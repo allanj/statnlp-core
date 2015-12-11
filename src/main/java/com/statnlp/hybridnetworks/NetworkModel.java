@@ -18,6 +18,11 @@ package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.statnlp.commons.types.Instance;
 
@@ -101,7 +106,7 @@ public abstract class NetworkModel implements Serializable{
 		//distribute the works into different threads.
 		//WARNING: must do the following sequentially..
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
-			this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, -1);
+			this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, 0);
 			this._learners[threadId].touch();
 			System.err.println("Okay..thread "+threadId+" touched.");
 		}
@@ -109,20 +114,19 @@ public abstract class NetworkModel implements Serializable{
 		//finalize the features.
 		this._fm.getParam_G().lockIt();
 		
+		ExecutorService pool = Executors.newFixedThreadPool(this._numThreads);
+		List<Callable<Void>> callables = Arrays.asList(this._learners);
+		
 		double obj_old = Double.NEGATIVE_INFINITY;
 		
 		//run the EM-style algorithm now...
 		long startTime = System.currentTimeMillis();
 		for(int it = 0; it<maxNumIterations; it++){
-			
+			for(LocalNetworkLearnerThread learner: this._learners){
+				learner.setIterationNumber(it);
+			}
 			long time = System.currentTimeMillis();
-			for(int threadId = 0; threadId<this._numThreads; threadId++){
-				this._learners[threadId] = this._learners[threadId].copyThread();
-				this._learners[threadId].start();
-			}
-			for(int k = 0; k<this._numThreads; k++){
-				this._learners[k].join();
-			}
+			pool.invokeAll(callables);
 			boolean done = this._fm.update();
 			time = System.currentTimeMillis() - time;
 			double obj = this._fm.getParam_G().getObj_old();
@@ -137,6 +141,7 @@ public abstract class NetworkModel implements Serializable{
 				break;
 			}
 		}
+		pool.shutdown();
 	}
 	
 	public Instance[] decode(Instance[] allInstances) throws InterruptedException{
