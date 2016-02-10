@@ -20,6 +20,10 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 
 /**
  * The base class for the feature manager.
@@ -115,7 +119,115 @@ public abstract class FeatureManager implements Serializable{
 	public LocalNetworkParam[] getParams_L(){
 		return this._params_l;
 	}
-	
+
+	public void mergeSubFeaturesToGlobalFeatures(){
+		HashMap<String, HashMap<String, HashMap<String, Integer>>> globalFeature2IntMap = this._param_g.getFeatureIntMap();
+
+		// if global mode, only 1 thread
+		if(this._param_g._subFeatureIntMaps.size()==1){
+			this._param_g._featureIntMap = new HashMap<String, HashMap<String, HashMap<String, Integer>>>(this._param_g._subFeatureIntMaps.get(0));
+			this._param_g._size = this._param_g._subSize[0];
+			this._params_l[0].finalizeIt();
+			this._param_g._subFeatureIntMaps.set(0, null);
+		}else{
+			this._param_g._size = 0;
+			for(int t=0;t<this._param_g._subFeatureIntMaps.size();t++){
+				addIntoGlobalFeatures(globalFeature2IntMap, this._param_g._subFeatureIntMaps.get(t),this._params_l[t]._globalFeature2LocalFeature);
+				this._params_l[t].finalizeIt();
+				this._param_g._subFeatureIntMaps.set(t, null);
+			}
+//			System.err.println(globalFeature2IntMap.toString());
+		}
+		// to release the memory
+//		for(int t=0;t<this._param_g._subFeatureIntMaps.size();t++){
+//			this._param_g._subFeatureIntMaps.set(t, null);
+//		}
+
+		//complete the type2int map. only in generative model
+		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
+			completeType2Int(globalFeature2IntMap, this._param_g._type2inputMap); 
+		}
+
+	}
+
+	private void addIntoGlobalFeatures(HashMap<String, HashMap<String, HashMap<String, Integer>>> globalMap, HashMap<String, HashMap<String, HashMap<String, Integer>>> localMap, HashMap<Integer, Integer> gf2lf){
+		Iterator<String> iter1 = localMap.keySet().iterator();
+		while(iter1.hasNext()){
+			String localType = iter1.next();
+			HashMap<String, HashMap<String, Integer>> localOutput2input = localMap.get(localType);
+			if(globalMap.containsKey(localType)){
+				HashMap<String, HashMap<String, Integer>> globalOutput2input = globalMap.get(localType);
+				Iterator<String> iter2 = localOutput2input.keySet().iterator();
+				while(iter2.hasNext()){
+					String localOutput = iter2.next();
+					HashMap<String, Integer> localInput2int = localOutput2input.get(localOutput);
+					if(globalOutput2input.containsKey(localOutput)){
+						HashMap<String, Integer> globalInput2int = globalOutput2input.get(localOutput);
+						Iterator<String> iter3 = localInput2int.keySet().iterator();
+						while(iter3.hasNext()){
+							String localInput = iter3.next();
+							if(!globalInput2int.containsKey(localInput)){
+								globalInput2int.put(localInput, this._param_g._size++);
+							}
+							gf2lf.put(globalInput2int.get(localInput), localInput2int.get(localInput));
+						}
+					}else{
+						//not contain the local output
+						HashMap<String, Integer> globalInput2int = new HashMap<String, Integer>(); 
+						Iterator<String> iter3 = localInput2int.keySet().iterator();
+						while(iter3.hasNext()){
+							String localInput = iter3.next();
+							globalInput2int.put(localInput, this._param_g._size++);
+							gf2lf.put(globalInput2int.get(localInput), localInput2int.get(localInput));
+						}
+						globalOutput2input.put(localOutput, globalInput2int);
+					}
+				}
+			}else{
+				HashMap<String, HashMap<String, Integer>> globalOutput2input = new HashMap<String, HashMap<String, Integer>>();
+				Iterator<String> iter2 = localOutput2input.keySet().iterator();
+				while(iter2.hasNext()){
+					String localOutput = iter2.next();
+					HashMap<String, Integer> globalInput2int = new HashMap<String, Integer>(); 
+					HashMap<String, Integer> localInput2int = localOutput2input.get(localOutput);
+					Iterator<String> iter3 = localInput2int.keySet().iterator();
+					while(iter3.hasNext()){
+						String localInput = iter3.next();
+						globalInput2int.put(localInput, this._param_g._size++);
+						gf2lf.put(globalInput2int.get(localInput), localInput2int.get(localInput));
+					}
+					globalOutput2input.put(localOutput, globalInput2int);
+				}
+				globalMap.put(localType, globalOutput2input);
+			}
+		}
+	}
+
+	private void completeType2Int(HashMap<String, HashMap<String, HashMap<String, Integer>>> globalMap,HashMap<String, ArrayList<String>> type2Input){
+		Iterator<String> iterType = globalMap.keySet().iterator();
+		while(iterType.hasNext()){
+			String type = iterType.next();
+			if(!type2Input.containsKey(type)){
+				type2Input.put(type, new ArrayList<String>());
+			}
+			HashMap<String, HashMap<String, Integer>> output2input  = globalMap.get(type);
+			Iterator<String> iterOutput = output2input.keySet().iterator();
+			while(iterOutput.hasNext()){
+				String output = iterOutput.next();
+				HashMap<String, Integer> input2int = output2input.get(output);
+				Iterator<String> iterInput = input2int.keySet().iterator();
+				while(iterInput.hasNext()){
+					String input = iterInput.next();
+					ArrayList<String> inputs = type2Input.get(type);
+					int index = Collections.binarySearch(inputs, input);
+					if(index<0){
+						inputs.add(-1-index, input);
+					}
+				}
+			}
+		}
+	}
+
 	/**
 	 * Extract the features from the specified network, parent index, and child indices, 
 	 * caching if necessary.<br>

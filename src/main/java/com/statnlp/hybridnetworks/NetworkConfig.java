@@ -49,6 +49,7 @@ public class NetworkConfig {
 	public static boolean REBUILD_FOREST_EVERY_TIME = false;
 	
 	public static boolean _CACHE_FEATURES_DURING_TRAINING = true;
+	public static boolean _SEQUENTIAL_FEATURE_EXTRACTION = true ;
 	
 	public static int _numThreads = 10;
 	

@@ -28,9 +28,9 @@ import java.util.Iterator;
 import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
+import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.commons.ml.opt.LBFGSOptimizer;
 import com.statnlp.commons.ml.opt.MathsVector;
-import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
@@ -60,6 +60,10 @@ public class GlobalNetworkParam implements Serializable{
 	protected HashMap<String, HashMap<String, HashMap<String, Integer>>> _featureIntMap;
 	/** Map from feature type to input */
 	protected HashMap<String, ArrayList<String>> _type2inputMap;
+	/** A feature int map (similar to {@link #_featureIntMap}) for each local thread */
+	protected ArrayList<HashMap<String, HashMap<String, HashMap<String, Integer>>>> _subFeatureIntMaps;
+	/** The size of each feature int maps for each local thread */
+	protected int[] _subSize;
 	
 	protected String[][] _feature2rep;//three-dimensional array representation of the feature.
 	/** The weights parameter */
@@ -96,6 +100,13 @@ public class GlobalNetworkParam implements Serializable{
 		}
 		this._featureIntMap = new HashMap<String, HashMap<String, HashMap<String, Integer>>>();
 		this._type2inputMap = new HashMap<String, ArrayList<String>>();
+		if (!NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
+			this._subFeatureIntMaps = new ArrayList<HashMap<String, HashMap<String, HashMap<String, Integer>>>>();
+			for (int i = 0; i < NetworkConfig._numThreads; i++){
+				this._subFeatureIntMaps.add(new HashMap<String, HashMap<String, HashMap<String, Integer>>>());
+			}
+			this._subSize = new int[NetworkConfig._numThreads];
+		}
 	}
 	
 	/**
@@ -364,6 +375,49 @@ public class GlobalNetworkParam implements Serializable{
 		return this._version;
 	}
 	
+	public int toFeature(String type , String output , String input){
+		return this.toFeature(null, type, output, input);
+	}
+	
+	public int toFeature(Network network , String type , String output , String input){ //process later , if threadId = −1, global mode.
+		if(this.isLocked()){
+			if(!this._featureIntMap.containsKey(type)){
+				return -1;
+			} else {
+				HashMap<String, HashMap<String, Integer>> output2input = this._featureIntMap.get(type);
+				if(!output2input.containsKey(output)){
+					return -1;
+				} else {
+					HashMap<String, Integer> input2id = output2input.get(output);
+					if(!input2id.containsKey(input)){
+						return -1;
+					} else {
+						return input2id.get(input);
+					}
+				}
+			}
+		}
+		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
+			return this.toSeqFeature(type, output, input);
+		}
+		int threadId = network != null ? network.getThreadId() : -1;
+		if(threadId == -1){
+			throw new RuntimeException("Missing network on some toFeature calls while in parallel touch.");
+		}
+		if(!this._subFeatureIntMaps.get(threadId).containsKey(type)){
+			this._subFeatureIntMaps.get(threadId).put(type, new HashMap<String, HashMap<String, Integer>>());
+		}
+		HashMap<String, HashMap<String, Integer>> mapByType = this._subFeatureIntMaps.get(threadId).get(type);
+		if(!mapByType.containsKey(output)){
+			mapByType.put(output, new HashMap<String, Integer>());
+		}
+		HashMap<String, Integer> subMap = mapByType.get(output);
+		if(!subMap.containsKey(input)){
+			subMap.put(input, this._subSize[threadId]++);
+		}
+		return subMap.get(input);
+	}
+
 	/**
 	 * Converts a tuple of feature type, input, and output into the feature index.
 	 * @param type The feature type (e.g., "EMISSION", "FEATURE_1", etc.)
@@ -374,7 +428,7 @@ public class GlobalNetworkParam implements Serializable{
 	 * @param input The input (e.g., for emission feature in HMM this might be the word itself) 
 	 * @return
 	 */
-	public int toFeature(String type, String output, String input){
+	public int toSeqFeature(String type, String output, String input){
 //		if(type.equals("emission")){
 //			System.err.println("XXX"+type+"\t"+output+"\t"+input);
 //		}

@@ -25,6 +25,9 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	/** The ID of the thread the lowest ID should be 0. */
 	private int _threadId = -1;
 	
+	/** Whether this thread is performing touch */
+	private boolean isTouching ;
+	
 	/** The maximum number of nodes in the network. */
 	private int _networkCapacity = 1000000;
 	/** The local feature map. */
@@ -97,8 +100,12 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	}
 	
     @Override
-    public void run() {
-    	this.train(this._it);
+    public void run () {
+    	if(!isTouching){
+    		this.train(this._it);
+    	} else {
+    		this.touch();
+    	}
     }
     
     public Void call(){
@@ -125,10 +132,20 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 		time = System.currentTimeMillis() - time;
 		System.out.println("Thread "+this._threadId + " touch time: "+ time/1000.0+" secs.");
 		
-		this._param.finalizeIt();
+		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
+			this._param.finalizeIt();
+		}
 		
 	}
-	
+
+	public void setTouch(){
+		this.isTouching = true;
+	}
+
+	public void setUnTouch(){
+		this.isTouching = false;
+	}
+
 	/**
 	 * Do one iteration of training
 	 * @param it

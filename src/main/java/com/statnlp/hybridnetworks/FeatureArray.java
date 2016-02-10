@@ -64,7 +64,11 @@ public class FeatureArray implements Serializable{
 		
 		int[] fs_local = new int[this._fs.length];
 		for(int k = 0; k<this._fs.length; k++){
-			fs_local[k] = param.toLocalFeature(this._fs[k]);
+			if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
+				fs_local[k] = param.toLocalFeature(this._fs[k]);
+			} else {
+				fs_local[k] = this._fs[k];
+			}
 			if(fs_local[k]==-1){
 				throw new RuntimeException("The local feature got an id of -1 for "+this._fs[k]);
 			}

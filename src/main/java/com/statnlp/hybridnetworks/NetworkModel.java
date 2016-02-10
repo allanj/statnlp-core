@@ -105,10 +105,23 @@ public abstract class NetworkModel implements Serializable{
 		
 		//distribute the works into different threads.
 		//WARNING: must do the following sequentially..
-		for(int threadId = 0; threadId<this._numThreads; threadId++){
-			this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, 0);
-			this._learners[threadId].touch();
-			System.err.println("Okay..thread "+threadId+" touched.");
+		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
+			for(int threadId = 0; threadId<this._numThreads; threadId++){
+				this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, 0);
+				this._learners[threadId].touch();
+				System.err.println("Okay..thread "+threadId+" touched.");
+			}
+		} else {
+			for(int threadId = 0; threadId < this._numThreads; threadId++){
+				this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, -1);
+				this._learners[threadId].setTouch();
+				this._learners[threadId].start();
+			}
+			for(int threadId = 0; threadId < this._numThreads; threadId++){
+				this._learners[threadId].join();
+				this._learners[threadId].setUnTouch();
+			}
+			this._fm.mergeSubFeaturesToGlobalFeatures();
 		}
 		
 		//finalize the features.
