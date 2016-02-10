@@ -124,7 +124,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 					word = input.get(idx)[0];
 				}
 				if(idx > pos) continue; // Only consider the left window
-				wordWindowFeatures[i] = param_g.toFeature(FeatureType.WORD+":"+relIdx, tag_id+"", word);
+				wordWindowFeatures[i] = param_g.toFeature(network, FeatureType.WORD+":"+relIdx, tag_id+"", word);
 			}
 			FeatureArray wordFeatures = new FeatureArray(wordWindowFeatures, features);
 			features = wordFeatures;
@@ -144,7 +144,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 				if(idx >= 0 && idx < size){
 					postag = input.get(idx)[1];
 				}
-				posWindowFeatures[i] = param_g.toFeature(FeatureType.TAG+":"+relIdx, tag_id+"", postag);
+				posWindowFeatures[i] = param_g.toFeature(network, FeatureType.TAG+":"+relIdx, tag_id+"", postag);
 			}
 			FeatureArray posFeatures = new FeatureArray(posWindowFeatures, features);
 			features = posFeatures;
@@ -166,7 +166,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 						bigram += " ";
 					}
 				}
-				bigramFeatures[i] = param_g.toFeature(FeatureType.WORD_BIGRAM+":"+i, tag_id+"", bigram);
+				bigramFeatures[i] = param_g.toFeature(network, FeatureType.WORD_BIGRAM+":"+i, tag_id+"", bigram);
 			}
 			features = new FeatureArray(bigramFeatures, features);
 		}
@@ -187,14 +187,14 @@ public class LinearCRFFeatureManager extends FeatureManager{
 						bigram += " ";
 					}
 				}
-				bigramFeatures[i] = param_g.toFeature(FeatureType.TAG_BIGRAM+":"+i, tag_id+"", bigram);
+				bigramFeatures[i] = param_g.toFeature(network, FeatureType.TAG_BIGRAM+":"+i, tag_id+"", bigram);
 			}
 			features = new FeatureArray(bigramFeatures, features);
 		}
 		
 		// Label transition feature
 		if(FeatureType.TRANSITION.enabled()){
-			int transitionFeature = param_g.toFeature(FeatureType.TRANSITION.name(), tag_id+"", child_tag_id+" "+tag_id);
+			int transitionFeature = param_g.toFeature(network, FeatureType.TRANSITION.name(), tag_id+"", child_tag_id+" "+tag_id);
 			features = new FeatureArray(new int[]{transitionFeature}, features);
 		}
 		

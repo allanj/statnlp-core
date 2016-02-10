@@ -33,9 +33,14 @@ public class LinearCRFMain {
 		LinearCRFInstance[] testInstances = readCoNLLData(test_filename, true, false);
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
+		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = false;
 		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
 		NetworkConfig._numThreads = 4;
+
+		// Set weight to not random to make useful comparison between sequential and parallel touch
+		NetworkConfig.RANDOM_INIT_WEIGHT = false;
+		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
 		
 		int numIterations = 100;
 		
