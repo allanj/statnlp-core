@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
@@ -380,7 +381,9 @@ public class GlobalNetworkParam implements Serializable{
 	}
 	
 	public int toFeature(Network network , String type , String output , String input){ //process later , if threadId = −1, global mode.
-		if(this.isLocked()){
+		//if it is locked, then we might return a dummy feature
+		//if the feature does not appear to be present.
+		if(this.isLocked() || (NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY && network.getInstance().getInstanceId() < 0)){
 			if(!this._featureIntMap.containsKey(type)){
 				return -1;
 			} else {
@@ -398,8 +401,13 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
-			return this.toSeqFeature(type, output, input);
+			return toSeqFeature(type, output, input);
+		} else {
+			return toParFeature(network, type, output, input);
 		}
+	}
+
+	private int toParFeature(Network network, String type, String output, String input) throws RuntimeException {
 		int threadId = network != null ? network.getThreadId() : -1;
 		if(threadId == -1){
 			throw new RuntimeException("Missing network on some toFeature calls while in parallel touch.");
@@ -429,38 +437,6 @@ public class GlobalNetworkParam implements Serializable{
 	 * @return
 	 */
 	public int toSeqFeature(String type, String output, String input){
-//		if(type.equals("emission")){
-//			System.err.println("XXX"+type+"\t"+output+"\t"+input);
-//		}
-		
-//		if(input.indexOf("low_point")!=-1){
-//			System.err.println(type+"\t"+output+"\t"+input);
-//			System.exit(1);
-//		}
-		
-		//if it is locked, then we might return a dummy feature
-		//if the feature does not appear to be present.
-		if(this.isLocked()){
-			if(!this._featureIntMap.containsKey(type)){
-				return -1;
-			} else {
-				HashMap<String, HashMap<String, Integer>> output2input = this._featureIntMap.get(type);
-				if(!output2input.containsKey(output)){
-					return -1;
-				} else {
-					HashMap<String, Integer> input2id = output2input.get(output);
-					if(!input2id.containsKey(input)){
-						return -1;
-					} else {
-						return input2id.get(input);
-					}
-				}
-			}
-		}
-//		if(type.equals("emission")){
-//			System.err.println("|||"+type+"\t"+output+"\t"+input);
-//		}
-		
 		if(!this._featureIntMap.containsKey(type)){
 			this._featureIntMap.put(type, new HashMap<String, HashMap<String, Integer>>());
 		}
@@ -481,11 +457,7 @@ public class GlobalNetworkParam implements Serializable{
 			if(index<0){
 				inputs.add(-1-index, input);
 			}
-//			System.err.println(type+"\t"+inputs.size());
 		}
-//		if(type.equals("emission")){
-//			System.err.println("<<<"+type+"\t"+output+"\t"+input);
-//		}
 
 		return subMap.get(input);
 	}
@@ -589,6 +561,14 @@ public class GlobalNetworkParam implements Serializable{
 //		System.exit(1);
 		
 		return done;
+	}
+	
+	public List<Double> toList(double[] arr){
+		List<Double> result = new ArrayList<Double>();
+		for(double num: arr){
+			result.add(num);
+		}
+		return result;
 	}
 	
 	/**

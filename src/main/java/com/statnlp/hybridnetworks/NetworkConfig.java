@@ -50,6 +50,7 @@ public class NetworkConfig {
 	
 	public static boolean _CACHE_FEATURES_DURING_TRAINING = true;
 	public static boolean _SEQUENTIAL_FEATURE_EXTRACTION = true ;
+	public static boolean _BUILD_FEATURES_FROM_LABELED_ONLY = false;
 	
 	public static int _numThreads = 10;
 	

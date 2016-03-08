@@ -104,7 +104,6 @@ public abstract class NetworkModel implements Serializable{
 		Instance[][] insts = this.splitInstancesForTrain();
 		
 		//distribute the works into different threads.
-		//WARNING: must do the following sequentially..
 		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
 			for(int threadId = 0; threadId<this._numThreads; threadId++){
 				this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, 0);
@@ -112,6 +111,9 @@ public abstract class NetworkModel implements Serializable{
 				System.err.println("Okay..thread "+threadId+" touched.");
 			}
 		} else {
+			if(NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY){
+				throw new RuntimeException("Build features from only the labeled networks only works in sequential touch, not in parallel touch");
+			}
 			for(int threadId = 0; threadId < this._numThreads; threadId++){
 				this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, -1);
 				this._learners[threadId].setTouch();
@@ -134,27 +136,30 @@ public abstract class NetworkModel implements Serializable{
 		
 		//run the EM-style algorithm now...
 		long startTime = System.currentTimeMillis();
-		for(int it = 0; it<maxNumIterations; it++){
-			for(LocalNetworkLearnerThread learner: this._learners){
-				learner.setIterationNumber(it);
+		try{
+			for(int it = 0; it<maxNumIterations; it++){
+				for(LocalNetworkLearnerThread learner: this._learners){
+					learner.setIterationNumber(it);
+				}
+				long time = System.currentTimeMillis();
+				pool.invokeAll(callables);
+				boolean done = this._fm.update();
+				time = System.currentTimeMillis() - time;
+				double obj = this._fm.getParam_G().getObj_old();
+				System.out.println(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0));
+	//			System.out.println("Iteration "+it+"\tObjective="+obj+"\tTime="+time/1000.0+" seconds."+"\t"+obj/obj_old);
+				if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE && it>1 && obj<obj_old && Math.abs(obj-obj_old)>1E-5){
+					throw new RuntimeException("Error:\n"+obj_old+"\n>\n"+obj);
+				}
+				obj_old = obj;
+				if(done){
+					System.out.println("Training completes. No significant progress (<objtol) after "+it+" iterations.");
+					break;
+				}
 			}
-			long time = System.currentTimeMillis();
-			pool.invokeAll(callables);
-			boolean done = this._fm.update();
-			time = System.currentTimeMillis() - time;
-			double obj = this._fm.getParam_G().getObj_old();
-			System.out.println(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0));
-//			System.out.println("Iteration "+it+"\tObjective="+obj+"\tTime="+time/1000.0+" seconds."+"\t"+obj/obj_old);
-			if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE && it>1 && obj<obj_old && Math.abs(obj-obj_old)>1E-5){
-				throw new RuntimeException("Error:\n"+obj_old+"\n>\n"+obj);
-			}
-			obj_old = obj;
-			if(done){
-				System.out.println("Training completes. No significant progress (<objtol) after "+it+" iterations.");
-				break;
-			}
+		} finally {
+			pool.shutdown();
 		}
-		pool.shutdown();
 	}
 	
 	public Instance[] decode(Instance[] allInstances) throws InterruptedException{

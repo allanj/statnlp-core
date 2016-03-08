@@ -447,12 +447,17 @@ public abstract class Network implements Serializable, HyperGraph{
 				continue;
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
-			double score = fa.getScore(this._param);
-			score += this._outside[k];
+			double score = fa.getScore(this._param); // w*f
+			score += this._outside[k];  // beta(s')
 			for(int child_k : children_k)
-				score += this._inside[child_k];
-			double count = Math.exp(score-this.getInside());
+				score += this._inside[child_k]; // alpha(s)
+			double count = Math.exp(score-this.getInside()); // Divide by normalization term Z
 			count *= this._weight;
+			
+//			System.out.println(Arrays.toString(this.getNodeArray(k))+": "+count+" "+this._inside[k]+" "+this._outside[k]+" "+score+" "+this.getInside()+" "+(score-this.getInside()));
+//			for(int child_k: children_k){
+//				System.out.println("\t"+Arrays.toString(this.getNodeArray(child_k)));	
+//			}
 //			if(Double.isNaN(count))
 //			if(this.getInstance().getInstanceId()==10)
 //			{

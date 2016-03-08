@@ -155,50 +155,26 @@ public abstract class FeatureManager implements Serializable{
 		while(iter1.hasNext()){
 			String localType = iter1.next();
 			HashMap<String, HashMap<String, Integer>> localOutput2input = localMap.get(localType);
-			if(globalMap.containsKey(localType)){
-				HashMap<String, HashMap<String, Integer>> globalOutput2input = globalMap.get(localType);
-				Iterator<String> iter2 = localOutput2input.keySet().iterator();
-				while(iter2.hasNext()){
-					String localOutput = iter2.next();
-					HashMap<String, Integer> localInput2int = localOutput2input.get(localOutput);
-					if(globalOutput2input.containsKey(localOutput)){
-						HashMap<String, Integer> globalInput2int = globalOutput2input.get(localOutput);
-						Iterator<String> iter3 = localInput2int.keySet().iterator();
-						while(iter3.hasNext()){
-							String localInput = iter3.next();
-							if(!globalInput2int.containsKey(localInput)){
-								globalInput2int.put(localInput, this._param_g._size++);
-							}
-							gf2lf.put(globalInput2int.get(localInput), localInput2int.get(localInput));
-						}
-					}else{
-						//not contain the local output
-						HashMap<String, Integer> globalInput2int = new HashMap<String, Integer>(); 
-						Iterator<String> iter3 = localInput2int.keySet().iterator();
-						while(iter3.hasNext()){
-							String localInput = iter3.next();
-							globalInput2int.put(localInput, this._param_g._size++);
-							gf2lf.put(globalInput2int.get(localInput), localInput2int.get(localInput));
-						}
-						globalOutput2input.put(localOutput, globalInput2int);
-					}
+			if(!globalMap.containsKey(localType)){
+				globalMap.put(localType, new HashMap<String, HashMap<String, Integer>>());
+			}
+			HashMap<String, HashMap<String, Integer>> globalOutput2input = globalMap.get(localType);
+			Iterator<String> iter2 = localOutput2input.keySet().iterator();
+			while(iter2.hasNext()){
+				String localOutput = iter2.next();
+				HashMap<String, Integer> localInput2int = localOutput2input.get(localOutput);
+				if(!globalOutput2input.containsKey(localOutput)){
+					globalOutput2input.put(localOutput, new HashMap<String, Integer>());
 				}
-			}else{
-				HashMap<String, HashMap<String, Integer>> globalOutput2input = new HashMap<String, HashMap<String, Integer>>();
-				Iterator<String> iter2 = localOutput2input.keySet().iterator();
-				while(iter2.hasNext()){
-					String localOutput = iter2.next();
-					HashMap<String, Integer> globalInput2int = new HashMap<String, Integer>(); 
-					HashMap<String, Integer> localInput2int = localOutput2input.get(localOutput);
-					Iterator<String> iter3 = localInput2int.keySet().iterator();
-					while(iter3.hasNext()){
-						String localInput = iter3.next();
+				HashMap<String, Integer> globalInput2int = globalOutput2input.get(localOutput);
+				Iterator<String> iter3 = localInput2int.keySet().iterator();
+				while(iter3.hasNext()){
+					String localInput = iter3.next();
+					if(!globalInput2int.containsKey(localInput)){
 						globalInput2int.put(localInput, this._param_g._size++);
-						gf2lf.put(globalInput2int.get(localInput), localInput2int.get(localInput));
 					}
-					globalOutput2input.put(localOutput, globalInput2int);
+					gf2lf.put(globalInput2int.get(localInput), localInput2int.get(localInput));
 				}
-				globalMap.put(localType, globalOutput2input);
 			}
 		}
 	}
