@@ -259,7 +259,7 @@ public abstract class FeatureManager implements Serializable{
 		this._param_g = (GlobalNetworkParam)ois.readObject();
 		this._cacheEnabled = ois.readBoolean();
 		this._numThreads = ois.readInt();
-		this._params_l = new LocalNetworkParam[this._numThreads];
+		this._params_l = new LocalNetworkParam[NetworkConfig._numThreads];
 	}
 	
 }
