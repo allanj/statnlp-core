@@ -83,7 +83,7 @@ public class FeatureArray implements Serializable{
 			} else {
 				fs_local[localIdx] = this._fs[k];
 			}
-			if(fs_local[k]==-1){
+			if(fs_local[localIdx]==-1){
 				throw new RuntimeException("The local feature got an id of -1 for "+this._fs[k]);
 			}
 		}
