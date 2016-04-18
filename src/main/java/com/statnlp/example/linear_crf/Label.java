@@ -20,6 +20,8 @@
 package com.statnlp.example.linear_crf;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author wei_lu
@@ -28,11 +30,34 @@ import java.io.Serializable;
 public class Label implements Serializable{
 	
 	private static final long serialVersionUID = -5006849791095171763L;
+	
+	public static final Map<String, Label> LABELS = new HashMap<String, Label>();
+	public static final Map<Integer, Label> LABELS_INDEX = new HashMap<Integer, Label>();
+	
+	public static Label get(String form){
+		if(!LABELS.containsKey(form)){
+			Label label = new Label(form, LABELS.size());
+			LABELS.put(form, label);
+			LABELS_INDEX.put(label._id, label);
+		}
+		return LABELS.get(form);
+	}
+	
+	public static Label get(int id){
+		return LABELS_INDEX.get(id);
+	}
+	
 	private String _form;
 	private int _id;
 	
-	public Label(String form){
+	public Label(Label lbl){
+		this._form = lbl._form;
+		this._id = lbl._id;
+	}
+	
+	private Label(String form, int id){
 		this._form = form;
+		this._id = id;
 	}
 	
 	public void setId(int id){
