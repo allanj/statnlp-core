@@ -3,19 +3,19 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.statnlp</groupId>
     <artifactId>statnlp-core</artifactId>
-    <version>2015.2-SNAPSHOT</version>
+    <version>2015.3-SNAPSHOT</version>
     <name>StatNLP Core Components</name>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-    <!--<dependencies>-->
-    <!--    <dependency>-->
-    <!--        <groupId>junit</groupId>-->
-    <!--        <artifactId>junit</artifactId>-->
-    <!--        <version>4.11</version>-->
-    <!--        <scope>test</scope>-->
-    <!--    </dependency>-->
-    <!--</dependencies>-->
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
     <build>
         <resources>
             <resource>
