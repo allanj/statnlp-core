@@ -28,10 +28,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
+import com.statnlp.commons.ml.opt.GradientDescentOptimizer;
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.commons.ml.opt.LBFGSOptimizer;
 import com.statnlp.commons.ml.opt.MathsVector;
+import com.statnlp.commons.ml.opt.Optimizer;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
@@ -48,7 +50,7 @@ public class GlobalNetworkParam implements Serializable{
 	/** The L2 regularization parameter weight */
 	protected transient double _kappa;
 	/** The optimizer */
-	protected transient LBFGSOptimizer _opt;
+	protected transient Optimizer _opt;
 	/** The gradient for each dimension */
 	protected transient double[] _counts;
 	/** A variable to store previous value of the objective function */
@@ -96,7 +98,11 @@ public class GlobalNetworkParam implements Serializable{
 		this._obj = Double.NEGATIVE_INFINITY;
 		this._isDiscriminative = !NetworkConfig.TRAIN_MODE_IS_GENERATIVE;
 		if(this.isDiscriminative()){
-			this._opt = new LBFGSOptimizer();
+			if(NetworkConfig.USE_STRUCTURED_SVM){
+				this._opt = new GradientDescentOptimizer();
+			} else {
+				this._opt = new LBFGSOptimizer();
+			}
 			this._kappa = NetworkConfig.L2_REGULARIZATION_CONSTANT;
 		}
 		this._featureIntMap = new HashMap<String, HashMap<String, HashMap<String, Integer>>>();
@@ -309,7 +315,11 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		this._version = 0;
-		this._opt = new LBFGSOptimizer();
+		if(NetworkConfig.USE_STRUCTURED_SVM){
+			this._opt = new GradientDescentOptimizer();	
+		} else {
+			this._opt = new LBFGSOptimizer();
+		}
 		this._locked = true;
 		
 		System.err.println(this._size+" features.");
@@ -357,7 +367,11 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		this._version = 0;
-		this._opt = new LBFGSOptimizer();
+		if(NetworkConfig.USE_STRUCTURED_SVM){
+			this._opt = new GradientDescentOptimizer();
+		} else {
+			this._opt = new LBFGSOptimizer();
+		}
 		this._locked = true;
 		
 		System.err.println(this._size+" features.");
@@ -608,7 +622,7 @@ public class GlobalNetworkParam implements Serializable{
     	if(this.smallChangeCount == 3){
     		done = true;
     	}
-    	if(done){
+    	if(done && !NetworkConfig.USE_STRUCTURED_SVM){
     		// If we stop early, we need to copy solution_cache,
     		// as noted in the Javadoc for solution_cache in LBFGS class.
     		// This is because the _weights will contain the next value to be evaluated, 
@@ -646,7 +660,6 @@ public class GlobalNetworkParam implements Serializable{
 		if(this.isDiscriminative() && this._kappa > 0){
 			this._obj += - this._kappa * MathsVector.square(this._weights);
 		}
-		// FIXME: Aldrian: the notes below seems to contradict the code above
 		//NOTES:
 		//for additional terms such as regularization terms:
 		//always add to _obj the term g(x) you would like to maximize.

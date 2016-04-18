@@ -61,7 +61,7 @@ public class DiscriminativeNetworkModel extends NetworkModel {
 				Instance inst_new = inst.duplicate();
 				inst_new.setInstanceId(-inst.getInstanceId());
 				inst_new.setWeight(-inst.getWeight());
-				inst_new.removeOutput();
+//				inst_new.removeOutput();
 				inst_new.setUnlabeled();
 				insts[threadId][i*2+1] = inst_new;
 			}

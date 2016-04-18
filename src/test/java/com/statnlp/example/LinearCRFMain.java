@@ -24,10 +24,8 @@ public class LinearCRFMain {
 		
 //		String lang = args[1];
 		
-		String inst_filename = "data/SMSNP/SMSNP.conll.train";
-		String test_filename = "data/SMSNP/SMSNP.conll.test";
-		
-		allLabels = new ArrayList<Label>();
+		String inst_filename = "data/train.data";
+		String test_filename = "data/test.data";
 		
 		LinearCRFInstance[] trainInstances = readCoNLLData(inst_filename, true, true);
 		LinearCRFInstance[] testInstances = readCoNLLData(test_filename, true, false);
@@ -37,6 +35,8 @@ public class LinearCRFMain {
 		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
 		NetworkConfig._numThreads = 4;
+		
+		NetworkConfig.USE_STRUCTURED_SVM = false;
 
 		// Set weight to not random to make useful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
@@ -50,7 +50,7 @@ public class LinearCRFMain {
 		
 		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(new GlobalNetworkParam());
 		
-		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler(allLabels);
+		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler();
 		
 		NetworkModel model = DiscriminativeNetworkModel.create(fm, compiler);
 		
@@ -116,12 +116,7 @@ public class LinearCRFMain {
 				String[] features = line.substring(0, lastSpace).split(" ");
 				words.add(features);
 				if(withLabels){
-					Label label = new Label(line.substring(lastSpace+1));
-					if(!allLabels.contains(label)){
-						allLabels.add(label);
-					} else { // Get the same object for the same label
-						label = allLabels.get(allLabels.indexOf(label));
-					}
+					Label label = Label.get(line.substring(lastSpace+1));
 					labels.add(label);
 				}
 			}

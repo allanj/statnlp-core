@@ -107,7 +107,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		int child_tag_id = network.getNodeArray(children_k[0])[1];
 		
 		GlobalNetworkParam param_g = this._param_g;
-
+		
 		FeatureArray features = new FeatureArray(new int[0]);
 		// Word window features
 		if(FeatureType.WORD.enabled()){

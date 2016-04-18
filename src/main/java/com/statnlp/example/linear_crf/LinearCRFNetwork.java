@@ -19,6 +19,7 @@
  */
 package com.statnlp.example.linear_crf;
 
+import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.TableLookupNetwork;
 
@@ -43,6 +44,25 @@ public class LinearCRFNetwork extends TableLookupNetwork{
 	public LinearCRFNetwork(int networkId, LinearCRFInstance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes){
 		super(networkId, inst, nodes, children, param);
 		this._numNodes = numNodes;
+	}
+	
+	public double loss(int k, int[] child_k){
+		LinearCRFInstance inst = (LinearCRFInstance)this.getInstance();
+		int size = inst.size();
+		int[] nodeArr = getNodeArray(k);
+		int pos = nodeArr[0]-1;
+		Label predLabel = Label.get(nodeArr[1]);
+		int nodeType = nodeArr[4];
+		if(pos >= 0 && pos < size && nodeType != NODE_TYPES.ROOT.ordinal()){
+			Label goldLabel = inst.output.get(pos);
+			if(goldLabel == predLabel){
+				return 0.0;
+			} else {
+				return 1.0/size;
+			}
+		} else {
+			return 0.0;
+		}
 	}
 	
 	@Override

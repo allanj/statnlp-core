@@ -47,6 +47,7 @@ public class NetworkConfig {
 	
 	public static boolean DEBUG_MODE = false;//true;//false;//true;
 	public static boolean REBUILD_FOREST_EVERY_TIME = false;
+	public static boolean USE_STRUCTURED_SVM = false;
 	
 	public static boolean _CACHE_FEATURES_DURING_TRAINING = true;
 	public static boolean _SEQUENTIAL_FEATURE_EXTRACTION = true ;
