@@ -118,24 +118,22 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
      * and caching the networks if {@link #_cacheNetworks} is true.
      */
 	public void touch(){
-		//for now, disable the feature cache...
-//		this._param.disableCache();
-		
 		long time = System.currentTimeMillis();
 		//extract the features..
 		for(int networkId = 0; networkId< this._instances.length; networkId++){
 			if(networkId%100==0)
 				System.err.print('.');
+			if(NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY
+					&& ((!this._param._isFinalized && this.getNetwork(networkId).getInstance().getInstanceId() < 0)
+							||
+						( this._param._isFinalized && this.getNetwork(networkId).getInstance().getInstanceId() > 0))){
+				continue;
+			}
 			this.getNetwork(networkId).touch();
 		}
 		System.err.println();
 		time = System.currentTimeMillis() - time;
 		System.out.println("Thread "+this._threadId + " touch time: "+ time/1000.0+" secs.");
-		
-		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
-			this._param.finalizeIt();
-		}
-		
 	}
 
 	public void setTouch(){
@@ -145,7 +143,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	public void setUnTouch(){
 		this.isTouching = false;
 	}
-
+	
 	/**
 	 * Do one iteration of training
 	 * @param it

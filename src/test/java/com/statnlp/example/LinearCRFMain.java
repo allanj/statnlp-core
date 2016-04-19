@@ -7,10 +7,10 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.example.linear_crf.Label;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
 import com.statnlp.example.linear_crf.LinearCRFInstance;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
-import com.statnlp.example.linear_crf.Label;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
@@ -24,8 +24,8 @@ public class LinearCRFMain {
 		
 //		String lang = args[1];
 		
-		String inst_filename = "data/SMSNP/SMSNP.conll.train";
-		String test_filename = "data/SMSNP/SMSNP.conll.test";
+		String inst_filename = "data/train.data";
+		String test_filename = "data/test.data";
 		
 		allLabels = new ArrayList<Label>();
 		
@@ -34,10 +34,11 @@ public class LinearCRFMain {
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
 		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = false;
-		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
+		NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = false;
+		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = false;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
 		NetworkConfig._numThreads = 4;
-
+		
 		// Set weight to not random to make useful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;

@@ -105,31 +105,29 @@ public abstract class NetworkModel implements Serializable{
 		
 		Instance[][] insts = this.splitInstancesForTrain();
 		
-		//distribute the works into different threads.
-		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
-			for(int threadId = 0; threadId<this._numThreads; threadId++){
-				this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, 0);
-				this._learners[threadId].touch();
-				System.err.println("Okay..thread "+threadId+" touched.");
-			}
-		} else {
+		touch(insts, false);
+		
+		for(int threadId=0; threadId<this._numThreads; threadId++){
 			if(NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY){
-				throw new RuntimeException("Build features from only the labeled networks only works in sequential touch, not in parallel touch");
+				this._fm.addIntoLocalFeatures(this._learners[threadId].getLocalNetworkParam()._globalFeature2LocalFeature);
 			}
-			for(int threadId = 0; threadId < this._numThreads; threadId++){
-				this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, -1);
-				this._learners[threadId].setTouch();
-				this._learners[threadId].start();
-			}
-			for(int threadId = 0; threadId < this._numThreads; threadId++){
-				this._learners[threadId].join();
-				this._learners[threadId].setUnTouch();
-			}
-			this._fm.mergeSubFeaturesToGlobalFeatures();
+			this._learners[threadId].getLocalNetworkParam().finalizeIt();
+		}
+
+		//complete the type2int map. only in generative model
+		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
+			this._fm.completeType2Int(); 
 		}
 		
 		//finalize the features.
 		this._fm.getParam_G().lockIt();
+		
+		if(NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY && NetworkConfig._CACHE_FEATURES_DURING_TRAINING){
+			touch(insts, true); // Touch again to cache features in the unlabeled
+			for(int threadId=0; threadId<this._numThreads; threadId++){
+				this._learners[threadId].getLocalNetworkParam()._globalFeature2LocalFeature = null;
+			}
+		}
 		
 		ExecutorService pool = Executors.newFixedThreadPool(this._numThreads);
 		List<Callable<Void>> callables = Arrays.asList(this._learners);
@@ -168,6 +166,37 @@ public abstract class NetworkModel implements Serializable{
 			}
 		} finally {
 			pool.shutdown();
+		}
+	}
+
+	private void touch(Instance[][] insts, boolean keepExisting) throws InterruptedException {
+		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
+			for(int threadId = 0; threadId<this._numThreads; threadId++){
+				if(!keepExisting){
+					this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, 0);
+				} else {
+					this._learners[threadId] = this._learners[threadId].copyThread();
+				}
+				this._learners[threadId].touch();
+				System.err.println("Okay..thread "+threadId+" touched.");
+			}
+		} else {
+			for(int threadId = 0; threadId < this._numThreads; threadId++){
+				if(!keepExisting){
+					this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, -1);
+				} else {
+					this._learners[threadId] = this._learners[threadId].copyThread();
+				}
+				this._learners[threadId].setTouch();
+				this._learners[threadId].start();
+			}
+			for(int threadId = 0; threadId < this._numThreads; threadId++){
+				this._learners[threadId].join();
+				this._learners[threadId].setUnTouch();
+			}
+			if(!keepExisting){
+				this._fm.mergeSubFeaturesToGlobalFeatures();
+			}
 		}
 	}
 	
