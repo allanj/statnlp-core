@@ -207,7 +207,11 @@ public class LocalNetworkParam implements Serializable{
 	}
 	
 	public FeatureArray extract(Network network, int parent_k, int[] children_k, int children_k_index){
-		boolean shouldCache = this.isCacheEnabled();
+		// Do not cache in the first touch when parallel touch and extract only from labeled is enabled,
+		// since the local feature indices will change
+		boolean shouldCache = this.isCacheEnabled() && (NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION
+														|| !NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY
+														|| this._isFinalized);
 		if(shouldCache){
 			if(this._cache == null){
 				this._cache = new FeatureArray[this._numNetworks][][];

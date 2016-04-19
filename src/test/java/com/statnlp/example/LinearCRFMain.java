@@ -34,12 +34,12 @@ public class LinearCRFMain {
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
 		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = false;
-		NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = false;
-		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = false;
+		NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = true;
+		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
 		NetworkConfig._numThreads = 4;
 		
-		// Set weight to not random to make useful comparison between sequential and parallel touch
+		// Set weight to not random to make meaningful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
 		

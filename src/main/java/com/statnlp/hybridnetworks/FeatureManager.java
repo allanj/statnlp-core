@@ -123,7 +123,7 @@ public abstract class FeatureManager implements Serializable{
 	public void mergeSubFeaturesToGlobalFeatures(){
 		HashMap<String, HashMap<String, HashMap<String, Integer>>> globalFeature2IntMap = this._param_g.getFeatureIntMap();
 
-		// if global mode, only 1 thread
+		// if global mode (test mode), only 1 thread
 		if(this._param_g._subFeatureIntMaps.size()==1){
 			this._param_g._featureIntMap = new HashMap<String, HashMap<String, HashMap<String, Integer>>>(this._param_g._subFeatureIntMaps.get(0));
 			this._param_g._size = this._param_g._subSize[0];
@@ -228,7 +228,11 @@ public abstract class FeatureManager implements Serializable{
 	 * @return
 	 */
 	public FeatureArray extract(Network network, int parent_k, int[] children_k, int children_k_index){
-		boolean shouldCache = this.isCacheEnabled();
+		// Do not cache in the first touch when parallel touch and extract only from labeled is enabled,
+		// since the local feature indices will change
+		boolean shouldCache = this.isCacheEnabled() && (NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION
+														|| !NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY
+														|| this._param_g.isLocked());
 		if(shouldCache){
 			if(this._cache[network.getNetworkId()] == null){
 				this._cache[network.getNetworkId()] = new FeatureArray[network.countNodes()][];

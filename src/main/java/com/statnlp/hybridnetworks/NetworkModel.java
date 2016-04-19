@@ -105,10 +105,14 @@ public abstract class NetworkModel implements Serializable{
 		
 		Instance[][] insts = this.splitInstancesForTrain();
 		
+		// The first touch
 		touch(insts, false);
 		
 		for(int threadId=0; threadId<this._numThreads; threadId++){
 			if(NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY){
+				// We extract features only from labeled instance in the first touch, so we don't know what
+				// features are present in each thread. So copy all features to each thread.
+				// Since we extract only from labeled instances, the feature index will be smaller
 				this._fm.addIntoLocalFeatures(this._learners[threadId].getLocalNetworkParam()._globalFeature2LocalFeature);
 			}
 			this._learners[threadId].getLocalNetworkParam().finalizeIt();
@@ -123,8 +127,14 @@ public abstract class NetworkModel implements Serializable{
 		this._fm.getParam_G().lockIt();
 		
 		if(NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY && NetworkConfig._CACHE_FEATURES_DURING_TRAINING){
-			touch(insts, true); // Touch again to cache features in the unlabeled
+			touch(insts, true); // Touch again to cache the features, both in labeled and unlabeled
+		}
+		
+		if(NetworkConfig._CACHE_FEATURES_DURING_TRAINING){
 			for(int threadId=0; threadId<this._numThreads; threadId++){
+				// This was previously in each LocalNetworkLearnerThread finalizeIt, but moved here since
+				// when we call finalizeIt above, it should not delete this variable first, because we were
+				// using it in the second touch.
 				this._learners[threadId].getLocalNetworkParam()._globalFeature2LocalFeature = null;
 			}
 		}
