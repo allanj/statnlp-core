@@ -7,10 +7,10 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.example.linear_crf.Label;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
 import com.statnlp.example.linear_crf.LinearCRFInstance;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
-import com.statnlp.example.linear_crf.Label;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
@@ -24,25 +24,26 @@ public class LinearCRFMain {
 		
 //		String lang = args[1];
 		
-		String inst_filename = "data/train.data";
-		String test_filename = "data/test.data";
+		String inst_filename = "data/train.txt";
+		String test_filename = "data/test.txt";
 		
-		LinearCRFInstance[] trainInstances = readCoNLLData(inst_filename, true, true);
+		int numTrain = 200;
+		LinearCRFInstance[] trainInstances = readCoNLLData(inst_filename, true, true, numTrain);
 		LinearCRFInstance[] testInstances = readCoNLLData(test_filename, true, false);
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
 		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = false;
 		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
-		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
-		NetworkConfig._numThreads = 4;
+		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.0;
+		NetworkConfig._numThreads = 8;
 		
-		NetworkConfig.USE_STRUCTURED_SVM = false;
+		NetworkConfig.USE_STRUCTURED_SVM = true;
 
 		// Set weight to not random to make useful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
 		
-		int numIterations = 100;
+		int numIterations = 200;
 		
 		int size = trainInstances.length;
 		
@@ -85,7 +86,7 @@ public class LinearCRFMain {
 		System.out.println(String.format("Accuracy: %.2f%%", 100.0*corr/total));
 	}
 	
-	private static LinearCRFInstance[] readCoNLLData(String fileName, boolean withLabels, boolean isLabeled) throws IOException{
+	private static LinearCRFInstance[] readCoNLLData(String fileName, boolean withLabels, boolean isLabeled, int number) throws IOException{
 		InputStreamReader isr = new InputStreamReader(new FileInputStream(fileName), "UTF-8");
 		BufferedReader br = new BufferedReader(isr);
 		ArrayList<LinearCRFInstance> result = new ArrayList<LinearCRFInstance>();
@@ -109,6 +110,7 @@ public class LinearCRFMain {
 				}
 				instanceId++;
 				result.add(instance);
+				if(result.size()==number) break;
 				words = null;
 				labels = null;
 			} else {
@@ -123,5 +125,9 @@ public class LinearCRFMain {
 		}
 		br.close();
 		return result.toArray(new LinearCRFInstance[result.size()]);
+	}
+	
+	private static LinearCRFInstance[]  readCoNLLData(String fileName, boolean withLabels, boolean isLabeled) throws IOException{
+		return readCoNLLData(fileName, withLabels, isLabeled, -1);
 	}
 }
