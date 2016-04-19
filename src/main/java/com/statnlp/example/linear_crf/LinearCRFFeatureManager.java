@@ -36,6 +36,8 @@ public class LinearCRFFeatureManager extends FeatureManager{
 
 	private static final long serialVersionUID = -4880581521293400351L;
 	
+	private static final boolean CHEAT = false;
+	
 	public int wordHalfWindowSize = 1;
 	public int posHalfWindowSize = -1;
 	public boolean useWordBigram = true;
@@ -108,6 +110,10 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		
 		GlobalNetworkParam param_g = this._param_g;
 		
+		if(CHEAT){
+			return new FeatureArray(new int[]{param_g.toFeature(net, "CHEAT", tag_id+"", Math.abs(instance.getInstanceId())+" "+pos+" "+child_tag_id)});
+		}
+
 		FeatureArray features = new FeatureArray(new int[0]);
 		// Word window features
 		if(FeatureType.WORD.enabled()){

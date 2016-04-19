@@ -10,6 +10,7 @@ import com.statnlp.commons.types.Instance;
 import com.statnlp.example.linear_crf.Label;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
 import com.statnlp.example.linear_crf.LinearCRFInstance;
+import com.statnlp.example.linear_crf.LinearCRFNetwork;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
@@ -37,13 +38,14 @@ public class LinearCRFMain {
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.0;
 		NetworkConfig._numThreads = 8;
 		
-		NetworkConfig.USE_STRUCTURED_SVM = true;
+		NetworkConfig.USE_STRUCTURED_SVM = true; // To use Structured SVM (need to define loss function in the network
+		LinearCRFNetwork.useZeroOneLossAtEachNode = true; // Whether to calculate loss at each node or only at root
 
-		// Set weight to not random to make useful comparison between sequential and parallel touch
+		// Set weight to not random to make meaningful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
 		
-		int numIterations = 200;
+		int numIterations = 1000;
 		
 		int size = trainInstances.length;
 		
