@@ -29,7 +29,7 @@ public class GradientDescentOptimizer implements Optimizer{
 	
 	public static final double DEFAULT_LEARNING_RATE = 0.01;
 	
-	private double _learningRate = 1E-10;
+	private double _learningRate;
 	private double[] _x;
 	private double[] _g;
 	private double _obj;

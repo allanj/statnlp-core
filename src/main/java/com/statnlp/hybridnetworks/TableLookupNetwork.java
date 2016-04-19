@@ -422,7 +422,7 @@ public abstract class TableLookupNetwork extends Network{
 		return false;
 	}
 	
-	public double loss(int k, int[] child_k){
+	public double totalLossUpTo(int k, int[] child_k){
 		return 0.0;
 	}
 	

@@ -147,16 +147,6 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * @return
 	 */
 	public double getMax(int k){
-//		if(k==87095){
-//			int[] arr = NetworkIDMapper.toHybridNodeArray(this.getNode(k));
-//			System.err.println("x:"+Arrays.toString(arr)+"\t"+k);
-//			System.err.println(Arrays.toString(this.getMaxPath(k)));
-//			int child_k = this.getMaxPath(k)[0];
-//			double child_max = this.getMax(child_k);
-//			System.err.println(child_max);
-////			System.err.println(Arrays.toString(this._max));
-//			System.err.println();
-//		}
 		if(NetworkConfig.USE_STRUCTURED_SVM){
 			return this._max[k]+this._loss[k];
 		} else {
@@ -191,13 +181,33 @@ public abstract class Network implements Serializable, HyperGraph{
 	}
 	
 	/**
-	 * The loss for the specified edge.<br>
-	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.
+	 * The loss of the structure from leaf nodes up to node <code>k</code>.<br>
+	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.<br>
+	 * This does some check whether the loss is actually required. Loss is not calculated during test, since
+	 * there is no labeled instance.<br>
+	 * This will call {@link #totalLossUpTo(int, int[])}, where the actual implementation resides.
 	 * @param k
 	 * @param child_k
 	 * @return
 	 */
-	public abstract double loss(int k, int[] child_k);
+	public double loss(int k, int[] child_k){
+		if(_inst.getInstanceId() > 0 && !_inst.isLabeled()){
+			return 0.0;
+		}
+		return totalLossUpTo(k, child_k);
+	}
+
+	/**
+	 * The loss of the structure from leaf nodes up to node <code>k</code>.<br>
+	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.<br>
+	 * Note that the implementation can access the loss of the child nodes at _loss[child_idx] and
+	 * the best path so far is stored at getMaxPath(child_idx), which represents the hyperedge connected to
+	 * node <code>child_idx</code> which is part of the best path so far.
+	 * @param k
+	 * @param child_k
+	 * @return
+	 */
+	public abstract double totalLossUpTo(int k, int[] child_k);
 	
 	/**
 	 * Train the network
@@ -205,7 +215,6 @@ public abstract class Network implements Serializable, HyperGraph{
 	public void train(){
 		if(this._weight == 0)
 			return;
-		
 		if(NetworkConfig.USE_STRUCTURED_SVM){
 			this.max();
 		} else {
@@ -559,9 +568,9 @@ public abstract class Network implements Serializable, HyperGraph{
 				} else {
 					FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 					double score = fa.getScore(this._param);
+					loss = loss(k, children_k);
 					for(int child_k : children_k){
 						score += this._max[child_k];
-						loss += this._loss[child_k];
 					}
 					inside = score;
 				}
@@ -583,9 +592,9 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
+				loss += loss(k, children_k);
 				for(int child_k : children_k){
 					score += this._max[child_k];
-					loss += this._loss[child_k];
 				}
 				
 				inside = sumLog(inside, score);
@@ -617,11 +626,10 @@ public abstract class Network implements Serializable, HyperGraph{
 				double loss = loss(k, children_k);
 				for(int child_k : children_k){
 					max += this._max[child_k];
-					loss += this._loss[child_k];
 				}
 				boolean shouldUpdate = false;
 				if(NetworkConfig.USE_STRUCTURED_SVM){
-					if(Math.exp(max)+loss >= Math.exp(this._max[k])+this._loss[k]){
+					if(max+loss >= this._max[k]+this._loss[k]){
 						shouldUpdate = true;
 					}
 				} else {
