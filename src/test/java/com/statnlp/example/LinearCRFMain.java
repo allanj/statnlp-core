@@ -33,7 +33,7 @@ public class LinearCRFMain {
 		LinearCRFInstance[] testInstances = readCoNLLData(test_filename, true, false);
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
-		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = false;
+		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = false;  
 		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.0;
 		NetworkConfig._numThreads = 8;
@@ -42,7 +42,7 @@ public class LinearCRFMain {
 		LinearCRFNetwork.useZeroOneLossAtEachNode = true; // Whether to calculate loss at each node or only at root
 
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
-		NetworkConfig.RANDOM_INIT_WEIGHT = false;
+		NetworkConfig.RANDOM_INIT_WEIGHT = false;   
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
 		
 		int numIterations = 1000;
