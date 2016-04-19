@@ -21,8 +21,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import com.statnlp.commons.types.Instance;
 
@@ -142,7 +144,14 @@ public abstract class NetworkModel implements Serializable{
 					learner.setIterationNumber(it);
 				}
 				long time = System.currentTimeMillis();
-				pool.invokeAll(callables);
+				List<Future<Void>> results = pool.invokeAll(callables);
+				for(Future<Void> result: results){
+					try{
+						result.get(); // To ensure any exception is thrown
+					} catch (ExecutionException e){
+						throw new RuntimeException(e);
+					}
+				}
 				boolean done = this._fm.update();
 				time = System.currentTimeMillis() - time;
 				double obj = this._fm.getParam_G().getObj_old();
