@@ -57,6 +57,9 @@ public class GlobalNetworkParam implements Serializable{
 	protected transient double _obj_old;
 	/** A variable to store current value of the objective function */
 	protected transient double _obj;
+	/** A variable for batch SGD optimization, if applicable */
+	protected transient int _globalBatchSize;
+	
 	protected transient int _version;
 	
 	/** Map from feature type to [a map from output to [a map from input to feature ID]] */
@@ -88,6 +91,8 @@ public class GlobalNetworkParam implements Serializable{
 	
 	/** A counter for how many consecutive times the decrease in objective value is less than 0.01% */
 	protected int smallChangeCount = 0;
+	/** The total number of instances for the coefficient the batch SGD regularization term*/
+	protected int totalNumInsts;
 	
 	public GlobalNetworkParam(){
 		this._locked = false;
@@ -100,6 +105,7 @@ public class GlobalNetworkParam implements Serializable{
 		if(this.isDiscriminative()){
 			if(NetworkConfig.USE_STRUCTURED_SVM){
 				this._opt = new GradientDescentOptimizer();
+				this._globalBatchSize = NetworkConfig.localBatchSize * NetworkConfig._numThreads;
 			} else {
 				this._opt = new LBFGSOptimizer();
 			}
@@ -648,22 +654,33 @@ public class GlobalNetworkParam implements Serializable{
 	 */
 	protected synchronized void resetCountsAndObj(){
 		
+		double cof = 1.0;
+		if(NetworkConfig.USE_BATCH_SGD){
+			cof = this._globalBatchSize*1.0/this.totalNumInsts;
+			if(cof>1) cof = 1.0;
+		}
+		
+		
 		for(int k = 0 ; k<this._size; k++){
 			this._counts[k] = 0.0;
 			//for regularization
 			if(this.isDiscriminative() && this._kappa > 0 && k>=this._fixedFeaturesSize){
-				this._counts[k] += 2 * this._kappa * this._weights[k];
+				this._counts[k] += 2 * cof * this._kappa * this._weights[k];
 			}
 		}
 		this._obj = 0.0;
 		//for regularization
 		if(this.isDiscriminative() && this._kappa > 0){
-			this._obj += - this._kappa * MathsVector.square(this._weights);
+			this._obj += - cof * this._kappa * MathsVector.square(this._weights);
 		}
 		//NOTES:
 		//for additional terms such as regularization terms:
 		//always add to _obj the term g(x) you would like to maximize.
 		//always add to _counts the NEGATION of the term g(x)'s gradient.
+	}
+	
+	public void setInstsNum(int number){
+		this.totalNumInsts = number;
 	}
 	
 	public boolean checkEqual(GlobalNetworkParam p){

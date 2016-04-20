@@ -99,6 +99,8 @@ public abstract class NetworkModel implements Serializable{
 //			System.err.println(k);
 			this._allInstances[k].setInstanceId(k+1);
 		}
+		this._fm.getParam_G().setInstsNum(this._allInstances.length);
+		if(NetworkConfig.USE_STRUCTURED_SVM) NetworkConfig.USE_BATCH_SGD = true;
 		
 		//create the threads.
 		this._learners = new LocalNetworkLearnerThread[this._numThreads];
@@ -135,6 +137,9 @@ public abstract class NetworkModel implements Serializable{
 		List<Callable<Void>> callables = Arrays.asList(this._learners);
 		
 		double obj_old = Double.NEGATIVE_INFINITY;
+		
+		
+		
 		
 		//run the EM-style algorithm now...
 		long startTime = System.currentTimeMillis();

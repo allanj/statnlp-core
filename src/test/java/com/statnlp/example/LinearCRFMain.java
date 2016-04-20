@@ -36,9 +36,10 @@ public class LinearCRFMain {
 		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = false;  
 		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.0;
-		NetworkConfig._numThreads = 8;
+		NetworkConfig._numThreads = 4;
 		
 		NetworkConfig.USE_STRUCTURED_SVM = true; // To use Structured SVM (need to define loss function in the network
+		NetworkConfig.localBatchSize = 1000;
 		LinearCRFNetwork.useZeroOneLossAtEachNode = true; // Whether to calculate loss at each node or only at root
 
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch

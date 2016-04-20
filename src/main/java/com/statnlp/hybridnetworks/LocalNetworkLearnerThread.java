@@ -16,6 +16,10 @@
  */
 package com.statnlp.hybridnetworks;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Random;
 import java.util.concurrent.Callable;
 
 import com.statnlp.commons.types.Instance;
@@ -42,6 +46,10 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	private NetworkCompiler _builder;
 	/** The current iteration number */
 	private int _it;
+	/** Batch size for the batch SGD (if applicable) */
+	private int _batchSize = NetworkConfig.localBatchSize;
+	/** Prepare the list of network ids for the batch selection */
+	private ArrayList<Integer> networkIDlists = null;
 	
 	/**
 	 * Construct a new learner thread using current networks (if cached) or builder (if not cached),
@@ -93,6 +101,8 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 			this._networks = new Network[this._instances.length];
 		
 		this._it = it;
+		networkIDlists = new ArrayList<Integer>();
+		for(int i=0;i<instances.length/2;i++) networkIDlists.add(i);
 	}
 	
 	public int getThreadId(){
@@ -148,14 +158,26 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 
 	/**
 	 * Do one iteration of training
+	 * add the batch size here is we are using the batch gradient descent, 
+	 * every time we shuffle the list.
 	 * @param it
 	 */
 	private void train(int it){
-		for(int networkId = 0; networkId< this._instances.length; networkId++){
-			Network network = this.getNetwork(networkId);
+		int trainSize = -1;
+		int[] trainNetworkID = null;
+		if(!NetworkConfig.USE_BATCH_SGD || _batchSize>this._instances.length){
+			trainNetworkID = new int[this._instances.length];
+			for()
+		}else{
+			Collections.shuffle(networkIDlists, new Random(NetworkConfig.RANDOM_BATCH_SEED));
+			trainSize = this._batchSize;
+		}
+		for(int i = 0; i< trainSize; i++){
+			
+			Network network = this.getNetwork(networkIDlists.get(i));
+			network
 			network.train();
 		}
-		
 	}
 	
 	private Network getNetwork(int networkId){
