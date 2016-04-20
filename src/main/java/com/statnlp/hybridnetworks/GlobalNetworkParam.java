@@ -73,6 +73,8 @@ public class GlobalNetworkParam implements Serializable{
 	protected String[][] _feature2rep;//three-dimensional array representation of the feature.
 	/** The weights parameter */
 	protected double[] _weights;
+	/** Store the best weights when using the batch sgd */
+	protected double[] _bestWeight;
 	/** A flag whether the model is discriminative */
 	protected boolean _isDiscriminative;
 	/**
@@ -321,7 +323,7 @@ public class GlobalNetworkParam implements Serializable{
 		}
 		this._version = 0;
 		if(NetworkConfig.USE_STRUCTURED_SVM){
-			this._opt = new GradientDescentOptimizer();	
+			this._opt = new GradientDescentOptimizer(this._weights.length);	
 		} else {
 			this._opt = new LBFGSOptimizer();
 		}
@@ -373,7 +375,7 @@ public class GlobalNetworkParam implements Serializable{
 		}
 		this._version = 0;
 		if(NetworkConfig.USE_STRUCTURED_SVM){
-			this._opt = new GradientDescentOptimizer();
+			this._opt = new GradientDescentOptimizer(this._weights.length);
 		} else {
 			this._opt = new LBFGSOptimizer();
 		}

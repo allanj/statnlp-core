@@ -19,6 +19,7 @@
  */
 package com.statnlp.commons.ml.opt;
 
+
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 
 /**
@@ -33,16 +34,25 @@ public class GradientDescentOptimizer implements Optimizer{
 	private double[] _x;
 	private double[] _g;
 	private double _obj;
+	private double prevOuterProduct[];
 	
 	private double _T = 1.0;
+	private boolean adaGrad = true;
+	
 	
 	public GradientDescentOptimizer(){
-		this(DEFAULT_LEARNING_RATE);
+		this(DEFAULT_LEARNING_RATE,0);
+		//should have some problem here.
 	}
 	
-	public GradientDescentOptimizer(double learningRate){
+	public GradientDescentOptimizer(int weightLength){
+		this(DEFAULT_LEARNING_RATE,weightLength);
+	}
+	
+	public GradientDescentOptimizer(double learningRate,int weightLength){
 		this._learningRate = learningRate;
 		this._T = 1;
+		this.prevOuterProduct = new double[weightLength];
 	}
 	
 	public double getLearningRate(){
@@ -66,7 +76,13 @@ public class GradientDescentOptimizer implements Optimizer{
 	public boolean optimize() throws ExceptionWithIflag{
 //		this._learningRate *= 1/this._T;
 		for(int k = 0; k<this._x.length; k++){
-			this._x[k] -= this._learningRate * this._g[k];
+			double updateCof = this._learningRate;
+			if(adaGrad) {
+				prevOuterProduct[k] += this._g[k]*this._g[k];
+				if(prevOuterProduct[k]!=0.0)
+					updateCof = this._learningRate/Math.sqrt(prevOuterProduct[k]);
+			}
+			this._x[k] -= updateCof * this._g[k];
 		}
 //		this._T++;
 		return false;

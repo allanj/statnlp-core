@@ -163,7 +163,8 @@ public abstract class NetworkModel implements Serializable{
 				if(NetworkConfig.USE_BATCH_SGD){
 					batchInstIds.clear();
 					Collections.shuffle(instIds, new Random(NetworkConfig.RANDOM_BATCH_SEED));
-					for(int iid = 0; iid<NetworkConfig.batchSize; iid++){
+					int size = NetworkConfig.batchSize >= this._allInstances.length? this._allInstances.length:NetworkConfig.batchSize; 
+					for(int iid = 0; iid<size; iid++){
 						batchInstIds.add(instIds.get(iid));
 					}
 				}
