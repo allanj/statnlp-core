@@ -123,24 +123,11 @@ public abstract class FeatureManager implements Serializable{
 	public void mergeSubFeaturesToGlobalFeatures(){
 		HashMap<String, HashMap<String, HashMap<String, Integer>>> globalFeature2IntMap = this._param_g.getFeatureIntMap();
 
-		// if global mode (test mode), only 1 thread
-		if(this._param_g._subFeatureIntMaps.size()==1){
-			this._param_g._featureIntMap = new HashMap<String, HashMap<String, HashMap<String, Integer>>>(this._param_g._subFeatureIntMaps.get(0));
-			this._param_g._size = this._param_g._subSize[0];
-			this._params_l[0].finalizeIt();
-			this._param_g._subFeatureIntMaps.set(0, null);
-		}else{
-			this._param_g._size = 0;
-			for(int t=0;t<this._param_g._subFeatureIntMaps.size();t++){
-				addIntoGlobalFeatures(globalFeature2IntMap, this._param_g._subFeatureIntMaps.get(t), this._params_l[t]._globalFeature2LocalFeature);
-				this._param_g._subFeatureIntMaps.set(t, null);
-			}
-//			System.err.println(globalFeature2IntMap.toString());
+		this._param_g._size = 0;
+		for(int t=0;t<this._param_g._subFeatureIntMaps.size();t++){
+			addIntoGlobalFeatures(globalFeature2IntMap, this._param_g._subFeatureIntMaps.get(t), this._params_l[t]._globalFeature2LocalFeature);
+			this._param_g._subFeatureIntMaps.set(t, null);
 		}
-		// to release the memory
-//		for(int t=0;t<this._param_g._subFeatureIntMaps.size();t++){
-//			this._param_g._subFeatureIntMaps.set(t, null);
-//		}
 	}
 
 	private void addIntoGlobalFeatures(HashMap<String, HashMap<String, HashMap<String, Integer>>> globalMap, HashMap<String, HashMap<String, HashMap<String, Integer>>> localMap, HashMap<Integer, Integer> gf2lf){
