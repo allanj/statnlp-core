@@ -404,11 +404,6 @@ public class GlobalNetworkParam implements Serializable{
 			if(threadId == -1){
 				throw new NetworkException("Missing network on some toFeature calls while in parallel touch.");
 			}
-//			if(shouldNotCreateNewFeature){
-//				// Currently does not support parallel touch and build features only from labeled instances
-//				// Need to change code to process the labeled instances and finalize features before the unlabeled.
-//				throw new NetworkException("Build features on labeled only, currently works only in sequential touch mode");
-//			}
 			featureIntMap = this._subFeatureIntMaps.get(threadId);
 		}
 		
