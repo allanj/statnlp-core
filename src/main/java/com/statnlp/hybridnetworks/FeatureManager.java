@@ -119,35 +119,15 @@ public abstract class FeatureManager implements Serializable{
 	public LocalNetworkParam[] getParams_L(){
 		return this._params_l;
 	}
-
+	
 	public void mergeSubFeaturesToGlobalFeatures(){
 		HashMap<String, HashMap<String, HashMap<String, Integer>>> globalFeature2IntMap = this._param_g.getFeatureIntMap();
 
-		// if global mode, only 1 thread
-		if(this._param_g._subFeatureIntMaps.size()==1){
-			this._param_g._featureIntMap = new HashMap<String, HashMap<String, HashMap<String, Integer>>>(this._param_g._subFeatureIntMaps.get(0));
-			this._param_g._size = this._param_g._subSize[0];
-			this._params_l[0].finalizeIt();
-			this._param_g._subFeatureIntMaps.set(0, null);
-		}else{
-			this._param_g._size = 0;
-			for(int t=0;t<this._param_g._subFeatureIntMaps.size();t++){
-				addIntoGlobalFeatures(globalFeature2IntMap, this._param_g._subFeatureIntMaps.get(t),this._params_l[t]._globalFeature2LocalFeature);
-				this._params_l[t].finalizeIt();
-				this._param_g._subFeatureIntMaps.set(t, null);
-			}
-//			System.err.println(globalFeature2IntMap.toString());
+		this._param_g._size = 0;
+		for(int t=0;t<this._param_g._subFeatureIntMaps.size();t++){
+			addIntoGlobalFeatures(globalFeature2IntMap, this._param_g._subFeatureIntMaps.get(t), this._params_l[t]._globalFeature2LocalFeature);
+			this._param_g._subFeatureIntMaps.set(t, null);
 		}
-		// to release the memory
-//		for(int t=0;t<this._param_g._subFeatureIntMaps.size();t++){
-//			this._param_g._subFeatureIntMaps.set(t, null);
-//		}
-
-		//complete the type2int map. only in generative model
-		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
-			completeType2Int(globalFeature2IntMap, this._param_g._type2inputMap); 
-		}
-
 	}
 
 	private void addIntoGlobalFeatures(HashMap<String, HashMap<String, HashMap<String, Integer>>> globalMap, HashMap<String, HashMap<String, HashMap<String, Integer>>> localMap, HashMap<Integer, Integer> gf2lf){
@@ -179,7 +159,24 @@ public abstract class FeatureManager implements Serializable{
 		}
 	}
 
-	private void completeType2Int(HashMap<String, HashMap<String, HashMap<String, Integer>>> globalMap,HashMap<String, ArrayList<String>> type2Input){
+	public void addIntoLocalFeatures(HashMap<Integer, Integer> globalFeaturesToLocalFeatures){
+		HashMap<String, HashMap<String, HashMap<String, Integer>>> globalMap = this._param_g.getFeatureIntMap();
+		for(String type: globalMap.keySet()){
+			HashMap<String, HashMap<String, Integer>> outputToInputToIndex = globalMap.get(type);
+			for(String output: outputToInputToIndex.keySet()){
+				HashMap<String, Integer> inputToIndex = outputToInputToIndex.get(output);
+				for(Integer featureIndex: inputToIndex.values()){
+					if(!globalFeaturesToLocalFeatures.containsKey(featureIndex)){
+						globalFeaturesToLocalFeatures.put(featureIndex, globalFeaturesToLocalFeatures.size());
+					}
+				}
+			}
+		}
+	}
+
+	public void completeType2Int(){
+		HashMap<String, HashMap<String, HashMap<String, Integer>>> globalMap = this._param_g._featureIntMap;
+		HashMap<String, ArrayList<String>> type2Input = this._param_g._type2inputMap;
 		Iterator<String> iterType = globalMap.keySet().iterator();
 		while(iterType.hasNext()){
 			String type = iterType.next();
@@ -218,7 +215,12 @@ public abstract class FeatureManager implements Serializable{
 	 * @return
 	 */
 	public FeatureArray extract(Network network, int parent_k, int[] children_k, int children_k_index){
-		if(this.isCacheEnabled()){
+		// Do not cache in the first touch when parallel touch and extract only from labeled is enabled,
+		// since the local feature indices will change
+		boolean shouldCache = this.isCacheEnabled() && (NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION
+														|| !NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY
+														|| this._param_g.isLocked());
+		if(shouldCache){
 			if(this._cache[network.getNetworkId()] == null){
 				this._cache[network.getNetworkId()] = new FeatureArray[network.countNodes()][];
 			}
@@ -232,7 +234,7 @@ public abstract class FeatureManager implements Serializable{
 		
 		FeatureArray fa = this.extract_helper(network, parent_k, children_k);
 		
-		if(this.isCacheEnabled()){
+		if(shouldCache){
 			this._cache[network.getNetworkId()][parent_k][children_k_index] = fa;
 		}
 		return fa;

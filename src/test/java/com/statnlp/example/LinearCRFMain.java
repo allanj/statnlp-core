@@ -19,7 +19,6 @@ import com.statnlp.hybridnetworks.NetworkModel;
 
 public class LinearCRFMain {
 	
-	public static ArrayList<Label> allLabels;
 	
 	public static void main(String args[]) throws IOException, InterruptedException{
 		
@@ -27,13 +26,15 @@ public class LinearCRFMain {
 		
 		String inst_filename = "data/train.txt";
 		String test_filename = "data/test.txt";
+
 		
 		int numTrain = 200;
 		LinearCRFInstance[] trainInstances = readCoNLLData(inst_filename, true, true, numTrain);
 		LinearCRFInstance[] testInstances = readCoNLLData(test_filename, true, false);
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
-		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = false;  
+		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = false;
+		NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = true;
 		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.0;
 		NetworkConfig._numThreads = 4;
@@ -44,6 +45,7 @@ public class LinearCRFMain {
 
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;   
+
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
 		
 		int numIterations = 1000;

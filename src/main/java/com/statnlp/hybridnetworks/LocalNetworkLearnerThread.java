@@ -128,24 +128,23 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
      * and caching the networks if {@link #_cacheNetworks} is true.
      */
 	public void touch(){
-		//for now, disable the feature cache...
-//		this._param.disableCache();
-		
 		long time = System.currentTimeMillis();
 		//extract the features..
 		for(int networkId = 0; networkId< this._instances.length; networkId++){
 			if(networkId%100==0)
 				System.err.print('.');
+			if(NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY
+					&& ((!this._param._isFinalized && this.getNetwork(networkId).getInstance().getInstanceId() < 0))){
+				// When extracting features only for labeled, the first touch is only to extract features from labeled instances
+				// The second touch, enabled only when caching is enabled, which is after the LocalNetworkParam being finalized,
+				// is only for feature caching
+				continue;
+			}
 			this.getNetwork(networkId).touch();
 		}
 		System.err.println();
 		time = System.currentTimeMillis() - time;
 		System.out.println("Thread "+this._threadId + " touch time: "+ time/1000.0+" secs.");
-		
-		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
-			this._param.finalizeIt();
-		}
-		
 	}
 
 	public void setTouch(){
@@ -155,7 +154,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	public void setUnTouch(){
 		this.isTouching = false;
 	}
-
+	
 	/**
 	 * Do one iteration of training
 	 * add the batch size here is we are using the batch gradient descent, 
@@ -167,7 +166,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 		int[] trainNetworkID = null;
 		if(!NetworkConfig.USE_BATCH_SGD || _batchSize>this._instances.length){
 			trainNetworkID = new int[this._instances.length];
-			for()
+			//for()
 		}else{
 			Collections.shuffle(networkIDlists, new Random(NetworkConfig.RANDOM_BATCH_SEED));
 			trainSize = this._batchSize;
@@ -175,7 +174,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 		for(int i = 0; i< trainSize; i++){
 			
 			Network network = this.getNetwork(networkIDlists.get(i));
-			network
+			//network
 			network.train();
 		}
 	}

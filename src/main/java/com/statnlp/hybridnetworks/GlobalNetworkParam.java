@@ -22,7 +22,6 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -399,52 +398,6 @@ public class GlobalNetworkParam implements Serializable{
 	public int toFeature(String type , String output , String input){
 		return this.toFeature(null, type, output, input);
 	}
-	
-	public int toFeature(Network network , String type , String output , String input){ //process later , if threadId = −1, global mode.
-		//if it is locked, then we might return a dummy feature
-		//if the feature does not appear to be present.
-		if(this.isLocked() || (NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY && network.getInstance().getInstanceId() < 0)){
-			if(!this._featureIntMap.containsKey(type)){
-				return -1;
-			} else {
-				HashMap<String, HashMap<String, Integer>> output2input = this._featureIntMap.get(type);
-				if(!output2input.containsKey(output)){
-					return -1;
-				} else {
-					HashMap<String, Integer> input2id = output2input.get(output);
-					if(!input2id.containsKey(input)){
-						return -1;
-					} else {
-						return input2id.get(input);
-					}
-				}
-			}
-		}
-		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
-			return toSeqFeature(type, output, input);
-		} else {
-			return toParFeature(network, type, output, input);
-		}
-	}
-
-	private int toParFeature(Network network, String type, String output, String input) throws RuntimeException {
-		int threadId = network != null ? network.getThreadId() : -1;
-		if(threadId == -1){
-			throw new RuntimeException("Missing network on some toFeature calls while in parallel touch.");
-		}
-		if(!this._subFeatureIntMaps.get(threadId).containsKey(type)){
-			this._subFeatureIntMaps.get(threadId).put(type, new HashMap<String, HashMap<String, Integer>>());
-		}
-		HashMap<String, HashMap<String, Integer>> mapByType = this._subFeatureIntMaps.get(threadId).get(type);
-		if(!mapByType.containsKey(output)){
-			mapByType.put(output, new HashMap<String, Integer>());
-		}
-		HashMap<String, Integer> subMap = mapByType.get(output);
-		if(!subMap.containsKey(input)){
-			subMap.put(input, this._subSize[threadId]++);
-		}
-		return subMap.get(input);
-	}
 
 	/**
 	 * Converts a tuple of feature type, input, and output into the feature index.
@@ -456,30 +409,60 @@ public class GlobalNetworkParam implements Serializable{
 	 * @param input The input (e.g., for emission feature in HMM this might be the word itself) 
 	 * @return
 	 */
-	public int toSeqFeature(String type, String output, String input){
-		if(!this._featureIntMap.containsKey(type)){
-			this._featureIntMap.put(type, new HashMap<String, HashMap<String, Integer>>());
+	public int toFeature(Network network , String type , String output , String input){ //process later , if threadId = −1, global mode.
+		int threadId = network != null ? network.getThreadId() : -1;
+		boolean shouldNotCreateNewFeature = (NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY && network.getInstance().getInstanceId() < 0);
+		HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap = null;
+		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION || this.isLocked()){
+			featureIntMap = this._featureIntMap;
+		} else {
+			if(threadId == -1){
+				throw new NetworkException("Missing network on some toFeature calls while in parallel touch.");
+			}
+//			if(shouldNotCreateNewFeature){
+//				// Currently does not support parallel touch and build features only from labeled instances
+//				// Need to change code to process the labeled instances and finalize features before the unlabeled.
+//				throw new NetworkException("Build features on labeled only, currently works only in sequential touch mode");
+//			}
+			featureIntMap = this._subFeatureIntMaps.get(threadId);
 		}
 		
-		HashMap<String, HashMap<String, Integer>> mapByType = this._featureIntMap.get(type);
-		
-		if(!mapByType.containsKey(output))
-			mapByType.put(output, new HashMap<String, Integer>());
-		
-		HashMap<String, Integer> subMap = mapByType.get(output);
-		if(!subMap.containsKey(input)){
-			subMap.put(input, this._size++);
-			if(!this._type2inputMap.containsKey(type)){
-				this._type2inputMap.put(type, new ArrayList<String>());
+		//if it is locked, then we might return a dummy feature
+		//if the feature does not appear to be present.
+		if(this.isLocked() || shouldNotCreateNewFeature){
+			if(!featureIntMap.containsKey(type)){
+				return -1;
 			}
-			ArrayList<String> inputs = this._type2inputMap.get(type);
-			int index = Collections.binarySearch(inputs, input);
-			if(index<0){
-				inputs.add(-1-index, input);
+			HashMap<String, HashMap<String, Integer>> output2input = featureIntMap.get(type);
+			if(!output2input.containsKey(output)){
+				return -1;
+			}
+			HashMap<String, Integer> input2id = output2input.get(output);
+			if(!input2id.containsKey(input)){
+				return -1;
+			}
+			return input2id.get(input);
+		}
+		
+		if(!featureIntMap.containsKey(type)){
+			featureIntMap.put(type, new HashMap<String, HashMap<String, Integer>>());
+		}
+
+		HashMap<String, HashMap<String, Integer>> outputToInputToIdx = featureIntMap.get(type);
+		if(!outputToInputToIdx.containsKey(output)){
+			outputToInputToIdx.put(output, new HashMap<String, Integer>());
+		}
+		
+		HashMap<String, Integer> inputToIdx = outputToInputToIdx.get(output);
+		if(!inputToIdx.containsKey(input)){
+			if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
+				inputToIdx.put(input, this._size++);
+			} else {
+				inputToIdx.put(input, this._subSize[threadId]++);
 			}
 		}
 
-		return subMap.get(input);
+		return inputToIdx.get(input);
 	}
 	
 	/**
