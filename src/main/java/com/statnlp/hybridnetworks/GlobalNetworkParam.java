@@ -391,7 +391,12 @@ public class GlobalNetworkParam implements Serializable{
 	 */
 	public int toFeature(Network network , String type , String output , String input){ //process later , if threadId = −1, global mode.
 		int threadId = network != null ? network.getThreadId() : -1;
-		boolean shouldNotCreateNewFeature = (NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY && network.getInstance().getInstanceId() < 0);
+		boolean shouldNotCreateNewFeature = false;
+		try{
+			shouldNotCreateNewFeature = (NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY && network.getInstance().getInstanceId() < 0);
+		} catch (NullPointerException e){
+			throw new NetworkException("Missing network on some toFeature calls while trying to extract only from labeled networks.");
+		}
 		HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap = null;
 		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION || this.isLocked()){
 			featureIntMap = this._featureIntMap;
