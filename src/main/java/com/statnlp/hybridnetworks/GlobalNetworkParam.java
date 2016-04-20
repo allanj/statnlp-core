@@ -57,7 +57,7 @@ public class GlobalNetworkParam implements Serializable{
 	/** A variable to store current value of the objective function */
 	protected transient double _obj;
 	/** A variable for batch SGD optimization, if applicable */
-	protected transient int _globalBatchSize;
+	protected transient int _batchSize;
 	
 	protected transient int _version;
 	
@@ -104,7 +104,7 @@ public class GlobalNetworkParam implements Serializable{
 		if(this.isDiscriminative()){
 			if(NetworkConfig.USE_STRUCTURED_SVM){
 				this._opt = new GradientDescentOptimizer();
-				this._globalBatchSize = NetworkConfig.localBatchSize * NetworkConfig._numThreads;
+				this._batchSize = NetworkConfig.batchSize;
 			} else {
 				this._opt = new LBFGSOptimizer();
 			}
@@ -639,7 +639,7 @@ public class GlobalNetworkParam implements Serializable{
 		
 		double cof = 1.0;
 		if(NetworkConfig.USE_BATCH_SGD){
-			cof = this._globalBatchSize*1.0/this.totalNumInsts;
+			cof = this._batchSize*1.0/this.totalNumInsts;
 			if(cof>1) cof = 1.0;
 		}
 		

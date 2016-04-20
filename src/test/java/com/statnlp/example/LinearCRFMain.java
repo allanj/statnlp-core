@@ -28,7 +28,7 @@ public class LinearCRFMain {
 		String test_filename = "data/test.txt";
 
 		
-		int numTrain = 200;
+		int numTrain = 1000;
 		LinearCRFInstance[] trainInstances = readCoNLLData(inst_filename, true, true, numTrain);
 		LinearCRFInstance[] testInstances = readCoNLLData(test_filename, true, false);
 		
@@ -37,10 +37,10 @@ public class LinearCRFMain {
 		NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = true;
 		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.0;
-		NetworkConfig._numThreads = 4;
+		NetworkConfig._numThreads = 8;
 		
 		NetworkConfig.USE_STRUCTURED_SVM = true; // To use Structured SVM (need to define loss function in the network
-		NetworkConfig.localBatchSize = 1000;
+		NetworkConfig.batchSize = 100;
 		LinearCRFNetwork.useZeroOneLossAtEachNode = true; // Whether to calculate loss at each node or only at root
 
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch

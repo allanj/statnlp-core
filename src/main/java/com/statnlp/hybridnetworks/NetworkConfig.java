@@ -41,7 +41,7 @@ public class NetworkConfig {
 	public static int _NETWORK_MAX_DEPTH = 901;
 	public static int _nGRAM = 1;//2;//1;
 	public static double objtol = 10e-15;//the value used for checking the objective increment for generative models.
-	public static int localBatchSize = 20; //batch size for batch SGD (if applicable) batch size for each thread
+	public static int batchSize = 20; //batch size for batch SGD (if applicable) batch size for each thread
 	public static int RANDOM_BATCH_SEED = 2345;
 	
 	public static int _SEMANTIC_FOREST_MAX_DEPTH = 20;//the max depth of the forest when creating the semantic forest.

@@ -19,7 +19,10 @@ package com.statnlp.hybridnetworks;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -100,6 +103,9 @@ public abstract class NetworkModel implements Serializable{
 			this._allInstances[k].setInstanceId(k+1);
 		}
 		this._fm.getParam_G().setInstsNum(this._allInstances.length);
+		HashSet<Integer> batchInstIds = new HashSet<Integer>();
+		ArrayList<Integer> instIds = new ArrayList<Integer>();
+		for(int i=0;i<_allInstances.length;i++) instIds.add(i+1);
 		if(NetworkConfig.USE_STRUCTURED_SVM) NetworkConfig.USE_BATCH_SGD = true;
 		
 		//create the threads.
@@ -153,8 +159,19 @@ public abstract class NetworkModel implements Serializable{
 		long startTime = System.currentTimeMillis();
 		try{
 			for(int it = 0; it<maxNumIterations; it++){
+				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
+				if(NetworkConfig.USE_BATCH_SGD){
+					batchInstIds.clear();
+					Collections.shuffle(instIds, new Random(NetworkConfig.RANDOM_BATCH_SEED));
+					for(int iid = 0; iid<NetworkConfig.batchSize; iid++){
+						batchInstIds.add(instIds.get(iid));
+					}
+				}
+				//
+				//
 				for(LocalNetworkLearnerThread learner: this._learners){
 					learner.setIterationNumber(it);
+					if(NetworkConfig.USE_BATCH_SGD) learner.setInstanceIdSet(batchInstIds);
 				}
 				long time = System.currentTimeMillis();
 				List<Future<Void>> results = pool.invokeAll(callables);
