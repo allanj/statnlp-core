@@ -38,6 +38,16 @@ public abstract class OptimizerFactory {
 	 * @param learningRate
 	 * @return
 	 */
+	public static GradientDescentOptimizerFactory getGradientDescentFactory(){
+		return new GradientDescentOptimizerFactory(AdaptiveMethod.NONE, DEFAULT_LEARNING_RATE, 0.0, 0.0);
+	}
+	
+	/**
+	 * Return the factory object to create a gradient descent optimizer.<br>
+	 * The returned factory will create instances of GradientDescentOptimizer with normal (S)GD procedure.<br>
+	 * @param learningRate
+	 * @return
+	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactory(double learningRate){
 		return new GradientDescentOptimizerFactory(AdaptiveMethod.NONE, learningRate, 0.0, 0.0);
 	}
@@ -80,13 +90,12 @@ public abstract class OptimizerFactory {
 	 * Return the factory object to create a gradient descent optimizer.<br>
 	 * The returned factory will create instances of GradientDescentOptimizer with ADADELTA adaptive method.<br>
 	 * The hyperparameters are set according to the passed values.
-	 * @param learningRate
 	 * @param phi
 	 * @param eps
 	 * @return
 	 */
-	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaDelta(double learningRate, double phi, double eps){
-		return new GradientDescentOptimizerFactory(AdaptiveMethod.ADADELTA, learningRate, phi, eps);
+	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaDelta(double phi, double eps){
+		return new GradientDescentOptimizerFactory(AdaptiveMethod.ADADELTA, 0.0, phi, eps);
 	}
 	
 	public abstract Optimizer create(int numWeights);

@@ -22,8 +22,8 @@ public class LinearCRFMain {
 	
 	
 	public static void main(String args[]) throws IOException, InterruptedException{
-		String inst_filename = "data/train.txt";
-		String test_filename = "data/test.txt";
+		String inst_filename = "data/train.data";
+		String test_filename = "data/test.data";
 
 		int numTrain = 1000;
 		LinearCRFInstance[] trainInstances = readCoNLLData(inst_filename, true, true, numTrain);
@@ -31,9 +31,9 @@ public class LinearCRFMain {
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
 		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = false;
-		NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = true;
+		NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = false;
 		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
-		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.0;
+		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
 		NetworkConfig._numThreads = 4;
 		
 		NetworkConfig.USE_STRUCTURED_SVM = true; // To use Structured SVM (need to define loss function in the network
@@ -43,10 +43,10 @@ public class LinearCRFMain {
 		LinearCRFNetwork.useZeroOneLossAtEachNode = true; // Whether to calculate loss at each node or only at root
 
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
-		NetworkConfig.RANDOM_INIT_WEIGHT = false;
+		NetworkConfig.RANDOM_INIT_WEIGHT = true;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
 		
-		int numIterations = 300;
+		int numIterations = 1000;
 		
 		int size = trainInstances.length;
 		
@@ -54,7 +54,7 @@ public class LinearCRFMain {
 		
 		OptimizerFactory optimizerFactory;
 		if(NetworkConfig.USE_STRUCTURED_SVM){
-			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaDelta();
+			optimizerFactory = OptimizerFactory.getGradientDescentFactory();
 		} else {
 			optimizerFactory = OptimizerFactory.getLBFGSFactory();
 		}
