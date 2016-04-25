@@ -33,6 +33,8 @@ import com.statnlp.commons.types.Instance;
 
 public abstract class NetworkModel implements Serializable{
 	
+	private static final Random RANDOM = new Random(NetworkConfig.RANDOM_BATCH_SEED);
+
 	private static final long serialVersionUID = 8695006398137564299L;
 	
 	//the global feature manager.
@@ -152,9 +154,6 @@ public abstract class NetworkModel implements Serializable{
 		
 		double obj_old = Double.NEGATIVE_INFINITY;
 		
-		
-		
-		
 		//run the EM-style algorithm now...
 		long startTime = System.currentTimeMillis();
 		try{
@@ -162,14 +161,12 @@ public abstract class NetworkModel implements Serializable{
 				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
 				if(NetworkConfig.USE_BATCH_SGD){
 					batchInstIds.clear();
-					Collections.shuffle(instIds, new Random(NetworkConfig.RANDOM_BATCH_SEED));
+					Collections.shuffle(instIds, RANDOM);
 					int size = NetworkConfig.batchSize >= this._allInstances.length? this._allInstances.length:NetworkConfig.batchSize; 
 					for(int iid = 0; iid<size; iid++){
 						batchInstIds.add(instIds.get(iid));
 					}
 				}
-				//
-				//
 				for(LocalNetworkLearnerThread learner: this._learners){
 					learner.setIterationNumber(it);
 					if(NetworkConfig.USE_BATCH_SGD) learner.setInstanceIdSet(batchInstIds);
