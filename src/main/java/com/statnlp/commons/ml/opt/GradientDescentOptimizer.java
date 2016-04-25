@@ -36,22 +36,16 @@ public class GradientDescentOptimizer implements Optimizer{
 	private double _obj;
 	private double prevOuterProduct[];
 	
-	private double _T = 1.0;
+//	private double _T = 1.0; // Controls learning rate adjustment
 	private boolean adaGrad = true;
 	
-	
-	public GradientDescentOptimizer(){
-		this(DEFAULT_LEARNING_RATE,0);
-		//should have some problem here.
-	}
-	
 	public GradientDescentOptimizer(int weightLength){
-		this(DEFAULT_LEARNING_RATE,weightLength);
+		this(DEFAULT_LEARNING_RATE, weightLength);
 	}
 	
 	public GradientDescentOptimizer(double learningRate,int weightLength){
 		this._learningRate = learningRate;
-		this._T = 1;
+//		this._T = 1;
 		this.prevOuterProduct = new double[weightLength];
 	}
 	
@@ -59,18 +53,36 @@ public class GradientDescentOptimizer implements Optimizer{
 		return this._learningRate;
 	}
 	
+	@Override
 	public void setVariables(double[] x){
 //		System.err.println("x0="+x[0]);
 		this._x = x;
 	}
 	
+	@Override
 	public void setObjective(double obj){
 		this._obj = obj;
 	}
 	
+	@Override
 	public void setGradients(double[] g){
 //		System.err.println("g0="+g[0]);
 		this._g = g;
+	}
+
+	@Override
+	public double getObjective() {
+		return _obj;
+	}
+
+	@Override
+	public double[] getVariables() {
+		return _x;
+	}
+
+	@Override
+	public double[] getGradients() {
+		return _g;
 	}
 	
 	public boolean optimize() throws ExceptionWithIflag{

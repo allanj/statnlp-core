@@ -105,10 +105,7 @@ public class GlobalNetworkParam implements Serializable{
 		this._isDiscriminative = !NetworkConfig.TRAIN_MODE_IS_GENERATIVE;
 		if(this.isDiscriminative()){
 			if(NetworkConfig.USE_STRUCTURED_SVM){
-				this._opt = new GradientDescentOptimizer();
 				this._batchSize = NetworkConfig.batchSize;
-			} else {
-				this._opt = new LBFGSOptimizer();
 			}
 			this._kappa = NetworkConfig.L2_REGULARIZATION_CONSTANT;
 		}

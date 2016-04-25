@@ -16,12 +16,7 @@
  */
 package com.statnlp.hybridnetworks;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.Callable;
 
 import com.statnlp.commons.types.Instance;

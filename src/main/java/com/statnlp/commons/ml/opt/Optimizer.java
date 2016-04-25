@@ -10,5 +10,11 @@ public interface Optimizer {
 	
 	public void setGradients(double[] g);
 	
+	public double getObjective();
+	
+	public double[] getVariables();
+	
+	public double[] getGradients();
+	
 	public boolean optimize() throws ExceptionWithIflag;
 }

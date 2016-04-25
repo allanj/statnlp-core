@@ -32,10 +32,12 @@ public class LBFGSOptimizer implements Optimizer{
 	private double[] _g;
 	private boolean _diagco = false;
 	
+	@Override
 	public void setObjective(double f){
 		this._f = f;
 	}
 
+	@Override
 	public void setVariables(double[] x){
 		this._x = x;
 		this._n = x.length;
@@ -47,12 +49,24 @@ public class LBFGSOptimizer implements Optimizer{
 		}
 	}
 	
+	@Override
 	public void setGradients(double[] g){
 		this._g = g;
 	}
-	
-	public void updateVariables(double[] x){
-		this._x = x;
+
+	@Override
+	public double getObjective() {
+		return _f;
+	}
+
+	@Override
+	public double[] getVariables() {
+		return _x;
+	}
+
+	@Override
+	public double[] getGradients() {
+		return _g;
 	}
 	
 	//return true if it should stop.
