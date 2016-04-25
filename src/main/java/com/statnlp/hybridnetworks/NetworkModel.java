@@ -108,7 +108,6 @@ public abstract class NetworkModel implements Serializable{
 		HashSet<Integer> batchInstIds = new HashSet<Integer>();
 		ArrayList<Integer> instIds = new ArrayList<Integer>();
 		for(int i=0;i<_allInstances.length;i++) instIds.add(i+1);
-		if(NetworkConfig.USE_STRUCTURED_SVM) NetworkConfig.USE_BATCH_SGD = true;
 		
 		//create the threads.
 		this._learners = new LocalNetworkLearnerThread[this._numThreads];

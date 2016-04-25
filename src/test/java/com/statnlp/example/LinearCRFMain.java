@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 
+import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.example.linear_crf.Label;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
@@ -21,13 +22,9 @@ public class LinearCRFMain {
 	
 	
 	public static void main(String args[]) throws IOException, InterruptedException{
-		
-//		String lang = args[1];
-		
 		String inst_filename = "data/train.txt";
 		String test_filename = "data/test.txt";
 
-		
 		int numTrain = 1000;
 		LinearCRFInstance[] trainInstances = readCoNLLData(inst_filename, true, true, numTrain);
 		LinearCRFInstance[] testInstances = readCoNLLData(test_filename, true, false);
@@ -37,24 +34,31 @@ public class LinearCRFMain {
 		NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = true;
 		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.0;
-		NetworkConfig._numThreads = 8;
+		NetworkConfig._numThreads = 4;
 		
 		NetworkConfig.USE_STRUCTURED_SVM = true; // To use Structured SVM (need to define loss function in the network
-		NetworkConfig.batchSize = 100;
+		NetworkConfig.USE_BATCH_SGD = false; // To use or not to use mini-batches in gradient descent optimizer
+		NetworkConfig.batchSize = 1;         // The mini-batch size (if USE_BATCH_SGD = true)
+		
 		LinearCRFNetwork.useZeroOneLossAtEachNode = true; // Whether to calculate loss at each node or only at root
 
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
-		NetworkConfig.RANDOM_INIT_WEIGHT = false;   
-
+		NetworkConfig.RANDOM_INIT_WEIGHT = false;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
 		
-		int numIterations = 1000;
+		int numIterations = 300;
 		
 		int size = trainInstances.length;
 		
 		System.err.println("Read.."+size+" instances.");
 		
-		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(new GlobalNetworkParam());
+		OptimizerFactory optimizerFactory;
+		if(NetworkConfig.USE_STRUCTURED_SVM){
+			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaDelta();
+		} else {
+			optimizerFactory = OptimizerFactory.getLBFGSFactory();
+		}
+		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(new GlobalNetworkParam(optimizerFactory));
 		
 		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler();
 		

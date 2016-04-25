@@ -27,12 +27,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import com.statnlp.commons.ml.opt.GradientDescentOptimizer;
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
-import com.statnlp.commons.ml.opt.LBFGSOptimizer;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
+import com.statnlp.commons.ml.opt.OptimizerFactory;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
@@ -50,6 +49,8 @@ public class GlobalNetworkParam implements Serializable{
 	protected transient double _kappa;
 	/** The optimizer */
 	protected transient Optimizer _opt;
+	/** The optimizer factory */
+	protected transient OptimizerFactory _optFactory;
 	/** The gradient for each dimension */
 	protected transient double[] _counts;
 	/** A variable to store previous value of the objective function */
@@ -96,6 +97,10 @@ public class GlobalNetworkParam implements Serializable{
 	protected int totalNumInsts;
 	
 	public GlobalNetworkParam(){
+		this(OptimizerFactory.getLBFGSFactory());
+	}
+	
+	public GlobalNetworkParam(OptimizerFactory optimizerFactory){
 		this._locked = false;
 		this._version = -1;
 		this._size = 0;
@@ -104,13 +109,12 @@ public class GlobalNetworkParam implements Serializable{
 		this._obj = Double.NEGATIVE_INFINITY;
 		this._isDiscriminative = !NetworkConfig.TRAIN_MODE_IS_GENERATIVE;
 		if(this.isDiscriminative()){
-			if(NetworkConfig.USE_STRUCTURED_SVM){
-				this._batchSize = NetworkConfig.batchSize;
-			}
+			this._batchSize = NetworkConfig.batchSize;
 			this._kappa = NetworkConfig.L2_REGULARIZATION_CONSTANT;
 		}
 		this._featureIntMap = new HashMap<String, HashMap<String, HashMap<String, Integer>>>();
 		this._type2inputMap = new HashMap<String, ArrayList<String>>();
+		this._optFactory = optimizerFactory;
 		if (!NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
 			this._subFeatureIntMaps = new ArrayList<HashMap<String, HashMap<String, HashMap<String, Integer>>>>();
 			for (int i = 0; i < NetworkConfig._numThreads; i++){
@@ -319,11 +323,7 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		this._version = 0;
-		if(NetworkConfig.USE_STRUCTURED_SVM){
-			this._opt = new GradientDescentOptimizer(this._weights.length);	
-		} else {
-			this._opt = new LBFGSOptimizer();
-		}
+		this._opt = this._optFactory.create(this._weights.length);
 		this._locked = true;
 		
 		System.err.println(this._size+" features.");
@@ -371,11 +371,7 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		this._version = 0;
-		if(NetworkConfig.USE_STRUCTURED_SVM){
-			this._opt = new GradientDescentOptimizer(this._weights.length);
-		} else {
-			this._opt = new LBFGSOptimizer();
-		}
+		this._opt = this._optFactory.create(this._weights.length);
 		this._locked = true;
 		
 		System.err.println(this._size+" features.");
@@ -597,18 +593,20 @@ public class GlobalNetworkParam implements Serializable{
     		throw new NetworkException("Exception with Iflag:"+e.getMessage());
     	}
 		
-    	double diff = this.getObj()-this.getObj_old();
-    	if(diff >= 0 && diff < NetworkConfig.objtol){
-    		done = true;
-    	}
-    	double diffRatio = Math.abs(diff/this.getObj_old());
-    	if(diffRatio < 1e-4){
-    		this.smallChangeCount += 1;
-    	} else {
-    		this.smallChangeCount = 0;
-    	}
-    	if(this.smallChangeCount == 3){
-    		done = true;
+    	if(!NetworkConfig.USE_STRUCTURED_SVM){
+	    	double diff = this.getObj()-this.getObj_old();
+	    	if(diff >= 0 && diff < NetworkConfig.objtol){
+	    		done = true;
+	    	}
+	    	double diffRatio = Math.abs(diff/this.getObj_old());
+	    	if(diffRatio < 1e-4){
+	    		this.smallChangeCount += 1;
+	    	} else {
+	    		this.smallChangeCount = 0;
+	    	}
+	    	if(this.smallChangeCount == 3){
+	    		done = true;
+	    	}
     	}
     	if(done && !NetworkConfig.USE_STRUCTURED_SVM){
     		// If we stop early, we need to copy solution_cache,
@@ -636,10 +634,10 @@ public class GlobalNetworkParam implements Serializable{
 	 */
 	protected synchronized void resetCountsAndObj(){
 		
-		double cof = 1.0;
+		double coef = 1.0;
 		if(NetworkConfig.USE_BATCH_SGD){
-			cof = this._batchSize*1.0/this.totalNumInsts;
-			if(cof>1) cof = 1.0;
+			coef = this._batchSize*1.0/this.totalNumInsts;
+			if(coef>1) coef = 1.0;
 		}
 		
 		
@@ -647,13 +645,13 @@ public class GlobalNetworkParam implements Serializable{
 			this._counts[k] = 0.0;
 			//for regularization
 			if(this.isDiscriminative() && this._kappa > 0 && k>=this._fixedFeaturesSize){
-				this._counts[k] += 2 * cof * this._kappa * this._weights[k];
+				this._counts[k] += 2 * coef * this._kappa * this._weights[k];
 			}
 		}
 		this._obj = 0.0;
 		//for regularization
 		if(this.isDiscriminative() && this._kappa > 0){
-			this._obj += - cof * this._kappa * MathsVector.square(this._weights);
+			this._obj += - coef * this._kappa * MathsVector.square(this._weights);
 		}
 		//NOTES:
 		//for additional terms such as regularization terms:

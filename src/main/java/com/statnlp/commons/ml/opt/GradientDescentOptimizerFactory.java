@@ -16,21 +16,25 @@
  */
 package com.statnlp.commons.ml.opt;
 
-import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
+import com.statnlp.commons.ml.opt.GradientDescentOptimizer.AdaptiveMethod;
 
-public interface Optimizer {
+public class GradientDescentOptimizerFactory extends OptimizerFactory {
+	
+	private AdaptiveMethod adaptiveMethod;
+	private double learningRate;
+	private double adadeltaPhi;
+	private double adadeltaEps;
 
-	public void setObjective(double f);
+	GradientDescentOptimizerFactory(AdaptiveMethod adaptiveMethod, double learningRate, double adadeltaPhi, double adadeltaEps) {
+		this.adaptiveMethod = adaptiveMethod;
+		this.learningRate = learningRate;
+		this.adadeltaPhi = adadeltaPhi;
+		this.adadeltaEps = adadeltaEps;
+	}
 
-	public void setVariables(double[] x);
-	
-	public void setGradients(double[] g);
-	
-	public double getObjective();
-	
-	public double[] getVariables();
-	
-	public double[] getGradients();
-	
-	public boolean optimize() throws ExceptionWithIflag;
+	@Override
+	public GradientDescentOptimizer create(int numWeights) {
+		return new GradientDescentOptimizer(adaptiveMethod, learningRate, adadeltaPhi, adadeltaEps, numWeights);
+	}
+
 }

@@ -1,5 +1,5 @@
 /** Statistical Natural Language Processing System
-    Copyright (C) 2014-2015  Lu, Wei
+    Copyright (C) 2014-2016  Lu, Wei
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -14,9 +14,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-/**
- * 
- */
 package com.statnlp.commons.ml.opt;
 
 
@@ -28,25 +25,30 @@ import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
  */
 public class GradientDescentOptimizer implements Optimizer{
 	
-	public static final double DEFAULT_LEARNING_RATE = 0.01;
-	
 	private double _learningRate;
 	private double[] _x;
 	private double[] _g;
 	private double _obj;
-	private double prevOuterProduct[];
+	private double prevGradients[];
+	private double prevDelta[];
 	
-//	private double _T = 1.0; // Controls learning rate adjustment
-	private boolean adaGrad = true;
-	
-	public GradientDescentOptimizer(int weightLength){
-		this(DEFAULT_LEARNING_RATE, weightLength);
+	public static enum AdaptiveMethod {
+		NONE,
+		ADAGRAD,
+		ADADELTA,
 	}
 	
-	public GradientDescentOptimizer(double learningRate,int weightLength){
+	private AdaptiveMethod adaptiveMethod;
+	private double adadeltaPhi;
+	private double adadeltaEps;
+	
+	public GradientDescentOptimizer(AdaptiveMethod adaptiveMethod, double learningRate, double adadeltaPhi, double adadeltaEps, int weightLength){
 		this._learningRate = learningRate;
-//		this._T = 1;
-		this.prevOuterProduct = new double[weightLength];
+		this.prevGradients = new double[weightLength];
+		this.prevDelta = new double[weightLength];
+		this.adaptiveMethod = adaptiveMethod;
+		this.adadeltaPhi = adadeltaPhi;
+		this.adadeltaEps = adadeltaEps;
 	}
 	
 	public double getLearningRate(){
@@ -86,17 +88,24 @@ public class GradientDescentOptimizer implements Optimizer{
 	}
 	
 	public boolean optimize() throws ExceptionWithIflag{
-//		this._learningRate *= 1/this._T;
 		for(int k = 0; k<this._x.length; k++){
-			double updateCof = this._learningRate;
-			if(adaGrad) {
-				prevOuterProduct[k] += this._g[k]*this._g[k];
-				if(prevOuterProduct[k]!=0.0)
-					updateCof = this._learningRate/Math.sqrt(prevOuterProduct[k]);
+			if(adaptiveMethod == AdaptiveMethod.NONE){ // Normal (S)GD
+				this._x[k] -= this._learningRate * this._g[k];
 			}
-			this._x[k] -= updateCof * this._g[k];
+			if(adaptiveMethod == AdaptiveMethod.ADAGRAD) { // based on http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf
+				prevGradients[k] += this._g[k]*this._g[k];
+				double updateCoef = this._learningRate;
+				if(prevGradients[k]!=0.0){
+					updateCoef /= Math.sqrt(prevGradients[k]);
+				}
+				this._x[k] -= updateCoef * this._g[k];
+			} else if (adaptiveMethod == AdaptiveMethod.ADADELTA){ // based on http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
+				prevGradients[k] = adadeltaPhi*prevGradients[k] + (1-adadeltaPhi)*Math.pow(this._g[k], 2);
+				double update = Math.sqrt(prevDelta[k]+adadeltaEps)/Math.sqrt(prevGradients[k]+adadeltaEps) * this._g[k];
+				prevDelta[k] = adadeltaPhi*prevDelta[k] + (1-adadeltaPhi)*Math.pow(update, 2);
+				this._x[k] -= update;
+			}
 		}
-//		this._T++;
 		return false;
 	}
 }
