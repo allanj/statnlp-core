@@ -16,6 +16,7 @@
  */
 package com.statnlp.hybridnetworks;
 
+import java.util.HashSet;
 import java.util.concurrent.Callable;
 
 import com.statnlp.commons.types.Instance;
@@ -42,6 +43,9 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	private NetworkCompiler _builder;
 	/** The current iteration number */
 	private int _it;
+	
+	/** Prepare the list of instance ids for the batch selection */
+	private HashSet<Integer> chargeInstsIds = null;
 	
 	/**
 	 * Construct a new learner thread using current networks (if cached) or builder (if not cached),
@@ -147,14 +151,17 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	
 	/**
 	 * Do one iteration of training
+	 * add the batch size here is we are using the batch gradient descent, 
+	 * every time we shuffle the list.
 	 * @param it
 	 */
 	private void train(int it){
-		for(int networkId = 0; networkId< this._instances.length; networkId++){
-			Network network = this.getNetwork(networkId);
+		for(int i = 0; i< this._instances.length; i++){
+			if(NetworkConfig.USE_BATCH_SGD && !this.chargeInstsIds.contains(this._instances[i].getInstanceId()) && !this.chargeInstsIds.contains(-this._instances[i].getInstanceId()) )
+				continue;
+			Network network = this.getNetwork(i);
 			network.train();
 		}
-		
 	}
 	
 	private Network getNetwork(int networkId){
@@ -181,6 +188,10 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 
 	public void setIterationNumber(int it) {
 		this._it = it;
+	}
+	
+	public void setInstanceIdSet(HashSet<Integer> set){
+		this.chargeInstsIds = set;
 	}
 	
 }

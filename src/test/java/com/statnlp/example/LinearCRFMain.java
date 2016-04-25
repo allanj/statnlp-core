@@ -6,10 +6,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 
+import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.example.linear_crf.Label;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
 import com.statnlp.example.linear_crf.LinearCRFInstance;
+import com.statnlp.example.linear_crf.LinearCRFNetwork;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
@@ -18,40 +20,47 @@ import com.statnlp.hybridnetworks.NetworkModel;
 
 public class LinearCRFMain {
 	
-	public static ArrayList<Label> allLabels;
 	
 	public static void main(String args[]) throws IOException, InterruptedException{
-		
-//		String lang = args[1];
-		
 		String inst_filename = "data/train.data";
 		String test_filename = "data/test.data";
-		
-		allLabels = new ArrayList<Label>();
-		
-		LinearCRFInstance[] trainInstances = readCoNLLData(inst_filename, true, true);
+
+		int numTrain = 1000;
+		LinearCRFInstance[] trainInstances = readCoNLLData(inst_filename, true, true, numTrain);
 		LinearCRFInstance[] testInstances = readCoNLLData(test_filename, true, false);
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
 		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = false;
-		NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = true;
+		NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = false;
 		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
 		NetworkConfig._numThreads = 4;
 		
+		NetworkConfig.USE_STRUCTURED_SVM = true; // To use Structured SVM (need to define loss function in the network
+		NetworkConfig.USE_BATCH_SGD = false; // To use or not to use mini-batches in gradient descent optimizer
+		NetworkConfig.batchSize = 1;         // The mini-batch size (if USE_BATCH_SGD = true)
+		
+		LinearCRFNetwork.useZeroOneLossAtEachNode = true; // Whether to calculate loss at each node or only at root
+
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
-		NetworkConfig.RANDOM_INIT_WEIGHT = false;
+		NetworkConfig.RANDOM_INIT_WEIGHT = true;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
 		
-		int numIterations = 100;
+		int numIterations = 1000;
 		
 		int size = trainInstances.length;
 		
 		System.err.println("Read.."+size+" instances.");
 		
-		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(new GlobalNetworkParam());
+		OptimizerFactory optimizerFactory;
+		if(NetworkConfig.USE_STRUCTURED_SVM){
+			optimizerFactory = OptimizerFactory.getGradientDescentFactory();
+		} else {
+			optimizerFactory = OptimizerFactory.getLBFGSFactory();
+		}
+		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(new GlobalNetworkParam(optimizerFactory));
 		
-		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler(allLabels);
+		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler();
 		
 		NetworkModel model = DiscriminativeNetworkModel.create(fm, compiler);
 		
@@ -86,7 +95,7 @@ public class LinearCRFMain {
 		System.out.println(String.format("Accuracy: %.2f%%", 100.0*corr/total));
 	}
 	
-	private static LinearCRFInstance[] readCoNLLData(String fileName, boolean withLabels, boolean isLabeled) throws IOException{
+	private static LinearCRFInstance[] readCoNLLData(String fileName, boolean withLabels, boolean isLabeled, int number) throws IOException{
 		InputStreamReader isr = new InputStreamReader(new FileInputStream(fileName), "UTF-8");
 		BufferedReader br = new BufferedReader(isr);
 		ArrayList<LinearCRFInstance> result = new ArrayList<LinearCRFInstance>();
@@ -110,6 +119,7 @@ public class LinearCRFMain {
 				}
 				instanceId++;
 				result.add(instance);
+				if(result.size()==number) break;
 				words = null;
 				labels = null;
 			} else {
@@ -117,17 +127,16 @@ public class LinearCRFMain {
 				String[] features = line.substring(0, lastSpace).split(" ");
 				words.add(features);
 				if(withLabels){
-					Label label = new Label(line.substring(lastSpace+1));
-					if(!allLabels.contains(label)){
-						allLabels.add(label);
-					} else { // Get the same object for the same label
-						label = allLabels.get(allLabels.indexOf(label));
-					}
+					Label label = Label.get(line.substring(lastSpace+1));
 					labels.add(label);
 				}
 			}
 		}
 		br.close();
 		return result.toArray(new LinearCRFInstance[result.size()]);
+	}
+	
+	private static LinearCRFInstance[]  readCoNLLData(String fileName, boolean withLabels, boolean isLabeled) throws IOException{
+		return readCoNLLData(fileName, withLabels, isLabeled, -1);
 	}
 }

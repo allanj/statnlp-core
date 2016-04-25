@@ -29,8 +29,9 @@ import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
-import com.statnlp.commons.ml.opt.LBFGSOptimizer;
 import com.statnlp.commons.ml.opt.MathsVector;
+import com.statnlp.commons.ml.opt.Optimizer;
+import com.statnlp.commons.ml.opt.OptimizerFactory;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
@@ -47,13 +48,18 @@ public class GlobalNetworkParam implements Serializable{
 	/** The L2 regularization parameter weight */
 	protected transient double _kappa;
 	/** The optimizer */
-	protected transient LBFGSOptimizer _opt;
+	protected transient Optimizer _opt;
+	/** The optimizer factory */
+	protected transient OptimizerFactory _optFactory;
 	/** The gradient for each dimension */
 	protected transient double[] _counts;
 	/** A variable to store previous value of the objective function */
 	protected transient double _obj_old;
 	/** A variable to store current value of the objective function */
 	protected transient double _obj;
+	/** A variable for batch SGD optimization, if applicable */
+	protected transient int _batchSize;
+	
 	protected transient int _version;
 	
 	/** Map from feature type to [a map from output to [a map from input to feature ID]] */
@@ -68,6 +74,8 @@ public class GlobalNetworkParam implements Serializable{
 	protected String[][] _feature2rep;//three-dimensional array representation of the feature.
 	/** The weights parameter */
 	protected double[] _weights;
+	/** Store the best weights when using the batch sgd */
+	protected double[] _bestWeight;
 	/** A flag whether the model is discriminative */
 	protected boolean _isDiscriminative;
 	/**
@@ -85,8 +93,14 @@ public class GlobalNetworkParam implements Serializable{
 	
 	/** A counter for how many consecutive times the decrease in objective value is less than 0.01% */
 	protected int smallChangeCount = 0;
+	/** The total number of instances for the coefficient the batch SGD regularization term*/
+	protected int totalNumInsts;
 	
 	public GlobalNetworkParam(){
+		this(OptimizerFactory.getLBFGSFactory());
+	}
+	
+	public GlobalNetworkParam(OptimizerFactory optimizerFactory){
 		this._locked = false;
 		this._version = -1;
 		this._size = 0;
@@ -95,11 +109,12 @@ public class GlobalNetworkParam implements Serializable{
 		this._obj = Double.NEGATIVE_INFINITY;
 		this._isDiscriminative = !NetworkConfig.TRAIN_MODE_IS_GENERATIVE;
 		if(this.isDiscriminative()){
-			this._opt = new LBFGSOptimizer();
+			this._batchSize = NetworkConfig.batchSize;
 			this._kappa = NetworkConfig.L2_REGULARIZATION_CONSTANT;
 		}
 		this._featureIntMap = new HashMap<String, HashMap<String, HashMap<String, Integer>>>();
 		this._type2inputMap = new HashMap<String, ArrayList<String>>();
+		this._optFactory = optimizerFactory;
 		if (!NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
 			this._subFeatureIntMaps = new ArrayList<HashMap<String, HashMap<String, HashMap<String, Integer>>>>();
 			for (int i = 0; i < NetworkConfig._numThreads; i++){
@@ -308,7 +323,7 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		this._version = 0;
-		this._opt = new LBFGSOptimizer();
+		this._opt = this._optFactory.create(this._weights.length);
 		this._locked = true;
 		
 		System.err.println(this._size+" features.");
@@ -356,7 +371,7 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		this._version = 0;
-		this._opt = new LBFGSOptimizer();
+		this._opt = this._optFactory.create(this._weights.length);
 		this._locked = true;
 		
 		System.err.println(this._size+" features.");
@@ -578,20 +593,22 @@ public class GlobalNetworkParam implements Serializable{
     		throw new NetworkException("Exception with Iflag:"+e.getMessage());
     	}
 		
-    	double diff = this.getObj()-this.getObj_old();
-    	if(diff >= 0 && diff < NetworkConfig.objtol){
-    		done = true;
+    	if(!NetworkConfig.USE_STRUCTURED_SVM){
+	    	double diff = this.getObj()-this.getObj_old();
+	    	if(diff >= 0 && diff < NetworkConfig.objtol){
+	    		done = true;
+	    	}
+	    	double diffRatio = Math.abs(diff/this.getObj_old());
+	    	if(diffRatio < 1e-4){
+	    		this.smallChangeCount += 1;
+	    	} else {
+	    		this.smallChangeCount = 0;
+	    	}
+	    	if(this.smallChangeCount == 3){
+	    		done = true;
+	    	}
     	}
-    	double diffRatio = Math.abs(diff/this.getObj_old());
-    	if(diffRatio < 1e-4){
-    		this.smallChangeCount += 1;
-    	} else {
-    		this.smallChangeCount = 0;
-    	}
-    	if(this.smallChangeCount == 3){
-    		done = true;
-    	}
-    	if(done){
+    	if(done && !NetworkConfig.USE_STRUCTURED_SVM){
     		// If we stop early, we need to copy solution_cache,
     		// as noted in the Javadoc for solution_cache in LBFGS class.
     		// This is because the _weights will contain the next value to be evaluated, 
@@ -617,23 +634,33 @@ public class GlobalNetworkParam implements Serializable{
 	 */
 	protected synchronized void resetCountsAndObj(){
 		
+		double coef = 1.0;
+		if(NetworkConfig.USE_BATCH_SGD){
+			coef = this._batchSize*1.0/this.totalNumInsts;
+			if(coef>1) coef = 1.0;
+		}
+		
+		
 		for(int k = 0 ; k<this._size; k++){
 			this._counts[k] = 0.0;
 			//for regularization
 			if(this.isDiscriminative() && this._kappa > 0 && k>=this._fixedFeaturesSize){
-				this._counts[k] += 2 * this._kappa * this._weights[k];
+				this._counts[k] += 2 * coef * this._kappa * this._weights[k];
 			}
 		}
 		this._obj = 0.0;
 		//for regularization
 		if(this.isDiscriminative() && this._kappa > 0){
-			this._obj += - this._kappa * MathsVector.square(this._weights);
+			this._obj += - coef * this._kappa * MathsVector.square(this._weights);
 		}
-		// FIXME: Aldrian: the notes below seems to contradict the code above
 		//NOTES:
 		//for additional terms such as regularization terms:
 		//always add to _obj the term g(x) you would like to maximize.
 		//always add to _counts the NEGATION of the term g(x)'s gradient.
+	}
+	
+	public void setInstsNum(int number){
+		this.totalNumInsts = number;
 	}
 	
 	public boolean checkEqual(GlobalNetworkParam p){

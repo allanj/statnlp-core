@@ -44,10 +44,13 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	private long[] _allNodes;
 	private int[][][] _allChildren;
 	
-	public LinearCRFNetworkCompiler(List<Label> labels){
-		this._labels = labels;
+	public LinearCRFNetworkCompiler(){
+		this._labels = new ArrayList<Label>();
+		for(Label label: Label.LABELS.values()){
+			this._labels.add(new Label(label));
+		}
 		int i=0;
-		for(Label label: labels){
+		for(Label label: _labels){
 			label.setId(i);
 			i++;
 		}
@@ -183,7 +186,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 			if(pos != i){
 				System.err.println("Position encoded in the node array not the same as the interpretation!");
 			}
-			predictions.add(0, _labels.get(tag_id));
+			predictions.add(0, Label.get(tag_id));
 			node_k = child_k;
 		}
 		

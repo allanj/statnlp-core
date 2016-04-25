@@ -57,6 +57,8 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected transient double[] _outside;
 	//at each index, store the score of the max tree
 	protected transient double[] _max;
+	//at each index, store the loss of the max tree
+	protected transient double[] _loss;
 	//this stores the paths associated with the above tree
 	protected transient int[][] _max_paths;
 	
@@ -130,7 +132,12 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * @return
 	 */
 	public double getMax(){
-		return this._max[this.countNodes()-1];
+		int rootIdx = this.countNodes()-1;
+		if(NetworkConfig.USE_STRUCTURED_SVM){
+			return this._max[rootIdx]+this._loss[rootIdx];	
+		} else {
+			return this._max[rootIdx];
+		}
 //		return this._max[this._max.length-1];
 	}
 
@@ -140,17 +147,11 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * @return
 	 */
 	public double getMax(int k){
-//		if(k==87095){
-//			int[] arr = NetworkIDMapper.toHybridNodeArray(this.getNode(k));
-//			System.err.println("x:"+Arrays.toString(arr)+"\t"+k);
-//			System.err.println(Arrays.toString(this.getMaxPath(k)));
-//			int child_k = this.getMaxPath(k)[0];
-//			double child_max = this.getMax(child_k);
-//			System.err.println(child_max);
-////			System.err.println(Arrays.toString(this._max));
-//			System.err.println();
-//		}
-		return this._max[k];
+		if(NetworkConfig.USE_STRUCTURED_SVM){
+			return this._max[k]+this._loss[k];
+		} else {
+			return this._max[k];
+		}
 	}
 	
 	/**
@@ -180,16 +181,48 @@ public abstract class Network implements Serializable, HyperGraph{
 	}
 	
 	/**
+	 * The loss of the structure from leaf nodes up to node <code>k</code>.<br>
+	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.<br>
+	 * This does some check whether the loss is actually required. Loss is not calculated during test, since
+	 * there is no labeled instance.<br>
+	 * This will call {@link #totalLossUpTo(int, int[])}, where the actual implementation resides.
+	 * @param k
+	 * @param child_k
+	 * @return
+	 */
+	public double loss(int k, int[] child_k){
+		if(_inst.getInstanceId() > 0 && !_inst.isLabeled()){
+			return 0.0;
+		}
+		return totalLossUpTo(k, child_k);
+	}
+
+	/**
+	 * The loss of the structure from leaf nodes up to node <code>k</code>.<br>
+	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.<br>
+	 * Note that the implementation can access the loss of the child nodes at _loss[child_idx] and
+	 * the best path so far is stored at getMaxPath(child_idx), which represents the hyperedge connected to
+	 * node <code>child_idx</code> which is part of the best path so far.
+	 * @param k
+	 * @param child_k
+	 * @return
+	 */
+	public abstract double totalLossUpTo(int k, int[] child_k);
+	
+	/**
 	 * Train the network
 	 */
 	public void train(){
 		if(this._weight == 0)
 			return;
-		
-		this.inside();
-		this.outside();
-		this.updateInsideOutside();
-		this._param.addObj(this.getInside() * this._weight);
+		if(NetworkConfig.USE_STRUCTURED_SVM){
+			this.max();
+		} else {
+			this.inside();
+			this.outside();
+		}
+		this.updateGradient();
+		this.updateObjective();
 	}
 	
 //	private static double[] inside_fixed = new double[100000];
@@ -235,14 +268,28 @@ public abstract class Network implements Serializable, HyperGraph{
 	/**
 	 * Calculate and update the inside-outside score of all nodes
 	 */
-	protected void updateInsideOutside(){
+	protected void updateGradient(){
 //		long time = System.currentTimeMillis();
 		
-		for(int k=0; k<this.countNodes(); k++)
-			this.updateInsideOutside(k);
-		
+		if(NetworkConfig.USE_STRUCTURED_SVM){
+			// Max is already calculated
+			int rootIdx = this.countNodes()-1;
+			this.updateGradient(rootIdx);
+		} else {
+			for(int k=0; k<this.countNodes(); k++){
+				this.updateGradient(k);
+			}
+		}			
 //		time = System.currentTimeMillis() - time;
 //		System.err.println("UPDATE TIME:"+time+" ms");
+	}
+	
+	protected void updateObjective(){
+		if(NetworkConfig.USE_STRUCTURED_SVM){
+			this._param.addObj(this.getMax() * this._weight);
+		} else {
+			this._param.addObj(this.getInside() * this._weight);
+		}
 	}
 	
 	/**
@@ -265,15 +312,17 @@ public abstract class Network implements Serializable, HyperGraph{
 //		long time = System.currentTimeMillis();
 		
 		this._max = new double[this.countNodes()]; //this._decoder.getMaxArray();
+		this._loss = new double[this.countNodes()];
 		Arrays.fill(this._max, Double.NEGATIVE_INFINITY);
+		Arrays.fill(this._loss, 0.0);
 		
 //		this._max_paths = this.getMaxPathSharedArray();//new int[this.countNodes()][];// this._decoder.getMaxPaths();
 		this._max_paths = new int[this.countNodes()][];// this._decoder.getMaxPaths();
 //		for(int k = 0; k<this.countNodes(); k++)
 //			Arrays.fill(this._max_paths[k], 0);
-		
-		for(int k=0; k<this.countNodes(); k++)
+		for(int k=0; k<this.countNodes(); k++){
 			this.max(k);
+		}
 		
 //		time = System.currentTimeMillis() - time;
 //		System.err.println("MAX TIME:"+time+" ms");
@@ -330,18 +379,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			for(int child_k : children_k)
 				score += this._inside[child_k];
 			
-			double v1 = inside;
-			double v2 = score;
-			//fix:luwei.31.Dec.2014.
-			if(v1==v2 && v2==Double.NEGATIVE_INFINITY){
-				inside = Double.NEGATIVE_INFINITY;
-			} else if(v1==v2 && v2==Double.POSITIVE_INFINITY){
-				inside = Double.POSITIVE_INFINITY;
-			} else if(v1>v2){
-				inside = Math.log1p(Math.exp(score-inside))+inside;
-			} else {
-				inside = Math.log1p(Math.exp(inside-score))+score;
-			}
+			inside = sumLog(inside, score);
 			
 //			if(this.getInstance().getInstanceId()==10 && k==13){
 //				System.err.println();
@@ -426,44 +464,57 @@ public abstract class Network implements Serializable, HyperGraph{
 	}
 	
 	/**
-	 * Calculate and update the inside-outside score for the specified node
+	 * Calculate and update the gradient for features present at the specified node
 	 * @param k
 	 */
-	protected void updateInsideOutside(int k){
+	protected void updateGradient(int k){
 		if(this.isRemoved(k))
 			return;
 		
 		int[][] childrenList_k = this.getChildren(k);
+		int[] maxChildren = null;
+		if(NetworkConfig.USE_STRUCTURED_SVM){
+			maxChildren = this.getMaxPath(k); // For Structured SVM
+		}
 		
 		for(int children_k_index = 0; children_k_index<childrenList_k.length; children_k_index++){
+			double count = 0.0;
 			int[] children_k = childrenList_k[children_k_index];
 			
 			boolean ignoreflag = false;
-			for(int child_k : children_k)
+			for(int child_k : children_k){
 				if(this.isRemoved(child_k)){
-					ignoreflag = true; break;
+					ignoreflag = true;
+					break;
 				}
-			if(ignoreflag)
+			}
+			if(NetworkConfig.USE_STRUCTURED_SVM){ // Consider only max path
+				if(!Arrays.equals(children_k, maxChildren)){
+					continue;
+				}
+			}
+			if(ignoreflag){
 				continue;
+			}
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
-			double score = fa.getScore(this._param); // w*f
-			score += this._outside[k];  // beta(s')
-			for(int child_k : children_k)
-				score += this._inside[child_k]; // alpha(s)
-			double count = Math.exp(score-this.getInside()); // Divide by normalization term Z
+			if(NetworkConfig.USE_STRUCTURED_SVM){
+				count = 1;
+			} else {
+				double score = fa.getScore(this._param); // w*f
+				score += this._outside[k];  // beta(s')
+				for(int child_k : children_k)
+					score += this._inside[child_k]; // alpha(s)
+				count = Math.exp(score-this.getInside()); // Divide by normalization term Z
+			}
 			count *= this._weight;
 			
-//			System.out.println(Arrays.toString(this.getNodeArray(k))+": "+count+" "+this._inside[k]+" "+this._outside[k]+" "+score+" "+this.getInside()+" "+(score-this.getInside()));
-//			for(int child_k: children_k){
-//				System.out.println("\t"+Arrays.toString(this.getNodeArray(child_k)));	
-//			}
-//			if(Double.isNaN(count))
-//			if(this.getInstance().getInstanceId()==10)
-//			{
-//				System.err.println(this.getInstance().getInstanceId()+" update at "+k+"="+count+" for features "+fa.size()+"\t"+fa.viewCurrent()+"\t"+this._inside[k]+"+"+this._outside[k]+"||"+score+"|"+this.getInside());
-//			}
 			fa.update(this._param, count);
+			if(NetworkConfig.USE_STRUCTURED_SVM){
+				for(int child_k: children_k){
+					this.updateGradient(child_k);	
+				}
+			}
 		}
 	}
 	
@@ -489,12 +540,14 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected void max(int k){
 		if(this.isRemoved(k)){
 			this._max[k] = Double.NEGATIVE_INFINITY;
+			this._loss[k] = 0.0;
 			return;
 		}
 		
 		if(this.isSumNode(k)){
 
 			double inside = 0.0;
+			double loss = 0.0;
 			int[][] childrenList_k = this.getChildren(k);
 			
 			if(childrenList_k.length==0){
@@ -511,11 +564,14 @@ public abstract class Network implements Serializable, HyperGraph{
 						ignoreflag = true;
 				if(ignoreflag){
 					inside = Double.NEGATIVE_INFINITY;
+					loss = 0.0;
 				} else {
 					FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 					double score = fa.getScore(this._param);
-					for(int child_k : children_k)
+					loss = loss(k, children_k);
+					for(int child_k : children_k){
 						score += this._max[child_k];
+					}
 					inside = score;
 				}
 				
@@ -536,31 +592,24 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
-				for(int child_k : children_k)
+				loss += loss(k, children_k);
+				for(int child_k : children_k){
 					score += this._max[child_k];
-				
-				double v1 = inside;
-				double v2 = score;
-				//fix:luwei.31.Dec.2014.
-				if(v1==v2 && v2==Double.NEGATIVE_INFINITY){
-					inside = Double.NEGATIVE_INFINITY;
-				} else if(v1==v2 && v2==Double.POSITIVE_INFINITY){
-					inside = Double.POSITIVE_INFINITY;
-				} else if(v1>v2){
-					inside = Math.log1p(Math.exp(score-inside))+inside;
-				} else {
-					inside = Math.log1p(Math.exp(inside-score))+score;
 				}
+				
+				inside = sumLog(inside, score);
 				
 			}
 			
 			this._max[k] = inside;
+			this._loss[k] = loss;
 		}
 		
 		else{
 
 			int[][] childrenList_k = this.getChildren(k);
 			this._max[k] = Double.NEGATIVE_INFINITY;
+			this._loss[k] = 0.0;
 			
 			for(int children_k_index = 0; children_k_index < childrenList_k.length; children_k_index++){
 				int[] children_k = childrenList_k[children_k_index];
@@ -574,15 +623,42 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double max = fa.getScore(this._param);
-				for(int child_k : children_k)
+				double loss = loss(k, children_k);
+				for(int child_k : children_k){
 					max += this._max[child_k];
-				if(max >= this._max[k]){
+				}
+				boolean shouldUpdate = false;
+				if(NetworkConfig.USE_STRUCTURED_SVM){
+					if(max+loss >= this._max[k]+this._loss[k]){
+						shouldUpdate = true;
+					}
+				} else {
+					if(max >= this._max[k]){
+						shouldUpdate = true;
+					}
+				}
+				if(shouldUpdate){
 					this._max[k] = max;
+					this._loss[k] = loss;
 					this._max_paths[k] = children_k;
 				}
 			}
 		}
 //		System.err.println("max["+k+"]"+_max[k]);
+	}
+
+	private double sumLog(double inside, double score) {
+		double v1 = inside;
+		double v2 = score;
+		if(v1==v2 && v2==Double.NEGATIVE_INFINITY){
+			return Double.NEGATIVE_INFINITY;
+		} else if(v1==v2 && v2==Double.POSITIVE_INFINITY){
+			return Double.POSITIVE_INFINITY;
+		} else if(v1>v2){
+			return Math.log1p(Math.exp(v2-v1))+v1;
+		} else {
+			return Math.log1p(Math.exp(v1-v2))+v2;
+		}
 	}
 
 	/**
