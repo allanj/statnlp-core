@@ -218,6 +218,7 @@ public abstract class FeatureManager implements Serializable{
 		// Do not cache in the first touch when parallel touch and extract only from labeled is enabled,
 		// since the local feature indices will change
 		boolean shouldCache = this.isCacheEnabled() && (NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION
+														|| NetworkConfig._numThreads == 1
 														|| !NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY
 														|| this._param_g.isLocked());
 		if(shouldCache){

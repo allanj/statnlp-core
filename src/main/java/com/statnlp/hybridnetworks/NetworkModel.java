@@ -199,7 +199,7 @@ public abstract class NetworkModel implements Serializable{
 	}
 
 	private void touch(Instance[][] insts, boolean keepExisting) throws InterruptedException {
-		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION){
+		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION || NetworkConfig._numThreads == 1){
 			for(int threadId = 0; threadId<this._numThreads; threadId++){
 				if(!keepExisting){
 					this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, 0);
