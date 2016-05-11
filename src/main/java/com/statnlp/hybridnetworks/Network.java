@@ -61,6 +61,8 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected transient double[] _loss;
 	//this stores the paths associated with the above tree
 	protected transient int[][] _max_paths;
+	/** To mark whether a node has been visited in one iteration */
+	protected transient boolean[] _visited;
 	
 	/** The compiler that created this network */
 	protected NetworkCompiler _compiler;
@@ -277,6 +279,7 @@ public abstract class Network implements Serializable, HyperGraph{
 		if(NetworkConfig.USE_STRUCTURED_SVM){
 			// Max is already calculated
 			int rootIdx = this.countNodes()-1;
+			resetVisitedMark();
 			this.updateGradient(rootIdx);
 		} else {
 			for(int k=0; k<this.countNodes(); k++){
@@ -285,6 +288,13 @@ public abstract class Network implements Serializable, HyperGraph{
 		}			
 //		time = System.currentTimeMillis() - time;
 //		System.err.println("UPDATE TIME:"+time+" ms");
+	}
+	
+	private void resetVisitedMark(){
+		this._visited = new boolean[countNodes()];
+		for(int i=0; i<this._visited.length; i++){
+			this._visited[i] = false;
+		}
 	}
 	
 	protected void updateObjective(){
@@ -471,6 +481,8 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * @param k
 	 */
 	protected void updateGradient(int k){
+		if(this._visited[k]) return;
+		this._visited[k] = true;
 		if(this.isRemoved(k))
 			return;
 		
