@@ -77,7 +77,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		int numNodes = pos+1; // Num nodes should equals to (instanceSize * (numLabels+1)) + 1
 //		System.out.println(String.format("Instance size: %d, Labels size: %d, numNodes: %d", size, _labels.size(), numNodes));
 		
-		return new LinearCRFNetwork(networkId, inst, this._allNodes, this._allChildren, param, numNodes);
+		return new LinearCRFNetwork(networkId, inst, this._allNodes, this._allChildren, param, numNodes, this);
 		
 	}
 	
@@ -135,7 +135,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 
 	
 	private LinearCRFNetwork compile_labeled(int networkId, LinearCRFInstance inst, LocalNetworkParam param){
-		LinearCRFNetwork network = new LinearCRFNetwork(networkId, inst, param);
+		LinearCRFNetwork network = new LinearCRFNetwork(networkId, inst, param, this);
 		ArrayList<Label> outputs = inst.getOutput();
 		
 		// Add leaf
@@ -195,5 +195,9 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		return result;
 	}
 	
+	public double totalLossUpTo(Network network, int parent_k, int[] child_k){
+//		return super.totalLossUpTo(network, parent_k, child_k);
+		return ((LinearCRFNetwork)network).totalLossUpTo(parent_k, child_k);
+	}
 
 }

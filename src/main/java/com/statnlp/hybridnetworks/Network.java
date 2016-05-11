@@ -571,7 +571,12 @@ public abstract class Network implements Serializable, HyperGraph{
 				} else {
 					FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 					double score = fa.getScore(this._param);
-					loss = this._compiler.loss(this, k, children_k);
+					loss = 0.0;
+					try{
+						loss = this._compiler.loss(this, k, children_k);
+					} catch (NullPointerException e){
+						System.err.println("WARNING: Compiler was not specified during network creation, setting loss to 0.0");
+					}
 					for(int child_k : children_k){
 						score += this._max[child_k];
 					}
@@ -595,7 +600,11 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
-				loss += this._compiler.loss(this, k, children_k);
+				try{
+					loss += this._compiler.loss(this, k, children_k);
+				} catch (NullPointerException e){
+					System.err.println("WARNING: Compiler was not specified during network creation, setting loss to 0.0");
+				}
 				for(int child_k : children_k){
 					score += this._max[child_k];
 				}
@@ -626,7 +635,12 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double max = fa.getScore(this._param);
-				double loss = this._compiler.loss(this, k, children_k);
+				double loss = 0.0;
+				try{
+					loss = this._compiler.loss(this, k, children_k);
+				} catch (NullPointerException e){
+					System.err.println("WARNING: Compiler was not specified during network creation, setting loss to 0.0");
+				}
 				for(int child_k : children_k){
 					max += this._max[child_k];
 				}

@@ -69,7 +69,7 @@ public abstract class NetworkCompiler implements Serializable{
 	 * @return
 	 */
 	public double loss(Network network, int k, int[] child_k){
-		if(network.getInstance().getInstanceId() > 0 && !network.getInstance().isLabeled()){
+		if(network.getInstance().getInstanceId() > 0 || network.getInstance().isLabeled()){
 			return 0.0;
 		}
 		return totalLossUpTo(network, k, child_k);
@@ -87,24 +87,30 @@ public abstract class NetworkCompiler implements Serializable{
 	 */	
 	public double totalLossUpTo(Network network, int parent_k, int[] child_k){
 		Network labeledNet = getLabeledNetwork(network);
-		if(labeledNet == null){
-			return 0.0;
-		}
+		double maxChildLoss = maxChildLoss(network, parent_k, child_k);
 		long node = network.getNode(parent_k);
 		int node_k = labeledNet.getNodeIndex(node);
 		if(node_k < 0){
-			return 1.0;
+			return maxChildLoss;
+		}
+		long[] childNodes = new long[child_k.length];
+		for(int i=0; i<child_k.length; i++){
+			childNodes[i] = network.getNode(child_k[i]);
 		}
 		int[][] children_k = labeledNet.getChildren(node_k);
 		boolean edgePresentInLabeled = false;
 		for(int[] children: children_k){
-			if(Arrays.equals(children, child_k)){
+			long[] childrenNodes = new long[children.length];
+			for(int i=0; i<children.length; i++){
+				childrenNodes[i] = labeledNet.getNode(children[i]);
+			}
+			if(Arrays.equals(childrenNodes, childNodes)){
 				edgePresentInLabeled = true;
 				break;
 			}
 		}
 		if(edgePresentInLabeled){
-			return maxChildLoss(network, parent_k, child_k);
+			return maxChildLoss;
 		} else {
 			return 1.0;
 		}

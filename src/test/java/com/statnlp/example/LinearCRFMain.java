@@ -38,12 +38,12 @@ public class LinearCRFMain {
 		
 		NetworkConfig.USE_STRUCTURED_SVM = true; // To use Structured SVM (need to define loss function in the network
 		NetworkConfig.USE_BATCH_SGD = false; // To use or not to use mini-batches in gradient descent optimizer
-		NetworkConfig.batchSize = 1;         // The mini-batch size (if USE_BATCH_SGD = true)
+		NetworkConfig.batchSize = 1000;         // The mini-batch size (if USE_BATCH_SGD = true)
 		
 		LinearCRFNetwork.useZeroOneLossAtEachNode = true; // Whether to calculate loss at each node or only at root
 
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
-		NetworkConfig.RANDOM_INIT_WEIGHT = true;
+		NetworkConfig.RANDOM_INIT_WEIGHT = false;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
 		
 		int numIterations = 1000;
@@ -54,7 +54,7 @@ public class LinearCRFMain {
 		
 		OptimizerFactory optimizerFactory;
 		if(NetworkConfig.USE_STRUCTURED_SVM){
-			optimizerFactory = OptimizerFactory.getGradientDescentFactory();
+			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaDelta();
 		} else {
 			optimizerFactory = OptimizerFactory.getLBFGSFactory();
 		}
