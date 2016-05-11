@@ -62,6 +62,7 @@ public class DiscriminativeNetworkModel extends NetworkModel {
 				inst_new.setInstanceId(-inst.getInstanceId());
 				inst_new.setWeight(-inst.getWeight());
 				inst_new.setUnlabeled();
+				inst_new.setLabeledInstance(inst);
 				insts[threadId][i*2+1] = inst_new;
 			}
 			System.out.println("Thread "+threadId+" has "+insts[threadId].length+" instances.");

@@ -16,10 +16,13 @@
  */
 package com.statnlp.commons.ml.opt;
 
+import java.io.Serializable;
+
 import com.statnlp.commons.ml.opt.GradientDescentOptimizer.AdaptiveMethod;
 
-public abstract class OptimizerFactory {
+public abstract class OptimizerFactory implements Serializable {
 	
+	private static final long serialVersionUID = 70815268952763513L;
 	public static final double DEFAULT_LEARNING_RATE = 0.01;
 	public static final double DEFAULT_ADADELTA_PHI = 0.95;
 	public static final double DEFAULT_ADADELTA_EPS = 1e-6;
@@ -59,7 +62,7 @@ public abstract class OptimizerFactory {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaGrad(){
-		return new GradientDescentOptimizerFactory(AdaptiveMethod.ADADELTA, DEFAULT_LEARNING_RATE, 0.0, 0.0);
+		return new GradientDescentOptimizerFactory(AdaptiveMethod.ADAGRAD, DEFAULT_LEARNING_RATE, 0.0, 0.0);
 	}
 	
 	/**

@@ -20,6 +20,7 @@ import com.statnlp.commons.ml.opt.GradientDescentOptimizer.AdaptiveMethod;
 
 public class GradientDescentOptimizerFactory extends OptimizerFactory {
 	
+	private static final long serialVersionUID = -5188815585483903945L;
 	private AdaptiveMethod adaptiveMethod;
 	private double learningRate;
 	private double adadeltaPhi;

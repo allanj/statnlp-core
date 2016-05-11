@@ -62,14 +62,18 @@ public abstract class Network implements Serializable, HyperGraph{
 	//this stores the paths associated with the above tree
 	protected transient int[][] _max_paths;
 	
+	/** The compiler that created this network */
+	protected NetworkCompiler _compiler;
+	/** The labeled version of this network, if exists */
+	protected Network _labeledNetwork;
+	
 	/**
 	 * Default constructor. Note that the network constructed using this default constructor is lacking 
 	 * the {@link LocalNetworkParam} object required for actual use.
 	 * Use this only for generating generic network, which is later actualized using another constructor.
 	 * @see #Network(int, Instance, LocalNetworkParam)
 	 */
-	public Network(){
-	}
+	public Network(){}
 	
 	/**
 	 * Construct a network
@@ -78,11 +82,23 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * @param param
 	 */
 	public Network(int networkId, Instance inst, LocalNetworkParam param){
+		this(networkId, inst, param, null);
+	}
+	
+	/**
+	 * Construct a network, specifying the NetworkCompiler that created this network
+	 * @param networkId
+	 * @param inst
+	 * @param param
+	 * @param compiler
+	 */
+	public Network(int networkId, Instance inst, LocalNetworkParam param, NetworkCompiler compiler){
 		this._networkId = networkId;
 		this._threadId = param.getThreadId();
 		this._inst = inst;
 		this._weight = this._inst.getWeight();
 		this._param = param;
+		this._compiler = compiler;
 	}
 	
 	protected double[] getInsideSharedArray(){
@@ -119,6 +135,22 @@ public abstract class Network implements Serializable, HyperGraph{
 	
 	public Instance getInstance(){
 		return this._inst;
+	}
+	
+	public NetworkCompiler getCompiler(){
+		return this._compiler;
+	}
+	
+	public void setCompiler(NetworkCompiler compiler){
+		this._compiler = compiler;
+	}
+	
+	public Network getLabeledNetwork(){
+		return this._labeledNetwork;
+	}
+	
+	public void setLabeledNetwork(Network network){
+		this._labeledNetwork = network;
 	}
 	
 	//get the inside score for the root node.
@@ -179,35 +211,6 @@ public abstract class Network implements Serializable, HyperGraph{
 		this.inside();
 		return this.getInside();
 	}
-	
-	/**
-	 * The loss of the structure from leaf nodes up to node <code>k</code>.<br>
-	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.<br>
-	 * This does some check whether the loss is actually required. Loss is not calculated during test, since
-	 * there is no labeled instance.<br>
-	 * This will call {@link #totalLossUpTo(int, int[])}, where the actual implementation resides.
-	 * @param k
-	 * @param child_k
-	 * @return
-	 */
-	public double loss(int k, int[] child_k){
-		if(_inst.getInstanceId() > 0 && !_inst.isLabeled()){
-			return 0.0;
-		}
-		return totalLossUpTo(k, child_k);
-	}
-
-	/**
-	 * The loss of the structure from leaf nodes up to node <code>k</code>.<br>
-	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.<br>
-	 * Note that the implementation can access the loss of the child nodes at _loss[child_idx] and
-	 * the best path so far is stored at getMaxPath(child_idx), which represents the hyperedge connected to
-	 * node <code>child_idx</code> which is part of the best path so far.
-	 * @param k
-	 * @param child_k
-	 * @return
-	 */
-	public abstract double totalLossUpTo(int k, int[] child_k);
 	
 	/**
 	 * Train the network
@@ -568,7 +571,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				} else {
 					FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 					double score = fa.getScore(this._param);
-					loss = loss(k, children_k);
+					loss = this._compiler.loss(this, k, children_k);
 					for(int child_k : children_k){
 						score += this._max[child_k];
 					}
@@ -592,7 +595,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
-				loss += loss(k, children_k);
+				loss += this._compiler.loss(this, k, children_k);
 				for(int child_k : children_k){
 					score += this._max[child_k];
 				}
@@ -623,7 +626,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double max = fa.getScore(this._param);
-				double loss = loss(k, children_k);
+				double loss = this._compiler.loss(this, k, children_k);
 				for(int child_k : children_k){
 					max += this._max[child_k];
 				}
