@@ -481,14 +481,14 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * @param k
 	 */
 	protected void updateGradient(int k){
-		if(this._visited[k]) return;
-		this._visited[k] = true;
 		if(this.isRemoved(k))
 			return;
 		
 		int[][] childrenList_k = this.getChildren(k);
 		int[] maxChildren = null;
 		if(NetworkConfig.USE_STRUCTURED_SVM){
+			if(this._visited[k]) return;
+			this._visited[k] = true;
 			maxChildren = this.getMaxPath(k); // For Structured SVM
 		}
 		
