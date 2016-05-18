@@ -195,7 +195,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		return result;
 	}
 	
-	public double totalLossUpTo(Network network, int parent_k, int[] child_k){
+	public double totalCostUpTo(Network network, int parent_k, int[] child_k){
 //		return super.totalLossUpTo(network, parent_k, child_k);
 		return ((LinearCRFNetwork)network).totalLossUpTo(parent_k, child_k);
 	}

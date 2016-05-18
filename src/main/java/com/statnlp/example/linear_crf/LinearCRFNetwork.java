@@ -81,14 +81,14 @@ public class LinearCRFNetwork extends TableLookupNetwork{
 			Label goldLabel = inst.output.get(pos);
 			if(goldLabel == predLabel){
 				// Same label, no change of loss
-				return this._loss[child_k[0]];
+				return this._cost[child_k[0]];
 			} else {
 				return 1.0;
 			}
 		} else {
 			if(child_k.length > 0){ // Root
 				// At root, no change of loss
-				return this._loss[child_k[0]];
+				return this._cost[child_k[0]];
 			} else { // Leaf
 				return 0.0;
 			}
