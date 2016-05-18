@@ -18,6 +18,8 @@ package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
 import java.util.Arrays;
+//import java.util.Map;
+//import java.util.concurrent.ConcurrentHashMap;
 
 import com.statnlp.commons.types.Instance;
 
@@ -34,6 +36,7 @@ import com.statnlp.commons.types.Instance;
 public abstract class NetworkCompiler implements Serializable{
 	
 	private static final long serialVersionUID = 1052885626598299680L;
+//	public Map<Integer, Double> instanceIDtoScore = new ConcurrentHashMap<Integer, Double>();
 	
 	/**
 	 * Convert an instance into the network representation.<br>
@@ -59,39 +62,40 @@ public abstract class NetworkCompiler implements Serializable{
 
 	
 	/**
-	 * The loss of the structure from leaf nodes up to node <code>k</code>.<br>
+	 * The cost of the structure from leaf nodes up to node <code>k</code>.<br>
 	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.<br>
-	 * This does some check whether the loss is actually required. Loss is not calculated during test, since
+	 * This does some check whether the cost is actually required. Cost is not calculated during test, since
 	 * there is no labeled instance.<br>
-	 * This will call {@link #totalLossUpTo(int, int[])}, where the actual implementation resides.
+	 * This will call {@link #totalCostUpTo(int, int[])}, where the actual implementation resides.
 	 * @param k
 	 * @param child_k
 	 * @return
 	 */
-	public double loss(Network network, int k, int[] child_k){
+	public double cost(Network network, int k, int[] child_k){
 		if(network.getInstance().getInstanceId() > 0 || network.getInstance().isLabeled()){
 			return 0.0;
 		}
-		return totalLossUpTo(network, k, child_k);
+		return totalCostUpTo(network, k, child_k);
 	}
 
 	/**
-	 * The loss of the structure from leaf nodes up to node <code>k</code>.<br>
+	 * The cost of the structure from leaf nodes up to node <code>k</code>.<br>
 	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.<br>
-	 * Note that the implementation can access the loss of the child nodes at _loss[child_idx] and
+	 * Note that the implementation can access the cost of the child nodes at _cost[child_idx] and
 	 * the best path so far is stored at getMaxPath(child_idx), which represents the hyperedge connected to
 	 * node <code>child_idx</code> which is part of the best path so far.
 	 * @param k
 	 * @param child_k
 	 * @return
 	 */	
-	public double totalLossUpTo(Network network, int parent_k, int[] child_k){
+	public double totalCostUpTo(Network network, int parent_k, int[] child_k){
+		int size = network.getInstance().size();
 		Network labeledNet = getLabeledNetwork(network);
-		double maxChildLoss = maxChildLoss(network, parent_k, child_k);
+		double aggregateChildLoss = aggregateChildCost(network, parent_k, child_k);
 		long node = network.getNode(parent_k);
 		int node_k = labeledNet.getNodeIndex(node);
 		if(node_k < 0){
-			return maxChildLoss;
+			return aggregateChildLoss;
 		}
 		long[] childNodes = new long[child_k.length];
 		for(int i=0; i<child_k.length; i++){
@@ -110,9 +114,9 @@ public abstract class NetworkCompiler implements Serializable{
 			}
 		}
 		if(edgePresentInLabeled){
-			return maxChildLoss;
+			return aggregateChildLoss;
 		} else {
-			return 1.0;
+			return aggregateChildLoss+NetworkConfig.SSVM_MARGIN/size;
 		}
 	}
 	
@@ -132,16 +136,16 @@ public abstract class NetworkCompiler implements Serializable{
 	}
 	
 	/**
-	 * Return the maximum loss value over all the child nodes for the specified network
+	 * Return the maximum cost value over all the child nodes for the specified network
 	 * @param network
 	 * @param k
 	 * @param child_k
 	 * @return
 	 */
-	public double maxChildLoss(Network network, int k, int[] child_k){
+	public double aggregateChildCost(Network network, int k, int[] child_k){
 		double maxLoss = 0.0;
 		for(int child: child_k){
-			maxLoss = Math.max(maxLoss, network._loss[child]);
+			maxLoss += network._cost[child];
 		}
 		return maxLoss;
 	}

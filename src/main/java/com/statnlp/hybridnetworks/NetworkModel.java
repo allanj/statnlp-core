@@ -182,7 +182,11 @@ public abstract class NetworkModel implements Serializable{
 				boolean done = this._fm.update();
 				time = System.currentTimeMillis() - time;
 				double obj = this._fm.getParam_G().getObj_old();
-				System.out.println(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0));
+				int multiplier = 1;
+				if(NetworkConfig.USE_STRUCTURED_SVM){
+					multiplier = -1;
+				}
+				System.out.println(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0));
 	//			System.out.println("Iteration "+it+"\tObjective="+obj+"\tTime="+time/1000.0+" seconds."+"\t"+obj/obj_old);
 				if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE && it>1 && obj<obj_old && Math.abs(obj-obj_old)>1E-5){
 					throw new RuntimeException("Error:\n"+obj_old+"\n>\n"+obj);

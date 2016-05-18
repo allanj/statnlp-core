@@ -57,8 +57,8 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected transient double[] _outside;
 	//at each index, store the score of the max tree
 	protected transient double[] _max;
-	//at each index, store the loss of the max tree
-	protected transient double[] _loss;
+	//at each index, store the cost of the max tree
+	protected transient double[] _cost;
 	//this stores the paths associated with the above tree
 	protected transient int[][] _max_paths;
 	/** To mark whether a node has been visited in one iteration */
@@ -168,7 +168,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	public double getMax(){
 		int rootIdx = this.countNodes()-1;
 		if(NetworkConfig.USE_STRUCTURED_SVM){
-			return this._max[rootIdx]+this._loss[rootIdx];	
+			return this._max[rootIdx]+this._cost[rootIdx];	
 		} else {
 			return this._max[rootIdx];
 		}
@@ -182,7 +182,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	 */
 	public double getMax(int k){
 		if(NetworkConfig.USE_STRUCTURED_SVM){
-			return this._max[k]+this._loss[k];
+			return this._max[k]+this._cost[k];
 		} else {
 			return this._max[k];
 		}
@@ -300,6 +300,39 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected void updateObjective(){
 		if(NetworkConfig.USE_STRUCTURED_SVM){
 			this._param.addObj(this.getMax() * this._weight);
+//			// Test to find bugs where some instances have negative loss
+//			boolean finalScore = false;
+//			int absID = Math.abs(this.getInstance().getInstanceId());
+//			double curScore = 0.0;
+//			if(this._compiler.instanceIDtoScore.containsKey(absID)){
+//				finalScore = true;
+//				curScore = this._compiler.instanceIDtoScore.get(absID);
+//			}
+//			this._compiler.instanceIDtoScore.put(absID, curScore+(this.getMax()*this._weight));
+//			double realScore = -this._compiler.instanceIDtoScore.get(absID); // Because the curScore is the negated one
+//			double labeledScore = 0.0;
+//			double unlabeledScore = 0.0;
+//			if(this._weight < 0){
+//				labeledScore = curScore;
+//				unlabeledScore = this.getMax();
+//			} else {
+//				labeledScore = this.getMax();
+//				unlabeledScore = -curScore;
+//			}
+//			if(finalScore){
+//				if(realScore < 0){
+//					System.out.printf("Instance ID: %d has negative loss: %.6f (%.6f - %.6f)\n", absID, realScore, unlabeledScore, labeledScore);
+//				} else {
+//					System.out.printf("Instance ID: %d has positive loss: %.6f (%.6f - %.6f)\n", absID, realScore, unlabeledScore, labeledScore);
+//				}
+//			}
+//			if(finalScore){
+//				this._compiler.instanceIDtoScore.remove(absID);
+//				if(absID == 3){
+//					System.out.println(this.getInstance());
+//					System.out.println(this);
+//				}
+//			}
 		} else {
 			this._param.addObj(this.getInside() * this._weight);
 		}
@@ -322,23 +355,18 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * Calculate the maximum score for all nodes
 	 */
 	public void max(){
-//		long time = System.currentTimeMillis();
-		
-		this._max = new double[this.countNodes()]; //this._decoder.getMaxArray();
-		this._loss = new double[this.countNodes()];
+		this._max = new double[this.countNodes()];
+		this._cost = new double[this.countNodes()];
 		Arrays.fill(this._max, Double.NEGATIVE_INFINITY);
-		Arrays.fill(this._loss, 0.0);
+		Arrays.fill(this._cost, 0.0);
 		
-//		this._max_paths = this.getMaxPathSharedArray();//new int[this.countNodes()][];// this._decoder.getMaxPaths();
-		this._max_paths = new int[this.countNodes()][];// this._decoder.getMaxPaths();
+//		this._max_paths = this.getMaxPathSharedArray();
+		this._max_paths = new int[this.countNodes()][];
 //		for(int k = 0; k<this.countNodes(); k++)
 //			Arrays.fill(this._max_paths[k], 0);
 		for(int k=0; k<this.countNodes(); k++){
 			this.max(k);
 		}
-		
-//		time = System.currentTimeMillis() - time;
-//		System.err.println("MAX TIME:"+time+" ms");
 	}
 	
 	/**
@@ -393,26 +421,12 @@ public abstract class Network implements Serializable, HyperGraph{
 				score += this._inside[child_k];
 			
 			inside = sumLog(inside, score);
-			
-//			if(this.getInstance().getInstanceId()==10 && k==13){
-//				System.err.println();
-//				System.err.println("v1 "+v1);
-//				System.err.println("v2 "+v2);
-//				System.err.println("inside "+inside);
-//			}
 		}
 		
 		this._inside[k] = inside;
 		
 		if(this._inside[k]==Double.NEGATIVE_INFINITY)
 			this.remove(k);
-
-//		if(this.getInstance().getInstanceId()==10){
-//			System.err.println("inside "+k+"="+this._inside[k]);
-//			if(Double.isNaN(this._inside[k])){
-//				System.exit(1);
-//			}
-//		}
 	}
 	
 	/**
@@ -466,14 +480,6 @@ public abstract class Network implements Serializable, HyperGraph{
 		if(this._outside[k]==Double.NEGATIVE_INFINITY){
 			this.remove(k);
 		}
-		
-//		if(this.getInstance().getInstanceId()==10){
-//			System.err.println("outside "+k+"="+this._outside[k]);
-//			if(Double.isNaN(this._outside[k])){
-//				System.exit(1);
-//			}
-//		}
-
 	}
 	
 	/**
@@ -514,7 +520,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			if(NetworkConfig.USE_STRUCTURED_SVM){
-				count = 1;
+				count = 1; // this assumes binary features (either 0 or 1)
 			} else {
 				double score = fa.getScore(this._param); // w*f
 				score += this._outside[k];  // beta(s')
@@ -555,14 +561,14 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected void max(int k){
 		if(this.isRemoved(k)){
 			this._max[k] = Double.NEGATIVE_INFINITY;
-			this._loss[k] = 0.0;
+			this._cost[k] = 0.0;
 			return;
 		}
 		
 		if(this.isSumNode(k)){
 
 			double inside = 0.0;
-			double loss = 0.0;
+			double cost = 0.0;
 			int[][] childrenList_k = this.getChildren(k);
 			
 			if(childrenList_k.length==0){
@@ -579,15 +585,15 @@ public abstract class Network implements Serializable, HyperGraph{
 						ignoreflag = true;
 				if(ignoreflag){
 					inside = Double.NEGATIVE_INFINITY;
-					loss = 0.0;
+					cost = 0.0;
 				} else {
 					FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 					double score = fa.getScore(this._param);
-					loss = 0.0;
+					cost = 0.0;
 					try{
-						loss = this._compiler.loss(this, k, children_k);
+						cost = this._compiler.cost(this, k, children_k);
 					} catch (NullPointerException e){
-						System.err.println("WARNING: Compiler was not specified during network creation, setting loss to 0.0");
+						System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 					}
 					for(int child_k : children_k){
 						score += this._max[child_k];
@@ -613,9 +619,9 @@ public abstract class Network implements Serializable, HyperGraph{
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
 				try{
-					loss += this._compiler.loss(this, k, children_k);
+					cost += this._compiler.cost(this, k, children_k);
 				} catch (NullPointerException e){
-					System.err.println("WARNING: Compiler was not specified during network creation, setting loss to 0.0");
+					System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 				}
 				for(int child_k : children_k){
 					score += this._max[child_k];
@@ -626,14 +632,14 @@ public abstract class Network implements Serializable, HyperGraph{
 			}
 			
 			this._max[k] = inside;
-			this._loss[k] = loss;
+			this._cost[k] = cost;
 		}
 		
 		else{
 
 			int[][] childrenList_k = this.getChildren(k);
 			this._max[k] = Double.NEGATIVE_INFINITY;
-			this._loss[k] = 0.0;
+			this._cost[k] = 0.0;
 			
 			for(int children_k_index = 0; children_k_index < childrenList_k.length; children_k_index++){
 				int[] children_k = childrenList_k[children_k_index];
@@ -647,18 +653,18 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double max = fa.getScore(this._param);
-				double loss = 0.0;
+				double cost = 0.0;
 				try{
-					loss = this._compiler.loss(this, k, children_k);
+					cost = this._compiler.cost(this, k, children_k);
 				} catch (NullPointerException e){
-					System.err.println("WARNING: Compiler was not specified during network creation, setting loss to 0.0");
+					System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 				}
 				for(int child_k : children_k){
 					max += this._max[child_k];
 				}
 				boolean shouldUpdate = false;
 				if(NetworkConfig.USE_STRUCTURED_SVM){
-					if(max+loss >= this._max[k]+this._loss[k]){
+					if(max+cost >= this._max[k]+this._cost[k]){
 						shouldUpdate = true;
 					}
 				} else {
@@ -668,7 +674,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				}
 				if(shouldUpdate){
 					this._max[k] = max;
-					this._loss[k] = loss;
+					this._cost[k] = cost;
 					this._max_paths[k] = children_k;
 				}
 			}
