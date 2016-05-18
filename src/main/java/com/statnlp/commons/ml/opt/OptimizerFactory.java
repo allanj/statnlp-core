@@ -23,9 +23,15 @@ import com.statnlp.commons.ml.opt.GradientDescentOptimizer.AdaptiveStrategy;
 public abstract class OptimizerFactory implements Serializable {
 	
 	private static final long serialVersionUID = 70815268952763513L;
-	public static final double DEFAULT_LEARNING_RATE = 1e-2;
+	public static final double DEFAULT_LEARNING_RATE = 1e-3;
 	public static final double DEFAULT_ADADELTA_PHI = 0.95;
-	public static final double DEFAULT_ADADELTA_EPS = 1e-8;
+	public static final double DEFAULT_ADADELTA_EPS = 1e-7;
+	public static final double DEFAULT_ADADELTA_GRAD_DECAY = 0.75;
+	public static final double DEFAULT_RMSPROP_DECAY = 0.9;
+	public static final double DEFAULT_RMSPROP_EPS = 1e-7;
+	public static final double DEFAULT_ADAM_BETA1 = 0.9;
+	public static final double DEFAULT_ADAM_BETA2 = 0.95;
+	public static final double DEFAULT_ADAM_EPS = 1e-7;
 	
 	OptimizerFactory() {}
 	
@@ -160,9 +166,25 @@ public abstract class OptimizerFactory implements Serializable {
 	/**
 	 * Return the factory object to create a gradient descent optimizer.<br>
 	 * The returned factory will create instances of GradientDescentOptimizer with RMSProp adaptive method.<br>
+	 * By default the hyperparameters are set as follows:
+	 * <ol>
+	 * <li>learningRate = {@value #DEFAULT_LEARNING_RATE}</li>
+	 * <li>rmsPropDecay = {@value #DEFAULT_RMSPROP_DECAY}</li>
+	 * <li>rmsPropEps = {@value #DEFAULT_RMSPROP_EPS}</li>
+	 * </ol>
+	 * @return
+	 */
+	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingRMSProp(){
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.RMSPROP, DEFAULT_LEARNING_RATE, 0.0, 0.0, 0.0, DEFAULT_RMSPROP_DECAY, DEFAULT_RMSPROP_EPS, 0.0, 0.0, 0.0);
+	}
+	
+	/**
+	 * Return the factory object to create a gradient descent optimizer.<br>
+	 * The returned factory will create instances of GradientDescentOptimizer with RMSProp adaptive method.<br>
 	 * The hyperparameters are set according to the passed values.
-	 * @param phi
-	 * @param eps
+	 * @param learningRate
+	 * @param rmsPropDecay
+	 * @param rmsPropEps
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingRMSProp(double learningRate, double rmsPropDecay, double rmsPropEps){
@@ -172,9 +194,27 @@ public abstract class OptimizerFactory implements Serializable {
 	/**
 	 * Return the factory object to create a gradient descent optimizer.<br>
 	 * The returned factory will create instances of GradientDescentOptimizer with AdaM adaptive method.<br>
+	 * By default the hyperparameters are set as follows:
+	 * <ol>
+	 * <li>learningRate = {@value #DEFAULT_LEARNING_RATE}</li>
+	 * <li>adamBeta1 = {@value #DEFAULT_ADAM_BETA1}</li>
+	 * <li>adamBeta2 = {@value #DEFAULT_ADAM_BETA2}</li>
+	 * <li>adamEps = {@value #DEFAULT_ADAM_EPS}</li>
+	 * </ol>
+	 * @return
+	 */
+	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaM(){
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM, DEFAULT_LEARNING_RATE, 0.0, 0.0, 0.0, 0.0, 0.0, DEFAULT_ADAM_BETA1, DEFAULT_ADAM_BETA2, DEFAULT_ADAM_EPS);
+	}
+	
+	/**
+	 * Return the factory object to create a gradient descent optimizer.<br>
+	 * The returned factory will create instances of GradientDescentOptimizer with AdaM adaptive method.<br>
 	 * The hyperparameters are set according to the passed values.
-	 * @param phi
-	 * @param eps
+	 * @param learningRate
+	 * @param adamBeta1
+	 * @param adamBeta2
+	 * @param adamEps
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaM(double learningRate, double adamBeta1, double adamBeta2, double adamEps){

@@ -189,6 +189,15 @@ public abstract class Network implements Serializable, HyperGraph{
 	}
 	
 	/**
+	 * Return the cost associated with the node with index k.
+	 * @param k
+	 * @return
+	 */
+	public double getCost(int k){
+		return this._cost[k];
+	}
+	
+	/**
 	 * Return the children of the hyperedge which is part of the maximum path of this network
 	 * @return
 	 */

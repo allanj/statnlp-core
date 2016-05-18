@@ -81,7 +81,7 @@ public abstract class NetworkCompiler implements Serializable{
 	/**
 	 * The cost of the structure from leaf nodes up to node <code>k</code>.<br>
 	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.<br>
-	 * Note that the implementation can access the cost of the child nodes at _cost[child_idx] and
+	 * Note that the implementation can access the cost of the child nodes at {@link Network#getCost(int)} and
 	 * the best path so far is stored at getMaxPath(child_idx), which represents the hyperedge connected to
 	 * node <code>child_idx</code> which is part of the best path so far.
 	 * @param k
@@ -145,7 +145,7 @@ public abstract class NetworkCompiler implements Serializable{
 	public double aggregateChildCost(Network network, int k, int[] child_k){
 		double maxLoss = 0.0;
 		for(int child: child_k){
-			maxLoss += network._cost[child];
+			maxLoss += network.getCost(child);
 		}
 		return maxLoss;
 	}
