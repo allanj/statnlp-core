@@ -51,6 +51,7 @@ public class NetworkConfig {
 	public static boolean REBUILD_FOREST_EVERY_TIME = false;
 	public static boolean USE_STRUCTURED_SVM = false;
 	public static boolean USE_BATCH_SGD = false;
+	public static double SSVM_MARGIN = 1.0;
 	
 	public static boolean _CACHE_FEATURES_DURING_TRAINING = true;
 	public static boolean _SEQUENTIAL_FEATURE_EXTRACTION = true ;

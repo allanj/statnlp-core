@@ -34,6 +34,7 @@ public abstract class Instance implements Serializable{
 	protected int _instanceId;
 	protected double _weight;
 	protected boolean _isLabeled;
+	protected Instance _labeledInstance;
 	
 	/**
 	 * Create an instance.
@@ -89,6 +90,14 @@ public abstract class Instance implements Serializable{
 	 */
 	public void setUnlabeled(){
 		this._isLabeled = false;
+	}
+	
+	public Instance getLabeledInstance(){
+		return this._labeledInstance;
+	}
+	
+	public void setLabeledInstance(Instance inst){
+		this._labeledInstance = inst;
 	}
 	
 	/**

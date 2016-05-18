@@ -24,6 +24,7 @@ import java.util.List;
 
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
+import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.hybridnetworks.TableLookupNetwork;
 
@@ -42,12 +43,12 @@ public class LinearCRFNetwork extends TableLookupNetwork{
 		
 	}
 	
-	public LinearCRFNetwork(int networkId, LinearCRFInstance inst, LocalNetworkParam param){
-		super(networkId, inst, param);
+	public LinearCRFNetwork(int networkId, LinearCRFInstance inst, LocalNetworkParam param, NetworkCompiler compiler){
+		super(networkId, inst, param, compiler);
 	}
 
-	public LinearCRFNetwork(int networkId, LinearCRFInstance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes){
-		super(networkId, inst, nodes, children, param);
+	public LinearCRFNetwork(int networkId, LinearCRFInstance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes, NetworkCompiler compiler){
+		super(networkId, inst, nodes, children, param, compiler);
 		this._numNodes = numNodes;
 	}
 	
@@ -80,14 +81,14 @@ public class LinearCRFNetwork extends TableLookupNetwork{
 			Label goldLabel = inst.output.get(pos);
 			if(goldLabel == predLabel){
 				// Same label, no change of loss
-				return this._loss[child_k[0]];
+				return this._cost[child_k[0]];
 			} else {
 				return 1.0;
 			}
 		} else {
 			if(child_k.length > 0){ // Root
 				// At root, no change of loss
-				return this._loss[child_k[0]];
+				return this._cost[child_k[0]];
 			} else { // Leaf
 				return 0.0;
 			}
