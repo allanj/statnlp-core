@@ -31,10 +31,19 @@ public abstract class Instance implements Serializable{
 	
 	private static final long serialVersionUID = 4998596827132890817L;
 	
+	/** The ID of this instance*/
 	protected int _instanceId;
+	/**
+	 * The weight (importance) of this instance.<br>
+	 * This is also used in the network score calculation, with negative weight for unlabeled.
+	 */
 	protected double _weight;
+	/** Whether current instance represents a labeled instance */
 	protected boolean _isLabeled;
-	protected Instance _labeledInstance;
+	/** The labeled version of this instance, if exists, null otherwise */
+	private Instance _labeledInstance;
+	/** The unlabeled version of this instance, if exists, null otherwise */
+	private Instance _unlabeledInstance;
 	
 	/**
 	 * Create an instance.
@@ -49,18 +58,34 @@ public abstract class Instance implements Serializable{
 		this._weight = weight;
 	}
 	
-	public void setInstanceId(int instanceId){
-		this._instanceId = instanceId;
-	}
-	
+	/**
+	 * Returns the instance ID
+	 * @return
+	 */
 	public int getInstanceId(){
 		return this._instanceId;
 	}
 	
+	/**
+	 * Sets the instance ID
+	 * @param instanceId
+	 */
+	public void setInstanceId(int instanceId){
+		this._instanceId = instanceId;
+	}
+	
+	/**
+	 * Returns the instance weight
+	 * @return
+	 */
 	public double getWeight(){
 		return this._weight;
 	}
 	
+	/**
+	 * Sets the instance weight
+	 * @param weight
+	 */
 	public void setWeight(double weight){
 		this._weight = weight;
 	}
@@ -71,6 +96,10 @@ public abstract class Instance implements Serializable{
 	 */
 	public abstract int size();
 	
+	/**
+	 * Whether this instance is a labeled instance (as opposed to unlabeled instance)
+	 * @return
+	 */
 	public boolean isLabeled(){
 		return this._isLabeled;
 	}
@@ -79,9 +108,6 @@ public abstract class Instance implements Serializable{
 	 * Set this instance as a labeled instance
 	 */
 	public void setLabeled(){
-//		if(this.getOutput()==null){
-//			throw new RuntimeException("This instance has no outputs, but you want to make it labeled??");
-//		}
 		this._isLabeled = true;
 	}
 	
@@ -92,12 +118,41 @@ public abstract class Instance implements Serializable{
 		this._isLabeled = false;
 	}
 	
+	/**
+	 * Returns the labeled instance<br>
+	 * If this instance is a labeled instance, this will return itself
+	 * @return
+	 */
 	public Instance getLabeledInstance(){
+		if(isLabeled()){
+			return this;
+		}
 		return this._labeledInstance;
 	}
 	
+	/**
+	 * Sets the labeled instance
+	 * @param inst
+	 */
 	public void setLabeledInstance(Instance inst){
 		this._labeledInstance = inst;
+	}
+	
+	/**
+	 * Returns the unlabeled instance<br>
+	 * If this instance is an unlabeled instance, this will return itself
+	 * @return
+	 */
+	public Instance getUnlabeledInstance(){
+		return this._unlabeledInstance;
+	}
+	
+	/**
+	 * Sets the unlabeled instance
+	 * @param inst
+	 */
+	public void setUnlabeledInstance(Instance inst){
+		this._unlabeledInstance = inst;
 	}
 	
 	/**

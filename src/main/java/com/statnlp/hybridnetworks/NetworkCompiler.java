@@ -18,8 +18,7 @@ package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
 import java.util.Arrays;
-//import java.util.Map;
-//import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.statnlp.commons.types.Instance;
 
@@ -35,8 +34,59 @@ import com.statnlp.commons.types.Instance;
  */
 public abstract class NetworkCompiler implements Serializable{
 	
+	/**
+	 * A class to store information about a single instance (both labeled and unlabeled versions)
+	 * @author Aldrian Obaja <aldrianobaja.m@gmail.com>
+	 *
+	 */
+	public static class InstanceInfo implements Serializable {
+		private static final long serialVersionUID = 8576388720516676443L;
+		public int instanceId;
+		public Network labeledNetwork;
+		public Network unlabeledNetwork;
+		
+		public double score;
+		
+		public InstanceInfo(int instanceID){
+			if(instanceID <= 0){
+				throw new RuntimeException("InstanceInfo objects should have positive ID, received ID: "+instanceID);
+			}
+			this.instanceId = instanceID;
+		}
+	}
+	
 	private static final long serialVersionUID = 1052885626598299680L;
-//	public Map<Integer, Double> instanceIDtoScore = new ConcurrentHashMap<Integer, Double>();
+	public final ConcurrentHashMap<Integer, InstanceInfo> instanceInfos = new ConcurrentHashMap<Integer, InstanceInfo>();
+	
+	/**
+	 * Compile and store the networks per instance basis (each instance has two networks: labeled and unlabeled)
+	 * @param networkId
+	 * @param inst
+	 * @param param
+	 * @return
+	 */
+	public Network compileAndStore(int networkId, Instance inst, LocalNetworkParam param){
+		Network network = compile(networkId, inst, param);
+		int absInstID = Math.abs(inst.getInstanceId());
+		InstanceInfo info = instanceInfos.putIfAbsent(absInstID, new InstanceInfo(absInstID));
+		if(info == null){ // This means previously there is no InstanceInfo
+			info = instanceInfos.get(absInstID);
+		}
+		if(inst.isLabeled()){
+			info.labeledNetwork = network;
+			if(info.unlabeledNetwork != null){
+				info.unlabeledNetwork.setLabeledNetwork(network);
+				network.setUnlabeledNetwork(info.unlabeledNetwork);
+			}
+		} else {
+			info.unlabeledNetwork = network;
+			if(info.labeledNetwork != null){
+				info.labeledNetwork.setUnlabeledNetwork(network);
+				network.setLabeledNetwork(info.labeledNetwork);
+			}
+		}
+		return network;
+	}
 	
 	/**
 	 * Convert an instance into the network representation.<br>
@@ -90,7 +140,7 @@ public abstract class NetworkCompiler implements Serializable{
 	 */	
 	public double totalCostUpTo(Network network, int parent_k, int[] child_k){
 		int size = network.getInstance().size();
-		Network labeledNet = getLabeledNetwork(network);
+		Network labeledNet = network.getLabeledNetwork();
 		double aggregateChildLoss = aggregateChildCost(network, parent_k, child_k);
 		long node = network.getNode(parent_k);
 		int node_k = labeledNet.getNodeIndex(node);
@@ -117,21 +167,6 @@ public abstract class NetworkCompiler implements Serializable{
 			return aggregateChildLoss;
 		} else {
 			return aggregateChildLoss+NetworkConfig.SSVM_MARGIN/size;
-		}
-	}
-	
-	private Network getLabeledNetwork(Network network){
-		Network labeledNet = network.getLabeledNetwork();
-		if(labeledNet != null){
-			return labeledNet;
-		}
-		Instance labeledInstance = network.getInstance().getLabeledInstance();
-		if(labeledInstance != null){
-			labeledNet = compile(-1, labeledInstance, new LocalNetworkParam(-1, null, 1));
-			network.setLabeledNetwork(labeledNet);
-			return labeledNet;
-		} else {
-			return null;
 		}
 	}
 	

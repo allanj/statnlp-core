@@ -35,12 +35,18 @@ public abstract class Network implements Serializable, HyperGraph{
 	
 	private static final long serialVersionUID = -3630379919120581209L;
 	
+	/** The working array for each thread for calculating inside scores */
 	protected static double[][] insideSharedArray = new double[NetworkConfig._numThreads][];
+	/** The working array for each thread for calculating outside scores */
 	protected static double[][] outsideSharedArray = new double[NetworkConfig._numThreads][];
+	/** The working array for each thread for calculating max scores */
 	protected static double[][] maxSharedArray = new double[NetworkConfig._numThreads][];
+	/** The working array for each thread for calculating cost */
+	protected static double[][] costSharedArray = new double[NetworkConfig._numThreads][];
+	/** The working array for each thread for storing max paths (for backtracking) */
 	protected static int[][][] maxPathsSharedArrays = new int[NetworkConfig._numThreads][][];
 	
-	/** The ids associated with the network (within the scope of the thread). */
+	/** The IDs associated with the network (within the scope of the thread). */
 	protected int _networkId;
 	/** The id of the thread */
 	protected int _threadId;
@@ -51,23 +57,25 @@ public abstract class Network implements Serializable, HyperGraph{
 	/** The feature parameters */
 	protected transient LocalNetworkParam _param;
 	
-	//at each index, store the node's inside score
+	/** At each index, store the node's inside score */
 	protected transient double[] _inside;
-	//at each index, store the node's outside score
+	/** At each index, store the node's outside score */
 	protected transient double[] _outside;
-	//at each index, store the score of the max tree
+	/** At each index, store the score of the max tree */
 	protected transient double[] _max;
-	//at each index, store the cost of the max tree
+	/** At each index, store the cost of the max tree */
 	protected transient double[] _cost;
-	//this stores the paths associated with the above tree
+	/** Stores the paths associated with the above tree */
 	protected transient int[][] _max_paths;
 	/** To mark whether a node has been visited in one iteration */
 	protected transient boolean[] _visited;
 	
 	/** The compiler that created this network */
 	protected NetworkCompiler _compiler;
-	/** The labeled version of this network, if exists */
-	protected Network _labeledNetwork;
+	/** The labeled version of this network, if exists, null otherwise */
+	private Network _labeledNetwork;
+	/** The unlabeled version of this network, if exists, null otherwise */
+	private Network _unlabeledNetwork;
 	
 	/**
 	 * Default constructor. Note that the network constructed using this default constructor is lacking 
@@ -121,6 +129,12 @@ public abstract class Network implements Serializable, HyperGraph{
 		return maxSharedArray[this._threadId];
 	}
 
+	protected double[] getCostSharedArray(){
+		if(costSharedArray[this._threadId] == null || this.countNodes() > costSharedArray[this._threadId].length)
+			costSharedArray[this._threadId] = new double[this.countNodes()];
+		return costSharedArray[this._threadId];
+	}
+
 	protected int[][] getMaxPathSharedArray(){
 		if(maxPathsSharedArrays[this._threadId] == null || this.countNodes() > maxPathsSharedArrays[this._threadId].length)
 			maxPathsSharedArrays[this._threadId] = new int[this.countNodes()][];
@@ -135,34 +149,80 @@ public abstract class Network implements Serializable, HyperGraph{
 		return this._threadId;
 	}
 	
+	/**
+	 * Returns the instance modeled by this network
+	 * @return
+	 */
 	public Instance getInstance(){
 		return this._inst;
 	}
 	
+	/**
+	 * Returns the compiler that compiled this network
+	 * @return
+	 */
 	public NetworkCompiler getCompiler(){
 		return this._compiler;
 	}
 	
+	/**
+	 * Sets the compiler that compiled this network
+	 * @param compiler
+	 */
 	public void setCompiler(NetworkCompiler compiler){
 		this._compiler = compiler;
 	}
 	
+	/**
+	 * Returns the labeled network related to this network<br>
+	 * If this network represents a labeled network, this will return itself
+	 * @return
+	 */
 	public Network getLabeledNetwork(){
+		if(getInstance().isLabeled()){
+			return this;
+		}
 		return this._labeledNetwork;
 	}
 	
+	/**
+	 * Sets the labeled network related to this network
+	 * @param network
+	 */
 	public void setLabeledNetwork(Network network){
 		this._labeledNetwork = network;
 	}
 	
-	//get the inside score for the root node.
-	public double getInside(){
-		return this._inside[this.countNodes()-1];
-//		return this._inside[this._inside.length-1];
+	/**
+	 * Returns the unlabeled network related to this network<br>
+	 * If this network represents an unlabeled network, this will return itself
+	 * @return
+	 */
+	public Network getUnlabeledNetwork(){
+		if(!getInstance().isLabeled()){
+			return this;
+		}
+		return this._unlabeledNetwork;
 	}
 	
 	/**
-	 * Return the maximum score for this network
+	 * Sets the unlabeled network related to this network
+	 * @param network
+	 */
+	public void setUnlabeledNetwork(Network network){
+		this._unlabeledNetwork = network;
+	}
+	
+	/**
+	 * Returns the inside score for the root node
+	 * @return
+	 */
+	public double getInside(){
+		return this._inside[this.countNodes()-1];
+	}
+	
+	/**
+	 * Return the maximum score for this network (which is the max score for the root node)
 	 * @return
 	 */
 	public double getMax(){
@@ -172,7 +232,6 @@ public abstract class Network implements Serializable, HyperGraph{
 		} else {
 			return this._max[rootIdx];
 		}
-//		return this._max[this._max.length-1];
 	}
 
 	/**
@@ -239,52 +298,36 @@ public abstract class Network implements Serializable, HyperGraph{
 		this.updateObjective();
 	}
 	
-//	private static double[] inside_fixed = new double[100000];
-	
 	/**
 	 * Calculate the inside score of all nodes
 	 */
 	protected void inside(){
-//		long time = System.currentTimeMillis();
-		
 		this._inside = this.getInsideSharedArray();
 		Arrays.fill(this._inside, 0.0);
 		for(int k=0; k<this.countNodes(); k++){
 			this.inside(k);
-//			System.err.println("inside score at "+k+"="+Math.exp(this._inside[k]));
 		}
 		
 		if(this.getInside()==Double.NEGATIVE_INFINITY){
-			throw new RuntimeException("Error! This instance has zero inside score!");
+			throw new RuntimeException("Error: network (ID="+_networkId+") has zero inside score");
 		}
-		
-//		time = System.currentTimeMillis() - time;
-//		System.err.println("INSIDE TIME:"+time+" ms\t"+Math.exp(this.getInside())+"\t"+this.countNodes()+Arrays.toString(NetworkIDMapper.toHybridNodeArray(this.getNode(this.countNodes()-1))));
 	}
 	
 	/**
 	 * Calculate the outside score of all nodes
 	 */
 	protected void outside(){
-//		long time = System.currentTimeMillis();
-		
 		this._outside = this.getOutsideSharedArray();
 		Arrays.fill(this._outside, Double.NEGATIVE_INFINITY);
 		for(int k=this.countNodes()-1; k>=0; k--){
 			this.outside(k);
-//			System.err.println("outside score at "+k+"="+Math.exp(this._outside[k]));
 		}
-		
-//		time = System.currentTimeMillis() - time;
-//		System.err.println("OUTSIDE TIME:"+time+" ms");
 	}
 	
 	/**
 	 * Calculate and update the inside-outside score of all nodes
 	 */
 	protected void updateGradient(){
-//		long time = System.currentTimeMillis();
-		
 		if(NetworkConfig.USE_STRUCTURED_SVM){
 			// Max is already calculated
 			int rootIdx = this.countNodes()-1;
@@ -295,8 +338,6 @@ public abstract class Network implements Serializable, HyperGraph{
 				this.updateGradient(k);
 			}
 		}			
-//		time = System.currentTimeMillis() - time;
-//		System.err.println("UPDATE TIME:"+time+" ms");
 	}
 	
 	private void resetVisitedMark(){
@@ -307,72 +348,33 @@ public abstract class Network implements Serializable, HyperGraph{
 	}
 	
 	protected void updateObjective(){
+		double objective = 0.0;
 		if(NetworkConfig.USE_STRUCTURED_SVM){
-			this._param.addObj(this.getMax() * this._weight);
-//			// Test to find bugs where some instances have negative loss
-//			boolean finalScore = false;
-//			int absID = Math.abs(this.getInstance().getInstanceId());
-//			double curScore = 0.0;
-//			if(this._compiler.instanceIDtoScore.containsKey(absID)){
-//				finalScore = true;
-//				curScore = this._compiler.instanceIDtoScore.get(absID);
-//			}
-//			this._compiler.instanceIDtoScore.put(absID, curScore+(this.getMax()*this._weight));
-//			double realScore = -this._compiler.instanceIDtoScore.get(absID); // Because the curScore is the negated one
-//			double labeledScore = 0.0;
-//			double unlabeledScore = 0.0;
-//			if(this._weight < 0){
-//				labeledScore = curScore;
-//				unlabeledScore = this.getMax();
-//			} else {
-//				labeledScore = this.getMax();
-//				unlabeledScore = -curScore;
-//			}
-//			if(finalScore){
-//				if(realScore < 0){
-//					System.out.printf("Instance ID: %d has negative loss: %.6f (%.6f - %.6f)\n", absID, realScore, unlabeledScore, labeledScore);
-//				} else {
-//					System.out.printf("Instance ID: %d has positive loss: %.6f (%.6f - %.6f)\n", absID, realScore, unlabeledScore, labeledScore);
-//				}
-//			}
-//			if(finalScore){
-//				this._compiler.instanceIDtoScore.remove(absID);
-//				if(absID == 3){
-//					System.out.println(this.getInstance());
-//					System.out.println(this);
-//				}
-//			}
+			objective = this.getMax() * this._weight;
 		} else {
-			this._param.addObj(this.getInside() * this._weight);
+			objective = this.getInside() * this._weight;
 		}
+		this._param.addObj(objective);
 	}
 	
 	/**
 	 * Goes through each nodes in the network to gather list of features
 	 */
 	public synchronized void touch(){
-//		long time = System.currentTimeMillis();
-		
 		for(int k=0; k<this.countNodes(); k++)
 			this.touch(k);
-		
-//		time = System.currentTimeMillis() - time;
-//		System.err.println("TOUCH TIME:"+time+" ms");
 	}
 	
 	/**
 	 * Calculate the maximum score for all nodes
 	 */
 	public void max(){
-		this._max = new double[this.countNodes()];
-		this._cost = new double[this.countNodes()];
+		this._max = this.getMaxSharedArray();
+		this._cost = this.getCostSharedArray();
 		Arrays.fill(this._max, Double.NEGATIVE_INFINITY);
 		Arrays.fill(this._cost, 0.0);
 		
-//		this._max_paths = this.getMaxPathSharedArray();
-		this._max_paths = new int[this.countNodes()][];
-//		for(int k = 0; k<this.countNodes(); k++)
-//			Arrays.fill(this._max_paths[k], 0);
+		this._max_paths = this.getMaxPathSharedArray();
 		for(int k=0; k<this.countNodes(); k++){
 			this.max(k);
 		}
@@ -391,7 +393,9 @@ public abstract class Network implements Serializable, HyperGraph{
 		double inside = 0.0;
 		int[][] childrenList_k = this.getChildren(k);
 		
-		if(childrenList_k.length==0){
+		// If this node has no child edge, assume there is one edge with no child node
+		// This is done so that every node is visited in the feature extraction step below
+		if(childrenList_k.length==0){ 
 			childrenList_k = new int[1][0];
 		}
 		
@@ -642,10 +646,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			this._max[k] = inside;
 			this._cost[k] = cost;
-		}
-		
-		else{
-
+		} else {
 			int[][] childrenList_k = this.getChildren(k);
 			this._max[k] = Double.NEGATIVE_INFINITY;
 			this._cost[k] = 0.0;
@@ -688,7 +689,6 @@ public abstract class Network implements Serializable, HyperGraph{
 				}
 			}
 		}
-//		System.err.println("max["+k+"]"+_max[k]);
 	}
 
 	private double sumLog(double inside, double score) {

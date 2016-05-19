@@ -206,6 +206,18 @@ public class LocalNetworkParam implements Serializable{
 		return this._cacheEnabled;
 	}
 	
+	/**
+	 * Extract features from the specified network at current hyperedge, specified by its parent node
+	 * index (parent_k) and its children node indices (children_k).<br>
+	 * The children_k_index represents the index of current hyperedge in the list of hyperedges coming out of
+	 * the parent node.<br>
+	 * Note that a node with no outgoing hyperedge will still be considered here with empty children_k
+	 * @param network
+	 * @param parent_k
+	 * @param children_k
+	 * @param children_k_index
+	 * @return
+	 */
 	public FeatureArray extract(Network network, int parent_k, int[] children_k, int children_k_index){
 		// Do not cache in the first touch when parallel touch and extract only from labeled is enabled,
 		// since the local feature indices will change
@@ -240,11 +252,15 @@ public class LocalNetworkParam implements Serializable{
 		return fa;
 	}
 	
-	//finalize the param.
+	/**
+	 * Finalize the features extracted by copying the local features into global features.<br>
+	 * This is not required if this is in global mode, which means the features are stored into
+	 * global feature index directly.
+	 */
 	public void finalizeIt(){
 		//if it is global mode, do not have to do this at all.
 		if(this.isGlobalMode()){
-			System.err.println("Is global mode..");
+			System.err.println("Finalizing local features in global mode: not required");
 			this._isFinalized = true;
 			return;
 		}
