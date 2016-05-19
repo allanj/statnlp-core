@@ -204,12 +204,7 @@ public class GradientDescentOptimizer implements Optimizer{
 	}
 	
 	public boolean optimize() throws ExceptionWithIflag{
-//		double sum = 0.0;
-//		for(int k=0; k<this._x.length; k++){
-//			sum += Math.pow(this._g[k], 2);
-//		}
-//		sum = Math.sqrt(sum);
-//		System.err.println("L2norm: "+sum);
+//		System.err.println("L2norm: "+Optimizer.l2Norm(this._g));
 		
 		boolean currentIsBest = checkAndSetAndIsBest();
 		if(!currentIsBest && (this.iterNum - this.bestIterNum >= maxStagnantIterCount)){

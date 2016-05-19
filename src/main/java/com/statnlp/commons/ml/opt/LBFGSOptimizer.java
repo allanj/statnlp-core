@@ -72,6 +72,7 @@ public class LBFGSOptimizer implements Optimizer{
 	//return true if it should stop.
 	public boolean optimize() throws ExceptionWithIflag{
     	LBFGS.lbfgs(this._n, this._m, this._x, this._f, this._g, this._diagco, this._diag, this._iprint, this._eps, this._xtol, this._iflag);
+//    	System.err.println("L2 norm: "+Optimizer.l2Norm(this._g));
     	return _iflag[0] == 0;
 	}
     

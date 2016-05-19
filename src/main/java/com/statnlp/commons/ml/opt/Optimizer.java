@@ -33,4 +33,13 @@ public interface Optimizer {
 	public double[] getGradients();
 	
 	public boolean optimize() throws ExceptionWithIflag;
+	
+	public static double l2Norm(double[] values){
+		double sum = 0.0;
+		for(int k=0; k<values.length; k++){
+			sum += Math.pow(values[k], 2);
+		}
+		sum = Math.sqrt(sum);
+		return sum;
+	}
 }
