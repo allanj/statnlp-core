@@ -46,7 +46,7 @@ public class LinearCRFMain {
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
 		
-		int numIterations = 1000;
+		int numIterations = 500;
 		
 		int size = trainInstances.length;
 		

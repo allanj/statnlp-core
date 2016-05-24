@@ -19,13 +19,8 @@
  */
 package com.statnlp.example.linear_crf;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkCompiler;
-import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.hybridnetworks.TableLookupNetwork;
 
 /**
@@ -50,95 +45,6 @@ public class LinearCRFNetwork extends TableLookupNetwork{
 	public LinearCRFNetwork(int networkId, LinearCRFInstance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes, NetworkCompiler compiler){
 		super(networkId, inst, nodes, children, param, compiler);
 		this._numNodes = numNodes;
-	}
-	
-	public double totalLossUpTo(int k, int[] child_k){
-		if(useZeroOneLossAtEachNode){
-			return zeroOneLossAtEachNode(k, child_k);
-		} else {
-			return zeroOneLossAtRootOnly(k, child_k);
-		}
-	}
-	
-	/**
-	 * We implement zero-one loss here, with the loss applied at each node<br>
-	 * So if the best path so far contains incorrect label, the loss is 1.0, otherwise 0.0.
-	 * Another possibility is to calculate loss only at root node, effectively removing the loss
-	 * from the Viterbi process during max-path finding, and only using the loss at the end<br>
-	 * See {@link #zeroOneLossAtRootOnly(int, int[])}
-	 * @param k
-	 * @param child_k
-	 * @return
-	 */
-	private double zeroOneLossAtEachNode(int k, int[] child_k){
-		LinearCRFInstance inst = (LinearCRFInstance)this.getInstance();
-		int size = inst.size();
-		int[] nodeArr = getNodeArray(k);
-		int pos = nodeArr[0]-1;
-		Label predLabel = Label.get(nodeArr[1]);
-		int nodeType = nodeArr[4];
-		if(pos >= 0 && pos < size && nodeType != NODE_TYPES.ROOT.ordinal()){
-			Label goldLabel = inst.output.get(pos);
-			if(goldLabel == predLabel){
-				// Same label, no change of loss
-				return this._cost[child_k[0]];
-			} else {
-				return 1.0;
-			}
-		} else {
-			if(child_k.length > 0){ // Root
-				// At root, no change of loss
-				return this._cost[child_k[0]];
-			} else { // Leaf
-				return 0.0;
-			}
-		}
-	}
-	
-	/**
-	 * We implement zero-one loss here, with the loss applied only at the root, which means we only
-	 * evaluate the loss when the full structure is predicted, and not for partial structures<br>
-	 * If the predicted structure contains incorrect label, the loss is 1.0, otherwise 0.0.
-	 * Another possibility is to calculate loss at each node, effectively including the loss
-	 * in the Viterbi process during max-path finding<br>
-	 * See {@link #zeroOneLossAtEachNode(int, int[])}
-	 * @param k
-	 * @param child_k
-	 * @return
-	 */
-	private double zeroOneLossAtRootOnly(int k, int[] child_k){
-		LinearCRFInstance inst = (LinearCRFInstance)this.getInstance();
-		int size = inst.size();
-		int[] nodeArr = getNodeArray(k);
-		int pos = nodeArr[0]-1;
-		int nodeType = nodeArr[4];
-		if(pos != size || nodeType != NODE_TYPES.ROOT.ordinal()){
-			return 0.0;
-		}
-		List<Label> gold = inst.output;
-		List<Label> pred = new ArrayList<Label>();
-		int node_k = child_k[0];
-		for(int i=size-1; i>=0; i--){
-			int[] children_k = getMaxPath(node_k);
-			if(children_k.length != 1){
-				System.err.println("Child length not 1!");
-			}
-			node_k = children_k[0];
-			long child = getNode(node_k);
-			int[] child_arr = NetworkIDMapper.toHybridNodeArray(child);
-			int childPos = child_arr[0]-1;
-			if(childPos != i){
-				System.err.println("Position encoded in the node array not the same as the interpretation!");
-			}
-			int tag_id = child_arr[1];
-			pred.add(0, Label.get(tag_id));
-		}
-		
-		if(gold.equals(pred)){
-			return 0.0;
-		} else {
-			return 1.0;
-		}
 	}
 	
 	@Override
