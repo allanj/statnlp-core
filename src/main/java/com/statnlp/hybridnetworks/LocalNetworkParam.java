@@ -202,6 +202,10 @@ public class LocalNetworkParam implements Serializable{
 		this._cacheEnabled = false;
 	}
 	
+	public void enableCache(){
+		this._cacheEnabled = true;
+	}
+	
 	public boolean isCacheEnabled(){
 		return this._cacheEnabled;
 	}

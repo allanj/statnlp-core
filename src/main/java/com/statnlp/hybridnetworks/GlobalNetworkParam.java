@@ -29,6 +29,7 @@ import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
+import com.statnlp.commons.ml.opt.LBFGSOptimizer;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
@@ -593,7 +594,7 @@ public class GlobalNetworkParam implements Serializable{
     		throw new NetworkException("Exception with Iflag:"+e.getMessage());
     	}
 		
-    	if(!NetworkConfig.USE_STRUCTURED_SVM){
+    	if(this._opt.getClass() == LBFGSOptimizer.class){
 	    	double diff = this.getObj()-this.getObj_old();
 	    	if(diff >= 0 && diff < NetworkConfig.objtol){
 	    		done = true;
@@ -608,7 +609,7 @@ public class GlobalNetworkParam implements Serializable{
 	    		done = true;
 	    	}
     	}
-    	if(done && !NetworkConfig.USE_STRUCTURED_SVM){
+    	if(done && this._opt.getClass() == LBFGSOptimizer.class){
     		// If we stop early, we need to copy solution_cache,
     		// as noted in the Javadoc for solution_cache in LBFGS class.
     		// This is because the _weights will contain the next value to be evaluated, 

@@ -324,6 +324,10 @@ public abstract class Network implements Serializable, HyperGraph{
 		}
 	}
 	
+	public void updateGradient(double[] gradientArray){
+		
+	}
+	
 	/**
 	 * Calculate and update the inside-outside score of all nodes
 	 */

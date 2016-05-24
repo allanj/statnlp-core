@@ -233,7 +233,11 @@ public abstract class NetworkModel implements Serializable{
 		}
 	}
 	
-	public Instance[] decode(Instance[] allInstances) throws InterruptedException{
+	public Instance[] decode(Instance[] allInstances) throws InterruptedException {
+		return decode(allInstances, false);
+	}
+	
+	public Instance[] decode(Instance[] allInstances, boolean cacheFeatures) throws InterruptedException{
 		
 //		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
 //			this._fm.getParam_G().expandFeaturesForGenerativeModelDuringTesting();
@@ -248,13 +252,19 @@ public abstract class NetworkModel implements Serializable{
 		this._allInstances = allInstances;
 		
 		//create the threads.
-		this._decoders = new LocalNetworkDecoderThread[this._numThreads];
+		if(this._decoders == null || !cacheFeatures){
+			this._decoders = new LocalNetworkDecoderThread[this._numThreads];
+		}
 		
 		Instance[][] insts = this.splitInstancesForTest();
 		
 		//distribute the works into different threads.
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
-			this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler);
+			if(cacheFeatures && this._decoders[threadId] != null){
+				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, this._decoders[threadId].getParam(), true);
+			} else {
+				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, true);
+			}
 		}
 		
 		System.err.println("Okay. Decoding started.");
