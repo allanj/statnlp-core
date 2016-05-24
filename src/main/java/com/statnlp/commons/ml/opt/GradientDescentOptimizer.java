@@ -35,7 +35,7 @@ import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
  */
 public class GradientDescentOptimizer implements Optimizer{
 	
-	public static final int DEFAULT_MAX_STAGNANT_ITER_COUNT = 20;
+	public static final int DEFAULT_MAX_STAGNANT_ITER_COUNT = 40;
 	
 	private double learningRate;
 	private double[] _x;
