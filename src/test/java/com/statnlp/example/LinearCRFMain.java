@@ -16,6 +16,7 @@ import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
+import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkModel;
 
 public class LinearCRFMain {
@@ -36,7 +37,7 @@ public class LinearCRFMain {
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
 		NetworkConfig._numThreads = 4;
 		
-		NetworkConfig.USE_STRUCTURED_SVM = true; // To use Structured SVM (need to define loss function in the network
+		NetworkConfig.MODEL_TYPE = ModelType.CRF; // The model to be used: CRF, SSVM, or SSVM_WITH_SOFTMAX
 		NetworkConfig.USE_BATCH_SGD = false; // To use or not to use mini-batches in gradient descent optimizer
 		NetworkConfig.batchSize = 1000;         // The mini-batch size (if USE_BATCH_SGD = true)
 		
@@ -53,7 +54,7 @@ public class LinearCRFMain {
 		System.err.println("Read.."+size+" instances.");
 		
 		OptimizerFactory optimizerFactory;
-		if(NetworkConfig.USE_STRUCTURED_SVM){
+		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
 			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaDelta();
 		} else {
 			optimizerFactory = OptimizerFactory.getLBFGSFactory();
