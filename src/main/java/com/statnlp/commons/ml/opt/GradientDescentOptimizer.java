@@ -72,6 +72,7 @@ public class GradientDescentOptimizer implements Optimizer{
 		ADADELTA_DECAYING,
 		ADADELTA_THEN_ADAGRAD,
 		ADADELTA_THEN_GD,
+		ADADELTA_THEN_STOP,
 		RMSPROP,
 		ADAM,
 	}
@@ -138,6 +139,7 @@ public class GradientDescentOptimizer implements Optimizer{
 		case ADADELTA_DECAYING:
 		case ADADELTA_THEN_ADAGRAD:
 		case ADADELTA_THEN_GD:
+		case ADADELTA_THEN_STOP:
 			currentAdaptiveMethod = AdaptiveMethod.ADADELTA;
 			break;
 		case RMSPROP:
@@ -236,6 +238,9 @@ public class GradientDescentOptimizer implements Optimizer{
 				
 				adadeltaEps /= 2;
 				System.err.println("[AdaDelta]Reset from obj = "+this._obj+", new eps = "+adadeltaEps);
+			} else if(adaptiveStrategy == AdaptiveStrategy.ADADELTA_THEN_STOP){
+				copyBest();
+				return true;
 			}
 		}
 //		clipGradients();

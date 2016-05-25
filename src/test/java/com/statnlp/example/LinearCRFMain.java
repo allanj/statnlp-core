@@ -11,7 +11,6 @@ import com.statnlp.commons.types.Instance;
 import com.statnlp.example.linear_crf.Label;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
 import com.statnlp.example.linear_crf.LinearCRFInstance;
-import com.statnlp.example.linear_crf.LinearCRFNetwork;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
@@ -37,12 +36,11 @@ public class LinearCRFMain {
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
 		NetworkConfig._numThreads = 4;
 		
-		NetworkConfig.MODEL_TYPE = ModelType.CRF; // The model to be used: CRF, SSVM, or SSVM_WITH_SOFTMAX
+		NetworkConfig.MODEL_TYPE = ModelType.SSVM_WITH_SOFTMAX; // The model to be used: CRF, SSVM, or SSVM_WITH_SOFTMAX
 		NetworkConfig.USE_BATCH_SGD = false; // To use or not to use mini-batches in gradient descent optimizer
 		NetworkConfig.batchSize = 1000;         // The mini-batch size (if USE_BATCH_SGD = true)
+		NetworkConfig.SSVM_MARGIN = 1.1;
 		
-		LinearCRFNetwork.useZeroOneLossAtEachNode = true; // Whether to calculate loss at each node or only at root
-
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
@@ -54,8 +52,12 @@ public class LinearCRFMain {
 		System.err.println("Read.."+size+" instances.");
 		
 		OptimizerFactory optimizerFactory;
-		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
-			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaDelta();
+		if(NetworkConfig.MODEL_TYPE != ModelType.CRF){
+			if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
+				optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingSmoothedAdaDeltaThenGD(1e-5, 0.95, 5e-5, 0.9);
+			} else {
+				optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingSmoothedAdaDeltaThenStop(0.95, 5e-5, 0.9);
+			}
 		} else {
 			optimizerFactory = OptimizerFactory.getLBFGSFactory();
 		}
