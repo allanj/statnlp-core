@@ -30,6 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 
 public abstract class NetworkModel implements Serializable{
 	
@@ -183,7 +184,7 @@ public abstract class NetworkModel implements Serializable{
 				time = System.currentTimeMillis() - time;
 				double obj = this._fm.getParam_G().getObj_old();
 				int multiplier = 1;
-				if(NetworkConfig.USE_STRUCTURED_SVM){
+				if(NetworkConfig.MODEL_TYPE == ModelType.SSVM || NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
 					multiplier = -1;
 				}
 				System.out.println(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0));

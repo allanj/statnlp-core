@@ -30,7 +30,6 @@ import com.statnlp.hybridnetworks.TableLookupNetwork;
 public class LinearCRFNetwork extends TableLookupNetwork{
 	
 	private static final long serialVersionUID = -269366520766930758L;
-	public static boolean useZeroOneLossAtEachNode = true;
 	
 	private int _numNodes = -1;
 	

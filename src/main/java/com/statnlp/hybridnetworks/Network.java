@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 
 /**
  * The base class for representing networks. This class is equipped with algorithm to calculate the 
@@ -227,7 +228,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	 */
 	public double getMax(){
 		int rootIdx = this.countNodes()-1;
-		if(NetworkConfig.USE_STRUCTURED_SVM){
+		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
 			return this._max[rootIdx]+this._cost[rootIdx];	
 		} else {
 			return this._max[rootIdx];
@@ -240,7 +241,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * @return
 	 */
 	public double getMax(int k){
-		if(NetworkConfig.USE_STRUCTURED_SVM){
+		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
 			return this._max[k]+this._cost[k];
 		} else {
 			return this._max[k];
@@ -288,7 +289,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	public void train(){
 		if(this._weight == 0)
 			return;
-		if(NetworkConfig.USE_STRUCTURED_SVM){
+		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
 			this.max();
 		} else {
 			this.inside();
@@ -304,6 +305,8 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected void inside(){
 		this._inside = this.getInsideSharedArray();
 		Arrays.fill(this._inside, 0.0);
+		this._cost = this.getCostSharedArray();
+		Arrays.fill(this._cost, 0.0);
 		for(int k=0; k<this.countNodes(); k++){
 			this.inside(k);
 		}
@@ -332,7 +335,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * Calculate and update the inside-outside score of all nodes
 	 */
 	protected void updateGradient(){
-		if(NetworkConfig.USE_STRUCTURED_SVM){
+		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
 			// Max is already calculated
 			int rootIdx = this.countNodes()-1;
 			resetVisitedMark();
@@ -353,7 +356,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	
 	protected void updateObjective(){
 		double objective = 0.0;
-		if(NetworkConfig.USE_STRUCTURED_SVM){
+		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
 			objective = this.getMax() * this._weight;
 		} else {
 			objective = this.getInside() * this._weight;
@@ -408,16 +411,22 @@ public abstract class Network implements Serializable, HyperGraph{
 			int[] children_k = childrenList_k[children_k_index];
 
 			boolean ignoreflag = false;
-			for(int child_k : children_k)
-				if(this.isRemoved(child_k))
+			for(int child_k : children_k){
+				if(this.isRemoved(child_k)){
 					ignoreflag = true;
+				}
+			}
 			if(ignoreflag){
 				inside = Double.NEGATIVE_INFINITY;
 			} else {
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
-				for(int child_k : children_k)
+				for(int child_k : children_k){
 					score += this._inside[child_k];
+				}
+				if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
+					score += this._compiler.cost(this, k, children_k);
+				}
 				inside = score;
 			}
 		}
@@ -426,16 +435,21 @@ public abstract class Network implements Serializable, HyperGraph{
 			int[] children_k = childrenList_k[children_k_index];
 
 			boolean ignoreflag = false;
-			for(int child_k : children_k)
-				if(this.isRemoved(child_k))
+			for(int child_k : children_k){
+				if(this.isRemoved(child_k)){
 					ignoreflag = true;
-			if(ignoreflag)
-				continue;
+				}
+			}
+			if(ignoreflag) continue;
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			double score = fa.getScore(this._param);
-			for(int child_k : children_k)
+			for(int child_k : children_k){
 				score += this._inside[child_k];
+			}
+			if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
+				score += this._compiler.cost(this, k, children_k);
+			}
 			
 			inside = sumLog(inside, score);
 		}
@@ -509,7 +523,7 @@ public abstract class Network implements Serializable, HyperGraph{
 		
 		int[][] childrenList_k = this.getChildren(k);
 		int[] maxChildren = null;
-		if(NetworkConfig.USE_STRUCTURED_SVM){
+		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
 			if(this._visited[k]) return;
 			this._visited[k] = true;
 			maxChildren = this.getMaxPath(k); // For Structured SVM
@@ -526,7 +540,7 @@ public abstract class Network implements Serializable, HyperGraph{
 					break;
 				}
 			}
-			if(NetworkConfig.USE_STRUCTURED_SVM){ // Consider only max path
+			if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){ // Consider only max path
 				if(!Arrays.equals(children_k, maxChildren)){
 					continue;
 				}
@@ -536,19 +550,20 @@ public abstract class Network implements Serializable, HyperGraph{
 			}
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
-			if(NetworkConfig.USE_STRUCTURED_SVM){
+			if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
 				count = 1; // this assumes binary features (either 0 or 1)
 			} else {
 				double score = fa.getScore(this._param); // w*f
 				score += this._outside[k];  // beta(s')
-				for(int child_k : children_k)
+				for(int child_k : children_k){
 					score += this._inside[child_k]; // alpha(s)
+				}
 				count = Math.exp(score-this.getInside()); // Divide by normalization term Z
 			}
 			count *= this._weight;
 			
 			fa.update(this._param, count);
-			if(NetworkConfig.USE_STRUCTURED_SVM){
+			if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
 				for(int child_k: children_k){
 					this.updateGradient(child_k);	
 				}
@@ -677,7 +692,7 @@ public abstract class Network implements Serializable, HyperGraph{
 					max += this._max[child_k];
 				}
 				boolean shouldUpdate = false;
-				if(NetworkConfig.USE_STRUCTURED_SVM){
+				if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
 					if(max+cost >= this._max[k]+this._cost[k]){
 						shouldUpdate = true;
 					}

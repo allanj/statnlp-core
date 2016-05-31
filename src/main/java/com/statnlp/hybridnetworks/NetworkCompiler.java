@@ -166,7 +166,7 @@ public abstract class NetworkCompiler implements Serializable{
 		if(edgePresentInLabeled){
 			return aggregateChildLoss;
 		} else {
-			return aggregateChildLoss+NetworkConfig.SSVM_MARGIN/size;
+			return aggregateChildLoss+NetworkConfig.SVM_MARGIN/size;
 		}
 	}
 	

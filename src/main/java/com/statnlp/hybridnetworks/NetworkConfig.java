@@ -20,6 +20,12 @@ import java.util.Random;
 
 public class NetworkConfig {
 	
+	public static enum ModelType {
+		CRF,
+		SSVM,
+		SOFTMAX_MARGIN,
+	}
+	
 	public static Random r = new Random();
 	public static double FEATURE_INIT_WEIGHT = 0;//r.nextDouble();//Math.log(1E-10);//Math.log(1);
 	public static boolean RANDOM_INIT_WEIGHT = true;
@@ -47,11 +53,11 @@ public class NetworkConfig {
 	public static int _SEMANTIC_FOREST_MAX_DEPTH = 20;//the max depth of the forest when creating the semantic forest.
 	public static int _SEMANTIC_PARSING_NGRAM = 1;//2;
 	
-	public static boolean DEBUG_MODE = false;//true;//false;//true;
+	public static boolean DEBUG_MODE = false;
 	public static boolean REBUILD_FOREST_EVERY_TIME = false;
-	public static boolean USE_STRUCTURED_SVM = false;
+	public static ModelType MODEL_TYPE = ModelType.CRF;
 	public static boolean USE_BATCH_SGD = false;
-	public static double SSVM_MARGIN = 1.0;
+	public static double SVM_MARGIN = 1.0;
 	
 	public static boolean _CACHE_FEATURES_DURING_TRAINING = true;
 	public static boolean _SEQUENTIAL_FEATURE_EXTRACTION = true ;
