@@ -184,7 +184,7 @@ public abstract class NetworkModel implements Serializable{
 				time = System.currentTimeMillis() - time;
 				double obj = this._fm.getParam_G().getObj_old();
 				int multiplier = 1;
-				if(NetworkConfig.MODEL_TYPE == ModelType.SSVM || NetworkConfig.MODEL_TYPE == ModelType.SSVM_WITH_SOFTMAX){
+				if(NetworkConfig.MODEL_TYPE == ModelType.SSVM || NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
 					multiplier = -1;
 				}
 				System.out.println(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0));

@@ -424,7 +424,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				for(int child_k : children_k){
 					score += this._inside[child_k];
 				}
-				if(NetworkConfig.MODEL_TYPE == ModelType.SSVM_WITH_SOFTMAX){
+				if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
 					score += this._compiler.cost(this, k, children_k);
 				}
 				inside = score;
@@ -447,7 +447,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			for(int child_k : children_k){
 				score += this._inside[child_k];
 			}
-			if(NetworkConfig.MODEL_TYPE == ModelType.SSVM_WITH_SOFTMAX){
+			if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
 				score += this._compiler.cost(this, k, children_k);
 			}
 			

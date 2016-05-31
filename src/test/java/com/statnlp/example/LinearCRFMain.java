@@ -36,10 +36,10 @@ public class LinearCRFMain {
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
 		NetworkConfig._numThreads = 4;
 		
-		NetworkConfig.MODEL_TYPE = ModelType.SSVM_WITH_SOFTMAX; // The model to be used: CRF, SSVM, or SSVM_WITH_SOFTMAX
+		NetworkConfig.MODEL_TYPE = ModelType.SOFTMAX_MARGIN; // The model to be used: CRF, SSVM, or SOFTMAX_MARGIN
 		NetworkConfig.USE_BATCH_SGD = false; // To use or not to use mini-batches in gradient descent optimizer
 		NetworkConfig.batchSize = 1000;         // The mini-batch size (if USE_BATCH_SGD = true)
-		NetworkConfig.SSVM_MARGIN = 1.1;
+		NetworkConfig.SVM_MARGIN = 1.1;
 		
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;

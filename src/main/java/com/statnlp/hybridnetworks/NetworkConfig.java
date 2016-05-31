@@ -23,7 +23,7 @@ public class NetworkConfig {
 	public static enum ModelType {
 		CRF,
 		SSVM,
-		SSVM_WITH_SOFTMAX,
+		SOFTMAX_MARGIN,
 	}
 	
 	public static Random r = new Random();
@@ -57,7 +57,7 @@ public class NetworkConfig {
 	public static boolean REBUILD_FOREST_EVERY_TIME = false;
 	public static ModelType MODEL_TYPE = ModelType.CRF;
 	public static boolean USE_BATCH_SGD = false;
-	public static double SSVM_MARGIN = 1.0;
+	public static double SVM_MARGIN = 1.0;
 	
 	public static boolean _CACHE_FEATURES_DURING_TRAINING = true;
 	public static boolean _SEQUENTIAL_FEATURE_EXTRACTION = true ;
