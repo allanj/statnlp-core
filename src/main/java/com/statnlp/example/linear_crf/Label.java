@@ -47,6 +47,11 @@ public class Label implements Serializable{
 		return LABELS_INDEX.get(id);
 	}
 	
+	public static void reset(){
+		LABELS.clear();
+		LABELS_INDEX.clear();
+	}
+	
 	private String _form;
 	private int _id;
 	

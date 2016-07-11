@@ -16,6 +16,9 @@
  */
 package com.statnlp.hybridnetworks;
 
+import static com.statnlp.commons.Utils.print;
+
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,23 +46,38 @@ public abstract class NetworkModel implements Serializable{
 	//the builder
 	protected NetworkCompiler _compiler;
 	//the list of instances.
-	
 	protected transient Instance[] _allInstances;
+	protected transient Network[] unlabeledNetworkByInstanceId;
+	protected transient Network[] labeledNetworkByInstanceId;
 	//the number of threads.
 	protected transient int _numThreads = NetworkConfig._numThreads;
 	//the local learners.
 	private transient LocalNetworkLearnerThread[] _learners;
 	//the local decoder.
 	private transient LocalNetworkDecoderThread[] _decoders;
+	private transient PrintStream[] outstreams;
 	
-	public NetworkModel(FeatureManager fm, NetworkCompiler compiler){
+	public NetworkModel(FeatureManager fm, NetworkCompiler compiler, PrintStream... outstreams){
 		this._fm = fm;
 		this._numThreads = NetworkConfig._numThreads;
 		this._compiler = compiler;
+		this.outstreams = new PrintStream[outstreams.length+1];
+		this.outstreams[0] = System.out;
+		for(int i=0; i<outstreams.length; i++){
+			this.outstreams[i+1] = outstreams[i];
+		}
 	}
 	
 	public int getNumThreads(){
 		return this._numThreads;
+	}
+	
+	public Network getLabeledNetwork(int instanceId){
+		return labeledNetworkByInstanceId[instanceId-1];
+	}
+	
+	public Network getUnlabeledNetwork(int instanceId){
+		return unlabeledNetworkByInstanceId[instanceId-1];
 	}
 	
 	protected abstract Instance[][] splitInstancesForTrain();
@@ -90,7 +108,7 @@ public abstract class NetworkModel implements Serializable{
 				Instance inst = insts_list.get(threadId).get(i);
 				insts[threadId][i] = inst;
 			}
-			System.out.println("Thread "+threadId+" has "+insts[threadId].length+" instances.");
+			print("Thread "+threadId+" has "+insts[threadId].length+" instances.", outstreams);
 		}
 		
 		return insts;
@@ -152,17 +170,21 @@ public abstract class NetworkModel implements Serializable{
 		ExecutorService pool = Executors.newFixedThreadPool(this._numThreads);
 		List<Callable<Void>> callables = Arrays.asList(this._learners);
 		
-		double obj_old = Double.NEGATIVE_INFINITY;
+		int multiplier = 1;
+		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM || NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
+			multiplier = -1;
+		}
 		
+		double obj_old = Double.NEGATIVE_INFINITY;
 		//run the EM-style algorithm now...
 		long startTime = System.currentTimeMillis();
 		try{
-			for(int it = 0; it<maxNumIterations; it++){
+			for(int it = 0; it<=maxNumIterations; it++){
 				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
 				if(NetworkConfig.USE_BATCH_SGD){
 					batchInstIds.clear();
 					Collections.shuffle(instIds, RANDOM);
-					int size = NetworkConfig.batchSize >= this._allInstances.length? this._allInstances.length:NetworkConfig.batchSize; 
+					int size = NetworkConfig.batchSize >= this._allInstances.length ? this._allInstances.length:NetworkConfig.batchSize; 
 					for(int iid = 0; iid<size; iid++){
 						batchInstIds.add(instIds.get(iid));
 					}
@@ -180,21 +202,27 @@ public abstract class NetworkModel implements Serializable{
 						throw new RuntimeException(e);
 					}
 				}
-				boolean done = this._fm.update();
+				boolean done = true;
+				boolean lastIter = (it == maxNumIterations);
+				if(lastIter){
+					done = this._fm.update(true);
+				} else {
+					done = this._fm.update();
+				}
 				time = System.currentTimeMillis() - time;
 				double obj = this._fm.getParam_G().getObj_old();
-				int multiplier = 1;
-				if(NetworkConfig.MODEL_TYPE == ModelType.SSVM || NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
-					multiplier = -1;
-				}
-				System.out.println(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0));
+				print(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0), outstreams);
 	//			System.out.println("Iteration "+it+"\tObjective="+obj+"\tTime="+time/1000.0+" seconds."+"\t"+obj/obj_old);
 				if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE && it>1 && obj<obj_old && Math.abs(obj-obj_old)>1E-5){
 					throw new RuntimeException("Error:\n"+obj_old+"\n>\n"+obj);
 				}
 				obj_old = obj;
+				if(lastIter){
+					print("Training completes. The specified number of iterations ("+it+") has passed.", outstreams);
+					break;
+				}
 				if(done){
-					System.out.println("Training completes. No significant progress (<objtol) after "+it+" iterations.");
+					print("Training completes. No significant progress (<objtol) after "+it+" iterations.", outstreams);
 					break;
 				}
 			}
@@ -230,6 +258,31 @@ public abstract class NetworkModel implements Serializable{
 			}
 			if(!keepExisting){
 				this._fm.mergeSubFeaturesToGlobalFeatures();
+			}
+		}
+		if(labeledNetworkByInstanceId == null || unlabeledNetworkByInstanceId == null){
+			labeledNetworkByInstanceId = new Network[this._allInstances.length];
+			unlabeledNetworkByInstanceId = new Network[this._allInstances.length];
+			Network[] arr;
+			for(int threadId=0; threadId < insts.length; threadId++){
+				LocalNetworkLearnerThread learner = this._learners[threadId];
+				for(int networkId=0; networkId < insts[threadId].length; networkId++){
+					Instance instance = insts[threadId][networkId];
+					int instanceId = instance.getInstanceId();
+					if(instanceId < 0){
+						arr = unlabeledNetworkByInstanceId;
+						instanceId = -instanceId;
+					} else {
+						arr = labeledNetworkByInstanceId;
+					}
+					instanceId -= 1;
+					arr[instanceId] = learner.getNetwork(networkId);
+				}
+			}
+			if(unlabeledNetworkByInstanceId[0] == null){
+				arr = labeledNetworkByInstanceId;
+				labeledNetworkByInstanceId = unlabeledNetworkByInstanceId;
+				unlabeledNetworkByInstanceId = arr;
 			}
 		}
 	}

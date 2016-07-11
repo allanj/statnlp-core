@@ -64,8 +64,6 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected transient double[] _outside;
 	/** At each index, store the score of the max tree */
 	protected transient double[] _max;
-	/** At each index, store the cost of the max tree */
-	protected transient double[] _cost;
 	/** Stores the paths associated with the above tree */
 	protected transient int[][] _max_paths;
 	/** To mark whether a node has been visited in one iteration */
@@ -228,11 +226,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	 */
 	public double getMax(){
 		int rootIdx = this.countNodes()-1;
-		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
-			return this._max[rootIdx]+this._cost[rootIdx];	
-		} else {
-			return this._max[rootIdx];
-		}
+		return this._max[rootIdx];
 	}
 
 	/**
@@ -241,20 +235,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * @return
 	 */
 	public double getMax(int k){
-		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
-			return this._max[k]+this._cost[k];
-		} else {
-			return this._max[k];
-		}
-	}
-	
-	/**
-	 * Return the cost associated with the node with index k.
-	 * @param k
-	 * @return
-	 */
-	public double getCost(int k){
-		return this._cost[k];
+		return this._max[k];
 	}
 	
 	/**
@@ -305,8 +286,6 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected void inside(){
 		this._inside = this.getInsideSharedArray();
 		Arrays.fill(this._inside, 0.0);
-		this._cost = this.getCostSharedArray();
-		Arrays.fill(this._cost, 0.0);
 		for(int k=0; k<this.countNodes(); k++){
 			this.inside(k);
 		}
@@ -377,9 +356,6 @@ public abstract class Network implements Serializable, HyperGraph{
 	 */
 	public void max(){
 		this._max = this.getMaxSharedArray();
-		this._cost = this.getCostSharedArray();
-		Arrays.fill(this._max, Double.NEGATIVE_INFINITY);
-		Arrays.fill(this._cost, 0.0);
 		
 		this._max_paths = this.getMaxPathSharedArray();
 		for(int k=0; k<this.countNodes(); k++){
@@ -421,11 +397,11 @@ public abstract class Network implements Serializable, HyperGraph{
 			} else {
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
-				for(int child_k : children_k){
-					score += this._inside[child_k];
-				}
 				if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
 					score += this._compiler.cost(this, k, children_k);
+				}
+				for(int child_k : children_k){
+					score += this._inside[child_k];
 				}
 				inside = score;
 			}
@@ -444,11 +420,11 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			double score = fa.getScore(this._param);
-			for(int child_k : children_k){
-				score += this._inside[child_k];
-			}
 			if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
 				score += this._compiler.cost(this, k, children_k);
+			}
+			for(int child_k : children_k){
+				score += this._inside[child_k];
 			}
 			
 			inside = sumLog(inside, score);
@@ -489,6 +465,9 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			double score = fa.getScore(this._param);
+			if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
+				score += this._compiler.cost(this, k, children_k);
+			}
 			score += this._outside[k];
 			for(int child_k : children_k){
 				score += this._inside[child_k];
@@ -500,11 +479,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			for(int child_k : children_k){
 				double v1 = this._outside[child_k];
 				double v2 = score - this._inside[child_k];
-				if(v1>v2){
-					this._outside[child_k] = v1 + Math.log1p(Math.exp(v2-v1));
-				} else {
-					this._outside[child_k] = v2 + Math.log1p(Math.exp(v1-v2));
-				}
+				this._outside[child_k] = sumLog(v1, v2);
 			}
 		}
 		
@@ -551,14 +526,18 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
-				count = 1; // this assumes binary features (either 0 or 1)
+				count = 1;
 			} else {
 				double score = fa.getScore(this._param); // w*f
+				if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
+					score += this._compiler.cost(this, k, children_k);
+				}
 				score += this._outside[k];  // beta(s')
 				for(int child_k : children_k){
 					score += this._inside[child_k]; // alpha(s)
 				}
-				count = Math.exp(score-this.getInside()); // Divide by normalization term Z
+				double normalization = this.getInside();
+				count = Math.exp(score-normalization); // Divide by normalization term Z
 			}
 			count *= this._weight;
 			
@@ -593,14 +572,12 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected void max(int k){
 		if(this.isRemoved(k)){
 			this._max[k] = Double.NEGATIVE_INFINITY;
-			this._cost[k] = 0.0;
 			return;
 		}
 		
 		if(this.isSumNode(k)){
 
 			double inside = 0.0;
-			double cost = 0.0;
 			int[][] childrenList_k = this.getChildren(k);
 			
 			if(childrenList_k.length==0){
@@ -617,13 +594,11 @@ public abstract class Network implements Serializable, HyperGraph{
 						ignoreflag = true;
 				if(ignoreflag){
 					inside = Double.NEGATIVE_INFINITY;
-					cost = 0.0;
 				} else {
 					FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 					double score = fa.getScore(this._param);
-					cost = 0.0;
 					try{
-						cost = this._compiler.cost(this, k, children_k);
+						score += this._compiler.cost(this, k, children_k);
 					} catch (NullPointerException e){
 						System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 					}
@@ -651,7 +626,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
 				try{
-					cost += this._compiler.cost(this, k, children_k);
+					score += this._compiler.cost(this, k, children_k);
 				} catch (NullPointerException e){
 					System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 				}
@@ -664,11 +639,9 @@ public abstract class Network implements Serializable, HyperGraph{
 			}
 			
 			this._max[k] = inside;
-			this._cost[k] = cost;
 		} else {
 			int[][] childrenList_k = this.getChildren(k);
 			this._max[k] = Double.NEGATIVE_INFINITY;
-			this._cost[k] = 0.0;
 			
 			for(int children_k_index = 0; children_k_index < childrenList_k.length; children_k_index++){
 				int[] children_k = childrenList_k[children_k_index];
@@ -681,29 +654,17 @@ public abstract class Network implements Serializable, HyperGraph{
 					continue;
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
-				double max = fa.getScore(this._param);
-				double cost = 0.0;
+				double score = fa.getScore(this._param);
 				try{
-					cost = this._compiler.cost(this, k, children_k);
+					score += this._compiler.cost(this, k, children_k);
 				} catch (NullPointerException e){
 					System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 				}
 				for(int child_k : children_k){
-					max += this._max[child_k];
+					score += this._max[child_k];
 				}
-				boolean shouldUpdate = false;
-				if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
-					if(max+cost >= this._max[k]+this._cost[k]){
-						shouldUpdate = true;
-					}
-				} else {
-					if(max >= this._max[k]){
-						shouldUpdate = true;
-					}
-				}
-				if(shouldUpdate){
-					this._max[k] = max;
-					this._cost[k] = cost;
+				if(score >= this._max[k]){
+					this._max[k] = score;
 					this._max_paths[k] = children_k;
 				}
 			}

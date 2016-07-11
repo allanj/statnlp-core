@@ -17,6 +17,7 @@
 package com.statnlp.commons.ml.opt;
 
 import java.io.Serializable;
+import java.util.HashMap;
 
 import com.statnlp.commons.ml.opt.GradientDescentOptimizer.AdaptiveStrategy;
 
@@ -33,7 +34,7 @@ public abstract class OptimizerFactory implements Serializable {
 	public static final double DEFAULT_ADAM_BETA2 = 0.95;
 	public static final double DEFAULT_ADAM_EPS = 1e-7;
 	
-	OptimizerFactory() {}
+	protected OptimizerFactory() {}
 	
 	public static LBFGSOptimizerFactory getLBFGSFactory(){
 		LBFGSOptimizerFactory factory = new LBFGSOptimizerFactory();
@@ -299,5 +300,9 @@ public abstract class OptimizerFactory implements Serializable {
 	}
 	
 	public abstract Optimizer create(int numWeights);
+	
+	public Optimizer create(int numWeights, HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap){
+		return create(numWeights);
+	}
 
 }

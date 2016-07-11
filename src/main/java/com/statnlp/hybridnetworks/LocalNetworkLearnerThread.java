@@ -164,7 +164,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 		}
 	}
 	
-	private Network getNetwork(int networkId){
+	public Network getNetwork(int networkId){
 		if(this._cacheNetworks && this._networks[networkId]!=null)
 			return this._networks[networkId];
 		Network network = this._builder.compileAndStore(networkId, this._instances[networkId], this._param);

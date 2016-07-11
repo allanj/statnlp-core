@@ -37,7 +37,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	
 	private static final long serialVersionUID = -3829680998638818730L;
 	
-	private List<Label> _labels;
+	public List<Label> _labels;
 	public enum NODE_TYPES {LEAF, NODE, ROOT};
 	private static int MAX_LENGTH = 300;
 	
@@ -118,17 +118,17 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		
 	}
 	
-	private long toNode_leaf(){
+	public long toNode_leaf(){
 		int[] arr = new int[]{0, 0, 0, 0, NODE_TYPES.LEAF.ordinal()};
 		return NetworkIDMapper.toHybridNodeID(arr);
 	}
 	
-	private long toNode(int pos, int tag_id){
+	public long toNode(int pos, int tag_id){
 		int[] arr = new int[]{pos+1, tag_id, 0, 0, NODE_TYPES.NODE.ordinal()};
 		return NetworkIDMapper.toHybridNodeID(arr);
 	}
 	
-	private long toNode_root(int size){
+	public long toNode_root(int size){
 		int[] arr = new int[]{size, this._labels.size(), 0, 0, NODE_TYPES.ROOT.ordinal()};
 		return NetworkIDMapper.toHybridNodeID(arr);
 	}
@@ -195,8 +195,8 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		return result;
 	}
 	
-	public double totalCostUpTo(Network network, int parent_k, int[] child_k){
-		return super.totalCostUpTo(network, parent_k, child_k);
+	public double costAt(Network network, int parent_k, int[] child_k){
+		return super.costAt(network, parent_k, child_k);
 	}
 
 }

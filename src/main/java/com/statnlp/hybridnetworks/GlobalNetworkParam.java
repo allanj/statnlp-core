@@ -29,7 +29,6 @@ import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
-import com.statnlp.commons.ml.opt.LBFGSOptimizer;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
@@ -324,7 +323,7 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		this._version = 0;
-		this._opt = this._optFactory.create(this._weights.length);
+		this._opt = this._optFactory.create(this._weights.length, getFeatureIntMap());
 		this._locked = true;
 		
 		System.err.println(this._size+" features.");
@@ -372,7 +371,7 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		this._version = 0;
-		this._opt = this._optFactory.create(this._weights.length);
+		this._opt = this._optFactory.create(this._weights.length, getFeatureIntMap());
 		this._locked = true;
 		
 		System.err.println(this._size+" features.");
@@ -593,14 +592,13 @@ public class GlobalNetworkParam implements Serializable{
     	} catch(ExceptionWithIflag e){
     		throw new NetworkException("Exception with Iflag:"+e.getMessage());
     	}
-		
-    	if(this._opt.getClass() == LBFGSOptimizer.class){
+    	if(this._opt.name().contains("LBFGS Optimizer")){
 	    	double diff = this.getObj()-this.getObj_old();
 	    	if(diff >= 0 && diff < NetworkConfig.objtol){
 	    		done = true;
 	    	}
 	    	double diffRatio = Math.abs(diff/this.getObj_old());
-	    	if(diffRatio < 1e-4){
+	    	if(diff >= 0 && diffRatio < 1e-4){
 	    		this.smallChangeCount += 1;
 	    	} else {
 	    		this.smallChangeCount = 0;
@@ -609,7 +607,7 @@ public class GlobalNetworkParam implements Serializable{
 	    		done = true;
 	    	}
     	}
-    	if(done && this._opt.getClass() == LBFGSOptimizer.class){
+    	if(done && this._opt.name().contains("LBFGS Optimizer")){
     		// If we stop early, we need to copy solution_cache,
     		// as noted in the Javadoc for solution_cache in LBFGS class.
     		// This is because the _weights will contain the next value to be evaluated, 
