@@ -147,12 +147,12 @@ public abstract class NetworkCompiler implements Serializable{
 			if(NetworkConfig.NORMALIZE_COST){
 				nodeCost /= size;
 			}
-			nodeCost *= NetworkConfig.SVM_MARGIN;
+			nodeCost *= NetworkConfig.MARGIN;
 			double edgeCost = NetworkConfig.EDGE_COST;
 			if(NetworkConfig.NORMALIZE_COST){
 				edgeCost /= size;
 			}
-			edgeCost *= NetworkConfig.SVM_MARGIN;
+			edgeCost *= NetworkConfig.MARGIN;
 			return nodeCost+edgeCost;
 		}
 		long[] childNodes = new long[child_k.length];
@@ -178,7 +178,7 @@ public abstract class NetworkCompiler implements Serializable{
 			if(NetworkConfig.NORMALIZE_COST){
 				edgeCost /= size;
 			}
-			edgeCost *= NetworkConfig.SVM_MARGIN;
+			edgeCost *= NetworkConfig.MARGIN;
 			return edgeCost;
 		}
 	}

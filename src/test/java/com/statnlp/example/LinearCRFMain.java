@@ -52,7 +52,7 @@ public class LinearCRFMain {
 		NetworkConfig.MODEL_TYPE = ModelType.valueOf(System.getProperty("modelType", "CRF")); // The model to be used: CRF, SSVM, or SOFTMAX_MARGIN
 		NetworkConfig.USE_BATCH_SGD = Boolean.parseBoolean(System.getProperty("useBatchSGD", "false")); // To use or not to use mini-batches in gradient descent optimizer
 		NetworkConfig.batchSize = Integer.parseInt(System.getProperty("batchSize", "1000"));  // The mini-batch size (if USE_BATCH_SGD = true)
-		NetworkConfig.SVM_MARGIN = Double.parseDouble(System.getProperty("svmMargin", "1.0"));
+		NetworkConfig.MARGIN = Double.parseDouble(System.getProperty("svmMargin", "1.0"));
 		
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
@@ -122,7 +122,7 @@ public class LinearCRFMain {
 				argIndex += 2;
 				break;
 			case "margin":
-				NetworkConfig.SVM_MARGIN = Double.parseDouble(args[argIndex+1]);
+				NetworkConfig.MARGIN = Double.parseDouble(args[argIndex+1]);
 				argIndex += 2;
 				break;
 			case "weightInit":
