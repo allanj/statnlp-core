@@ -324,4 +324,8 @@ public class GradientDescentOptimizer implements Optimizer{
 			this.bestIterNum = this.iterNum;
 		}
 	}
+	
+	public String name(){
+		return "Gradient Descent Optimizer with adaptive strategy: "+this.adaptiveStrategy.name();
+	}
 }

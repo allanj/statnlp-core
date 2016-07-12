@@ -40,8 +40,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 	
 	public int wordHalfWindowSize = 1;
 	public int posHalfWindowSize = -1;
-	public boolean useWordBigram = true;
-	public boolean usePOSBigram = false;
+	public boolean productWithOutput = true;
 	
 	public enum FeatureType {
 		WORD,
@@ -49,6 +48,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		TAG(false),
 		TAG_BIGRAM(false),
 		TRANSITION,
+		LABEL,
 		;
 		
 		private boolean isEnabled;
@@ -82,7 +82,29 @@ public class LinearCRFFeatureManager extends FeatureManager{
 	 * @param param_g
 	 */
 	public LinearCRFFeatureManager(GlobalNetworkParam param_g) {
+		this(param_g, new LinearCRFConfig());
+	}
+	
+	public LinearCRFFeatureManager(GlobalNetworkParam param_g, String[] args){
+		this(param_g, new LinearCRFConfig(args));
+	}
+	
+	/**
+	 * @param param_g
+	 */
+	public LinearCRFFeatureManager(GlobalNetworkParam param_g, LinearCRFConfig config) {
 		super(param_g);
+		wordHalfWindowSize = config.wordHalfWindowSize;
+		posHalfWindowSize = config.posHalfWindowSize;
+		productWithOutput = config.productWithOutput;
+		if(config.features != null){
+			for(FeatureType feat: FeatureType.values()){
+				feat.disable();
+			}
+			for(String feat: config.features){
+				FeatureType.valueOf(feat.toUpperCase()).enable();
+			}
+		}
 	}
 
 	@Override
@@ -101,12 +123,22 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		int pos = arr[0]-1;
 		int tag_id = arr[1];
 		int nodeType = arr[4];
+		if(!productWithOutput){
+			tag_id = -1;
+		}
 		
 		if(nodeType == NODE_TYPES.LEAF.ordinal()){
 			return FeatureArray.EMPTY;
 		}
 		
 		int child_tag_id = network.getNodeArray(children_k[0])[1];
+		int childNodeType = network.getNodeArray(children_k[0])[4];
+		
+		int labelSize = Label.LABELS.size();
+
+		if(childNodeType == NODE_TYPES.LEAF.ordinal()){
+			child_tag_id = labelSize;
+		}
 		
 		GlobalNetworkParam param_g = this._param_g;
 		
@@ -114,15 +146,14 @@ public class LinearCRFFeatureManager extends FeatureManager{
 			return new FeatureArray(new int[]{param_g.toFeature(net, "CHEAT", tag_id+"", Math.abs(instance.getInstanceId())+" "+pos+" "+child_tag_id)});
 		}
 
-		FeatureArray features = new FeatureArray(new int[0]);
+		ArrayList<Integer> features = new ArrayList<Integer>();
 		// Word window features
-		if(FeatureType.WORD.enabled()){
+		if(FeatureType.WORD.enabled() && tag_id != labelSize){
 			int wordWindowSize = wordHalfWindowSize*2+1;
 			if(wordWindowSize < 0){
 				wordWindowSize = 0;
 			}
-			int[] wordWindowFeatures = new int[wordWindowSize];
-			for(int i=0; i<wordWindowFeatures.length; i++){
+			for(int i=0; i<wordWindowSize; i++){
 				String word = "***";
 				int relIdx = i-wordHalfWindowSize;
 				int idx = pos + relIdx;
@@ -130,35 +161,29 @@ public class LinearCRFFeatureManager extends FeatureManager{
 					word = input.get(idx)[0];
 				}
 				if(idx > pos) continue; // Only consider the left window
-				wordWindowFeatures[i] = param_g.toFeature(network, FeatureType.WORD+":"+relIdx, tag_id+"", word);
+				features.add(param_g.toFeature(network, FeatureType.WORD+":"+relIdx, tag_id+"", word));
 			}
-			FeatureArray wordFeatures = new FeatureArray(wordWindowFeatures, features);
-			features = wordFeatures;
 		}
 		
 		// POS tag window features
-		if(FeatureType.TAG.enabled()){
+		if(FeatureType.TAG.enabled() && tag_id != labelSize){
 			int posWindowSize = posHalfWindowSize*2+1;
 			if(posWindowSize < 0){
 				posWindowSize = 0;
 			}
-			int[] posWindowFeatures = new int[posWindowSize];
-			for(int i=0; i<posWindowFeatures.length; i++){
+			for(int i=0; i<posWindowSize; i++){
 				String postag = "***";
 				int relIdx = i-posHalfWindowSize;
 				int idx = pos + relIdx;
 				if(idx >= 0 && idx < size){
 					postag = input.get(idx)[1];
 				}
-				posWindowFeatures[i] = param_g.toFeature(network, FeatureType.TAG+":"+relIdx, tag_id+"", postag);
+				features.add(param_g.toFeature(network, FeatureType.TAG+":"+relIdx, tag_id+"", postag));
 			}
-			FeatureArray posFeatures = new FeatureArray(posWindowFeatures, features);
-			features = posFeatures;
 		}
 		
 		// Word bigram features
 		if(FeatureType.WORD_BIGRAM.enabled()){
-			int[] bigramFeatures = new int[2];
 			for(int i=0; i<2; i++){
 				String bigram = "";
 				for(int j=0; j<2; j++){
@@ -172,14 +197,12 @@ public class LinearCRFFeatureManager extends FeatureManager{
 						bigram += " ";
 					}
 				}
-				bigramFeatures[i] = param_g.toFeature(network, FeatureType.WORD_BIGRAM+":"+i, tag_id+"", bigram);
+				features.add(param_g.toFeature(network, FeatureType.WORD_BIGRAM+":"+i, tag_id+"", bigram));
 			}
-			features = new FeatureArray(bigramFeatures, features);
 		}
 		
 		// POS tag bigram features
 		if(FeatureType.TAG_BIGRAM.enabled()){
-			int[] bigramFeatures = new int[2];
 			for(int i=0; i<2; i++){
 				String bigram = "";
 				for(int j=0; j<2; j++){
@@ -193,18 +216,29 @@ public class LinearCRFFeatureManager extends FeatureManager{
 						bigram += " ";
 					}
 				}
-				bigramFeatures[i] = param_g.toFeature(network, FeatureType.TAG_BIGRAM+":"+i, tag_id+"", bigram);
+				features.add(param_g.toFeature(network, FeatureType.TAG_BIGRAM+":"+i, tag_id+"", bigram));
 			}
-			features = new FeatureArray(bigramFeatures, features);
+		}
+		
+		// Label feature
+		if(FeatureType.LABEL.enabled()){
+			int labelFeature = param_g.toFeature(network, FeatureType.LABEL.name(), tag_id+"", "");
+			features.add(labelFeature);
 		}
 		
 		// Label transition feature
 		if(FeatureType.TRANSITION.enabled()){
-			int transitionFeature = param_g.toFeature(network, FeatureType.TRANSITION.name(), tag_id+"", child_tag_id+" "+tag_id);
-			features = new FeatureArray(new int[]{transitionFeature}, features);
+			if(tag_id != labelSize && child_tag_id != labelSize){
+				int transitionFeature = param_g.toFeature(network, FeatureType.TRANSITION.name(), child_tag_id+" "+tag_id, "");
+				features.add(transitionFeature);
+			}
 		}
 		
-		return features;
+		int[] featureArray = new int[features.size()];
+		for(int i=0; i<featureArray.length; i++){
+			featureArray[i] = features.get(i);
+		}
+		return new FeatureArray(featureArray);
 	}
 
 }

@@ -114,38 +114,46 @@ public abstract class NetworkCompiler implements Serializable{
 	/**
 	 * The cost of the structure from leaf nodes up to node <code>k</code>.<br>
 	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.<br>
-	 * This does some check whether the cost is actually required. Cost is not calculated during test, since
-	 * there is no labeled instance.<br>
-	 * This will call {@link #totalCostUpTo(int, int[])}, where the actual implementation resides.
+	 * Cost is not calculated during test, since there is no labeled instance.<br>
+	 * This will call {@link #costAt(int, int[])}, where the actual implementation resides.
 	 * @param k
 	 * @param child_k
 	 * @return
 	 */
 	public double cost(Network network, int k, int[] child_k){
-		if(network.getInstance().getInstanceId() > 0 || network.getInstance().isLabeled()){
+		if(network.getInstance().getInstanceId() > 0){
 			return 0.0;
 		}
-		return totalCostUpTo(network, k, child_k);
+		return costAt(network, k, child_k);
 	}
 
 	/**
-	 * The cost of the structure from leaf nodes up to node <code>k</code>.<br>
-	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.<br>
-	 * Note that the implementation can access the cost of the child nodes at {@link Network#getCost(int)} and
-	 * the best path so far is stored at getMaxPath(child_idx), which represents the hyperedge connected to
-	 * node <code>child_idx</code> which is part of the best path so far.
-	 * @param k
+	 * The cost of the structure at the edge connecting node <code>k</code> with its specific
+	 * child node <code>child_k</code>.<br>
+	 * This is used for structured SVM, and generally the implementation requires the labeled Instance, which
+	 * can be accessed through {@link Network#getLabeledNetwork}.<br>
+	 * @param network
+	 * @param parent_k
 	 * @param child_k
 	 * @return
 	 */	
-	public double totalCostUpTo(Network network, int parent_k, int[] child_k){
+	public double costAt(Network network, int parent_k, int[] child_k){
 		int size = network.getInstance().size();
 		Network labeledNet = network.getLabeledNetwork();
-		double aggregateChildLoss = aggregateChildCost(network, parent_k, child_k);
 		long node = network.getNode(parent_k);
 		int node_k = labeledNet.getNodeIndex(node);
 		if(node_k < 0){
-			return aggregateChildLoss;
+			double nodeCost = NetworkConfig.NODE_COST;
+			if(NetworkConfig.NORMALIZE_COST){
+				nodeCost /= size;
+			}
+			nodeCost *= NetworkConfig.MARGIN;
+			double edgeCost = NetworkConfig.EDGE_COST;
+			if(NetworkConfig.NORMALIZE_COST){
+				edgeCost /= size;
+			}
+			edgeCost *= NetworkConfig.MARGIN;
+			return nodeCost+edgeCost;
 		}
 		long[] childNodes = new long[child_k.length];
 		for(int i=0; i<child_k.length; i++){
@@ -163,26 +171,16 @@ public abstract class NetworkCompiler implements Serializable{
 				break;
 			}
 		}
-		if(edgePresentInLabeled){
-			return aggregateChildLoss;
+		if(edgePresentInLabeled || network.isRoot(parent_k)){
+			return 0.0;
 		} else {
-			return aggregateChildLoss+NetworkConfig.SVM_MARGIN/size;
+			double edgeCost = NetworkConfig.EDGE_COST;
+			if(NetworkConfig.NORMALIZE_COST){
+				edgeCost /= size;
+			}
+			edgeCost *= NetworkConfig.MARGIN;
+			return edgeCost;
 		}
-	}
-	
-	/**
-	 * Return the maximum cost value over all the child nodes for the specified network
-	 * @param network
-	 * @param k
-	 * @param child_k
-	 * @return
-	 */
-	public double aggregateChildCost(Network network, int k, int[] child_k){
-		double maxLoss = 0.0;
-		for(int child: child_k){
-			maxLoss += network.getCost(child);
-		}
-		return maxLoss;
 	}
 	
 }

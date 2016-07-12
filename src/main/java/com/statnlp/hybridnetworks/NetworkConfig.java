@@ -57,7 +57,10 @@ public class NetworkConfig {
 	public static boolean REBUILD_FOREST_EVERY_TIME = false;
 	public static ModelType MODEL_TYPE = ModelType.CRF;
 	public static boolean USE_BATCH_SGD = false;
-	public static double SVM_MARGIN = 1.0;
+	public static double MARGIN = 0.5;
+	public static boolean NORMALIZE_COST = false;
+	public static double NODE_COST = 1.0;
+	public static double EDGE_COST = 0.0;
 	
 	public static boolean _CACHE_FEATURES_DURING_TRAINING = true;
 	public static boolean _SEQUENTIAL_FEATURE_EXTRACTION = true ;

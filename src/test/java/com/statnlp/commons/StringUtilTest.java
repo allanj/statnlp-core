@@ -1,5 +1,7 @@
 package com.statnlp.commons;
 
+import com.statnlp.commons.StringUtil;
+
 public class StringUtilTest {
 
 	public static void main(String args[]){

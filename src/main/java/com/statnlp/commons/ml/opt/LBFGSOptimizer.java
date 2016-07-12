@@ -74,5 +74,9 @@ public class LBFGSOptimizer implements Optimizer{
     	LBFGS.lbfgs(this._n, this._m, this._x, this._f, this._g, this._diagco, this._diag, this._iprint, this._eps, this._xtol, this._iflag);
     	return _iflag[0] == 0;
 	}
+	
+	public String name(){
+		return "LBFGS Optimizer";
+	}
     
 }

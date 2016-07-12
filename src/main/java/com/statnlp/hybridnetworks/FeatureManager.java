@@ -66,13 +66,23 @@ public abstract class FeatureManager implements Serializable{
 	public void setLocalNetworkParams(int threadId, LocalNetworkParam param_l){
 		this._params_l[threadId] = param_l;
 	}
-	
+
 	/**
 	 * Go through all threads, accumulating the value of the objective function and the gradients, 
 	 * and then update the weights to be evaluated next
 	 * @return
 	 */
 	public synchronized boolean update(){
+		return update(false);
+	}
+	
+	/**
+	 * Go through all threads, accumulating the value of the objective function and the gradients, 
+	 * and then update the weights to be evaluated next
+	 * @param justUpdateObjectiveAndGradient
+	 * @return
+	 */
+	public synchronized boolean update(boolean justUpdateObjectiveAndGradient){
 		//if the number of thread is 1, then your local param fetches information directly from the global param.
 		if(NetworkConfig._numThreads!=1){
 			this._param_g.resetCountsAndObj();
@@ -86,6 +96,10 @@ public abstract class FeatureManager implements Serializable{
 				}
 				this._param_g.addObj(param_l.getObj());
 			}
+		}
+		if(justUpdateObjectiveAndGradient){
+			this._param_g._obj_old = this._param_g._obj;
+			return false;
 		}
 		
 		boolean done = this._param_g.update();
