@@ -398,7 +398,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
 				if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
-					score += this._compiler.cost(this, k, children_k);
+					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
 				for(int child_k : children_k){
 					score += this._inside[child_k];
@@ -421,7 +421,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			double score = fa.getScore(this._param);
 			if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
-				score += this._compiler.cost(this, k, children_k);
+				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 			}
 			for(int child_k : children_k){
 				score += this._inside[child_k];
@@ -466,7 +466,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			double score = fa.getScore(this._param);
 			if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
-				score += this._compiler.cost(this, k, children_k);
+				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 			}
 			score += this._outside[k];
 			for(int child_k : children_k){
@@ -530,7 +530,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			} else {
 				double score = fa.getScore(this._param); // w*f
 				if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
-					score += this._compiler.cost(this, k, children_k);
+					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
 				score += this._outside[k];  // beta(s')
 				for(int child_k : children_k){
@@ -598,7 +598,7 @@ public abstract class Network implements Serializable, HyperGraph{
 					FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 					double score = fa.getScore(this._param);
 					try{
-						score += this._compiler.cost(this, k, children_k);
+						score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 					} catch (NullPointerException e){
 						System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 					}
@@ -626,7 +626,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
 				try{
-					score += this._compiler.cost(this, k, children_k);
+					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				} catch (NullPointerException e){
 					System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 				}
@@ -656,7 +656,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
 				try{
-					score += this._compiler.cost(this, k, children_k);
+					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				} catch (NullPointerException e){
 					System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 				}

@@ -185,6 +185,24 @@ public abstract class OptimizerFactory implements Serializable {
 	 * The returned factory will create instances of GradientDescentOptimizer with AdaDelta adaptive method,
 	 * then changes to gradient descent when no progress is seen after some number of iterations (specified by {@link GradientDescentOptimizer#maxStagnantIterCount}).<br>
 	 * Note that this is well-defined only when full-batch is used (i.e., no mini-batch)<br>
+	 * By default the hyperparameters are set as follows:
+	 * <ol>
+	 * <li>learning rate = {@value #DEFAULT_LEARNING_RATE}</li>
+	 * <li>phi = {@value #DEFAULT_ADADELTA_PHI}</li>
+	 * <li>eps = {@value #DEFAULT_ADADELTA_EPS}</li>
+	 * <li>decay = {@value #DEFAULT_ADADELTA_GRAD_DECAY}</li>
+	 * </ol>
+	 * @return
+	 */
+	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingSmoothedAdaDeltaThenGD(){
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_THEN_GD, DEFAULT_LEARNING_RATE, DEFAULT_ADADELTA_PHI, DEFAULT_ADADELTA_EPS, DEFAULT_ADADELTA_GRAD_DECAY);
+	}
+	
+	/**
+	 * Return the factory object to create a gradient descent optimizer.<br>
+	 * The returned factory will create instances of GradientDescentOptimizer with AdaDelta adaptive method,
+	 * then changes to gradient descent when no progress is seen after some number of iterations (specified by {@link GradientDescentOptimizer#maxStagnantIterCount}).<br>
+	 * Note that this is well-defined only when full-batch is used (i.e., no mini-batch)<br>
 	 * The hyperparameters are set according to the passed values.
 	 * @param learningRate
 	 * @param phi
@@ -210,6 +228,23 @@ public abstract class OptimizerFactory implements Serializable {
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingSmoothedAdaDeltaThenAdaGrad(double learningRate, double phi, double eps, double decay){
 		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_THEN_ADAGRAD, learningRate, phi, eps, decay);
+	}
+	
+	/**
+	 * Return the factory object to create a gradient descent optimizer.<br>
+	 * The returned factory will create instances of GradientDescentOptimizer with AdaDelta adaptive method,
+	 * then stops when no progress is seen after some number of iterations (specified by {@link GradientDescentOptimizer#maxStagnantIterCount}).<br>
+	 * Note that this is well-defined only when full-batch is used (i.e., no mini-batch)<br>
+	 * By default the hyperparameters are set as follows:
+	 * <ol>
+	 * <li>phi = {@value #DEFAULT_ADADELTA_PHI}</li>
+	 * <li>eps = {@value #DEFAULT_ADADELTA_EPS}</li>
+	 * <li>decay = {@value #DEFAULT_ADADELTA_GRAD_DECAY}</li>
+	 * </ol>
+	 * @return
+	 */
+	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingSmoothedAdaDeltaThenStop(){
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_THEN_STOP, 0.0, DEFAULT_ADADELTA_PHI, DEFAULT_ADADELTA_EPS, DEFAULT_ADADELTA_GRAD_DECAY);
 	}
 	
 	/**

@@ -54,6 +54,8 @@ public class LocalNetworkParam implements Serializable{
 	
 	//the cache that stores the features
 	protected FeatureArray[][][] _cache;
+	//the cache that stores the features
+	protected Double[][][] _costCache;
 	//check whether the cache is enabled.
 	protected boolean _cacheEnabled = true;
 	
@@ -254,6 +256,37 @@ public class LocalNetworkParam implements Serializable{
 		}
 		
 		return fa;
+	}
+	
+	public double cost(Network network, int parent_k, int[] children_k, int children_k_index, NetworkCompiler compiler){
+		// Do not cache in the first touch when parallel touch and extract only from labeled is enabled,
+		// since the local feature indices will change
+		boolean shouldCache = this.isCacheEnabled() && (NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION
+														|| NetworkConfig._numThreads == 1
+														|| !NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY
+														|| this._isFinalized);
+		if(shouldCache){
+			if(this._costCache == null){
+				this._costCache = new Double[this._numNetworks][][];
+			}
+			if(this._costCache[network.getNetworkId()] == null){
+				this._costCache[network.getNetworkId()] = new Double[network.countNodes()][];
+			}
+			if(this._costCache[network.getNetworkId()][parent_k] == null){
+				this._costCache[network.getNetworkId()][parent_k] = new Double[network.getChildren(parent_k).length];
+			}
+			if(this._costCache[network.getNetworkId()][parent_k][children_k_index] != null){
+				return this._costCache[network.getNetworkId()][parent_k][children_k_index];
+			}
+		}
+		
+		double cost = compiler.cost(network, parent_k, children_k);
+		
+		if(shouldCache){
+			this._costCache[network.getNetworkId()][parent_k][children_k_index] = cost;
+		}
+		
+		return cost;
 	}
 	
 	/**
