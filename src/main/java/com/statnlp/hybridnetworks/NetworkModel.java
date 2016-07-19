@@ -55,12 +55,15 @@ public abstract class NetworkModel implements Serializable{
 	private transient LocalNetworkLearnerThread[] _learners;
 	//the local decoder.
 	private transient LocalNetworkDecoderThread[] _decoders;
-	private transient PrintStream[] outstreams;
+	private transient PrintStream[] outstreams = new PrintStream[]{System.out};
 	
 	public NetworkModel(FeatureManager fm, NetworkCompiler compiler, PrintStream... outstreams){
 		this._fm = fm;
 		this._numThreads = NetworkConfig._numThreads;
 		this._compiler = compiler;
+		if(outstreams == null){
+			outstreams = new PrintStream[0];
+		}
 		this.outstreams = new PrintStream[outstreams.length+1];
 		this.outstreams[0] = System.out;
 		for(int i=0; i<outstreams.length; i++){

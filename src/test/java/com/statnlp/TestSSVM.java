@@ -21,6 +21,8 @@ public class TestSSVM {
 		String posHalfWindowSize = "0";
 		String wordHalfWindowSize = "0";
 		String features = "tag";
+		
+		// Linear CRF training and testing
 		LinearCRFMain.main(new String[]{
 				"-trainPath", trainPath,
 				"-testPath", testPath,
@@ -39,6 +41,7 @@ public class TestSSVM {
 				"-features", features+",transition",
 		});
 
+		// SVM Struct training and testing
 		SVMStruct.main(new String[]{
 				"-C", String.format("%.3f", margin*numExamples),
 				"-trainPath", trainPath,
@@ -53,6 +56,7 @@ public class TestSSVM {
 				"-productWithOutput", "false",
 		});
 		
+		// Our SSVM training and testing
 		LinearCRFMain.main(new String[]{
 				"-trainPath", trainPath,
 				"-testPath", testPath,
@@ -73,13 +77,14 @@ public class TestSSVM {
 				"-features", features+",transition",
 		});
 		
+		// Softmax-margin training and testing
 		LinearCRFMain.main(new String[]{
 				"-trainPath", trainPath,
 				"-testPath", testPath,
 				"-modelPath", "experiments/test/softmax_margin.model",
 				"-logPath", "experiments/test/softmax_margin.log",
 				"-writeModelText",
-				"-weightInit", "file", "experiments/test/svmstruct.model.features",
+				"-weightInit", "file", "experiments/test/svmstruct.model.features", 
 				
 				"-modelType", "SOFTMAX_MARGIN",
 				"-l2", "0.125",

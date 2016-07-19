@@ -11,10 +11,13 @@ import java.io.PrintStream;
 public class Utils {
 
 	public static void print(String string, PrintStream... streams){
-		if(streams.length == 0){
+		if(streams == null || streams.length == 0){
 			streams = new PrintStream[]{System.out};
 		}
 		for(PrintStream stream: streams){
+			if(stream == null){
+				continue;
+			}
 			stream.println(string);
 		}
 	}
