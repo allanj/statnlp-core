@@ -245,7 +245,7 @@ public class LinearCRFMain {
 					HashMap<String, Integer> inputMap = outputInputMap.get(output);
 					for(String input: sorted(inputMap.keySet())){
 						int featureId = inputMap.get(input);
-						modelTextWriter.println("\t\t"+input+" "+featureId+" "+fm.getParam_G().getWeight(featureId));
+						modelTextWriter.printf("\t\t%s %d %.17f\n", input, featureId, fm.getParam_G().getWeight(featureId));
 					}
 				}
 			}
