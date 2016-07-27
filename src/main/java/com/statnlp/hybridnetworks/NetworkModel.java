@@ -171,7 +171,7 @@ public abstract class NetworkModel implements Serializable{
 		}
 		
 		ExecutorService pool = Executors.newFixedThreadPool(this._numThreads);
-		List<Callable<Void>> callables = Arrays.asList(this._learners);
+		List<Callable<Void>> callables = Arrays.asList((Callable<Void>[])this._learners);
 		
 		int multiplier = 1;
 		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM || NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
