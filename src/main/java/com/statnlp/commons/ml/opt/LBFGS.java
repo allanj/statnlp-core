@@ -476,14 +476,16 @@ public class LBFGS {
 					if (point == 0)
 						cp = m;
 					w[n + cp - 1] = 1 / ys;
-					if (badNum(w[n + cp - 1]))
+					if (badNum(w[n + cp - 1])){
 						System.err.println("w2 " + ys);
+					}
 
 					for (i = 1; i <= n; i += 1) {
 						w[i - 1] = -g[i - 1];
-						if (badNum(w[i - 1]))
+						if (badNum(w[i - 1])){
 							throw new IllegalArgumentException(i + " "
 									+ g[i - 1]);
+						}
 					}
 
 					cp = point;
