@@ -25,5 +25,9 @@ public class LBFGSOptimizerFactory extends OptimizerFactory {
 	public LBFGSOptimizer create(int numWeights){
 		return new LBFGSOptimizer();
 	}
+	
+	public LBFGSOptimizer create(int numWeights, double eps, double xtol){
+		return new LBFGSOptimizer(eps, xtol);
+	}
 
 }

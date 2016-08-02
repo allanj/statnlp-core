@@ -127,7 +127,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 		for(int networkId = 0; networkId< this._instances.length; networkId++){
 			if(networkId%100==0)
 				System.err.print('.');
-			if(NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY
+			if(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY
 					&& ((!this._param._isFinalized && this.getNetwork(networkId).getInstance().getInstanceId() < 0))){
 				// When extracting features only for labeled, the first touch is only to extract features from labeled instances
 				// The second touch, enabled only when caching is enabled, which is after the LocalNetworkParam being finalized,
@@ -157,7 +157,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	 */
 	private void train(int it){
 		for(int i = 0; i< this._instances.length; i++){
-			if(NetworkConfig.USE_BATCH_SGD && !this.chargeInstsIds.contains(this._instances[i].getInstanceId()) && !this.chargeInstsIds.contains(-this._instances[i].getInstanceId()) )
+			if(NetworkConfig.USE_BATCH_TRAINING && !this.chargeInstsIds.contains(this._instances[i].getInstanceId()) && !this.chargeInstsIds.contains(-this._instances[i].getInstanceId()) )
 				continue;
 			Network network = this.getNetwork(i);
 			network.train();

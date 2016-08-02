@@ -109,18 +109,18 @@ public class GlobalNetworkParam implements Serializable{
 		this._obj = Double.NEGATIVE_INFINITY;
 		this._isDiscriminative = !NetworkConfig.TRAIN_MODE_IS_GENERATIVE;
 		if(this.isDiscriminative()){
-			this._batchSize = NetworkConfig.batchSize;
+			this._batchSize = NetworkConfig.BATCH_SIZE;
 			this._kappa = NetworkConfig.L2_REGULARIZATION_CONSTANT;
 		}
 		this._featureIntMap = new HashMap<String, HashMap<String, HashMap<String, Integer>>>();
 		this._type2inputMap = new HashMap<String, ArrayList<String>>();
 		this._optFactory = optimizerFactory;
-		if (!NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION && NetworkConfig._numThreads > 1){
+		if (NetworkConfig.PARALLEL_FEATURE_EXTRACTION && NetworkConfig.NUM_THREADS > 1){
 			this._subFeatureIntMaps = new ArrayList<HashMap<String, HashMap<String, HashMap<String, Integer>>>>();
-			for (int i = 0; i < NetworkConfig._numThreads; i++){
+			for (int i = 0; i < NetworkConfig.NUM_THREADS; i++){
 				this._subFeatureIntMaps.add(new HashMap<String, HashMap<String, HashMap<String, Integer>>>());
 			}
-			this._subSize = new int[NetworkConfig._numThreads];
+			this._subSize = new int[NetworkConfig.NUM_THREADS];
 		}
 	}
 	
@@ -408,12 +408,12 @@ public class GlobalNetworkParam implements Serializable{
 		int threadId = network != null ? network.getThreadId() : -1;
 		boolean shouldNotCreateNewFeature = false;
 		try{
-			shouldNotCreateNewFeature = (NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY && network.getInstance().getInstanceId() < 0);
+			shouldNotCreateNewFeature = (NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY && network.getInstance().getInstanceId() < 0);
 		} catch (NullPointerException e){
 			throw new NetworkException("Missing network on some toFeature calls while trying to extract only from labeled networks.");
 		}
 		HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap = null;
-		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION || NetworkConfig._numThreads == 1 || this.isLocked()){
+		if(!NetworkConfig.PARALLEL_FEATURE_EXTRACTION || NetworkConfig.NUM_THREADS == 1 || this.isLocked()){
 			featureIntMap = this._featureIntMap;
 		} else {
 			if(threadId == -1){
@@ -450,7 +450,7 @@ public class GlobalNetworkParam implements Serializable{
 		
 		HashMap<String, Integer> inputToIdx = outputToInputToIdx.get(output);
 		if(!inputToIdx.containsKey(input)){
-			if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION || NetworkConfig._numThreads == 1){
+			if(!NetworkConfig.PARALLEL_FEATURE_EXTRACTION || NetworkConfig.NUM_THREADS == 1){
 				inputToIdx.put(input, this._size++);
 			} else {
 				inputToIdx.put(input, this._subSize[threadId]++);
@@ -545,7 +545,7 @@ public class GlobalNetworkParam implements Serializable{
 				}
 			}
 		}
-		boolean done = Math.abs(this._obj-this._obj_old) < NetworkConfig.objtol;
+		boolean done = Math.abs(this._obj-this._obj_old) < NetworkConfig.OBJTOL;
 		
 		this._version ++;
 		
@@ -573,7 +573,7 @@ public class GlobalNetworkParam implements Serializable{
 	 * Update the parameters using discriminative algorithm (e.g., CRF).
 	 * If the optimization seems to be done, it will return true.
 	 * @return true if the difference between previous objective value and
-	 * 		   current objective value is less than {@link NetworkConfig#objtol}
+	 * 		   current objective value is less than {@link NetworkConfig#OBJTOL}
 	 * 		   or the optimizer deems the optimization is finished, or
 	 * 		   the decrease is less than 0.01% for three iterations, false otherwise.
 	 */
@@ -594,7 +594,7 @@ public class GlobalNetworkParam implements Serializable{
     	}
     	if(this._opt.name().contains("LBFGS Optimizer")){
 	    	double diff = this.getObj()-this.getObj_old();
-	    	if(diff >= 0 && diff < NetworkConfig.objtol){
+	    	if(diff >= 0 && diff < NetworkConfig.OBJTOL){
 	    		done = true;
 	    	}
 	    	double diffRatio = Math.abs(diff/this.getObj_old());
@@ -634,7 +634,7 @@ public class GlobalNetworkParam implements Serializable{
 	protected synchronized void resetCountsAndObj(){
 		
 		double coef = 1.0;
-		if(NetworkConfig.USE_BATCH_SGD){
+		if(NetworkConfig.USE_BATCH_TRAINING){
 			coef = this._batchSize*1.0/this.totalNumInsts;
 			if(coef>1) coef = 1.0;
 		}

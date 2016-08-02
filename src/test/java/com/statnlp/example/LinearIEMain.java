@@ -50,10 +50,10 @@ public class LinearIEMain {
 		}
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
-		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
+		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
-		NetworkConfig.objtol = 1e-4;
-		NetworkConfig._numThreads = 4;
+		NetworkConfig.OBJTOL = 1e-4;
+		NetworkConfig.NUM_THREADS = 4;
 		
 		int numIterations = 2500;
 		

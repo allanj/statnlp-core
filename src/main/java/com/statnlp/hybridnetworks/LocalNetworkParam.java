@@ -76,10 +76,10 @@ public class LocalNetworkParam implements Serializable{
 		this._version = 0;
 		this._globalMode = false;
 		
-		if(!NetworkConfig._CACHE_FEATURES_DURING_TRAINING){
+		if(!NetworkConfig.CACHE_FEATURES_DURING_TRAINING){
 			this.disableCache();
 		}
-		if(NetworkConfig._numThreads==1){
+		if(NetworkConfig.NUM_THREADS == 1){
 			this._globalMode = true;
 		}
 
@@ -227,9 +227,9 @@ public class LocalNetworkParam implements Serializable{
 	public FeatureArray extract(Network network, int parent_k, int[] children_k, int children_k_index){
 		// Do not cache in the first touch when parallel touch and extract only from labeled is enabled,
 		// since the local feature indices will change
-		boolean shouldCache = this.isCacheEnabled() && (NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION
-														|| NetworkConfig._numThreads == 1
-														|| !NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY
+		boolean shouldCache = this.isCacheEnabled() && (!NetworkConfig.PARALLEL_FEATURE_EXTRACTION
+														|| NetworkConfig.NUM_THREADS == 1
+														|| !NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY
 														|| this._isFinalized);
 		if(shouldCache){
 			if(this._cache == null){
@@ -261,9 +261,9 @@ public class LocalNetworkParam implements Serializable{
 	public double cost(Network network, int parent_k, int[] children_k, int children_k_index, NetworkCompiler compiler){
 		// Do not cache in the first touch when parallel touch and extract only from labeled is enabled,
 		// since the local feature indices will change
-		boolean shouldCache = this.isCacheEnabled() && (NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION
-														|| NetworkConfig._numThreads == 1
-														|| !NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY
+		boolean shouldCache = this.isCacheEnabled() && (!NetworkConfig.PARALLEL_FEATURE_EXTRACTION
+														|| NetworkConfig.NUM_THREADS == 1
+														|| !NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY
 														|| this._isFinalized);
 		if(shouldCache){
 			if(this._costCache == null){

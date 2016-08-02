@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.statnlp</groupId>
     <artifactId>statnlp-core</artifactId>
-    <version>2015.3-SNAPSHOT</version>
+    <version>2015.4-SNAPSHOT</version>
     <name>StatNLP Core Components</name>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
