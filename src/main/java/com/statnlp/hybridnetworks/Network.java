@@ -297,6 +297,19 @@ public abstract class Network implements Serializable, HyperGraph{
 	public int[] getMaxPath(int k){
 		return this._max_paths[k];
 	}
+	
+	public double getMaxTopK(int nodeIdx, int k){
+		return this._max_k[nodeIdx][k];
+	}
+
+	public int[] getMaxTopKPath(int nodeIdx, int k){
+		return this._max_k_paths[nodeIdx][k];
+	}
+
+	public int[] getMaxTopKBestListPath(int nodeIdx, int k){
+		return this._max_k_path_listbest[nodeIdx][k];
+	}
+	
 
 	/**
 	 * Calculate the marginal score for all nodes
