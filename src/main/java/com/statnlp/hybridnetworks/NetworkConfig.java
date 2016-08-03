@@ -171,6 +171,9 @@ public class NetworkConfig {
 	/** @deprecated Use {@link #NUM_THREADS} instead */
 	public static final int _numThreads = NUM_THREADS;
 	
+	/** Decoding the max-marginal for each node as well. if set to true */
+	public static boolean MAX_MARGINAL_DECODING = false;
+	
 	public static int _topKValue = 1;
 	
 	/***
