@@ -33,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.neural.NNCRFGlobalNetworkParam;
 
 public abstract class NetworkModel implements Serializable{
 	
@@ -54,6 +55,8 @@ public abstract class NetworkModel implements Serializable{
 	private transient LocalNetworkLearnerThread[] _learners;
 	//the local decoder.
 	private transient LocalNetworkDecoderThread[] _decoders;
+	//neuralCRF/SSVM socket controller
+	private NNCRFGlobalNetworkParam nnController;
 	private transient PrintStream[] outstreams = new PrintStream[]{System.out};
 	
 	public NetworkModel(FeatureManager fm, NetworkCompiler compiler, PrintStream... outstreams){
@@ -155,6 +158,7 @@ public abstract class NetworkModel implements Serializable{
 		
 		//finalize the features.
 		this._fm.getParam_G().lockIt();
+		nnController = this._fm.getParam_G()._nnController;
 		
 		if(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY && NetworkConfig.CACHE_FEATURES_DURING_TRAINING){
 			touch(insts, true); // Touch again to cache the features, both in labeled and unlabeled
@@ -197,6 +201,9 @@ public abstract class NetworkModel implements Serializable{
 					if(NetworkConfig.USE_BATCH_TRAINING) learner.setInstanceIdSet(batchInstIds);
 				}
 				long time = System.currentTimeMillis();
+				if (NetworkConfig.USE_NEURAL_FEATURES) {
+					nnController.forwardNetwork();
+				}
 				List<Future<Void>> results = pool.invokeAll(callables);
 				for(Future<Void> result: results){
 					try{
@@ -227,6 +234,9 @@ public abstract class NetworkModel implements Serializable{
 					print("Training completes. No significant progress (<objtol) after "+it+" iterations.", outstreams);
 					break;
 				}
+			}
+			if (NetworkConfig.USE_NEURAL_FEATURES) {
+				nnController.forwardNetwork();
 			}
 		} finally {
 			pool.shutdown();

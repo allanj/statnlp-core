@@ -26,6 +26,7 @@ import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
+import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 
 /**
@@ -49,6 +50,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		TAG_BIGRAM(false),
 		TRANSITION,
 		LABEL,
+		neural,
 		;
 		
 		private boolean isEnabled;
@@ -147,6 +149,11 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		}
 
 		ArrayList<Integer> features = new ArrayList<Integer>();
+		
+//		if(NetworkConfig.USE_NEURAL_FEATURES)
+//			features.add(param_g.toFeature(network, FeatureType.neural.name(), tag_id+"", input.get(pos)[0]));
+//		else
+//			features.add(param_g.toFeature(network, FeatureType.WORD.name(), tag_id+"", input.get(pos)[0]));
 		// Word window features
 		if(FeatureType.WORD.enabled() && tag_id != labelSize){
 			int wordWindowSize = wordHalfWindowSize*2+1;

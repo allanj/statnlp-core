@@ -25,6 +25,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import com.statnlp.neural.NNCRFGlobalNetworkParam;
+
 /**
  * The base class for the feature manager.
  * The only function to be implemented is the {@link #extract_helper(Network, int, int[])} method.
@@ -55,6 +57,11 @@ public abstract class FeatureManager implements Serializable{
 	protected boolean _cacheEnabled = false;
 	
 	protected int _numThreads;
+	
+	/**
+	 * The communication controller for Neural CRF.
+	 */
+	private NNCRFGlobalNetworkParam nnController;
 	
 	public FeatureManager(GlobalNetworkParam param_g){
 		this._param_g = param_g;
@@ -102,7 +109,12 @@ public abstract class FeatureManager implements Serializable{
 			this._param_g._obj_old = this._param_g._obj;
 			return false;
 		}
-		
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			if (nnController == null) {
+				nnController = this._param_g._nnController;
+			}
+			nnController.backwardNetwork();
+		}
 		boolean done = this._param_g.update();
 		
 		if(NetworkConfig.NUM_THREADS != 1){

@@ -47,7 +47,7 @@ public class LinearCRFMain {
 		NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = Boolean.parseBoolean(System.getProperty("featuresFromLabeledOnly", "false"));
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = Boolean.parseBoolean(System.getProperty("cacheFeatures", "true"));
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = Double.parseDouble(System.getProperty("l2", "0.01"));
-		NetworkConfig.NUM_THREADS = Integer.parseInt(System.getProperty("numThreads", "4"));
+		NetworkConfig.NUM_THREADS = Integer.parseInt(System.getProperty("numThreads", "8"));
 		
 		NetworkConfig.MODEL_TYPE = ModelType.valueOf(System.getProperty("modelType", "CRF")); // The model to be used: CRF, SSVM, or SOFTMAX_MARGIN
 		NetworkConfig.USE_BATCH_TRAINING = Boolean.parseBoolean(System.getProperty("useBatchTraining", "false")); // To use or not to use mini-batches in gradient descent optimizer
@@ -57,6 +57,7 @@ public class LinearCRFMain {
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
+		NetworkConfig.USE_NEURAL_FEATURES = true;
 		String weightInitFile = null;
 		
 		int numIterations = Integer.parseInt(System.getProperty("numIter", "500"));

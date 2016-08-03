@@ -173,4 +173,15 @@ public class NetworkConfig {
 	
 	public static int _topKValue = 1;
 	
+	/***
+	 * Please read carefully about the README.txt to install the NN server and also the communication package for Neural CRF
+	 */
+	/** If enable the neural CRF model, set it true.  */
+	public static boolean USE_NEURAL_FEATURES = false;
+	/**The neural network server port **/
+	public static int NEURAL_SERVER_PORT = 9546;
+	/**The neural network server IP address. Currently we are supporting torch server. ***/
+	public static String NEURAL_SERVER_ADDR = "tcp://172.18.240.32:" + NEURAL_SERVER_PORT;
+	
+	
 }
