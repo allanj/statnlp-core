@@ -82,6 +82,8 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected transient int[][][] _max_k_path_listbest;
 	/** To mark whether a node has been visited in one iteration */
 	protected transient boolean[] _visited;
+	/** The marginal score for each node */
+	protected transient double[] _marginal;
 	
 	/** The compiler that created this network */
 	protected NetworkCompiler _compiler;
@@ -253,6 +255,15 @@ public abstract class Network implements Serializable, HyperGraph{
 	}
 	
 	/**
+	 * Return the marginal score for the network at a specific index (Note: do not support SSVM yet)
+	 * @param k
+	 * @return
+	 */
+	public double getMarginal(int k){
+		return this._marginal[k];
+	}
+	
+	/**
 	 * Return the maximum score for this network (which is the max score for the root node)
 	 * @return
 	 */
@@ -287,6 +298,33 @@ public abstract class Network implements Serializable, HyperGraph{
 		return this._max_paths[k];
 	}
 
+	/**
+	 * Calculate the marginal score for all nodes
+	 */
+	public void marginal(){
+		this._marginal = new double[this.countNodes()];
+		double sum = this.sum();
+		this.outside();
+		Arrays.fill(this._marginal, Double.NEGATIVE_INFINITY);
+		for(int k=0; k<this.countNodes(); k++){
+			this.marginal(k,sum);
+		}
+	}
+	
+	
+	/**
+	 * Calculate the marginal score at the specific node
+	 * @param k
+	 */
+	protected void marginal(int k, double sum){
+		if(this.isRemoved(k)){
+			this._marginal[k] = Double.NEGATIVE_INFINITY;
+			return;
+		}
+		//since inside and outside are in log space
+		this._marginal[k] = this._inside[k] + this._outside[k] - sum;
+	}
+	
 	/**
 	 * Get the sum of the network (i.e., the inside score)
 	 * @return
