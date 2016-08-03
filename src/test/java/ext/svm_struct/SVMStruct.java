@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
@@ -108,11 +107,11 @@ public class SVMStruct {
 			testInstances = readCoNLLData(new BufferedReader(new FileReader(testFilename)), true, false, -1);
 		}
 
-		NetworkConfig._numThreads = 4;
+		NetworkConfig.NUM_THREADS = 4;
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
-		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = true;
-		NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = false;
-		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = true;
+		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = false;
+		NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = false;
+		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.MODEL_TYPE = ModelType.CRF;
 		
 		String[] argsToFeatureManager = new String[args.length-argIndex];
@@ -332,7 +331,7 @@ public class SVMStruct {
 					featIds.add(featId+1);
 				}
 			}
-			featIds.sort(Comparator.naturalOrder());
+			Collections.sort(featIds);
 			for(int featId: featIds){
 				result.append(" "+featId+":1");
 			}

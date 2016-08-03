@@ -1,5 +1,7 @@
 package com.statnlp.example.semi_crf;
 
+import java.util.ArrayList;
+
 import com.statnlp.example.semi_crf.SemiCRFNetworkCompiler.NodeType;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
@@ -108,25 +110,26 @@ public class SemiCRFFeatureManager extends FeatureManager {
 		int nextWordFeature = param_g.toFeature(FeatureType.NEXT_WORD.name(), parentLabelId+"", input.substring(parentPos+1, nextSpaceIdx));
 		int endBoundaryWordFeature = param_g.toFeature(FeatureType.END_BOUNDARY_WORD.name(), parentLabelId+"", input.substring(lastSpaceIdx, nextSpaceIdx));
 		
-		FeatureArray features = new FeatureArray(new int[]{
-				bigramFeature,
-				isSpaceFeature,
-				startCharFeature,
-				endCharFeature,
-				segmentFeature,
-				numSpacesFeature,
-				prevWordFeature,
-				nextWordFeature,
-				startBoundaryWordFeature,
-				endBoundaryWordFeature,
-		});
+		ArrayList<Integer> features = new ArrayList<Integer>();
+		features.add(bigramFeature);
+		features.add(isSpaceFeature);
+		features.add(startCharFeature);
+		features.add(endCharFeature);
+		features.add(segmentFeature);
+		features.add(numSpacesFeature);
+		features.add(prevWordFeature);
+		features.add(nextWordFeature);
+		features.add(startBoundaryWordFeature);
+		features.add(endBoundaryWordFeature);
 		
 		int[] wordFeatures = new int[2*words.length];
 		for(int i=0; i<words.length; i++){
 			wordFeatures[i] = param_g.toFeature(FeatureType.WORDS.name()+i, parentLabelId+"", words[i]);
 			wordFeatures[2*words.length-i-1] = param_g.toFeature(FeatureType.WORDS.name()+"-"+i, parentLabelId+"", words[i]);
 		}
-		features = new FeatureArray(wordFeatures, features);
+		for(int feature: wordFeatures){
+			features.add(feature);
+		}
 		
 		int unigramFeatureSize = 2*unigramWindowSize;
 		int[] unigramFeatures = new int[unigramFeatureSize];
@@ -142,7 +145,9 @@ public class SemiCRFFeatureManager extends FeatureManager {
 			}
 			unigramFeatures[unigramFeatureSize-i-1] = param_g.toFeature(FeatureType.UNIGRAM+":-"+i, parentLabelId+"", curInput);
 		}
-		features = new FeatureArray(unigramFeatures, features);
+		for(int feature: unigramFeatures){
+			features.add(feature);
+		}
 		
 		int substringFeatureSize = 2*substringWindowSize;
 		int[] substringFeatures = new int[substringFeatureSize];
@@ -158,10 +163,17 @@ public class SemiCRFFeatureManager extends FeatureManager {
 			}
 			substringFeatures[unigramFeatureSize-i-1] = param_g.toFeature(FeatureType.SUBSTRING+":-"+i, parentLabelId+"", curInput);
 		}
-		features = new FeatureArray(substringFeatures, features);
+		for(int feature: substringFeatures){
+			features.add(feature);
+		}
 		
-		return features;
-		
+		int[] featureArr = new int[features.size()];
+		int i=0;
+		for(int feature: features){
+			featureArr[i] = feature;
+			i++;
+		}
+		return new FeatureArray(featureArr);
 	}
 
 }

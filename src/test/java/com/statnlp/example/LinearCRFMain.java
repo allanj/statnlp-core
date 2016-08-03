@@ -43,15 +43,15 @@ public class LinearCRFMain {
 		boolean writeModelText = Boolean.parseBoolean(System.getProperty("writeModelText", "false"));
 
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = Boolean.parseBoolean(System.getProperty("generativeTraining", "false"));
-		NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = Boolean.parseBoolean(System.getProperty("sequentialTouch", "true"));
-		NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = Boolean.parseBoolean(System.getProperty("featuresFromLabeledOnly", "false"));
-		NetworkConfig._CACHE_FEATURES_DURING_TRAINING = Boolean.parseBoolean(System.getProperty("cacheFeatures", "true"));
+		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = Boolean.parseBoolean(System.getProperty("parallelTouch", "false"));
+		NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = Boolean.parseBoolean(System.getProperty("featuresFromLabeledOnly", "false"));
+		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = Boolean.parseBoolean(System.getProperty("cacheFeatures", "true"));
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = Double.parseDouble(System.getProperty("l2", "0.01"));
-		NetworkConfig._numThreads = Integer.parseInt(System.getProperty("numThreads", "4"));
+		NetworkConfig.NUM_THREADS = Integer.parseInt(System.getProperty("numThreads", "4"));
 		
 		NetworkConfig.MODEL_TYPE = ModelType.valueOf(System.getProperty("modelType", "CRF")); // The model to be used: CRF, SSVM, or SOFTMAX_MARGIN
-		NetworkConfig.USE_BATCH_SGD = Boolean.parseBoolean(System.getProperty("useBatchSGD", "false")); // To use or not to use mini-batches in gradient descent optimizer
-		NetworkConfig.batchSize = Integer.parseInt(System.getProperty("batchSize", "1000"));  // The mini-batch size (if USE_BATCH_SGD = true)
+		NetworkConfig.USE_BATCH_TRAINING = Boolean.parseBoolean(System.getProperty("useBatchTraining", "false")); // To use or not to use mini-batches in gradient descent optimizer
+		NetworkConfig.BATCH_SIZE = Integer.parseInt(System.getProperty("batchSize", "1000"));  // The mini-batch size (if USE_BATCH_SGD = true)
 		NetworkConfig.MARGIN = Double.parseDouble(System.getProperty("svmMargin", "1.0"));
 		
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
@@ -90,15 +90,15 @@ public class LinearCRFMain {
 				argIndex += 1;
 				break;
 			case "parallelTouch":
-				NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION = false;
+				NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
 				argIndex += 1;
 				break;
 			case "featuresFromLabeledOnly":
-				NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY = true;
+				NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = true;
 				argIndex += 1;
 				break;
 			case "noCacheFeatures":
-				NetworkConfig._CACHE_FEATURES_DURING_TRAINING = false;
+				NetworkConfig.CACHE_FEATURES_DURING_TRAINING = false;
 				argIndex += 1;
 				break;
 			case "l2":
@@ -106,7 +106,7 @@ public class LinearCRFMain {
 				argIndex += 2;
 				break;
 			case "numThreads":
-				NetworkConfig._numThreads = Integer.parseInt(args[argIndex+1]);
+				NetworkConfig.NUM_THREADS = Integer.parseInt(args[argIndex+1]);
 				argIndex += 2;
 				break;
 			case "modelType":
@@ -114,11 +114,11 @@ public class LinearCRFMain {
 				argIndex += 2;
 				break;
 			case "useBatchSGD":
-				NetworkConfig.USE_BATCH_SGD = true;
+				NetworkConfig.USE_BATCH_TRAINING = true;
 				argIndex += 1;
 				break;
 			case "batchSize":
-				NetworkConfig.batchSize = Integer.parseInt(args[argIndex+1]);
+				NetworkConfig.BATCH_SIZE = Integer.parseInt(args[argIndex+1]);
 				argIndex += 2;
 				break;
 			case "margin":
@@ -163,14 +163,10 @@ public class LinearCRFMain {
 		System.err.println("Read.."+size+" instances from "+trainPath);
 		
 		OptimizerFactory optimizerFactory;
-		if(NetworkConfig.MODEL_TYPE != ModelType.CRF){
-			if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
-				optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingSmoothedAdaDeltaThenGD(1e-6, 0.95, 5e-5, 0.9);
-			} else {
-				optimizerFactory = OptimizerFactory.getLBFGSFactory();
-			}
-		} else {
+		if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 			optimizerFactory = OptimizerFactory.getLBFGSFactory();
+		} else {
+			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingSmoothedAdaDeltaThenGD(1e-2, 0.95, 5e-5, 0.9);
 		}
 		if(weightInitFile != null){
 			HashMap<String, HashMap<String, HashMap<String, Double>>> featureWeightMap = new HashMap<String, HashMap<String, HashMap<String, Double>>>();
@@ -221,10 +217,10 @@ public class LinearCRFMain {
 			modelTextWriter.println("Model path: "+modelPath);
 			modelTextWriter.println("Train path: "+trainPath);
 			modelTextWriter.println("Test path: "+testPath);
-			modelTextWriter.println("#Threads: "+NetworkConfig._numThreads);
+			modelTextWriter.println("#Threads: "+NetworkConfig.NUM_THREADS);
 			modelTextWriter.println("L2 param: "+NetworkConfig.L2_REGULARIZATION_CONSTANT);
 			modelTextWriter.println("Weight init: "+0.0);
-			modelTextWriter.println("objtol: "+NetworkConfig.objtol);
+			modelTextWriter.println("objtol: "+NetworkConfig.OBJTOL);
 			modelTextWriter.println("Max iter: "+numIterations);
 			modelTextWriter.println();
 			modelTextWriter.println("Labels:");

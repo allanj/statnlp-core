@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 
 
 /**
@@ -39,21 +38,22 @@ public abstract class Network implements Serializable, HyperGraph{
 	private static final long serialVersionUID = -3630379919120581209L;
 	
 	/** The working array for each thread for calculating inside scores */
-	protected static double[][] insideSharedArray = new double[NetworkConfig._numThreads][];
+	protected static double[][] insideSharedArray = new double[NetworkConfig.NUM_THREADS][]; // TODO: The value of NetworkConfig.NUM_THREADS might change after first access to Network class 
 	/** The working array for each thread for calculating outside scores */
-	protected static double[][] outsideSharedArray = new double[NetworkConfig._numThreads][];
+	protected static double[][] outsideSharedArray = new double[NetworkConfig.NUM_THREADS][];
 	/** The working array for each thread for calculating max scores */
-	protected static double[][] maxSharedArray = new double[NetworkConfig._numThreads][];
+	protected static double[][] maxSharedArray = new double[NetworkConfig.NUM_THREADS][];
 	/** The working array for each thread for calculating cost */
-	protected static double[][] costSharedArray = new double[NetworkConfig._numThreads][];
+	protected static double[][] costSharedArray = new double[NetworkConfig.NUM_THREADS][];
 	/** The working array for each thread for storing max paths (for backtracking) */
-	protected static int[][][] maxPathsSharedArrays = new int[NetworkConfig._numThreads][][];
+	protected static int[][][] maxPathsSharedArrays = new int[NetworkConfig.NUM_THREADS][][];
 	/** The working array for each thread for calculating max k  scores */
-	protected static double[][][] maxKSharedArray = new double[NetworkConfig._numThreads][][];
+	protected static double[][][] maxKSharedArray = new double[NetworkConfig.NUM_THREADS][][];
 	/** The working array for each thread for storing max k  paths (for backtracking) */
-	protected static int[][][][] maxKPathsSharedArrays = new int[NetworkConfig._numThreads][][][];
+	protected static int[][][][] maxKPathsSharedArrays = new int[NetworkConfig.NUM_THREADS][][][];
 	/** The working array for each thread for storing max k  paths (for backtracking) */
-	protected static int[][][][] maxKPathsListBestSharedArrays = new int[NetworkConfig._numThreads][][][];
+	protected static int[][][][] maxKPathsListBestSharedArrays = new int[NetworkConfig.NUM_THREADS][][][];
+
 	
 	/** The IDs associated with the network (within the scope of the thread). */
 	protected int _networkId;
@@ -302,11 +302,11 @@ public abstract class Network implements Serializable, HyperGraph{
 	public void train(){
 		if(this._weight == 0)
 			return;
-		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
-			this.max();
-		} else {
+		if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 			this.inside();
 			this.outside();
+		} else { // Use real max
+			this.max();
 		}
 		this.updateGradient();
 		this.updateObjective();
@@ -346,15 +346,15 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * Calculate and update the inside-outside score of all nodes
 	 */
 	protected void updateGradient(){
-		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
+		if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
+			for(int k=0; k<this.countNodes(); k++){
+				this.updateGradient(k);
+			}
+		} else { // Use real max
 			// Max is already calculated
 			int rootIdx = this.countNodes()-1;
 			resetVisitedMark();
 			this.updateGradient(rootIdx);
-		} else {
-			for(int k=0; k<this.countNodes(); k++){
-				this.updateGradient(k);
-			}
 		}			
 	}
 	
@@ -367,10 +367,10 @@ public abstract class Network implements Serializable, HyperGraph{
 	
 	protected void updateObjective(){
 		double objective = 0.0;
-		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
-			objective = this.getMax() * this._weight;
-		} else {
+		if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 			objective = this.getInside() * this._weight;
+		} else { // Use real max
+			objective = this.getMax() * this._weight;
 		}
 		this._param.addObj(objective);
 	}
@@ -429,7 +429,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			} else {
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
-				if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
+				if(NetworkConfig.MODEL_TYPE.USE_COST){
 					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
 				for(int child_k : children_k){
@@ -452,7 +452,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			double score = fa.getScore(this._param);
-			if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
+			if(NetworkConfig.MODEL_TYPE.USE_COST){
 				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 			}
 			for(int child_k : children_k){
@@ -497,7 +497,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			double score = fa.getScore(this._param);
-			if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
+			if(NetworkConfig.MODEL_TYPE.USE_COST){
 				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 			}
 			score += this._outside[k];
@@ -530,7 +530,7 @@ public abstract class Network implements Serializable, HyperGraph{
 		
 		int[][] childrenList_k = this.getChildren(k);
 		int[] maxChildren = null;
-		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
+		if(!NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 			if(this._visited[k]) return;
 			this._visited[k] = true;
 			maxChildren = this.getMaxPath(k); // For Structured SVM
@@ -547,7 +547,7 @@ public abstract class Network implements Serializable, HyperGraph{
 					break;
 				}
 			}
-			if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){ // Consider only max path
+			if(!NetworkConfig.MODEL_TYPE.USE_SOFTMAX){ // Consider only max path
 				if(!Arrays.equals(children_k, maxChildren)){
 					continue;
 				}
@@ -557,11 +557,9 @@ public abstract class Network implements Serializable, HyperGraph{
 			}
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
-			if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
-				count = 1;
-			} else {
+			if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 				double score = fa.getScore(this._param); // w*f
-				if(NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
+				if(NetworkConfig.MODEL_TYPE.USE_COST){
 					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
 				score += this._outside[k];  // beta(s')
@@ -570,11 +568,13 @@ public abstract class Network implements Serializable, HyperGraph{
 				}
 				double normalization = this.getInside();
 				count = Math.exp(score-normalization); // Divide by normalization term Z
+			} else { // Use real max
+				count = 1;
 			}
 			count *= this._weight;
 			
 			fa.update(this._param, count);
-			if(NetworkConfig.MODEL_TYPE == ModelType.SSVM){
+			if(!NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 				for(int child_k: children_k){
 					this.updateGradient(child_k);	
 				}
@@ -629,10 +629,12 @@ public abstract class Network implements Serializable, HyperGraph{
 				} else {
 					FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 					double score = fa.getScore(this._param);
-					try{
-						score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
-					} catch (NullPointerException e){
-						System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
+					if(NetworkConfig.MODEL_TYPE.USE_COST){
+						try{
+							score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
+						} catch (NullPointerException e){
+							System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
+						}
 					}
 					for(int child_k : children_k){
 						score += this._max[child_k];
@@ -657,10 +659,12 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
-				try{
-					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
-				} catch (NullPointerException e){
-					System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
+				if(NetworkConfig.MODEL_TYPE.USE_COST){
+					try{
+						score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
+					} catch (NullPointerException e){
+						System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
+					}
 				}
 				for(int child_k : children_k){
 					score += this._max[child_k];
@@ -687,10 +691,12 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = fa.getScore(this._param);
-				try{
-					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
-				} catch (NullPointerException e){
-					System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
+				if(NetworkConfig.MODEL_TYPE.USE_COST){
+					try{
+						score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
+					} catch (NullPointerException e){
+						System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
+					}
 				}
 				for(int child_k : children_k){
 					score += this._max[child_k];

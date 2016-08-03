@@ -58,7 +58,7 @@ public abstract class FeatureManager implements Serializable{
 	
 	public FeatureManager(GlobalNetworkParam param_g){
 		this._param_g = param_g;
-		this._numThreads = NetworkConfig._numThreads;
+		this._numThreads = NetworkConfig.NUM_THREADS;
 		this._params_l = new LocalNetworkParam[this._numThreads];
 		this._cacheEnabled = false;
 	}
@@ -78,13 +78,14 @@ public abstract class FeatureManager implements Serializable{
 	
 	/**
 	 * Go through all threads, accumulating the value of the objective function and the gradients, 
-	 * and then update the weights to be evaluated next
-	 * @param justUpdateObjectiveAndGradient
+	 * and then update the weights to be evaluated next, unless justUpdateObjectiveAndGradient is <tt>true</tt>,
+	 * in which case no new weights are estimated.
+	 * @param justUpdateObjectiveAndGradient No weight estimation is done
 	 * @return
 	 */
 	public synchronized boolean update(boolean justUpdateObjectiveAndGradient){
 		//if the number of thread is 1, then your local param fetches information directly from the global param.
-		if(NetworkConfig._numThreads!=1){
+		if(NetworkConfig.NUM_THREADS!=1){
 			this._param_g.resetCountsAndObj();
 			
 			for(LocalNetworkParam param_l : this._params_l){
@@ -104,7 +105,7 @@ public abstract class FeatureManager implements Serializable{
 		
 		boolean done = this._param_g.update();
 		
-		if(NetworkConfig._numThreads != 1){
+		if(NetworkConfig.NUM_THREADS != 1){
 			for(LocalNetworkParam param_l : this._params_l){
 				param_l.reset();
 			}
@@ -263,9 +264,9 @@ public abstract class FeatureManager implements Serializable{
 	public FeatureArray extract(Network network, int parent_k, int[] children_k, int children_k_index){
 		// Do not cache in the first touch when parallel touch and extract only from labeled is enabled,
 		// since the local feature indices will change
-		boolean shouldCache = this.isCacheEnabled() && (NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION
-														|| NetworkConfig._numThreads == 1
-														|| !NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY
+		boolean shouldCache = this.isCacheEnabled() && (!NetworkConfig.PARALLEL_FEATURE_EXTRACTION
+														|| NetworkConfig.NUM_THREADS == 1
+														|| !NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY
 														|| this._param_g.isLocked());
 		if(shouldCache){
 			if(this._cache[network.getNetworkId()] == null){
@@ -309,7 +310,7 @@ public abstract class FeatureManager implements Serializable{
 		this._param_g = (GlobalNetworkParam)ois.readObject();
 		this._cacheEnabled = ois.readBoolean();
 		this._numThreads = ois.readInt();
-		this._params_l = new LocalNetworkParam[NetworkConfig._numThreads];
+		this._params_l = new LocalNetworkParam[NetworkConfig.NUM_THREADS];
 	}
 	
 }

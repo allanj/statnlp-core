@@ -33,7 +33,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 
 public abstract class NetworkModel implements Serializable{
 	
@@ -50,7 +49,7 @@ public abstract class NetworkModel implements Serializable{
 	protected transient Network[] unlabeledNetworkByInstanceId;
 	protected transient Network[] labeledNetworkByInstanceId;
 	//the number of threads.
-	protected transient int _numThreads = NetworkConfig._numThreads;
+	protected transient int _numThreads = NetworkConfig.NUM_THREADS;
 	//the local learners.
 	private transient LocalNetworkLearnerThread[] _learners;
 	//the local decoder.
@@ -59,7 +58,7 @@ public abstract class NetworkModel implements Serializable{
 	
 	public NetworkModel(FeatureManager fm, NetworkCompiler compiler, PrintStream... outstreams){
 		this._fm = fm;
-		this._numThreads = NetworkConfig._numThreads;
+		this._numThreads = NetworkConfig.NUM_THREADS;
 		this._compiler = compiler;
 		if(outstreams == null){
 			outstreams = new PrintStream[0];
@@ -119,7 +118,7 @@ public abstract class NetworkModel implements Serializable{
 	
 	public void train(Instance[] allInstances, int maxNumIterations) throws InterruptedException{
 		
-		this._numThreads = NetworkConfig._numThreads;
+		this._numThreads = NetworkConfig.NUM_THREADS;
 		
 		this._allInstances = allInstances;
 		for(int k = 0; k<this._allInstances.length; k++){
@@ -140,7 +139,7 @@ public abstract class NetworkModel implements Serializable{
 		touch(insts, false);
 		
 		for(int threadId=0; threadId<this._numThreads; threadId++){
-			if(NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY){
+			if(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY){
 				// We extract features only from labeled instance in the first touch, so we don't know what
 				// features are present in each thread. So copy all features to each thread.
 				// Since we extract only from labeled instances, the feature index will be smaller
@@ -157,11 +156,11 @@ public abstract class NetworkModel implements Serializable{
 		//finalize the features.
 		this._fm.getParam_G().lockIt();
 		
-		if(NetworkConfig._BUILD_FEATURES_FROM_LABELED_ONLY && NetworkConfig._CACHE_FEATURES_DURING_TRAINING){
+		if(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY && NetworkConfig.CACHE_FEATURES_DURING_TRAINING){
 			touch(insts, true); // Touch again to cache the features, both in labeled and unlabeled
 		}
 		
-		if(NetworkConfig._CACHE_FEATURES_DURING_TRAINING){
+		if(NetworkConfig.CACHE_FEATURES_DURING_TRAINING){
 			for(int threadId=0; threadId<this._numThreads; threadId++){
 				// This was previously in each LocalNetworkLearnerThread finalizeIt, but moved here since
 				// when we call finalizeIt above, it should not delete this variable first, because we were
@@ -171,10 +170,11 @@ public abstract class NetworkModel implements Serializable{
 		}
 		
 		ExecutorService pool = Executors.newFixedThreadPool(this._numThreads);
-		List<Callable<Void>> callables = Arrays.asList(this._learners);
+		List<Callable<Void>> callables = Arrays.asList((Callable<Void>[])this._learners);
 		
-		int multiplier = 1;
-		if(NetworkConfig.MODEL_TYPE == ModelType.SSVM || NetworkConfig.MODEL_TYPE == ModelType.SOFTMAX_MARGIN){
+		int multiplier = 1; // By default, print the negative of the objective
+		if(!NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
+			// Print the objective if not using softmax 
 			multiplier = -1;
 		}
 		
@@ -184,17 +184,17 @@ public abstract class NetworkModel implements Serializable{
 		try{
 			for(int it = 0; it<=maxNumIterations; it++){
 				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
-				if(NetworkConfig.USE_BATCH_SGD){
+				if(NetworkConfig.USE_BATCH_TRAINING){
 					batchInstIds.clear();
 					Collections.shuffle(instIds, RANDOM);
-					int size = NetworkConfig.batchSize >= this._allInstances.length ? this._allInstances.length:NetworkConfig.batchSize; 
+					int size = NetworkConfig.BATCH_SIZE >= this._allInstances.length ? this._allInstances.length:NetworkConfig.BATCH_SIZE; 
 					for(int iid = 0; iid<size; iid++){
 						batchInstIds.add(instIds.get(iid));
 					}
 				}
 				for(LocalNetworkLearnerThread learner: this._learners){
 					learner.setIterationNumber(it);
-					if(NetworkConfig.USE_BATCH_SGD) learner.setInstanceIdSet(batchInstIds);
+					if(NetworkConfig.USE_BATCH_TRAINING) learner.setInstanceIdSet(batchInstIds);
 				}
 				long time = System.currentTimeMillis();
 				List<Future<Void>> results = pool.invokeAll(callables);
@@ -215,7 +215,6 @@ public abstract class NetworkModel implements Serializable{
 				time = System.currentTimeMillis() - time;
 				double obj = this._fm.getParam_G().getObj_old();
 				print(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0), outstreams);
-	//			System.out.println("Iteration "+it+"\tObjective="+obj+"\tTime="+time/1000.0+" seconds."+"\t"+obj/obj_old);
 				if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE && it>1 && obj<obj_old && Math.abs(obj-obj_old)>1E-5){
 					throw new RuntimeException("Error:\n"+obj_old+"\n>\n"+obj);
 				}
@@ -235,7 +234,7 @@ public abstract class NetworkModel implements Serializable{
 	}
 
 	private void touch(Instance[][] insts, boolean keepExisting) throws InterruptedException {
-		if(NetworkConfig._SEQUENTIAL_FEATURE_EXTRACTION || NetworkConfig._numThreads == 1){
+		if(!NetworkConfig.PARALLEL_FEATURE_EXTRACTION || NetworkConfig.NUM_THREADS == 1){
 			for(int threadId = 0; threadId<this._numThreads; threadId++){
 				if(!keepExisting){
 					this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, 0);
@@ -300,7 +299,7 @@ public abstract class NetworkModel implements Serializable{
 //			this._fm.getParam_G().expandFeaturesForGenerativeModelDuringTesting();
 //		}
 		
-		this._numThreads = NetworkConfig._numThreads;
+		this._numThreads = NetworkConfig.NUM_THREADS;
 		System.err.println("#threads:"+this._numThreads);
 		
 		Instance[] results = new Instance[allInstances.length];
