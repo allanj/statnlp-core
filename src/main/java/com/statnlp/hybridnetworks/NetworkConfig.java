@@ -82,7 +82,7 @@ public class NetworkConfig {
 	 */
 	public static double OBJTOL = 1e-14;
 	/** @deprecated Use {@link #OBJTOL} instead*/
-	public static double objtol = OBJTOL;
+	public static final double objtol = OBJTOL;
 
 	public static boolean DEBUG_MODE = false;
 	
@@ -98,11 +98,11 @@ public class NetworkConfig {
 	 */
 	public static int BATCH_SIZE = 20;
 	/** @deprecated Use {@link #BATCH_SIZE} instead */
-	public static int batchSize = 20;
+	public static final int batchSize = 20;
 	public static int RANDOM_BATCH_SEED = 2345;
 	
 	/** @deprecated Use {@link #USE_BATCH_TRAINING} instead */
-	public static boolean USE_BATCH_SGD = false;
+	public static final boolean USE_BATCH_SGD = false;
 	
 	/** The weight of the cost function for SSVM and Softmax-Margin */
 	public static double MARGIN = 0.5;
@@ -158,17 +158,17 @@ public class NetworkConfig {
 	public static boolean BUILD_FEATURES_FROM_LABELED_ONLY = false;
 
 	/** @deprecated Use {@link #CACHE_FEATURES_DURING_TRAINING} instead */
-	public static boolean _CACHE_FEATURES_DURING_TRAINING = true;
+	public static final boolean _CACHE_FEATURES_DURING_TRAINING = true;
 	/** @deprecated Use {@link #PARALLEL_FEATURE_EXTRACTION} instead */
-	public static boolean _SEQUENTIAL_FEATURE_EXTRACTION = true ;
+	public static final boolean _SEQUENTIAL_FEATURE_EXTRACTION = true ;
 	/** @deprecated Use {@link #BUILD_FEATURES_FROM_LABELED_ONLY} instead */
-	public static boolean _BUILD_FEATURES_FROM_LABELED_ONLY = false;
+	public static final boolean _BUILD_FEATURES_FROM_LABELED_ONLY = false;
 	
 	/**
 	 * The number of threads to be used for parallel execution
 	 */
 	public static int NUM_THREADS = 4;
 	/** @deprecated Use {@link #NUM_THREADS} instead */
-	public static int _numThreads = NUM_THREADS;
+	public static final int _numThreads = NUM_THREADS;
 	
 }
