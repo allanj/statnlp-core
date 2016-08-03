@@ -70,4 +70,6 @@ public class NetworkConfig {
 	
 	public static int _maxSpanLen = 2;//the upper-bound of the length of a span.
 	
+	public static int _topKValue = 1;
+	
 }

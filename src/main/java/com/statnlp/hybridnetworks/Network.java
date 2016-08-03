@@ -18,9 +18,11 @@ package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.HashSet;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
+
 
 /**
  * The base class for representing networks. This class is equipped with algorithm to calculate the 
@@ -46,6 +48,12 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected static double[][] costSharedArray = new double[NetworkConfig._numThreads][];
 	/** The working array for each thread for storing max paths (for backtracking) */
 	protected static int[][][] maxPathsSharedArrays = new int[NetworkConfig._numThreads][][];
+	/** The working array for each thread for calculating max k  scores */
+	protected static double[][][] maxKSharedArray = new double[NetworkConfig._numThreads][][];
+	/** The working array for each thread for storing max k  paths (for backtracking) */
+	protected static int[][][][] maxKPathsSharedArrays = new int[NetworkConfig._numThreads][][][];
+	/** The working array for each thread for storing max k  paths (for backtracking) */
+	protected static int[][][][] maxKPathsListBestSharedArrays = new int[NetworkConfig._numThreads][][][];
 	
 	/** The IDs associated with the network (within the scope of the thread). */
 	protected int _networkId;
@@ -66,6 +74,12 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected transient double[] _max;
 	/** Stores the paths associated with the above tree */
 	protected transient int[][] _max_paths;
+	/** At each index, store the score of the max k  tree */
+	protected transient double[][] _max_k;
+	/** Stores the paths associated with the above tree */
+	protected transient int[][][] _max_k_paths;
+	/** Stores the paths best list associated with the above tree */
+	protected transient int[][][] _max_k_path_listbest;
 	/** To mark whether a node has been visited in one iteration */
 	protected transient boolean[] _visited;
 	
@@ -138,6 +152,24 @@ public abstract class Network implements Serializable, HyperGraph{
 		if(maxPathsSharedArrays[this._threadId] == null || this.countNodes() > maxPathsSharedArrays[this._threadId].length)
 			maxPathsSharedArrays[this._threadId] = new int[this.countNodes()][];
 		return maxPathsSharedArrays[this._threadId];
+	}
+	
+	protected int[][][] getMaxKPathSharedArray(){
+		if(maxKPathsSharedArrays[this._threadId] == null || this.countNodes() > maxKPathsSharedArrays[this._threadId].length)
+			maxKPathsSharedArrays[this._threadId] = new int[this.countNodes()][][];
+		return maxKPathsSharedArrays[this._threadId];
+	}
+	
+	protected double[][] getMaxKSharedArray(){
+		if(maxKSharedArray[this._threadId] == null || this.countNodes() > maxKSharedArray[this._threadId].length)
+			maxKSharedArray[this._threadId] = new double[this.countNodes()][];
+		return maxKSharedArray[this._threadId];
+	}
+	
+	protected int[][][] getMaxKPathListBestSharedArray(){
+		if(maxKPathsListBestSharedArrays[this._threadId] == null || this.countNodes() > maxKPathsListBestSharedArrays[this._threadId].length)
+			maxKPathsListBestSharedArrays[this._threadId] = new int[this.countNodes()][][];
+		return maxKPathsListBestSharedArrays[this._threadId];
 	}
 	
 	public int getNetworkId(){
@@ -356,12 +388,12 @@ public abstract class Network implements Serializable, HyperGraph{
 	 */
 	public void max(){
 		this._max = this.getMaxSharedArray();
-		
 		this._max_paths = this.getMaxPathSharedArray();
 		for(int k=0; k<this.countNodes(); k++){
 			this.max(k);
 		}
 	}
+	
 	
 	/**
 	 * Calculate the inside score for the specified node
@@ -671,6 +703,168 @@ public abstract class Network implements Serializable, HyperGraph{
 		}
 	}
 
+	
+	/**
+	 * Using the normal approach, each node we maintain a top-k list.
+	 * top-k viterbi decoding. 
+	 */
+	protected void topK(){
+		int topK = NetworkConfig._topKValue;
+		this._max_k = getMaxKSharedArray();
+		this._max_k_paths = getMaxKPathSharedArray();
+		this._max_k_path_listbest  = getMaxKPathListBestSharedArray();
+		for(int nodeIdx=0; nodeIdx<this.countNodes(); nodeIdx++){
+			this._max_k[nodeIdx] = new double[NetworkConfig._topKValue];
+			this._max_k_paths[nodeIdx] = new int[NetworkConfig._topKValue][];
+			this._max_k_path_listbest[nodeIdx]  = new int[NetworkConfig._topKValue][];
+			this.askKBest(nodeIdx, topK);
+		}
+	}
+
+	/**
+	 * Ask the k^{th} best of nodeIdx, currently specific for CKY-styly parsing
+	 * @param nodeIdx
+	 * @param q
+	 */
+	protected void askKBest(int nodeIdx, int TOPK){
+		int[][] childrenList_k = this.getChildren(nodeIdx);
+		for(int children_k_index = 0; children_k_index < childrenList_k.length; children_k_index++){
+			int[] children_k = childrenList_k[children_k_index];
+			boolean ignoreflag = false;
+			for(int child_k : children_k)
+				if(this.isRemoved(child_k)){
+					ignoreflag = true; break;
+				}
+			if(ignoreflag)
+				continue;
+			
+			BinaryHeap heap = new BinaryHeap(NetworkConfig._topKValue+1);
+			int n = 0;
+			
+			int currMaxPath[][] = new int[TOPK][children_k.length]; //topk and (l-best, r-best)
+			
+			FeatureArray fa = this._param.extract(this, nodeIdx, children_k, children_k_index);
+			double score = fa.getScore(this._param);
+			double firstBest = score;
+			for(int child_k : children_k){
+				firstBest += this._max_k[child_k][0];
+			}
+			int[] firstBestListIdx = new int[children_k.length];
+			Arrays.fill(firstBestListIdx, 0);
+			ValueIndexPair vip = new ValueIndexPair(firstBest, firstBestListIdx); //first best of left, first best of right
+			heap.add(vip);
+			HashSet<IndexPair> beenPushedSet  = new HashSet<IndexPair>();
+			beenPushedSet.add(new IndexPair(firstBestListIdx));
+			if(children_k.length==0){
+				vip = heap.removeMax();
+				currMaxPath[0] = vip.bestListIdx;
+				for(int k=1;k<TOPK;k++) currMaxPath[k] = null;
+			}else{
+				while(n < TOPK) {
+				    vip = heap.removeMax();
+				    if(vip.val == Double.NEGATIVE_INFINITY)
+					break;
+				    currMaxPath[n] = vip.bestListIdx; 
+				    n++;
+				    if(n >= TOPK)
+				    	break;
+					
+				    for(int ith=0;ith<vip.bestListIdx.length;ith++){
+				    	int[] listIdx = vip.bestListIdx.clone();
+				    	IndexPair ip = new IndexPair(listIdx);
+				    	ip.set(ith, listIdx[ith]+1);
+				    	if(!beenPushedSet.contains(ip)){
+				    		double kbestScore  = 0;
+				    		for(int ck=0;ck<children_k.length;ck++){
+				    			kbestScore += ith==ck? this._max_k[children_k[ck]][vip.bestListIdx[ck]+1]: this._max_k[children_k[ck]][vip.bestListIdx[ck]];
+				    		}
+				    		kbestScore+=score;
+				    		heap.add(new ValueIndexPair(kbestScore, ip.indices));
+				    		beenPushedSet.add(ip);
+				    	}
+				    }
+				}
+				for(int x=n;x<TOPK;x++) currMaxPath[x] = null;
+			}
+			//merge two topK vectors into one
+			if(children_k_index == 0){
+				this._max_k_path_listbest[nodeIdx] = currMaxPath;
+				for(int tk=0;tk<this._max_k_path_listbest[nodeIdx].length;tk++){
+					if(this._max_k_path_listbest[nodeIdx][tk]==null){
+						this._max_k_paths[nodeIdx][tk] = null;
+						this._max_k[nodeIdx][tk] = Double.NEGATIVE_INFINITY;
+						continue;
+					}
+					this._max_k_paths[nodeIdx][tk] = children_k;
+					double tkbest = 0;
+					int c=0;
+					for(int child_k : children_k){
+						tkbest += this._max_k[child_k][this._max_k_path_listbest[nodeIdx][tk][c++]];
+					}
+					this._max_k[nodeIdx][tk] = tkbest+score;
+				}
+			}else{
+				this._max_k_path_listbest[nodeIdx] = this.merge(currMaxPath, children_k,nodeIdx, score);
+			}
+			
+		}
+	}
+	
+	/**
+	 * 
+	 * @param currMaxPath: nth best, and the best pair from child
+	 * @param globalMaxKPath
+	 * @param maxKScore[nodeIdx][kthbest]: only know the children
+	 * @return
+	 */
+	private int[][] merge(int currMaxPath[][], int[] children, int nodeIdx, double score){
+		int[][] answer = new int[NetworkConfig._topKValue][children.length];//pair is two
+		int[][] answerPath = new int[NetworkConfig._topKValue][children.length];
+		int i=0, j=0, k=0;
+		while(k<answer.length){
+//			System.err.println("node idx:"+nodeIdx+" i:"+i+" j:"+j);
+			double left = Double.NEGATIVE_INFINITY;
+			if(currMaxPath[i]!=null){
+				left = 0;
+				for(int ith=0;ith<children.length;ith++){
+					left += this._max_k[children[ith]][currMaxPath[i][ith]];
+				}
+			}
+			
+			int[] pathChildren = this._max_k_paths[nodeIdx][j]==null? null:this._max_k_paths[nodeIdx][j];
+			
+			double right = Double.NEGATIVE_INFINITY;
+			if(!(pathChildren==null || this._max_k_path_listbest[nodeIdx][j]==null)){
+				right = 0;
+				for(int pth=0;pth<pathChildren.length;pth++)
+					right += this._max_k[pathChildren[pth]][this._max_k_path_listbest[nodeIdx][j][pth]];
+			}
+			
+			
+			if(left==Double.NEGATIVE_INFINITY && right==Double.NEGATIVE_INFINITY){
+				break;
+			}
+			
+			if(left > right){
+				answer[k] = currMaxPath[i];
+				this._max_k[nodeIdx][k] = left + score;
+				answerPath[k] = children;
+				i++;
+			}else{
+				answer[k] = this._max_k_path_listbest[nodeIdx][j];
+				this._max_k[nodeIdx][k] = right + score;
+				System.arraycopy(this._max_k_paths[nodeIdx][j], 0, answerPath[k], 0, this._max_k_paths[nodeIdx][j].length); //a faster way to copy array
+				//answerPath[k] = this._max_k_paths[nodeIdx][j].clone();
+				j++;
+			}
+			k++;
+			
+		}
+		for(int x=k;x<answer.length;x++) {answer[x] = null; answerPath[x]= null;}
+		this._max_k_paths[nodeIdx] = answerPath;
+		return answer;
+	}
+	
 	private double sumLog(double inside, double score) {
 		double v1 = inside;
 		double v2 = score;
@@ -726,4 +920,7 @@ public abstract class Network implements Serializable, HyperGraph{
 		return sb.toString();
 	}
 	
+	
 }
+
+
