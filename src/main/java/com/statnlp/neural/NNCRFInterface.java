@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 public abstract class NNCRFInterface implements Serializable {
 
-	private static final long serialVersionUID = 4395103331238560027L;
+	private static final long serialVersionUID = -9106600200597945640L;
 
 	// The remote neural network
 	protected transient RemoteNN nn;
@@ -12,7 +12,7 @@ public abstract class NNCRFInterface implements Serializable {
 	// Internal Neural weights and gradients
 	protected double[] _nnWeights, _nnGrads;
 	
-	public NNCRFInterface(RemoteNN nn) {
+	public void setRemoteNN(RemoteNN nn) {
 		this.nn = nn;
 		nn.setController(this);
 	}
@@ -49,8 +49,10 @@ public abstract class NNCRFInterface implements Serializable {
 	public abstract void updateNonNeuralAndInternalNeuralWeights(double[] concatWeights);
 	
 	// wrapper to RemoteNN's forward
-	public void forwardNetwork() {
-		nn.forwardNetwork();
+	// argument is a flag indicating training/testing phase
+	// e.g., to make dropout function properly
+	public void forwardNetwork(boolean training) {
+		nn.forwardNetwork(training);
 	}
 		
 	// wrapper to RemoteNN's backward

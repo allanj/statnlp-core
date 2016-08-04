@@ -181,10 +181,6 @@ public class NetworkConfig {
 	 */
 	/** If enable the neural CRF model, set it true.  */
 	public static boolean USE_NEURAL_FEATURES = false;
-	/**The neural network server port **/
-	public static int NEURAL_SERVER_PORT = 9546;
-	/**The neural network server IP address. Currently we are supporting torch server. ***/
-	public static String NEURAL_SERVER_ADDR = "tcp://172.18.240.32:" + NEURAL_SERVER_PORT;
 	
 	
 }
