@@ -149,11 +149,18 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		}
 
 		ArrayList<Integer> features = new ArrayList<Integer>();
+//		int prevIdx = pos - 1;
+//		String prevWord = "STR";
+//		if(prevIdx>=0) prevWord = input.get(prevIdx)[0]; 
 		
-		if(NetworkConfig.USE_NEURAL_FEATURES)
+		if(NetworkConfig.USE_NEURAL_FEATURES){
 			features.add(param_g.toFeature(network, FeatureType.neural.name(), tag_id+"", input.get(pos)[0]));
-		else
+		}else{
 			features.add(param_g.toFeature(network, FeatureType.WORD.name(), tag_id+"", input.get(pos)[0]));
+			//features.add(param_g.toFeature(network, FeatureType.WORD.name(), tag_id+"", input.get(pos)[0]));
+		}
+		
+		
 		// Word window features
 		if(FeatureType.WORD.enabled() && tag_id != labelSize){
 			int wordWindowSize = wordHalfWindowSize*2+1;

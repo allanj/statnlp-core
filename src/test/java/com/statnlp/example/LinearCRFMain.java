@@ -27,6 +27,7 @@ import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
+import com.statnlp.neural.NeuralConfigReader;
 import com.statnlp.hybridnetworks.NetworkModel;
 
 public class LinearCRFMain {
@@ -60,8 +61,11 @@ public class LinearCRFMain {
 		NetworkConfig.USE_NEURAL_FEATURES = true;
 		String weightInitFile = null;
 		
-		int numIterations = Integer.parseInt(System.getProperty("numIter", "500"));
+		int numIterations = Integer.parseInt(System.getProperty("numIter", "1000"));
 		
+		if(NetworkConfig.USE_NEURAL_FEATURES){
+			NeuralConfigReader.readConfig("nn-crf-interface/neural_server/neural.config");
+		}
 		int argIndex = 0;
 		boolean shouldStop = false;
 		while(argIndex < args.length && !shouldStop){
@@ -250,6 +254,7 @@ public class LinearCRFMain {
 		}
 
 		LinearCRFInstance[] testInstances = readCoNLLData(testPath, true, false);
+		//for(LinearCRFInstance inst: trainInstances) inst.setUnlabeled();
 		Instance[] predictions = model.decode(testInstances);
 		
 		PrintStream[] outstreams = new PrintStream[]{outstream, System.out};
