@@ -16,6 +16,8 @@ local json = require ("dkjson")
 local zmq = require "lzmq"
 local context = zmq.init(1)
 
+torch.manualSeed(1337)
+
 -- GPU setup
 gpuid = opt.gpuid
 if gpuid >= 0 then
@@ -44,25 +46,109 @@ local ret -- return value to client
 local mlp -- our neural net
 local params, gradParams -- mlp's params
 local x -- input to nn, which is fixed
-local inputVocabSize
+local numInput
 local outputDim
 
-function init_MLP(inputDim, outputDim)
-    local mlp = nn.Sequential()
-                :add(OneHot(inputDim))
-                :add(nn.Linear(inputDim, outputDim):noBias()) -- no bias
-    local x = torch.Tensor(inputDim)
-    local i = 0
-    x:apply(function() i = i + 1 return i end)
+local glove
+function loadGlove(lt, wordList)
+    if glove == nil then
+        glove = require 'glove_torch/glove'
+    end
+    for i=1,#wordList do
+        lt.weight[i] = glove:word2vec(wordList[i])
+    end
+end
+
+function init_MLP(data)
+    -- numInputList, inputDimList, embSizeList, outputDim,
+    -- numLayer, hiddenSize, activation, dropout
+    -- vocab
+
+    -- re-seed
+    torch.manualSeed(torch.initialSeed())
+    if gpuid >= 0 then cutorch.manualSeed(cutorch.initialSeed()) end
+
+    -- what to forward
+    x = prepare_input(data.vocab, data.numInputList, data.embSizeList)
+    numInput = x[1]:size(1)
+
+    -- input layer
+    local pt = nn.ParallelTable()
+    local totalInput = 0
+    local totalDim = 0
+    for i=1,#data.inputDimList do
+        local inputDim = data.inputDimList[i]
+        local lt
+        if data.embSizeList[i] == 0 then
+            lt = OneHot(inputDim)
+            totalDim = totalDim + data.numInputList[i] * inputDim
+        else
+            lt = nn.LookupTable(inputDim, data.embSizeList[i])
+            if data.useGlove[i] then
+                loadGlove(lt, data.wordList)
+            end
+            totalDim = totalDim + data.numInputList[i] * data.embSizeList[i]
+        end
+        pt:add(lt)
+        totalInput = totalInput + data.numInputList[i]
+    end
+
+    local jt = nn.JoinTable(2)
+    local rs = nn.Reshape(totalDim)
+
+    mlp = nn.Sequential()
+    mlp:add(pt)
+    mlp:add(jt)
+    mlp:add(rs)
+
+    -- hidden layer
+    for i=1,data.numLayer do
+        local ll
+        if i == 1 then
+            ll = nn.Linear(totalDim, data.hiddenSize)
+        else
+            ll = nn.Linear(data.hiddenSize, data.hiddenSize)
+        end
+        mlp:add(ll)
+
+        local act
+        if data.activation == nil or data.activation == "relu" then
+            act = nn.ReLU()
+        elseif data.activation == "tanh" then
+            act = nn.Tanh()
+        else
+            error("activation " .. activation .. " not supported")
+        end
+        mlp:add(act)
+
+        if data.dropout ~= nil and data.dropout > 0 then
+            mlp:add(nn.Dropout(data.dropout))
+        end
+    end
+
+    -- output layer (passed to CRF)
+    outputDim = data.outputDim
+    local lastInputDim
+    if data.numLayer == 0 then
+        lastInputDim = totalDim
+    else
+        lastInputDim = data.hiddenSize
+    end
+    mlp:add(nn.Linear(lastInputDim, outputDim):noBias()) -- no bias
     if gpuid >= 0 then
         mlp:cuda()
-        x:cuda()
     end
+
     params, gradParams = mlp:getParameters()
     return mlp, x
 end
 
-function fwd_MLP(mlp, x, newParams)
+function fwd_MLP(mlp, x, newParams, training)
+    if training == true then
+        mlp:training()
+    else
+        mlp:evaluate()
+    end
     params:copy(newParams)
     return mlp:forward(x)
 end
@@ -94,6 +180,22 @@ function deserialize(data, row, col)
     return ret
 end
 
+function prepare_input(vocab, numInputList, embSizeList)
+    local result = {}
+    local startIdx = 0
+    for i=1,#numInputList do
+        table.insert(result, torch.Tensor(#vocab, numInputList[i]))
+        for j=1,#vocab do
+            for k=1,numInputList[i] do
+                result[i][j][k] = vocab[j][startIdx+k]
+            end
+        end
+        startIdx = startIdx + numInputList[i]
+        if gpuid >= 0 then result[i] = result[i]:cuda() end
+    end
+    return result
+end
+
 while true do
     --  Wait for next request from client
     local request = socket:recv()
@@ -103,25 +205,21 @@ while true do
         request = json.decode(request, 1, nil)
         if request.cmd == "init" then
             timer = torch.Timer()
-            inputVocabSize = request.inputVocabSize
-            print("inputVocabSize",request.inputVocabSize)
-            outputDim = request.outputDim
-            print("outputDim",request.outputDim)
-            mlp, x = init_MLP(request.inputVocabSize, request.outputDim)
+            mlp, x = init_MLP(request)
             print(mlp)
-            ret = {params:nElement()}
+            ret = serialize(params)
             time = timer:time().real
             print(string.format("Init took %.4fs", time))
         elseif request.cmd == "fwd" then
             local timer = torch.Timer()
             local newParams = deserialize(request.weights, 1, -1)
-            local fwd_out = fwd_MLP(mlp, x, newParams)
+            local fwd_out = fwd_MLP(mlp, x, newParams, request.training)
             ret = serialize(fwd_out)
             time = timer:time().real
             print(string.format("Forward took %.4fs", time))
         elseif request.cmd == "bwd" then
             local timer = torch.Timer()
-            local gradOut = deserialize(request.grad, inputVocabSize, outputDim)
+            local gradOut = deserialize(request.grad, numInput, outputDim)
             bwd_MLP(mlp, x, gradOut)
             ret = serialize(gradParams)
             time = timer:time().real
