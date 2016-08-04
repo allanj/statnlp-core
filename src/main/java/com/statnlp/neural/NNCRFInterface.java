@@ -1,8 +1,13 @@
 package com.statnlp.neural;
 
-public abstract class NNCRFInterface {
+import java.io.Serializable;
+
+public abstract class NNCRFInterface implements Serializable {
+
+	private static final long serialVersionUID = 4395103331238560027L;
+
 	// The remote neural network
-	protected RemoteNN nn;
+	protected transient RemoteNN nn;
 
 	// Internal Neural weights and gradients
 	protected double[] _nnWeights, _nnGrads;

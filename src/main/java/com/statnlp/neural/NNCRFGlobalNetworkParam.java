@@ -7,6 +7,8 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 
 public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 	
+	private static final long serialVersionUID = -7968553107102301648L;
+
 	private GlobalNetworkParam param_G;
 	
 	// "input" and "output" vocab

@@ -101,7 +101,7 @@ public class GlobalNetworkParam implements Serializable{
 	/** Neural CRF socket server controller  */
 	protected NNCRFGlobalNetworkParam _nnController;	
 	/** The weights that some of them will be replaced by neural net if NNCRF is enabled. */
-	private double[] concatWeights, concatCounts;
+	private transient double[] concatWeights, concatCounts;
 	
 	public GlobalNetworkParam(){
 		this(OptimizerFactory.getLBFGSFactory());
@@ -735,6 +735,7 @@ public class GlobalNetworkParam implements Serializable{
 		out.writeInt(this._size);
 		out.writeInt(this._fixedFeaturesSize);
 		out.writeBoolean(this._locked);
+		out.writeObject(this._nnController);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -745,6 +746,7 @@ public class GlobalNetworkParam implements Serializable{
 		this._size = in.readInt();
 		this._fixedFeaturesSize = in.readInt();
 		this._locked = in.readBoolean();
+		this._nnController = (NNCRFGlobalNetworkParam)in.readObject();
 	}
 	
 }
