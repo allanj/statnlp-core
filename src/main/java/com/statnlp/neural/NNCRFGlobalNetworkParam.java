@@ -63,20 +63,24 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 	}
 	
 	public void setInternalNeuralWeights(double[] seed) {
-		if (NeuralConfig.NUM_LAYER > 0 || NeuralConfig.WORD_EMBEDDING_SIZE > 0) {
-			for(int k = 0; k<this._nnSize; k++) {
-				this._nnWeights[k] = seed[k];
-			}
-		} else { // trick for reproducing
-			for(int k = 0; k<this._nnSize; k++){
-				int weightIdx = internalWeightIndex[k];
-				if (weightIdx != -1) {
-					this._nnWeights[k] = seed[weightIdx];
-				} else {
-					this._nnWeights[k] = 0.0;
-				}
-			}
+		
+		for(int k = 0; k<this._nnSize; k++) {
+			this._nnWeights[k] = seed[k];
 		}
+//		if (NeuralConfig.NUM_LAYER > 0 || NeuralConfig.WORD_EMBEDDING_SIZE > 0) {
+//			for(int k = 0; k<this._nnSize; k++) {
+//				this._nnWeights[k] = seed[k];
+//			}
+//		} else { // trick for reproducing
+//			for(int k = 0; k<this._nnSize; k++){
+//				int weightIdx = internalWeightIndex[k];
+//				if (weightIdx != -1) {
+//					this._nnWeights[k] = seed[weightIdx];
+//				} else {
+//					this._nnWeights[k] = 0.0;
+//				}
+//			}
+//		}
 	}
 	
 	@Override
