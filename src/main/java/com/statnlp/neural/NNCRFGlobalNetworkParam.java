@@ -83,6 +83,11 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 //		}
 	}
 	
+	
+	public void setInternalNeuralWeight(int f, double val){
+		this._nnWeights[f] = val;
+	}
+	
 	@Override
 	public void updateExternalNeuralWeights(double[] weights) {
 		for (int i = 0; i < weights.length; i++) {
