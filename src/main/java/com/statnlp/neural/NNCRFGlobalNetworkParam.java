@@ -15,9 +15,7 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 	private GlobalNetworkParam param_G;
 	
 	// "input" and "output" vocab
-	private HashMap<String, Integer> str2idxInput = new HashMap<String, Integer>();
 	private HashSet<String> inputSet = new HashSet<String>();
-	private HashMap<Integer, String> idx2strInput = new HashMap<Integer, String>();
 	private HashMap<Integer, String> idx2strOutput = new HashMap<Integer, String>();
 	private ArrayList<HashMap<String, Integer>> fieldMapList = new ArrayList<HashMap<String, Integer>>();
 	
@@ -90,7 +88,7 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 	
 	@Override
 	public void updateExternalNeuralWeights(double[] weights) {
-		System.out.println(weights.length+" ||| "+externalWeightIndex.length);
+		//System.out.println(weights.length+" ||| "+externalWeightIndex.length);
 		for (int i = 0; i < externalWeightIndex.length; i++) {
 			if (externalWeightIndex[i] != -1) {
 				param_G.overRideWeight(externalWeightIndex[i], weights[i]);
@@ -177,20 +175,22 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 					}
 						
 				}
-				vocab.add(new ArrayList<Integer>());
+				
 				for(int i=0;i<fields.length;i++) {
+					ArrayList<Integer> entry = new ArrayList<Integer>();
 					String[] elements = fields[i].split(NeuralConfig.IN_SEP);
 					HashMap<String, Integer> fieldMap = fieldMapList.get(i);
 					for (int j=0;j<elements.length;j++) {
 						if(!fieldMap.containsKey(elements[j])) {
-							fieldMap.put(elements[j], j);
+							fieldMap.put(elements[j], fieldMap.size());
 							inputDimList.set(i, inputDimList.get(i)+1);
 						}
-						vocab.get(vocab.size()-1).add(fieldMap.get(elements[j])+1); // 1-indexing
+						entry.add(fieldMap.get(elements[j])+1); // 1-indexing
 					}
-				}
-				if (!inputSet.contains(input)) {
-					inputSet.add(input);
+					if (!inputSet.contains(input)) {
+						inputSet.add(input);
+						vocab.add(entry);
+					}
 				}
 			}
 		}
