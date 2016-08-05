@@ -181,7 +181,7 @@ public abstract class NetworkModel implements Serializable{
 			// Print the objective if not using softmax 
 			multiplier = -1;
 		}
-		boolean gradientCheck = false;
+		
 		double obj_old = Double.NEGATIVE_INFINITY;
 		//run the EM-style algorithm now...
 		long startTime = System.currentTimeMillis();
@@ -210,86 +210,6 @@ public abstract class NetworkModel implements Serializable{
 						result.get(); // To ensure any exception is thrown
 					} catch (ExecutionException e){
 						throw new RuntimeException(e);
-					}
-				}
-				
-				if(gradientCheck){
-					Random rand = new Random();
-					int internalWeightL = this._fm.getParam_G().getNNCRFController().getInternalNeuralWeights().length;
-					boolean[] used = new boolean[internalWeightL];
-					Arrays.fill(used, false);
-					int x = -1;
-					for(int t=0;t<100;t++){
-						while(true){
-							x = rand.nextInt(internalWeightL);
-							if(!used[x]) {used[x] = true; break;} 
-						}
-						x = t;
-						
-						if (NetworkConfig.USE_NEURAL_FEATURES) {
-							if (nnController == null) {
-								nnController = this._fm._param_g._nnController;
-							}
-							nnController.backwardNetwork();
-						}
-						double org_gradient =  this._fm.getParam_G().getNNCRFController().getInternalNeuralGradients()[x];
-						//System.err.print(" computed gradient:"+this._fm.getParam_G().getNNCRFController().getInternalNeuralGradients()[x] + " ");
-						this._fm.getParam_G().resetCountsAndObj();
-						double org_weight = this._fm.getParam_G().getNNCRFController().getInternalNeuralWeights()[x];
-						this._fm.getParam_G().getNNCRFController().setInternalNeuralWeight(x, org_weight+0.0000001);
-						
-						if(NetworkConfig.USE_NEURAL_FEATURES) {
-							nnController.forwardNetwork(true);
-						}
-						List<Future<Void>> plus = pool.invokeAll(callables);
-						for(Future<Void> result: plus){
-							try{
-								result.get(); // To ensure any exception is thrown
-							} catch (ExecutionException e){
-								throw new RuntimeException(e);
-							}
-						}
-						
-						double plus_obj = this._fm.getParam_G().getObj();
-						this._fm.getParam_G().resetCountsAndObj();
-						if (NetworkConfig.USE_NEURAL_FEATURES) {
-							if (nnController == null) {
-								nnController = this._fm._param_g._nnController;
-							}
-							nnController.backwardNetwork();
-						}
-						this._fm.getParam_G().getNNCRFController().setInternalNeuralWeight(x, org_weight-0.0000001);
-						if(NetworkConfig.USE_NEURAL_FEATURES) {
-							nnController.forwardNetwork(true);
-						}
-						List<Future<Void>> minus = pool.invokeAll(callables);
-						for(Future<Void> result: minus){
-							try{
-								result.get(); // To ensure any exception is thrown
-							} catch (ExecutionException e){
-								throw new RuntimeException(e);
-							}
-						}
-						double minus_obj = this._fm.getParam_G().getObj();
-						double gradient_0 = -(plus_obj-minus_obj)/0.0000002;
-						//System.err.println(" checked gradient:"+gradient_0);
-						if(Math.abs(gradient_0-org_gradient)>0.0001){
-							System.err.println("wrong gradient at pos "+x);
-						}
-						this._fm.getParam_G().resetCountsAndObj();
-						
-						this._fm.getParam_G().getNNCRFController().setInternalNeuralWeight(x, org_weight);
-						if(NetworkConfig.USE_NEURAL_FEATURES) {
-							nnController.forwardNetwork(true);
-						}
-						List<Future<Void>> org = pool.invokeAll(callables);
-						for(Future<Void> result: org){
-							try{
-								result.get(); // To ensure any exception is thrown
-							} catch (ExecutionException e){
-								throw new RuntimeException(e);
-							}
-						}
 					}
 				}
 				
