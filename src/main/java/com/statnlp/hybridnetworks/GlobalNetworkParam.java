@@ -365,7 +365,7 @@ public class GlobalNetworkParam implements Serializable{
 			_nnController = new NNCRFGlobalNetworkParam(this);
 			_nnController.setRemoteNN(new RemoteNN());
 			_nnController.initializeInternalNeuralWeights();
-			if(NeuralConfig.NUM_LAYER == 0 && NeuralConfig.WORD_EMBEDDING_SIZE ==0){
+			if(NeuralConfig.NUM_LAYER == 0 && NeuralConfig.EMBEDDING_SIZE.get(0)==0){
 				_nnController.setInternalNeuralWeights(_weights);
 			}
 			
