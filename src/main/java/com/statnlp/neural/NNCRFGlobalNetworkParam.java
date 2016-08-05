@@ -175,9 +175,8 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 					}
 						
 				}
-				
+				ArrayList<Integer> entry = new ArrayList<Integer>();
 				for(int i=0;i<fields.length;i++) {
-					ArrayList<Integer> entry = new ArrayList<Integer>();
 					String[] elements = fields[i].split(NeuralConfig.IN_SEP);
 					HashMap<String, Integer> fieldMap = fieldMapList.get(i);
 					for (int j=0;j<elements.length;j++) {
@@ -187,13 +186,14 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 						}
 						entry.add(fieldMap.get(elements[j])+1); // 1-indexing
 					}
-					if (!inputSet.contains(input)) {
-						inputSet.add(input);
-						vocab.add(entry);
-					}
+				}
+				if (!inputSet.contains(input)) {
+					inputSet.add(input);
+					vocab.add(entry);
 				}
 			}
 		}
+		System.out.println(vocab.size());
 		externalWeightIndex = new int[idx2strOutput.size()*inputSet.size()];
 		int i = 0;
 		for (String input : inputSet) {
