@@ -70,6 +70,8 @@ function init_MLP(data)
 
     -- what to forward
     x = prepare_input(data.vocab, data.numInputList, data.embSizeList)
+print(x)
+    
     numInput = x[1]:size(1)
 
     -- input layer
@@ -80,11 +82,12 @@ function init_MLP(data)
         local inputDim = data.inputDimList[i]
         local lt
         if data.embSizeList[i] == 0 then
+print(inputDim)
             lt = OneHot(inputDim)
             totalDim = totalDim + data.numInputList[i] * inputDim
         else
             lt = nn.LookupTable(inputDim, data.embSizeList[i])
-            if data.useGlove[i] then
+            if data.useGlove ~= nil and data.useGlove[i] then
                 loadGlove(lt, data.wordList)
             end
             totalDim = totalDim + data.numInputList[i] * data.embSizeList[i]
@@ -93,7 +96,8 @@ function init_MLP(data)
         totalInput = totalInput + data.numInputList[i]
     end
 
-    local jt = nn.JoinTable(2)
+print(numInput)
+    local jt = nn.JoinTable(2,numInput)
     local rs = nn.Reshape(totalDim)
 
     mlp = nn.Sequential()
@@ -103,6 +107,10 @@ function init_MLP(data)
 
     -- hidden layer
     for i=1,data.numLayer do
+        if data.dropout ~= nil and data.dropout > 0 then
+            mlp:add(nn.Dropout(data.dropout))
+        end
+
         local ll
         if i == 1 then
             ll = nn.Linear(totalDim, data.hiddenSize)
@@ -116,14 +124,17 @@ function init_MLP(data)
             act = nn.ReLU()
         elseif data.activation == "tanh" then
             act = nn.Tanh()
+	elseif data.activation == "identity" then
+	   
         else
             error("activation " .. activation .. " not supported")
         end
-        mlp:add(act)
-
-        if data.dropout ~= nil and data.dropout > 0 then
-            mlp:add(nn.Dropout(data.dropout))
-        end
+	if data.activation ~= 'identity' then
+            mlp:add(act)
+	end
+    end
+    if data.dropout ~= nil and data.dropout > 0 then
+        mlp:add(nn.Dropout(data.dropout))
     end
 
     -- output layer (passed to CRF)
@@ -144,6 +155,8 @@ function init_MLP(data)
 end
 
 function fwd_MLP(mlp, x, newParams, training)
+print(params:size())
+print(newParams:size())
     if training == true then
         mlp:training()
     else
@@ -156,6 +169,7 @@ end
 function bwd_MLP(mlp, x, gradOutput)
     gradParams:zero()
     mlp:backward(x, gradOutput)
+--print(gradParams)
 end
 
 function serialize(data)
@@ -214,6 +228,7 @@ while true do
             local timer = torch.Timer()
             local newParams = deserialize(request.weights, 1, -1)
             local fwd_out = fwd_MLP(mlp, x, newParams, request.training)
+--print(fwd_out[4032],fwd_out[4033])
             ret = serialize(fwd_out)
             time = timer:time().real
             print(string.format("Forward took %.4fs", time))
