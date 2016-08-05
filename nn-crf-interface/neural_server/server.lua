@@ -70,8 +70,6 @@ function init_MLP(data)
 
     -- what to forward
     x = prepare_input(data.vocab, data.numInputList, data.embSizeList)
-print(x)
-    
     numInput = x[1]:size(1)
 
     -- input layer
@@ -82,7 +80,6 @@ print(x)
         local inputDim = data.inputDimList[i]
         local lt
         if data.embSizeList[i] == 0 then
-print(inputDim)
             lt = OneHot(inputDim)
             totalDim = totalDim + data.numInputList[i] * inputDim
         else
@@ -92,11 +89,10 @@ print(inputDim)
             end
             totalDim = totalDim + data.numInputList[i] * data.embSizeList[i]
         end
-        pt:add(lt)
+        pt:add(nn.Sequential():add(lt):add(nn.View(numInput,-1)))
         totalInput = totalInput + data.numInputList[i]
     end
 
-print(numInput)
     local jt = nn.JoinTable(2,numInput)
     local rs = nn.Reshape(totalDim)
 
@@ -124,13 +120,13 @@ print(numInput)
             act = nn.ReLU()
         elseif data.activation == "tanh" then
             act = nn.Tanh()
-	elseif data.activation == "identity" then
-	   
+        elseif data.activation == "identity" then
+            -- do nothing
         else
             error("activation " .. activation .. " not supported")
         end
 	if data.activation ~= 'identity' then
-            mlp:add(act)
+        mlp:add(act)
 	end
     end
     if data.dropout ~= nil and data.dropout > 0 then
@@ -155,8 +151,6 @@ print(numInput)
 end
 
 function fwd_MLP(mlp, x, newParams, training)
-print(params:size())
-print(newParams:size())
     if training == true then
         mlp:training()
     else
@@ -169,7 +163,6 @@ end
 function bwd_MLP(mlp, x, gradOutput)
     gradParams:zero()
     mlp:backward(x, gradOutput)
---print(gradParams)
 end
 
 function serialize(data)
@@ -228,7 +221,6 @@ while true do
             local timer = torch.Timer()
             local newParams = deserialize(request.weights, 1, -1)
             local fwd_out = fwd_MLP(mlp, x, newParams, request.training)
---print(fwd_out[4032],fwd_out[4033])
             ret = serialize(fwd_out)
             time = timer:time().real
             print(string.format("Forward took %.4fs", time))

@@ -193,7 +193,6 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 				}
 			}
 		}
-		System.out.println(vocab.size());
 		externalWeightIndex = new int[idx2strOutput.size()*inputSet.size()];
 		int i = 0;
 		for (String input : inputSet) {
