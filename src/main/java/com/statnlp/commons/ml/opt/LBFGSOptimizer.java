@@ -29,7 +29,7 @@ public class LBFGSOptimizer implements Optimizer{
 	private boolean _diagco = false;
 	private int[] _iprint = {0,0};
 	private int[] _iflag = {0};
-	private double _eps = 10e-10;
+	private double _eps = 10e-3;
 	private double _xtol = 10e-16;
 	
 	/**

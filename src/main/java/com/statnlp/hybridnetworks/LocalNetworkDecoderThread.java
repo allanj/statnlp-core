@@ -80,9 +80,10 @@ public class LocalNetworkDecoderThread extends Thread{
 	public Instance max(Instance instance, int networkId){
 		Network network = this._compiler.compileAndStore(networkId, instance, this._param);
 		//make sure we disable the cache..
-		if(!_cacheParam){
-			this._param.disableCache();
-		}
+//		if(!_cacheParam){
+//			this._param.disableCache();
+//		}
+		this._param.disableCache();
 		network.max();
 		if(NetworkConfig.MAX_MARGINAL_DECODING){
 			network.marginal();
