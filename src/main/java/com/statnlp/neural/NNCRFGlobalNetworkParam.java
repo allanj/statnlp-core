@@ -49,11 +49,12 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 		
 		List<Integer> numInputList = new ArrayList<Integer>();
 		List<Integer> inputDimList = new ArrayList<Integer>();//Arrays.asList(idx2strInput.size());
+		List<String> embList = NeuralConfig.EMBEDDING;
 		List<Integer> embSizeList = NeuralConfig.EMBEDDING_SIZE;
 		List<List<Integer>> vocab = makeVocab(numInputList, inputDimList );
 		int outputDim = neuralFeatureIntMap.size();
 		
-		double[] nnInternalWeights = this.nn.initNetwork(numInputList, inputDimList, embSizeList, outputDim, vocab);
+		double[] nnInternalWeights = this.nn.initNetwork(numInputList, inputDimList, embList, embSizeList, outputDim, vocab);
 		_nnSize = nnInternalWeights.length;
 		_nnWeights = new double[_nnSize];
 		_nnGrads = new double[_nnSize];

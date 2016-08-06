@@ -17,6 +17,11 @@ public class NeuralConfigReader {
 			if(info[0].equals("serverPort")) {
 				NeuralConfig.NEURAL_SERVER_PORT= Integer.parseInt(info[1]);
 			} else if(info[0].equals("wordEmbedding")) {
+				NeuralConfig.EMBEDDING = new ArrayList<String>();
+				for (int i = 1; i < info.length; i++) {
+					NeuralConfig.EMBEDDING.add(info[i]);
+				}
+			} else if(info[0].equals("embeddingSize")) {
 				NeuralConfig.EMBEDDING_SIZE = new ArrayList<Integer>();
 				for (int i = 1; i < info.length; i++) {
 					NeuralConfig.EMBEDDING_SIZE.add(Integer.parseInt(info[i])); 

@@ -59,6 +59,28 @@ function loadGlove(lt, wordList)
     end
 end
 
+local senna
+function loadSenna(lt)
+    -- http://www-personal.umich.edu/~rahuljha/files/nlp_from_scratch/ner_embeddings.lua
+    ltw = nn.LookupTable(130000, 50)
+
+    -- initialize lookup table with embeddings
+    embeddingsFile = torch.DiskFile('../nlp-from-scratch/senna-torch/senna/embeddings/embeddings.txt');
+    embedding = torch.DoubleStorage(50)
+
+    embeddingsFile:readDouble(embedding);
+    for i=2,130000 do 
+       embeddingsFile:readDouble(embedding);
+       local emb = torch.Tensor(50)
+       for j=1,50 do 
+          emb[j] = embedding[j]
+       end
+       ltw.weight[i-1] = emb;
+    end
+    return ltw
+    -- misc note: PADDING index is 1738
+end
+
 function init_MLP(data)
     -- numInputList, inputDimList, embSizeList, outputDim,
     -- numLayer, hiddenSize, activation, dropout
@@ -83,9 +105,17 @@ function init_MLP(data)
             lt = OneHot(inputDim)
             totalDim = totalDim + data.numInputList[i] * inputDim
         else
-            lt = nn.LookupTable(inputDim, data.embSizeList[i])
-            if data.useGlove ~= nil and data.useGlove[i] then
-                loadGlove(lt, data.wordList)
+            if data.embedding ~= nil then
+                if data.embedding[i] == 'senna' then
+                    lt = loadSenna()
+                elseif data.embedding[i] == 'glove' then
+                    lt = nn.LookupTable(inputDim, data.embSizeList[i])
+                    loadGlove(lt, data.wordList)
+                else -- unknown/no embedding, defaults to random init
+                    lt = nn.LookupTable(inputDim, data.embSizeList[i])
+                end
+            else
+                lt = nn.LookupTable(inputDim, data.embSizeList[i])
             end
             totalDim = totalDim + data.numInputList[i] * data.embSizeList[i]
         end

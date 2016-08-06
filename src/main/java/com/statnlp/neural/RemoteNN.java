@@ -28,12 +28,13 @@ public class RemoteNN {
 	}
 	
 	public double[] initNetwork(List<Integer> numInputList, List<Integer> inputDimList,
-						   List<Integer> embSizeList, int outputDim,
-						   List<List<Integer>> vocab) {
+						   List<String> embeddingList, List<Integer> embSizeList,
+						   int outputDim, List<List<Integer>> vocab) {
 		JSONObject obj = new JSONObject();
 		obj.put("cmd", "init");
 		obj.put("numInputList", numInputList);
 		obj.put("inputDimList", inputDimList);
+		obj.put("embedding", embeddingList);
 		obj.put("embSizeList", embSizeList);
 		obj.put("outputDim", outputDim);
 		obj.put("numLayer", NeuralConfig.NUM_LAYER);
@@ -70,6 +71,7 @@ public class RemoteNN {
 		
 		String request = obj.toString();
 		requester.send(request.getBytes(), 0);
+
 		byte[] reply = requester.recv(0);
 		JSONArray arr = new JSONArray(new String(reply));
 		double[] nnExternalWeights = new double[arr.length()];
@@ -96,6 +98,7 @@ public class RemoteNN {
 		
 		String request = obj.toString();
 		requester.send(request.getBytes(), 0);
+		
 		byte[] reply = requester.recv(0);
 		JSONArray grads = new JSONArray(new String(reply));
 		double[] counts = new double[grads.length()];
