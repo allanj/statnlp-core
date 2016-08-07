@@ -20,6 +20,7 @@
 package com.statnlp.example.linear_crf;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.FeatureArray;
@@ -28,6 +29,7 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
+import com.statnlp.neural.NeuralConfig;
 
 /**
  * @author wei_lu
@@ -42,6 +44,10 @@ public class LinearCRFFeatureManager extends FeatureManager{
 	public int wordHalfWindowSize = 1;
 	public int posHalfWindowSize = -1;
 	public boolean productWithOutput = true;
+	
+	private HashMap<Long, HashMap<Long, Integer>> edge2idx;
+	private String OUT_SEP = NeuralConfig.OUT_SEP; 
+	private String IN_SEP = NeuralConfig.IN_SEP; 
 	
 	public enum FeatureType {
 		WORD,
@@ -90,7 +96,6 @@ public class LinearCRFFeatureManager extends FeatureManager{
 	public LinearCRFFeatureManager(GlobalNetworkParam param_g, String[] args){
 		this(param_g, new LinearCRFConfig(args));
 	}
-	
 	/**
 	 * @param param_g
 	 */
@@ -107,6 +112,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 				FeatureType.valueOf(feat.toUpperCase()).enable();
 			}
 		}
+		edge2idx = LinearCRFNetworkCompiler.edge2idx;
 	}
 
 	@Override
@@ -133,6 +139,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 			return FeatureArray.EMPTY;
 		}
 		
+		long childNode = network.getNode(children_k[0]);
 		int child_tag_id = network.getNodeArray(children_k[0])[1];
 		int childNodeType = network.getNodeArray(children_k[0])[4];
 		
@@ -149,14 +156,25 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		}
 
 		ArrayList<Integer> features = new ArrayList<Integer>();
-//		int prevIdx = pos - 1;
-//		String prevWord = "STR";
-//		if(prevIdx>=0) prevWord = input.get(prevIdx)[0]; 
+		int prevIdx = pos - 1;
+		int nextIdx = pos + 1;
+		String prevWord = "STR";
+		String nextWord ="END";
+		String prevPos = "STR";
+		if(nextIdx<input.size()-1) nextWord = input.get(nextIdx)[0];
+		if(prevIdx>=0) {
+			prevWord = input.get(prevIdx)[0]; 
+			prevPos = input.get(prevIdx)[1];
+		}
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
-			features.add(param_g.toFeature(network, FeatureType.neural.name(), tag_id+"", input.get(pos)[0]));
+			
+			
+			String postag = input.get(pos)[1];
+			features.add(param_g.toFeature(network, FeatureType.neural.name(), tag_id+"", prevWord+IN_SEP+input.get(pos)[0]+IN_SEP+nextWord+OUT_SEP+prevPos+IN_SEP+postag));
 		}else{
-			features.add(param_g.toFeature(network, FeatureType.WORD.name(), tag_id+"", input.get(pos)[0]));
+			features.add(param_g.toFeature(network, FeatureType.WORD.name(), tag_id+"",input.get(pos)[0]));
+//			features.add(param_g.toFeature(network, FeatureType.WORD.name(), tag_id+"", prevWord+IN_SEP+input.get(pos)[0]+IN_SEP+nextWord));
 			//features.add(param_g.toFeature(network, FeatureType.WORD.name(), tag_id+"", input.get(pos)[0]));
 		}
 		

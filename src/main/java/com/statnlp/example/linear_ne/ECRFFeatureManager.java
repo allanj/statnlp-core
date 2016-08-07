@@ -1,6 +1,7 @@
 package com.statnlp.example.linear_ne;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import com.statnlp.commons.types.Sentence;
 import com.statnlp.hybridnetworks.FeatureArray;
@@ -44,7 +45,7 @@ public class ECRFFeatureManager extends FeatureManager {
 		if(pos<0 || pos >= inst.size() || eId==Entity.Entities.size())
 			return FeatureArray.EMPTY;
 			
-		
+//		System.err.println(Arrays.toString(nodeArr) + Entity.get(eId).toString());
 		int[] child = NetworkIDMapper.toHybridNodeArray(network.getNode(children_k[0]));
 		int childEId = child[1];
 //		int childPos = child[0]-1;

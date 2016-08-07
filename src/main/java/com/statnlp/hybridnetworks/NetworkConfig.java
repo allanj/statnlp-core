@@ -183,8 +183,12 @@ public class NetworkConfig {
 	 */
 	/** If enable the neural CRF model, set it true.  */
 	public static boolean USE_NEURAL_FEATURES = false;
+	/** Regularized the neural features in CRF or not. set to false then can be done by dropout***/
 	public static boolean REGULARIZE_NEURAL_FEATURES = false;
+	/** If true: Optimized the neural net in CRF **/
 	public static boolean OPTIMIZE_NEURAL = false;   //false means not update the neural network parameters in CRF.
+	/** false: the feature is the word itself. true: word is the indexed word **/
+	public static boolean IS_INDEXED_NEURAL_FEATURES = false;
 	
 	// semantic settings
 	public static int _FOREST_MAX_HEIGHT = 10000;
