@@ -21,6 +21,7 @@ package com.statnlp.example.linear_crf;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import com.statnlp.commons.types.Instance;
@@ -43,6 +44,9 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	
 	private long[] _allNodes;
 	private int[][][] _allChildren;
+
+	public static HashMap<Long, HashMap<Long, Integer>> edge2idx;
+	private int edgeId;
 	
 	public LinearCRFNetworkCompiler(){
 		this._labels = new ArrayList<Label>();
@@ -54,6 +58,8 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 			label.setId(i);
 			i++;
 		}
+		edge2idx = new HashMap<Long, HashMap<Long, Integer>>();
+		edgeId = 0;
 		this.compile_unlabled_generic();
 	}
 	
@@ -98,6 +104,10 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 				network.addNode(node);
 				for(long prevNode : prevNodes){
 					network.addEdge(node, new long[]{prevNode});
+					if(!edge2idx.containsKey(node)){
+						edge2idx.put(node,  new HashMap<Long, Integer>());
+					}
+					if(!edge2idx.get(node).containsKey(prevNodes)) edge2idx.get(node).put(prevNode, edgeId++);
 				}
 			}
 			prevNodes = currNodes;
@@ -107,6 +117,10 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 			network.addNode(root);
 			for(long prevNode : prevNodes){
 				network.addEdge(root, new long[]{prevNode});
+				if(!edge2idx.containsKey(root)){
+					edge2idx.put(root,  new HashMap<Long, Integer>());
+				}
+				if(!edge2idx.get(root).containsKey(prevNodes)) edge2idx.get(root).put(prevNode, edgeId++);
 			}
 			
 		}

@@ -51,12 +51,12 @@ public class ECRFFeatureManager extends FeatureManager {
 		
 		String lw = pos>0? sent.get(pos-1).getName():"1738";
 		String llw = pos==0? "1738": pos==1? "1738":sent.get(pos-2).getName();
-		String llt = pos==0? "1": pos==1? "1":sent.get(pos-2).getTag();
-		String lt = pos>0? sent.get(pos-1).getTag():"1";
+		String llt = pos==0? "0": pos==1? "0":sent.get(pos-2).getTag();
+		String lt = pos>0? sent.get(pos-1).getTag():"0";
 		String rw = pos<sent.length()-1? sent.get(pos+1).getName():"1738";
-		String rt = pos<sent.length()-1? sent.get(pos+1).getTag():"1";
+		String rt = pos<sent.length()-1? sent.get(pos+1).getTag():"0";
 		String rrw = pos==sent.length()-1? "1738": pos==sent.length()-2? "1738":sent.get(pos+2).getName();
-		String rrt = pos==sent.length()-1? "1": pos==sent.length()-2? "1":sent.get(pos+2).getTag();
+		String rrt = pos==sent.length()-1? "0": pos==sent.length()-2? "0":sent.get(pos+2).getTag();
 		
 		String currWord = inst.getInput().get(pos).getName();
 		String currTag = inst.getInput().get(pos).getTag();
