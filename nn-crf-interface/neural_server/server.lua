@@ -1,5 +1,6 @@
 require "nn"
 require "OneHot"
+require 'optim'
 
 cmd = torch.CmdLine()
 cmd:text()
@@ -48,6 +49,7 @@ local params, gradParams -- mlp's params
 local x -- input to nn, which is fixed
 local numInput
 local outputDim
+local doOptimization, optimizer, optimState
 
 local glove
 function loadGlove(lt, wordList)
@@ -57,6 +59,28 @@ function loadGlove(lt, wordList)
     for i=1,#wordList do
         lt.weight[i] = glove:word2vec(wordList[i])
     end
+end
+
+local senna
+function loadSenna(lt)
+    -- http://www-personal.umich.edu/~rahuljha/files/nlp_from_scratch/ner_embeddings.lua
+    ltw = nn.LookupTable(130000, 50)
+
+    -- initialize lookup table with embeddings
+    embeddingsFile = torch.DiskFile('../nlp-from-scratch/senna-torch/senna/embeddings/embeddings.txt');
+    embedding = torch.DoubleStorage(50)
+
+    embeddingsFile:readDouble(embedding);
+    for i=2,130000 do 
+       embeddingsFile:readDouble(embedding);
+       local emb = torch.Tensor(50)
+       for j=1,50 do 
+          emb[j] = embedding[j]
+       end
+       ltw.weight[i-1] = emb;
+    end
+    return ltw
+    -- misc note: PADDING index is 1738
 end
 
 function init_MLP(data)
@@ -83,9 +107,17 @@ function init_MLP(data)
             lt = OneHot(inputDim)
             totalDim = totalDim + data.numInputList[i] * inputDim
         else
-            lt = nn.LookupTable(inputDim, data.embSizeList[i])
-            if data.useGlove ~= nil and data.useGlove[i] then
-                loadGlove(lt, data.wordList)
+            if data.embedding ~= nil then
+                if data.embedding[i] == 'senna' then
+                    lt = loadSenna()
+                elseif data.embedding[i] == 'glove' then
+                    lt = nn.LookupTable(inputDim, data.embSizeList[i])
+                    loadGlove(lt, data.wordList)
+                else -- unknown/no embedding, defaults to random init
+                    lt = nn.LookupTable(inputDim, data.embSizeList[i])
+                end
+            else
+                lt = nn.LookupTable(inputDim, data.embSizeList[i])
             end
             totalDim = totalDim + data.numInputList[i] * data.embSizeList[i]
         end
@@ -120,14 +152,16 @@ function init_MLP(data)
             act = nn.ReLU()
         elseif data.activation == "tanh" then
             act = nn.Tanh()
+        elseif data.activation == "hardtanh" then
+            act = nn.HardTanh()
         elseif data.activation == "identity" then
             -- do nothing
         else
             error("activation " .. activation .. " not supported")
         end
-	if data.activation ~= 'identity' then
+  if data.activation ~= 'identity' then
         mlp:add(act)
-	end
+  end
     end
     if data.dropout ~= nil and data.dropout > 0 then
         mlp:add(nn.Dropout(data.dropout))
@@ -146,6 +180,17 @@ function init_MLP(data)
         mlp:cuda()
     end
 
+    -- set optimizer. If nil, optimization is done by caller.
+    doOptimization = data.optimizer ~= nil and data.optimizer ~= 'none'
+    if data.optimizer == 'sgd' then
+        optimizer = optim.sgd
+        optimState = {learningRate=data.learningRate}
+    elseif data.optimizer == 'adagrad' then
+        optimizer = optim.adagrad
+        optimState = {learningRate=data.learningRate}
+        print(optimState)
+    end
+
     params, gradParams = mlp:getParameters()
     return mlp, x
 end
@@ -156,13 +201,23 @@ function fwd_MLP(mlp, x, newParams, training)
     else
         mlp:evaluate()
     end
-    params:copy(newParams)
+    if newParams ~= nil then
+        params:copy(newParams)
+    end
     return mlp:forward(x)
 end
 
+function feval(params) -- for optim
+    return 0, gradParams
+end
+
 function bwd_MLP(mlp, x, gradOutput)
-    gradParams:zero()
+    gradParams:zero() 
     mlp:backward(x, gradOutput)
+    if doOptimization then
+        optimizer(feval, params, optimState)
+        -- mlp:updateParameters(0.001)
+    end
 end
 
 function serialize(data)
@@ -214,12 +269,19 @@ while true do
             timer = torch.Timer()
             mlp, x = init_MLP(request)
             print(mlp)
-            ret = serialize(params)
+            if doOptimization then -- no return array if optim is done here
+                ret = 1
+            else
+                ret = serialize(params)
+            end
             time = timer:time().real
             print(string.format("Init took %.4fs", time))
         elseif request.cmd == "fwd" then
             local timer = torch.Timer()
-            local newParams = deserialize(request.weights, 1, -1)
+            local newParams
+            if not doOptimization then
+                newParams = deserialize(request.weights, 1, -1)
+            end
             local fwd_out = fwd_MLP(mlp, x, newParams, request.training)
             ret = serialize(fwd_out)
             time = timer:time().real
@@ -228,7 +290,11 @@ while true do
             local timer = torch.Timer()
             local gradOut = deserialize(request.grad, numInput, outputDim)
             bwd_MLP(mlp, x, gradOut)
-            ret = serialize(gradParams)
+            if doOptimization then
+                ret = 1
+            else
+                ret = serialize(gradParams)
+            end
             time = timer:time().real
             print(string.format("Backward took %.4fs", time))
         end
