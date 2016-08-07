@@ -207,7 +207,4 @@ public class NetworkConfig {
 	
 	public static boolean REPLACE_ORIGINAL_EMISSION = true;
 	
-	// whether the feature string are already indices
-	public static boolean IS_INDEXED_NEURAL_FEATURES = false;
-	
 }
