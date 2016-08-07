@@ -31,6 +31,8 @@ public class LinearNEMain {
 	
 	public static String trainPath = "nn-crf-interface/nlp-from-scratch/me/eng.train.conll";
 	public static String testFile = "nn-crf-interface/nlp-from-scratch/me/eng.testb.conll";
+//	public static String trainPath = "nn-crf-interface/nlp-from-scratch/debug/debug.train.txt";
+//	public static String testFile = "nn-crf-interface/nlp-from-scratch/debug/debug.train.txt";
 	public static String nerOut = "nn-crf-interface/nlp-from-scratch/me/output/ner_out.txt";
 	public static String neural_config = "nn-crf-interface/neural_server/neural.config";
 	
@@ -38,7 +40,7 @@ public class LinearNEMain {
 	public static void main(String[] args) throws IOException, InterruptedException{
 		
 		processArgs(args);
-		System.err.println("[Info] trainingFile: "+"training path");
+		System.err.println("[Info] trainingFile: "+trainPath);
 		System.err.println("[Info] testFile: "+testFile);
 		System.err.println("[Info] nerOut: "+nerOut);
 		
@@ -46,8 +48,8 @@ public class LinearNEMain {
 		List<ECRFInstance> testInstances = null;
 		
 		
-		trainInstances = EReader.readData(trainPath,true,trainNumber);
-		testInstances = EReader.readData(testFile,false,testNumber);
+		trainInstances = EReader.readData(trainPath,true,trainNumber, "IOBES");
+		testInstances = EReader.readData(testFile,false,testNumber,"IOB");
 		
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
@@ -61,7 +63,7 @@ public class LinearNEMain {
 		}
 		
 		
-		System.err.println("[Info] ALL entities: "+Entity.Entities.toString());
+		System.err.println("[Info] "+Entity.Entities.size()+" entities: "+Entity.Entities.toString());
 		
 		
 		ECRFFeatureManager fa = new ECRFFeatureManager(gnp);

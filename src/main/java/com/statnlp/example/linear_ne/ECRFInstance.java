@@ -14,10 +14,7 @@ public class ECRFInstance extends Instance {
 	protected ArrayList<String> entities;
 	protected ArrayList<String> predictons;
 	
-	protected String[][] topKPredictions;
-	protected double[] topKScore;
 	
-	protected int globalId = -1;
 	protected double predictionScore;
 	
 	public ECRFInstance(int instanceId, double weight, Sentence sent) {
@@ -25,11 +22,6 @@ public class ECRFInstance extends Instance {
 		this.sentence = sent;
 	}
 	
-	public ECRFInstance(int globalId, int instanceId, double weight, Sentence sent) {
-		super(instanceId, weight);
-		this.sentence = sent;
-		this.globalId = globalId;
-	}
 
 	@Override
 	public int size() {
@@ -40,24 +32,13 @@ public class ECRFInstance extends Instance {
 	@SuppressWarnings({ "unchecked" })
 	@Override
 	public ECRFInstance duplicate() {
-		ECRFInstance inst = new ECRFInstance(this.globalId, this._instanceId, this._weight,this.sentence);
+		ECRFInstance inst = new ECRFInstance(this._instanceId, this._weight,this.sentence);
 		if(entities!=null)
 			inst.entities = (ArrayList<String>)entities.clone();
 		else inst.entities = null;
 		if(predictons!=null)
 			inst.predictons =(ArrayList<String>)predictons.clone();
 		else inst.predictons = null;
-		
-		if(topKPredictions!=null)
-			inst.topKPredictions = topKPredictions.clone();
-		else inst.topKPredictions = null;
-		inst.topKPredictions = this.topKPredictions;
-		
-		if(topKScore!=null)
-			inst.topKScore = topKScore.clone();
-		else inst.topKScore = null;
-		inst.topKScore = this.topKScore;
-		
 		return inst;
 	}
 
@@ -107,16 +88,8 @@ public class ECRFInstance extends Instance {
 		this.predictons = (ArrayList<String>)o;
 	}
 	
-	public int getGlobalId(){
-		return this.globalId;
-	}
 
 	public void setPredictionScore(double score){this.predictionScore = score;}
 	public double getPredictionScore(){return this.predictionScore;}
 	
-	public void setTopKPrediction(String[][] topKPrediction){this.topKPredictions = topKPrediction;}
-	public void setTopKPredictionScore(double[] topkScore){this.topKScore = topkScore;}
-	
-	public String[][] getTopKPrediction(){return this.topKPredictions;}
-	public double[] getTopKScore(){return this.topKScore;}
 }
