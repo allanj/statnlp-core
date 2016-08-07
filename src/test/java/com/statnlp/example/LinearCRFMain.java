@@ -56,9 +56,11 @@ public class LinearCRFMain {
 		NetworkConfig.MARGIN = Double.parseDouble(System.getProperty("svmMargin", "1.0"));
 		
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
-		NetworkConfig.RANDOM_INIT_WEIGHT = false;
+		NetworkConfig.RANDOM_INIT_WEIGHT = true;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;  
 		NetworkConfig.USE_NEURAL_FEATURES = true;
+		NetworkConfig.REGULARIZE_NEURAL_FEATURES = false;
+		NetworkConfig.OPTIMIZE_NEURAL = false;
 		String weightInitFile = null;
 		
 		int numIterations = Integer.parseInt(System.getProperty("numIter", "1000"));
@@ -173,6 +175,11 @@ public class LinearCRFMain {
 		} else {
 			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingSmoothedAdaDeltaThenGD(1e-2, 0.95, 5e-5, 0.9);
 		}
+		
+		if(NetworkConfig.USE_NEURAL_FEATURES) {
+			optimizerFactory = OptimizerFactory.getGradientDescentFactory(0.001);
+		}
+		
 		if(weightInitFile != null){
 			HashMap<String, HashMap<String, HashMap<String, Double>>> featureWeightMap = new HashMap<String, HashMap<String, HashMap<String, Double>>>();
 			Scanner reader = new Scanner(new File(weightInitFile));

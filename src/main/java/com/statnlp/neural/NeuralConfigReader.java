@@ -14,7 +14,9 @@ public class NeuralConfigReader {
 				continue;
 			}
 			String[] info = line.split(" ");
-			if(info[0].equals("serverPort")) {
+			if(info[0].equals("serverAddress")) {
+				NeuralConfig.NEURAL_SERVER_ADDRESS = info[1];
+			} else if(info[0].equals("serverPort")) {
 				NeuralConfig.NEURAL_SERVER_PORT= Integer.parseInt(info[1]);
 			} else if(info[0].equals("wordEmbedding")) {
 				NeuralConfig.EMBEDDING = new ArrayList<String>();
@@ -34,8 +36,8 @@ public class NeuralConfigReader {
 				NeuralConfig.ACTIVATION = info[1];
 			} else if(info[0].equals("dropout")) {
 				NeuralConfig.DROPOUT = Double.parseDouble(info[1]);
-			} else if(info[0].equals("serverAddress")) {
-				NeuralConfig.NEURAL_SERVER_ADDRESS = info[1];
+			} else if(info[0].equals("optimizer")) {
+				NeuralConfig.OPTIMIZER = info[1];
 			} else {
 				System.err.println("Unrecognized option: " + line);
 			}

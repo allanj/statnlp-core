@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
+import com.statnlp.hybridnetworks.NetworkConfig;
 
 public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 	
@@ -55,7 +56,11 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 		int outputDim = neuralFeatureIntMap.size();
 		
 		double[] nnInternalWeights = this.nn.initNetwork(numInputList, inputDimList, embList, embSizeList, outputDim, vocab);
-		_nnSize = nnInternalWeights.length;
+		if(nnInternalWeights != null) {
+			_nnSize = nnInternalWeights.length;
+		} else {
+			_nnSize = 0;
+		}
 		_nnWeights = new double[_nnSize];
 		_nnGrads = new double[_nnSize];
 		setInternalNeuralWeights(nnInternalWeights);

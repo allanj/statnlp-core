@@ -1,5 +1,6 @@
 require "nn"
 require "OneHot"
+require 'optim'
 
 cmd = torch.CmdLine()
 cmd:text()
@@ -48,6 +49,7 @@ local params, gradParams -- mlp's params
 local x -- input to nn, which is fixed
 local numInput
 local outputDim
+local doOptimization, optimizer, optimState
 
 local glove
 function loadGlove(lt, wordList)
@@ -150,6 +152,8 @@ function init_MLP(data)
             act = nn.ReLU()
         elseif data.activation == "tanh" then
             act = nn.Tanh()
+        elseif data.activation == "hardtanh" then
+            act = nn.HardTanh()
         elseif data.activation == "identity" then
             -- do nothing
         else
@@ -176,6 +180,13 @@ function init_MLP(data)
         mlp:cuda()
     end
 
+    -- set optimizer. If nil, optimization is done by caller.
+    doOptimization = data.optimizer ~= nil and data.optimizer ~= 'none'
+    if data.optimizer == 'sgd' then
+        optimizer = optim.sgd
+        optimState = {learningRate=0.001}
+    end
+
     params, gradParams = mlp:getParameters()
     return mlp, x
 end
@@ -186,13 +197,23 @@ function fwd_MLP(mlp, x, newParams, training)
     else
         mlp:evaluate()
     end
-    params:copy(newParams)
+    if newParams ~= nil then
+        params:copy(newParams)
+    end
     return mlp:forward(x)
 end
 
+function feval(params) -- for optim
+    return 0, gradParams
+end
+
 function bwd_MLP(mlp, x, gradOutput)
-    gradParams:zero()
+    gradParams:zero() 
     mlp:backward(x, gradOutput)
+    if doOptimization then
+        optimizer(feval, params, optimState)
+        -- mlp:updateParameters(0.001)
+    end
 end
 
 function serialize(data)
@@ -244,12 +265,19 @@ while true do
             timer = torch.Timer()
             mlp, x = init_MLP(request)
             print(mlp)
-            ret = serialize(params)
+            if doOptimization then -- no return array if optim is done here
+                ret = 1
+            else
+                ret = serialize(params)
+            end
             time = timer:time().real
             print(string.format("Init took %.4fs", time))
         elseif request.cmd == "fwd" then
             local timer = torch.Timer()
-            local newParams = deserialize(request.weights, 1, -1)
+            local newParams
+            if not doOptimization then
+                newParams = deserialize(request.weights, 1, -1)
+            end
             local fwd_out = fwd_MLP(mlp, x, newParams, request.training)
             ret = serialize(fwd_out)
             time = timer:time().real
@@ -258,7 +286,11 @@ while true do
             local timer = torch.Timer()
             local gradOut = deserialize(request.grad, numInput, outputDim)
             bwd_MLP(mlp, x, gradOut)
-            ret = serialize(gradParams)
+            if doOptimization then
+                ret = 1
+            else
+                ret = serialize(gradParams)
+            end
             time = timer:time().real
             print(string.format("Backward took %.4fs", time))
         end

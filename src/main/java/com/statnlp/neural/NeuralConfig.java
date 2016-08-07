@@ -14,6 +14,7 @@ public class NeuralConfig {
 	public static int HIDDEN_SIZE = 100;
 	public static String ACTIVATION = "tanh";
 	public static double DROPOUT = 0;
+	public static String OPTIMIZER = "sgd";
 	
 	public static String OUT_SEP = "#OUT#";
 	public static String IN_SEP = "#IN#";
