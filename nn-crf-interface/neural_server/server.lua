@@ -184,7 +184,11 @@ function init_MLP(data)
     doOptimization = data.optimizer ~= nil and data.optimizer ~= 'none'
     if data.optimizer == 'sgd' then
         optimizer = optim.sgd
-        optimState = {learningRate=0.001}
+        optimState = {learningRate=data.learningRate}
+    elseif data.optimizer == 'adagrad' then
+        optimizer = optim.adagrad
+        optimState = {learningRate=data.learningRate}
+        print(optimState)
     end
 
     params, gradParams = mlp:getParameters()

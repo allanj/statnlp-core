@@ -38,6 +38,8 @@ public class NeuralConfigReader {
 				NeuralConfig.DROPOUT = Double.parseDouble(info[1]);
 			} else if(info[0].equals("optimizer")) {
 				NeuralConfig.OPTIMIZER = info[1];
+			} else if(info[0].equals("learningRate")) {
+				NeuralConfig.LEARNING_RATE = Double.parseDouble(info[1]);
 			} else {
 				System.err.println("Unrecognized option: " + line);
 			}
