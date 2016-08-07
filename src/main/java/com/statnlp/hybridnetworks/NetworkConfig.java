@@ -176,13 +176,15 @@ public class NetworkConfig {
 	
 	public static int _topKValue = 1;
 	
+	public static boolean RANDOM_BATCH = true;
+	
 	/***
 	 * Please read carefully about the README.txt to install the NN server and also the communication package for Neural CRF
 	 */
 	/** If enable the neural CRF model, set it true.  */
 	public static boolean USE_NEURAL_FEATURES = false;
 	public static boolean REGULARIZE_NEURAL_FEATURES = false;
-	public static boolean OPTIMIZE_NEURAL = true;
+	public static boolean OPTIMIZE_NEURAL = false;   //false means not update the neural network parameters in CRF.
 	
 	// semantic settings
 	public static int _FOREST_MAX_HEIGHT = 10000;

@@ -177,7 +177,8 @@ public class LinearCRFMain {
 		}
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES) {
-			optimizerFactory = OptimizerFactory.getGradientDescentFactory(0.001);
+//			optimizerFactory = OptimizerFactory.getGradientDescentFactory(0.1);
+			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(0.1);
 		}
 		
 		if(weightInitFile != null){

@@ -159,9 +159,9 @@ function init_MLP(data)
         else
             error("activation " .. activation .. " not supported")
         end
-	if data.activation ~= 'identity' then
+  if data.activation ~= 'identity' then
         mlp:add(act)
-	end
+  end
     end
     if data.dropout ~= nil and data.dropout > 0 then
         mlp:add(nn.Dropout(data.dropout))

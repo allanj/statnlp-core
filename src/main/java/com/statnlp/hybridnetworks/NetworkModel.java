@@ -213,14 +213,25 @@ public abstract class NetworkModel implements Serializable{
 		//run the EM-style algorithm now...
 		long startTime = System.currentTimeMillis();
 		try{
+			int batchId = 0;
 			for(int it = 0; it<=maxNumIterations; it++){
 				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
 				if(NetworkConfig.USE_BATCH_TRAINING){
 					batchInstIds.clear();
-					Collections.shuffle(instIds, RANDOM);
+					if(NetworkConfig.RANDOM_BATCH || batchId == 0) {
+						Collections.shuffle(instIds, RANDOM);
+					}
 					int size = NetworkConfig.BATCH_SIZE >= this._allInstances.length ? this._allInstances.length:NetworkConfig.BATCH_SIZE; 
 					for(int iid = 0; iid<size; iid++){
-						batchInstIds.add(instIds.get(iid));
+						int offset = NetworkConfig.BATCH_SIZE*batchId;
+						batchInstIds.add(instIds.get(iid+offset));
+					}
+					if(!NetworkConfig.RANDOM_BATCH) {
+						batchId++;
+						int offset = NetworkConfig.BATCH_SIZE*batchId;
+						if(size+offset > instIds.size()) {
+							batchId = 0;
+						}
 					}
 				}
 				for(LocalNetworkLearnerThread learner: this._learners){
@@ -269,7 +280,6 @@ public abstract class NetworkModel implements Serializable{
 					break;
 				}
 			}
-			
 			if (NetworkConfig.USE_NEURAL_FEATURES) {
 				nnController.forwardNetwork(false);
 			}

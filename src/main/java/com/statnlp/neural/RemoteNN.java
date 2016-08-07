@@ -43,8 +43,10 @@ public class RemoteNN {
 		obj.put("hiddenSize", NeuralConfig.HIDDEN_SIZE);
 		obj.put("activation", NeuralConfig.ACTIVATION);
 		obj.put("dropout", NeuralConfig.DROPOUT);
-		obj.put("optimizer", NeuralConfig.OPTIMIZER);
-		obj.put("learningRate", NeuralConfig.LEARNING_RATE);
+		if (!NetworkConfig.OPTIMIZE_NEURAL) {
+			obj.put("optimizer", NeuralConfig.OPTIMIZER);
+			obj.put("learningRate", NeuralConfig.LEARNING_RATE);
+		}
 		obj.put("vocab", vocab);
 
 		String request = obj.toString();
