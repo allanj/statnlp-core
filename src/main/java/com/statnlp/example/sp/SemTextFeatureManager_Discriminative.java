@@ -18,6 +18,7 @@ package com.statnlp.example.sp;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import com.statnlp.commons.types.Sentence;
 import com.statnlp.hybridnetworks.FeatureArray;
@@ -26,6 +27,7 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
+import com.statnlp.neural.NeuralConfig;
 
 /**
  * @author wei_lu
@@ -51,7 +53,7 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 			if (!NetworkConfig.REPLACE_ORIGINAL_EMISSION) {
 				fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
 			}
-			fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission_neural.name(), output, input);
+			fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.neural.name(), output, input);
 		} else {
 			fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
 		}
@@ -59,7 +61,7 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 	}
 	
 	// new enum type: emission_neural
-	private enum FEATURE_TYPE {emission, transition, pattern, emission_neural};
+	private enum FEATURE_TYPE {emission, transition, pattern, neural};
 	
 	public SemTextFeatureManager_Discriminative(GlobalNetworkParam param_g, HybridGrammar g, SemTextDataManager dm) {
 		super(param_g);
@@ -180,10 +182,10 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 				
 				int[] fs = new int[1+1+prevWord];
 				// we'll provide space for neural features here
-				if (NetworkConfig.USE_NEURAL_FEATURES
-					&& !NetworkConfig.REPLACE_ORIGINAL_EMISSION) {
-					fs = new int[1+(1+prevWord)*2];
-				}
+//				if (NetworkConfig.USE_NEURAL_FEATURES
+//					&& !NetworkConfig.REPLACE_ORIGINAL_EMISSION) {
+//					fs = new int[1+(1+prevWord)*2];
+//				}
 
 				int t = 0;
 				fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.pattern.name(), p_unit.toString(), pattern_children[0].toString());
@@ -205,8 +207,7 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 				}
 				input = "[END]";
 				
-				t = createEmissionNeuralFeatures(network, fs, t, output, input);
-				// fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
+				fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
 
 				wordsInWindow = new ArrayList<String>();
 				for(int k = 0; k<historySize; k++){
@@ -219,9 +220,20 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 						output += wordsInWindow.get(k)+"|||";
 					}
 					input = this.getForm(pattern_children[0], w, sent, bIndex+w);
-					t = createEmissionNeuralFeatures(network, fs, t, output, input);
+					if(NetworkConfig.USE_NEURAL_FEATURES) {
+						boolean first = true;
+						String window = "";
+						for (int offset = -2; offset <= 2; offset++) {
+							if(!first) window += NeuralConfig.IN_SEP;
+							window += getWord(sent, bIndex+w, offset);
+							first = false;
+						}
+						fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.neural.name(), output, window);
+					} else {
+						fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
+					}
 					
-					// fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
+					// createEmissionNeuralFeatures(network, fs, t, output, input);
 					
 					wordsInWindow.add(input);
 					wordsInWindow.remove(0);
@@ -268,10 +280,10 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 				}
 				
 				int[] fs = new int[prevWord];
-				if (NetworkConfig.USE_NEURAL_FEATURES
-					&& !NetworkConfig.REPLACE_ORIGINAL_EMISSION) {
-					fs = new int[prevWord*2];
-				}
+//				if (NetworkConfig.USE_NEURAL_FEATURES
+//					&& !NetworkConfig.REPLACE_ORIGINAL_EMISSION) {
+//					fs = new int[prevWord*2];
+//				}
 				String output, input;
 				
 				ArrayList<String> wordsInWindow = new ArrayList<String>();
@@ -289,8 +301,21 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 					}
 					
 					input = this.getForm(pattern_children[1], w, sent, cIndex+w);
-					createEmissionNeuralFeatures(network, fs, w, output, input);
-					// fs[w] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
+					
+					if(NetworkConfig.USE_NEURAL_FEATURES) {
+						boolean first = true;
+						String window = "";
+						for (int offset = -2; offset <= 2; offset++) {
+							if(!first) window += NeuralConfig.IN_SEP;
+							window += getWord(sent, cIndex+w, offset);
+							first = false;
+						}
+						fs[w] = this._param_g.toFeature(network,FEATURE_TYPE.neural.name(), output, window);
+					} else {
+						fs[w] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
+					}
+					
+					// createEmissionNeuralFeatures(network, fs, w, output, input);
 					
 					wordsInWindow.add(input);
 					wordsInWindow.remove(0);
@@ -302,6 +327,19 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 			
 		}
 		
+	}
+	
+	private String getWord(Sentence sent, int index, int offset) {
+		int target = index+offset;
+		if(target == -1) {
+			return "<S>";
+		} else if(target == sent.length()) {
+			return "</S>";
+		} else if(target >= 0 && target < sent.length()) {
+			return sent.get(target).getName();
+		} else {
+			return "<PAD>";
+		}
 	}
 	
 	private String getForm(HybridPattern p, int offset, Sentence sent, int index){

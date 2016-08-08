@@ -21,6 +21,7 @@ import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.example.sp.GeoqueryEvaluator;
 import com.statnlp.example.sp.HybridGrammar;
@@ -53,10 +54,12 @@ public class SemTextExperimenter_Discriminative {
 		String init_filename = "data/geoquery/geoFunql-"+lang+".init.corpus";
 		String g_filename = "data/hybridgrammar.txt";
 		
+		double adagrad_learningRate = 0.01;
+		
 		int modelIter = 0; // Integer.parseInt(args[3]);
 		String modelPath = "";
 		if (modelIter > 0) {
-			modelPath = "model/"+lang+"."+(modelIter-1)+".model";
+			modelPath = lang;
 		}
 		boolean isTrain = modelPath.equals("");
 		
@@ -73,7 +76,7 @@ public class SemTextExperimenter_Discriminative {
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.NUM_THREADS = Integer.parseInt(args[0]);
-		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = false; // true may change result
+		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true; // true may change result
 //		NetworkConfig._SEMANTIC_PARSING_NGRAM = Integer.parseInt(args[2]);
 		
 //		int numIterations = 100;//Integer.parseInt(args[3]);
@@ -96,6 +99,9 @@ public class SemTextExperimenter_Discriminative {
 //		ArrayList<SemTextInstance> insts_test = SemTextInstanceReader.read(inst_filename, dm, train_ids, false);
 		
 //		insts_test = insts_train;
+		
+		NetworkConfig.USE_NEURAL_FEATURES = true;
+		NetworkConfig.REGULARIZE_NEURAL_FEATURES = false;
 		
 		int size = insts_train.size();
 		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
@@ -134,6 +140,9 @@ public class SemTextExperimenter_Discriminative {
             ois.close();
 		} else {
 			param_G = new GlobalNetworkParam();
+			if(NetworkConfig.USE_NEURAL_FEATURES){
+				param_G =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(adagrad_learningRate));
+			}
 		}
 		
 		SemTextFeatureManager_Discriminative fm = new SemTextFeatureManager_Discriminative(param_G, g, dm);

@@ -214,6 +214,8 @@ public abstract class NetworkModel implements Serializable{
 		long startTime = System.currentTimeMillis();
 		try{
 			int batchId = 0;
+			int epochNum = 0;
+			double epochObj = 0.0;
 			for(int it = 0; it<=maxNumIterations; it++){
 				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
 				if(NetworkConfig.USE_BATCH_TRAINING){
@@ -231,6 +233,9 @@ public abstract class NetworkModel implements Serializable{
 						int offset = NetworkConfig.BATCH_SIZE*batchId;
 						if(size+offset > instIds.size()) {
 							batchId = 0;
+							// this means one epoch
+							print(String.format("Epoch %d: Obj=%-18.12f", epochNum++, epochObj/instIds.size()), outstreams);
+							epochObj = 0.0;
 						}
 					}
 				}
@@ -261,6 +266,9 @@ public abstract class NetworkModel implements Serializable{
 				}
 				time = System.currentTimeMillis() - time;
 				double obj = this._fm.getParam_G().getObj_old();
+				
+				epochObj += obj;
+				
 				print(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0), outstreams);
 				if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE && it>1 && obj<obj_old && Math.abs(obj-obj_old)>1E-5){
 					throw new RuntimeException("Error:\n"+obj_old+"\n>\n"+obj);

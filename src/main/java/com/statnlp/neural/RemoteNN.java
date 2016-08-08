@@ -6,6 +6,9 @@ import java.util.List;
 import org.msgpack.core.MessageBufferPacker;
 import org.msgpack.core.MessagePack;
 import org.msgpack.core.MessageUnpacker;
+import org.msgpack.value.FloatValue;
+import org.msgpack.value.IntegerValue;
+import org.msgpack.value.Value;
 import org.zeromq.ZMQ;
 
 import com.statnlp.hybridnetworks.NetworkConfig;
@@ -54,16 +57,34 @@ public class RemoteNN {
 		}
 	}
 	
-	public double[] initNetwork(List<Integer> numInputList, List<Integer> inputDimList,
+	private double unpackDoubleOrInt(MessageUnpacker unpacker) throws IOException {
+		Value v = unpacker.unpackValue();
+		double x = 0.0;
+		switch (v.getValueType()) {
+		case FLOAT:
+			FloatValue fv = v.asFloatValue();
+			x = fv.toDouble();
+			break;
+		case INTEGER:
+			IntegerValue iv = v.asIntegerValue();
+			x = iv.toDouble();
+			break;
+		default: break;
+		}
+		return x;
+	}
+	
+	public double[] initNetwork(List<Integer> numInputList, List<Integer> inputDimList, List<String> wordList,
 						   List<String> embeddingList, List<Integer> embSizeList,
 						   int outputDim, List<List<Integer>> vocab) {
 		MessageBufferPacker packer = MessagePack.newDefaultBufferPacker();
 		try {
-			packer.packMapHeader(13);
+			packer.packMapHeader(14);
 			packer.packString("cmd").packString("init");
 			
 			packList(packer, "numInputList", numInputList);
 			packList(packer, "inputDimList", inputDimList);
+			packList(packer, "wordList", wordList);
 			packList(packer, "embedding", embeddingList);
 			packList(packer, "embSizeList", embSizeList);
 			packer.packString("outputDim").packInt(outputDim);
@@ -84,7 +105,7 @@ public class RemoteNN {
 				int size = unpacker.unpackArrayHeader();
 				nnInternalWeights = new double[size];
 				for (int i = 0; i < nnInternalWeights.length; i++) {
-					nnInternalWeights[i] = unpacker.unpackDouble();
+					nnInternalWeights[i] = unpackDoubleOrInt(unpacker);
 				}
 			}
 			if (DEBUG) {
@@ -124,7 +145,7 @@ public class RemoteNN {
 			int size = unpacker.unpackArrayHeader();
 			double[] nnExternalWeights = new double[size];
 			for (int i = 0; i < size; i++) {
-				nnExternalWeights[i] = unpacker.unpackDouble();
+				nnExternalWeights[i] = unpackDoubleOrInt(unpacker);
 			}
 			controller.updateExternalNeuralWeights(nnExternalWeights);
 			unpacker.close();
@@ -160,7 +181,7 @@ public class RemoteNN {
 				int size = unpacker.unpackArrayHeader();
 				double[] counts = new double[size];
 				for (int i = 0; i < counts.length; i++) {
-					counts[i] = unpacker.unpackDouble();
+					counts[i] = unpackDoubleOrInt(unpacker);
 				}
 				controller.setInternalNeuralGradients(counts);
 			}
