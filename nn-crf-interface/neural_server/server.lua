@@ -2,6 +2,8 @@ require "nn"
 require "OneHot"
 require 'optim'
 
+local mp = require 'MessagePack'
+
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text('Neural Network Server')
@@ -264,7 +266,8 @@ while true do
     -- print("Received Hello [" .. request .. "]")
     -- print(request)
     if request ~= nil then
-        request = json.decode(request, 1, nil)
+        -- request = json.decode(request, 1, nil)
+        request = mp.unpack(request)
         if request.cmd == "init" then
             timer = torch.Timer()
             mlp, x = init_MLP(request)
@@ -298,7 +301,8 @@ while true do
             time = timer:time().real
             print(string.format("Backward took %.4fs", time))
         end
-        ret = json.encode (ret, { indent = true })
+        -- ret = json.encode (ret, { indent = true })
+        ret = mp.pack(ret)
         socket:send(ret)
     end
 end

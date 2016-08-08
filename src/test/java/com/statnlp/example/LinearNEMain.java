@@ -70,7 +70,7 @@ public class LinearNEMain {
 		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler();
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
 		ECRFInstance[] ecrfs = trainInstances.toArray(new ECRFInstance[trainInstances.size()]);
-		model.train(ecrfs, numIteration);
+		model.train(ecrfs, numIteration, "ner");
 		Instance[] predictions = model.decode(testInstances.toArray(new ECRFInstance[testInstances.size()]));
 		ECRFEval.evalNER(predictions, nerOut);
 	}
@@ -93,7 +93,8 @@ public class LinearNEMain {
 					case "-testFile": testFile = args[i+1]; break;        
 					case "-windows":EConfig.windows = true; break;            //default: false (is using windows system to run the evaluation script)
 					case "-batch": NetworkConfig.USE_BATCH_TRAINING = true;
-									NetworkConfig.BATCH_SIZE = Integer.valueOf(args[i+1]); break;
+									NetworkConfig.BATCH_SIZE = Integer.valueOf(args[i+1]);
+									NetworkConfig.RANDOM_BATCH = false; break;
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;
 					case "-neural": if(args[i+1].equals("true")){ NetworkConfig.USE_NEURAL_FEATURES = true; NetworkConfig.OPTIMIZE_NEURAL = false; NetworkConfig.IS_INDEXED_NEURAL_FEATURES = true;}//not optimize in CRF..
 									break;

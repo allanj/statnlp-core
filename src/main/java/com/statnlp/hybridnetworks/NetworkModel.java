@@ -267,7 +267,7 @@ public abstract class NetworkModel implements Serializable{
 				}
 				obj_old = obj;
 
-				if (!modelPrefix.equals("") && it == maxNumIterations && it > 0 && it % NetworkConfig.SAVE_MODEL_AFTER_ITER == 0) {
+				if (!modelPrefix.equals("") && (it == maxNumIterations || it > 0 && it % NetworkConfig.SAVE_MODEL_AFTER_ITER == 0)) {
 					saveModel(modelPrefix, it);
 				}
 				
