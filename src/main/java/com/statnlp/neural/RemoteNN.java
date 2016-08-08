@@ -1,9 +1,13 @@
 package com.statnlp.neural;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.msgpack.core.MessageBufferPacker;
+import org.msgpack.core.MessagePack;
+import org.msgpack.core.MessageUnpacker;
 import org.zeromq.ZMQ;
 
 import com.statnlp.hybridnetworks.NetworkConfig;
@@ -65,61 +69,79 @@ public class RemoteNN {
 	}
 	
 	public void forwardNetwork(boolean training) {
-		JSONObject obj = new JSONObject();
-		obj.put("cmd", "fwd");
-		obj.put("training", training);
-		
-		if(NetworkConfig.OPTIMIZE_NEURAL) {
-			double[] nnInternalWeights = controller.getInternalNeuralWeights();
-			JSONArray nnWeightsArr = new JSONArray();
-			for (int i = 0; i < nnInternalWeights.length; i++) {
-				nnWeightsArr.put(nnInternalWeights[i]);
+		MessageBufferPacker packer = MessagePack.newDefaultBufferPacker();
+		int mapSize = NetworkConfig.OPTIMIZE_NEURAL? 3:2;
+		try {
+			packer.packMapHeader(mapSize);
+			packer.packString("cmd").packString("fwd");
+			packer.packString("training").packBoolean(training);
+			
+			if(NetworkConfig.OPTIMIZE_NEURAL) {
+				double[] nnInternalWeights = controller.getInternalNeuralWeights();
+				packer.packString("weights");
+				packer.packArrayHeader(nnInternalWeights.length);
+				for (int i = 0; i < nnInternalWeights.length; i++) {
+					packer.packDouble(nnInternalWeights[i]);
+				}
 			}
-			obj.put("weights", nnWeightsArr);
+			packer.close();
+			
+			requester.send(packer.toByteArray(), 0);
+			byte[] reply = requester.recv(0);
+			
+			MessageUnpacker unpacker = MessagePack.newDefaultUnpacker(reply);
+			int size = unpacker.unpackArrayHeader();
+			double[] nnExternalWeights = new double[size];
+			for (int i = 0; i < size; i++) {
+				nnExternalWeights[i] = unpacker.unpackDouble();
+			}
+			controller.updateExternalNeuralWeights(nnExternalWeights);
+			unpacker.close();
+			if (DEBUG) {
+				System.out.println("Forward returns " + reply.toString());
+			}
+			
+		} catch (IOException e) {
+			System.err.println("Exception happened while forwarding network...");
+			e.printStackTrace();
 		}
 		
-		String request = obj.toString();
-		requester.send(request.getBytes(), 0);
-
-		byte[] reply = requester.recv(0);
-		JSONArray arr = new JSONArray(new String(reply));
-		double[] nnExternalWeights = new double[arr.length()];
-		for (int i = 0; i < nnExternalWeights.length; i++) {
-			nnExternalWeights[i] = arr.getDouble(i);
-		}
-		controller.updateExternalNeuralWeights(nnExternalWeights);
-		if (DEBUG) {
-			System.out.println("Forward returns " + arr.toString());
-		}
+		
 	}
 	
 	public void backwardNetwork() {
-		JSONObject obj = new JSONObject();
-		obj.put("cmd", "bwd");
-		
-		double[] grad = controller.getExternalNeuralGradients();
-		JSONArray gradArr = new JSONArray();
-		for (int i = 0; i < grad.length; i++) {
-			gradArr.put(grad[i]);
-		}
-		obj.put("grad", gradArr);
-		
-		String request = obj.toString();
-		requester.send(request.getBytes(), 0);
-		
-		byte[] reply = requester.recv(0);
-		if(NetworkConfig.OPTIMIZE_NEURAL) {
-			JSONArray grads = new JSONArray(new String(reply));
-			double[] counts = new double[grads.length()];
-			for (int i = 0; i < counts.length; i++) {
-				counts[i] = grads.getDouble(i);
+		MessageBufferPacker packer = MessagePack.newDefaultBufferPacker();
+		try {
+			packer.packMapHeader(2);
+			packer.packString("cmd").packString("fwd");
+			double[] grad = controller.getExternalNeuralGradients();
+			packer.packString("grad");
+			packer.packArrayHeader(grad.length);
+			for (int i = 0; i < grad.length; i++) {
+				packer.packDouble(grad[i]);
 			}
-			controller.setInternalNeuralGradients(counts);
+			packer.close();
+			requester.send(packer.toByteArray(), 0);
+			
+			byte[] reply = requester.recv(0);
+			MessageUnpacker unpacker = MessagePack.newDefaultUnpacker(reply);
+			if(NetworkConfig.OPTIMIZE_NEURAL) {
+				int size = unpacker.unpackArrayHeader();
+				double[] counts = new double[size];
+				for (int i = 0; i < counts.length; i++) {
+					counts[i] = unpacker.unpackDouble();
+				}
+				controller.setInternalNeuralGradients(counts);
+			}
+			if (DEBUG) {
+				System.out.println("Backward returns " + new String(reply));
+			}
+			
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		
-		if (DEBUG) {
-			System.out.println("Backward returns " + new String(reply));
-		}
+		
 	}
 	
 	public void cleanUp() {
