@@ -42,7 +42,7 @@ import com.statnlp.neural.NeuralConfigReader;
 
 public class SemTextExperimenter_Discriminative {
 	
-	static boolean debug = true;
+	static boolean debug = false;
 	static boolean skipTest = false;
 	static boolean printFeats = false;
 	static String lang;

@@ -1,8 +1,8 @@
 torch.setdefaulttensortype('torch.FloatTensor')
 
 opt = {
-    binfilename = '/home/raymondhs/Workspace/glove/glove.6B.50d.txt',
-    outfilename = '/home/raymondhs/Workspace/glove/glove.6B.50d.t7'
+    binfilename = 'glove_torch/glove.6B.50d.txt',
+    outfilename = 'glove_torch/glove.6B.50d.t7'
 }
 local GloVe = {}
 if not paths.filep(opt.outfilename) then
@@ -11,7 +11,6 @@ else
 	GloVe = torch.load(opt.outfilename)
 	print('Done reading GloVe data.')
 end
-
 
 GloVe.distance = function (self,vec,k)
 	local k = k or 1	
@@ -34,9 +33,12 @@ GloVe.word2vec = function (self,word,throwerror)
    local ind = self.w2vvocab[word]
    if throwerror then
 		assert(ind ~= nil, 'Word does not exist in the dictionary!')
-   end
+   end   
 	if ind == nil then
 		ind = self.w2vvocab['UNK']
+        if ind == nil then
+            ind = self.w2vvocab['unk']
+        end
 	end
    return self.M[ind]
 end
