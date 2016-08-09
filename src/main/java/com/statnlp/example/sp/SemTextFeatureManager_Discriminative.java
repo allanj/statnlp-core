@@ -183,8 +183,7 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 				int[] fs = new int[1+1+prevWord];
 				// we'll provide space for neural features here
 				if (NetworkConfig.USE_NEURAL_FEATURES) {
-//					&& !NetworkConfig.REPLACE_ORIGINAL_EMISSION) {
-					fs = new int[1+(1+prevWord)*2];
+					fs = new int[1+1+prevWord*2]; //  this is the maximum number, could be less
 				}
 
 				int t = 0;
@@ -221,14 +220,18 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 					}
 					input = this.getForm(pattern_children[0], w, sent, bIndex+w);
 					if(NetworkConfig.USE_NEURAL_FEATURES) {
-						boolean first = true;
-						String window = "";
-						for (int offset = -2; offset <= 2; offset++) {
-							if(!first) window += NeuralConfig.IN_SEP;
-							window += getWord(sent, bIndex+w, offset);
-							first = false;
+						if(!input.equals("[X]") && !input.equals("[Y]")) {
+							boolean first = true;
+							String window = "";
+							for (int offset = -2; offset <= 2; offset++) {
+								if(!first) window += NeuralConfig.IN_SEP;
+								window += getWord(sent, bIndex+w, offset);
+								first = false;
+							}
+							fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.neural.name(), output, window);
+						} else {
+//							System.out.println("X/Y");
 						}
-						fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.neural.name(), output, window);
 					}
 					
 					fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
@@ -239,7 +242,8 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 					wordsInWindow.remove(0);
 				}
 				
-				fa = new FeatureArray(fs, fa);
+				int[] newfs = Arrays.copyOf(fs, t); // make sure t == fs.length
+				fa = new FeatureArray(newfs, fa);
 			}
 
 			return fa;
@@ -281,7 +285,6 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 				
 				int[] fs = new int[prevWord];
 				if (NetworkConfig.USE_NEURAL_FEATURES) {
-//					&& !NetworkConfig.REPLACE_ORIGINAL_EMISSION) {
 					fs = new int[prevWord*2];
 				}
 				String output, input;
@@ -292,7 +295,7 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 					String word = this.getForm(pattern_children[0], k-historySize, sent, cIndex-(historySize-k));
 					wordsInWindow.add(word);
 				}
-				
+				int t = 0;
 				for(int w = 0; w<prevWord; w++){
 					//the first _prevWord words
 					output = p_unit.toString();
@@ -303,23 +306,28 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 					input = this.getForm(pattern_children[1], w, sent, cIndex+w);
 					
 					if(NetworkConfig.USE_NEURAL_FEATURES) {
-						boolean first = true;
-						String window = "";
-						for (int offset = -2; offset <= 2; offset++) {
-							if(!first) window += NeuralConfig.IN_SEP;
-							window += getWord(sent, cIndex+w, offset);
-							first = false;
+						if(!input.equals("[X]") && !input.equals("[Y]")) {
+							boolean first = true;
+							String window = "";
+							for (int offset = -2; offset <= 2; offset++) {
+								if(!first) window += NeuralConfig.IN_SEP;
+								window += getWord(sent, cIndex+w, offset);
+								first = false;
+							}
+							fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.neural.name(), output, window);
+						} else {
+//							System.out.println("X/Y");
 						}
-						fs[w] = this._param_g.toFeature(network,FEATURE_TYPE.neural.name(), output, window);
 					}
-					fs[w] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
+					fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
 					
 					// createEmissionNeuralFeatures(network, fs, w, output, input);
 					
 					wordsInWindow.add(input);
 					wordsInWindow.remove(0);
 				}
-				fa = new FeatureArray(fs, fa);
+				int[] newfs = Arrays.copyOf(fs, t); // make sure t == fs.length				
+				fa = new FeatureArray(newfs, fa);
 			}
 			
 			return fa;
