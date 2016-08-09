@@ -182,10 +182,10 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 				
 				int[] fs = new int[1+1+prevWord];
 				// we'll provide space for neural features here
-//				if (NetworkConfig.USE_NEURAL_FEATURES
+				if (NetworkConfig.USE_NEURAL_FEATURES) {
 //					&& !NetworkConfig.REPLACE_ORIGINAL_EMISSION) {
-//					fs = new int[1+(1+prevWord)*2];
-//				}
+					fs = new int[1+(1+prevWord)*2];
+				}
 
 				int t = 0;
 				fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.pattern.name(), p_unit.toString(), pattern_children[0].toString());
@@ -229,9 +229,9 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 							first = false;
 						}
 						fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.neural.name(), output, window);
-					} else {
-						fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
 					}
+					
+					fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
 					
 					// createEmissionNeuralFeatures(network, fs, t, output, input);
 					
@@ -280,10 +280,10 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 				}
 				
 				int[] fs = new int[prevWord];
-//				if (NetworkConfig.USE_NEURAL_FEATURES
+				if (NetworkConfig.USE_NEURAL_FEATURES) {
 //					&& !NetworkConfig.REPLACE_ORIGINAL_EMISSION) {
-//					fs = new int[prevWord*2];
-//				}
+					fs = new int[prevWord*2];
+				}
 				String output, input;
 				
 				ArrayList<String> wordsInWindow = new ArrayList<String>();
@@ -311,9 +311,8 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 							first = false;
 						}
 						fs[w] = this._param_g.toFeature(network,FEATURE_TYPE.neural.name(), output, window);
-					} else {
-						fs[w] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
 					}
+					fs[w] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
 					
 					// createEmissionNeuralFeatures(network, fs, w, output, input);
 					

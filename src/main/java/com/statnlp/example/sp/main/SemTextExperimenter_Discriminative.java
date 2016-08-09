@@ -17,6 +17,7 @@
 package com.statnlp.example.sp.main;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,32 +42,67 @@ import com.statnlp.neural.NeuralConfigReader;
 
 public class SemTextExperimenter_Discriminative {
 	
-	static boolean DEBUG = true;
-	static boolean SKIP_TEST = false;
-	static boolean PRINT_FEATS = false;
+	static boolean debug = true;
+	static boolean skipTest = false;
+	static boolean printFeats = false;
+	static String lang;
+	static double adagrad_learningRate = 0.01;
+	static int numIterations = 100;
+	static String modelPath = "";
+	
+	// -thread 4 -lang en -config nn-crf-interface/neural_server/neural.sp.config -lr 0.01 -debug -iter 50 -save-iter 10 -model model/en.best.model
+	private static void parse(String args[]) throws FileNotFoundException {
+		for (int i = 0; i < args.length; i++) {
+			String opt = args[i];
+			if(opt.equals("-lang")) {
+				lang = args[i+1];
+			} else if(opt.equals("-thread")) {
+				NetworkConfig.NUM_THREADS = Integer.parseInt(args[i+1]);
+			} else if(opt.equals("-config")) {
+				NetworkConfig.USE_NEURAL_FEATURES = true;
+				NeuralConfigReader.readConfig(args[i+1]);
+			} else if(opt.equals("-lr")) {
+				adagrad_learningRate = Double.parseDouble(args[i+1]);
+			} else if(opt.equals("-iter")) {
+				numIterations = Integer.parseInt(args[i+1]);
+			} else if(opt.equals("-save-iter")) {
+				NetworkConfig.SAVE_MODEL_AFTER_ITER = Integer.parseInt(args[i+1]);
+			} else if(opt.equals("-model")) {
+				modelPath = args[i+1];
+			} else if(opt.equals("-debug")) {
+				debug = true;
+			} else if(opt.equals("-skip-test")) {
+				skipTest = true;
+			} else if(opt.equals("-print-feats")) {
+				printFeats = true;
+			}
+		}
+	}
 	
 	public static void main(String args[]) throws Exception{
 		
 		System.err.println(SemTextExperimenter_Discriminative.class.getCanonicalName());
 		
-		String lang = args[1];
+		parse(args);
+		
+//		String lang = args[1];
 		String inst_filename = "data/geoquery/geoFunql-"+lang+".corpus";
 		String init_filename = "data/geoquery/geoFunql-"+lang+".init.corpus";
 		String g_filename = "data/hybridgrammar.txt";
 		
-		double adagrad_learningRate = 0.01;
+//		double adagrad_learningRate = Double.parseDouble(args[3]);
 		
-		int modelIter = 0; // Integer.parseInt(args[3]);
-		String modelPath = "";
-		if (modelIter > 0) {
-			modelPath = lang;
-		}
+//		int modelIter = 0; // Integer.parseInt(args[3]);
+//		String modelPath = "";
+//		if (modelIter > 0) {
+//			modelPath = lang;
+//		}
 		boolean isTrain = modelPath.equals("");
 		
 		String train_ids = "data/geoquery-2012-08-27/splits/split-880/run-0/fold-0/train-N600";//+args[1];
 		
 		// rhs: 20 train insts
-		if (DEBUG) {
+		if (debug) {
 			train_ids = "data/geoquery-2012-08-27/splits/split-880/run-0/fold-0/train-N20";//+args[1];
 		}
 		String test_ids = "data/geoquery-2012-08-27/splits/split-880/run-0/fold-0/test";
@@ -75,17 +111,17 @@ public class SemTextExperimenter_Discriminative {
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
-		NetworkConfig.NUM_THREADS = Integer.parseInt(args[0]);
+//		NetworkConfig.NUM_THREADS = Integer.parseInt(args[0]);
 		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true; // true may change result
 //		NetworkConfig._SEMANTIC_PARSING_NGRAM = Integer.parseInt(args[2]);
 		
 //		int numIterations = 100;//Integer.parseInt(args[3]);
 		
 		// rhs: iters
-		int numIterations = 100;
-		if (DEBUG) {
-			numIterations = 10;
-		}
+//		int numIterations = 300;
+//		if (debug) {
+//			numIterations = 50;
+//		}
 		
 //		NetworkConfig._SEMANTIC_FOREST_MAX_DEPTH = Integer.parseInt(args[4]);
 		
@@ -96,12 +132,13 @@ public class SemTextExperimenter_Discriminative {
 		ArrayList<SemTextInstance> insts_test = SemTextInstanceReader.read(inst_filename, dm, test_ids, false);
 
 		// rhs: test same as train
-//		ArrayList<SemTextInstance> insts_test = SemTextInstanceReader.read(inst_filename, dm, train_ids, false);
-		
 //		insts_test = insts_train;
 		
-		NetworkConfig.USE_NEURAL_FEATURES = true;
+//		NetworkConfig.USE_NEURAL_FEATURES = false;
 		NetworkConfig.REGULARIZE_NEURAL_FEATURES = false;
+//		if (NetworkConfig.USE_NEURAL_FEATURES) {
+//			NeuralConfigReader.readConfig(args[2]);
+//		}
 		
 		int size = insts_train.size();
 		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
@@ -127,10 +164,6 @@ public class SemTextExperimenter_Discriminative {
 		
 		HybridGrammar g = HybridGrammarReader.read(g_filename);
 		
-		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			NeuralConfigReader.readConfig(args[2]);
-		}
-		
 		SemanticForest forest_global = SemTextInstanceReader.toForest(dm);
 		
 		GlobalNetworkParam param_G;
@@ -139,10 +172,10 @@ public class SemTextExperimenter_Discriminative {
             param_G = (GlobalNetworkParam) ois.readObject();
             ois.close();
 		} else {
-			param_G = new GlobalNetworkParam();
-			if(NetworkConfig.USE_NEURAL_FEATURES){
+//			param_G = new GlobalNetworkParam();
+//			if(NetworkConfig.USE_NEURAL_FEATURES){
 				param_G =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(adagrad_learningRate));
-			}
+//			}
 		}
 		
 		SemTextFeatureManager_Discriminative fm = new SemTextFeatureManager_Discriminative(param_G, g, dm);
@@ -156,7 +189,7 @@ public class SemTextExperimenter_Discriminative {
 			model.train(train_instances, numIterations, lang);
 		}
 		
-		if (PRINT_FEATS) {
+		if (printFeats) {
 			GlobalNetworkParam paramG = fm.getParam_G();
 			System.out.println("Num features: "+paramG.countFeatures());
 			System.out.println("Features:");
@@ -176,7 +209,7 @@ public class SemTextExperimenter_Discriminative {
 		}
 		
 		// rhs: skip decoding
-		if (SKIP_TEST) {
+		if (skipTest) {
 			System.exit(0);
 		}
 		

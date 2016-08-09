@@ -27,7 +27,8 @@ public class FeatureArray implements Serializable{
 	private boolean _isLocal = false;
 	
 	public static final FeatureArray EMPTY = new FeatureArray(new int[0]);
-	public static final FeatureArray NEGATIVE_INFINITY = new FeatureArray(Double.NEGATIVE_INFINITY);
+	public static final FeatureArray NEGATIVE_INFINITY = new FeatureArray(-10000);
+//	public static final FeatureArray NEGATIVE_INFINITY = new FeatureArray(Double.NEGATIVE_INFINITY);
 	
 	/**
 	 * Merges the features in <code>fs</code> and in <code>next</code>

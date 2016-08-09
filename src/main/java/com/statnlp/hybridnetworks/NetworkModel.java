@@ -123,11 +123,18 @@ public abstract class NetworkModel implements Serializable{
 	}
 	
 	private void saveModel(String prefix, int it) {
-		System.out.print("Saving model at iteration " + it);
+		String modelName = "";
+		if(prefix.endsWith("best")) {
+			System.out.print("Saving best model found at iteration " + it);
+			modelName = "model/" + prefix + ".model";
+		} else {
+			System.out.print("Saving model at iteration " + it);
+			modelName = "model/" + prefix + "." + it + ".model";
+		}
         long startTime = System.currentTimeMillis();
         ObjectOutputStream oos = null;
 		try {
-			oos = new ObjectOutputStream(new FileOutputStream("model/" + prefix + "." + it + ".model"));
+			oos = new ObjectOutputStream(new FileOutputStream(modelName));
 			oos.writeObject(this._fm._param_g);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -216,6 +223,7 @@ public abstract class NetworkModel implements Serializable{
 			int batchId = 0;
 			int epochNum = 0;
 			double epochObj = 0.0;
+			double bestObj = -1e7;
 			for(int it = 0; it<=maxNumIterations; it++){
 				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
 				if(NetworkConfig.USE_BATCH_TRAINING){
@@ -267,6 +275,12 @@ public abstract class NetworkModel implements Serializable{
 				time = System.currentTimeMillis() - time;
 				double obj = this._fm.getParam_G().getObj_old();
 				
+				if(it >= maxNumIterations-20) { // save best model for the last 20 iter
+					if(obj > bestObj) {
+						bestObj = obj;
+						saveModel(modelPrefix+".best", it);
+					}
+				}
 				epochObj += obj;
 				
 				print(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0), outstreams);
