@@ -156,6 +156,9 @@ function init_MLP(data)
             end
             totalDim = totalDim + data.numInputList[i] * data.embSizeList[i]
         end
+        if data.fixEmbedding then
+            lt.accGradParameters = function() end
+        end
         pt:add(nn.Sequential():add(lt):add(nn.View(numInput,-1)))
         totalInput = totalInput + data.numInputList[i]
     end

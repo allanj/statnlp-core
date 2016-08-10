@@ -198,6 +198,7 @@ public class NetworkConfig {
 	
 	public static int _SEMANTIC_FOREST_MAX_DEPTH = 20;//the max depth of the forest when creating the semantic forest.
 	public static int _SEMANTIC_PARSING_NGRAM = 1;//2;
+	public static int NEURAL_WINDOW_SIZE = 0;
 	
 	public static boolean REBUILD_FOREST_EVERY_TIME = false;
 	

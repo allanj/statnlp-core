@@ -45,10 +45,13 @@ public class SemTextExperimenter_Discriminative {
 	static boolean debug = false;
 	static boolean skipTest = false;
 	static boolean printFeats = false;
+	static boolean testOnTrain = false;
 	static String lang;
 	static double adagrad_learningRate = 0.01;
 	static int numIterations = 100;
 	static String modelPath = "";
+	static String savePrefix = "";
+	static String optim = "adagrad";
 	
 	// -thread 4 -lang en -config nn-crf-interface/neural_server/neural.sp.config -lr 0.01 -debug -iter 50 -save-iter 10 -model model/en.best.model
 	private static void parse(String args[]) throws FileNotFoundException {
@@ -75,6 +78,16 @@ public class SemTextExperimenter_Discriminative {
 				skipTest = true;
 			} else if(opt.equals("-print-feats")) {
 				printFeats = true;
+			} else if(opt.equals("-test-on-train")) {
+				testOnTrain = true;
+			} else if(opt.equals("-optim")) {
+				optim = args[i+1];
+			} else if(opt.equals("-save-prefix")) {
+				savePrefix = args[i+1];
+			} else if(opt.equals("-window")) {
+				NetworkConfig.NEURAL_WINDOW_SIZE = Integer.parseInt(args[i+1]);
+			} else if(opt.equals("-optimize-neural")) {
+				NetworkConfig.OPTIMIZE_NEURAL = true;
 			}
 		}
 	}
@@ -103,7 +116,7 @@ public class SemTextExperimenter_Discriminative {
 		
 		// rhs: 20 train insts
 		if (debug) {
-			train_ids = "data/geoquery-2012-08-27/splits/split-880/run-0/fold-0/train-N20";//+args[1];
+			train_ids = "data/geoquery-2012-08-27/splits/split-880/run-0/fold-0/train-N50";//+args[1];
 		}
 		String test_ids = "data/geoquery-2012-08-27/splits/split-880/run-0/fold-0/test";
 		
@@ -129,10 +142,13 @@ public class SemTextExperimenter_Discriminative {
 		
 		ArrayList<SemTextInstance> inits = SemTextInstanceReader.readInit(init_filename, dm);
 		ArrayList<SemTextInstance> insts_train = SemTextInstanceReader.read(inst_filename, dm, train_ids, true);
-		ArrayList<SemTextInstance> insts_test = SemTextInstanceReader.read(inst_filename, dm, test_ids, false);
+		ArrayList<SemTextInstance> insts_test = null;
+		insts_test = SemTextInstanceReader.read(inst_filename, dm, test_ids, false);
 
 		// rhs: test same as train
-//		insts_test = insts_train;
+		if(testOnTrain) {
+			insts_test = insts_train;
+		}
 		
 //		NetworkConfig.USE_NEURAL_FEATURES = false;
 		NetworkConfig.REGULARIZE_NEURAL_FEATURES = false;
@@ -172,10 +188,11 @@ public class SemTextExperimenter_Discriminative {
             param_G = (GlobalNetworkParam) ois.readObject();
             ois.close();
 		} else {
-//			param_G = new GlobalNetworkParam();
-//			if(NetworkConfig.USE_NEURAL_FEATURES){
+			if (optim.equals("lbfgs")) {
+				param_G = new GlobalNetworkParam();
+			} else {
 				param_G =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(adagrad_learningRate));
-//			}
+			}
 		}
 		
 		SemTextFeatureManager_Discriminative fm = new SemTextFeatureManager_Discriminative(param_G, g, dm);
@@ -186,7 +203,11 @@ public class SemTextExperimenter_Discriminative {
 		NetworkModel model = NetworkConfig.TRAIN_MODE_IS_GENERATIVE ? GenerativeNetworkModel.create(fm, compiler) : DiscriminativeNetworkModel.create(fm, compiler);
 		
 		if (isTrain) {
-			model.train(train_instances, numIterations, lang);
+			String modelName = lang;
+			if (!savePrefix.equals("")) {
+				modelName = savePrefix+"."+lang;
+			}
+			model.train(train_instances, numIterations, modelName);
 		}
 		
 		if (printFeats) {
@@ -219,6 +240,7 @@ public class SemTextExperimenter_Discriminative {
 		test_instances = new SemTextInstance[insts_test.size()];
 		for(int k = 0; k<test_instances.length; k++){
 			test_instances[k] = insts_test.get(k);
+			test_instances[k].setInstanceId(k+1);
 			test_instances[k].setUnlabeled();
 		}
 		output_instances_unlabeled = model.decode(test_instances);

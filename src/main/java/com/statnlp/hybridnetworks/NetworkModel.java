@@ -289,6 +289,12 @@ public abstract class NetworkModel implements Serializable{
 				}
 				obj_old = obj;
 
+				if (NetworkConfig.USE_NEURAL_FEATURES) {
+					if (lastIter || done) {
+						nnController.forwardNetwork(false);
+					}
+				}
+				
 				if (!modelPrefix.equals("") && (it == maxNumIterations || it > 0 && it % NetworkConfig.SAVE_MODEL_AFTER_ITER == 0)) {
 					saveModel(modelPrefix, it);
 				}
@@ -301,9 +307,6 @@ public abstract class NetworkModel implements Serializable{
 					print("Training completes. No significant progress (<objtol) after "+it+" iterations.", outstreams);
 					break;
 				}
-			}
-			if (NetworkConfig.USE_NEURAL_FEATURES) {
-				nnController.forwardNetwork(false);
 			}
 		} finally {
 			pool.shutdown();

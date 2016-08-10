@@ -223,7 +223,8 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 						if(!input.equals("[X]") && !input.equals("[Y]")) {
 							boolean first = true;
 							String window = "";
-							for (int offset = -2; offset <= 2; offset++) {
+							int N = NetworkConfig.NEURAL_WINDOW_SIZE;
+							for (int offset = -N; offset <= N; offset++) {
 								if(!first) window += NeuralConfig.IN_SEP;
 								window += getWord(sent, bIndex+w, offset);
 								first = false;
@@ -309,7 +310,8 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 						if(!input.equals("[X]") && !input.equals("[Y]")) {
 							boolean first = true;
 							String window = "";
-							for (int offset = -2; offset <= 2; offset++) {
+							int N = NetworkConfig.NEURAL_WINDOW_SIZE;
+							for (int offset = -N; offset <= N; offset++) {
 								if(!first) window += NeuralConfig.IN_SEP;
 								window += getWord(sent, cIndex+w, offset);
 								first = false;
