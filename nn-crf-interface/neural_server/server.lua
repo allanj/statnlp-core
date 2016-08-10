@@ -2,6 +2,8 @@ require "nn"
 require "OneHot"
 require 'optim'
 
+local mp = require 'MessagePack'
+
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text('Neural Network Server')
@@ -52,13 +54,20 @@ local outputDim
 local doOptimization, optimizer, optimState
 
 local glove
-function loadGlove(lt, wordList)
+function loadGlove(wordList)
     if glove == nil then
         glove = require 'glove_torch/glove'
     end
+    ltw = nn.LookupTable(#wordList, 50)
     for i=1,#wordList do
-        lt.weight[i] = glove:word2vec(wordList[i])
+        local emb = torch.Tensor(50)
+        local p_emb = glove:word2vec(wordList[i])
+        for j=1,50 do
+            emb[j] = p_emb[j]
+        end
+        ltw.weight[i] = emb
     end
+    return ltw
 end
 
 local senna
@@ -81,6 +90,23 @@ function loadSenna(lt)
     end
     return ltw
     -- misc note: PADDING index is 1738
+end
+
+local polyglot
+function loadPolyglot(wordList)
+    if polyglot == nil then
+        polyglot = require 'polyglot/polyglot'
+    end
+    ltw = nn.LookupTable(#wordList, 64)
+    for i=1,#wordList do
+        local emb = torch.Tensor(64)
+        local p_emb = polyglot:word2vec(wordList[i])
+        for j=1,64 do
+            emb[j] = p_emb[j]
+        end
+        ltw.weight[i] = emb
+    end
+    return ltw
 end
 
 function init_MLP(data)
@@ -111,8 +137,9 @@ function init_MLP(data)
                 if data.embedding[i] == 'senna' then
                     lt = loadSenna()
                 elseif data.embedding[i] == 'glove' then
-                    lt = nn.LookupTable(inputDim, data.embSizeList[i])
-                    loadGlove(lt, data.wordList)
+                    lt = loadGlove(data.wordList)
+                elseif data.embedding[i] == 'polyglot' then
+                    lt = loadPolyglot(data.wordList)
                 else -- unknown/no embedding, defaults to random init
                     lt = nn.LookupTable(inputDim, data.embSizeList[i])
                 end
@@ -159,10 +186,8 @@ function init_MLP(data)
         else
             error("activation " .. activation .. " not supported")
         end
-  if data.activation ~= 'identity' then
-        mlp:add(act)
-  end
     end
+
     if data.dropout ~= nil and data.dropout > 0 then
         mlp:add(nn.Dropout(data.dropout))
     end
@@ -188,7 +213,6 @@ function init_MLP(data)
     elseif data.optimizer == 'adagrad' then
         optimizer = optim.adagrad
         optimState = {learningRate=data.learningRate}
-        print(optimState)
     end
 
     params, gradParams = mlp:getParameters()
@@ -264,7 +288,8 @@ while true do
     -- print("Received Hello [" .. request .. "]")
     -- print(request)
     if request ~= nil then
-        request = json.decode(request, 1, nil)
+        -- request = json.decode(request, 1, nil)
+        request = mp.unpack(request)
         if request.cmd == "init" then
             timer = torch.Timer()
             mlp, x = init_MLP(request)
@@ -298,7 +323,8 @@ while true do
             time = timer:time().real
             print(string.format("Backward took %.4fs", time))
         end
-        ret = json.encode (ret, { indent = true })
+        -- ret = json.encode (ret, { indent = true })
+        ret = mp.pack(ret)
         socket:send(ret)
     end
 end
