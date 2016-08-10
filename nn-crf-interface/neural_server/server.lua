@@ -54,14 +54,22 @@ local outputDim
 local doOptimization, optimizer, optimState
 
 local glove
+GLOVE_DIM = 50
+specialSymbols = {}
+specialSymbols['<PAD>'] = torch.Tensor(GLOVE_DIM):normal(0,1)
+specialSymbols['<S>'] = torch.Tensor(GLOVE_DIM):normal(0,1)
+specialSymbols['</S>'] = torch.Tensor(GLOVE_DIM):normal(0,1)
 function loadGlove(wordList)
     if glove == nil then
         glove = require 'glove_torch/glove'
     end
-    ltw = nn.LookupTable(#wordList, 50)
+    ltw = nn.LookupTable(#wordList, GLOVE_DIM)
     for i=1,#wordList do
-        local emb = torch.Tensor(50)
+        local emb = torch.Tensor(GLOVE_DIM)
         local p_emb = glove:word2vec(wordList[i])
+        if p_emb == nil then
+            p_emb = specialSymbols[wordList[i]]
+        end
         for j=1,50 do
             emb[j] = p_emb[j]
         end
@@ -147,6 +155,9 @@ function init_MLP(data)
                 lt = nn.LookupTable(inputDim, data.embSizeList[i])
             end
             totalDim = totalDim + data.numInputList[i] * data.embSizeList[i]
+        end
+        if data.fixEmbedding then
+            lt.accGradParameters = function() end
         end
         pt:add(nn.Sequential():add(lt):add(nn.View(numInput,-1)))
         totalInput = totalInput + data.numInputList[i]
