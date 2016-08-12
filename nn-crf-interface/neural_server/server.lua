@@ -197,6 +197,7 @@ function init_MLP(data)
         else
             error("activation " .. activation .. " not supported")
         end
+        mlp:add(act)
     end
 
     if data.dropout ~= nil and data.dropout > 0 then
