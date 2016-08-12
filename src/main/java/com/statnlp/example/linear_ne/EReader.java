@@ -81,7 +81,6 @@ public class EReader {
 				}
 			}else
 				currEntity = rawCurrEntity;
-			
 			words.add(new WordToken(values[1],values[2],-1, currEntity));
 			es.add(currEntity);
 			prevLine = line;

@@ -50,7 +50,7 @@ public class LinearNEMain {
 		
 		trainInstances = EReader.readData(trainPath,true,trainNumber, "IOBES");
 		testInstances = EReader.readData(testFile,false,testNumber,"IOB");
-		
+		System.exit(0);
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
 		NetworkConfig.NUM_THREADS = numThreads;
@@ -95,7 +95,11 @@ public class LinearNEMain {
 					case "-batch": NetworkConfig.USE_BATCH_TRAINING = true;
 									NetworkConfig.BATCH_SIZE = Integer.valueOf(args[i+1]); break;
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;
-					case "-neural": if(args[i+1].equals("true")){ NetworkConfig.USE_NEURAL_FEATURES = true; NetworkConfig.OPTIMIZE_NEURAL = false; NetworkConfig.IS_INDEXED_NEURAL_FEATURES = true;}//not optimize in CRF..
+					case "-neural": if(args[i+1].equals("true")){ 
+											NetworkConfig.USE_NEURAL_FEATURES = true; 
+											NetworkConfig.OPTIMIZE_NEURAL = false;  //not optimize in CRF..
+											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
+										}
 									break;
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;
 					case "-lr": adagrad_learningRate = Double.valueOf(args[i+1]); break;
