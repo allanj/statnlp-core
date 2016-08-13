@@ -206,6 +206,6 @@ public class NetworkConfig {
 		
 	public static int _maxSpanLen = 2;//the upper-bound of the length of a span.
 	
-	public static boolean REPLACE_ORIGINAL_EMISSION = true;
+	public static boolean REPLACE_ORIGINAL_EMISSION = false;
 	
 }

@@ -23,17 +23,19 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
-import com.statnlp.neural.NNCRFGlobalNetworkParam;
-import com.statnlp.neural.RemoteNN;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
+import com.statnlp.commons.types.Instance;
+import com.statnlp.neural.NNCRFGlobalNetworkParam;
+import com.statnlp.neural.RemoteNN;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
@@ -102,6 +104,7 @@ public class GlobalNetworkParam implements Serializable{
 	protected NNCRFGlobalNetworkParam _nnController;	
 	/** The weights that some of them will be replaced by neural net if NNCRF is enabled. */
 	private transient double[] concatWeights, concatCounts;
+	HashSet<Integer> dummyFeatList = new HashSet<Integer>();
 	
 	public GlobalNetworkParam(){
 		this(OptimizerFactory.getLBFGSFactory());
@@ -361,6 +364,9 @@ public class GlobalNetworkParam implements Serializable{
 				NetworkConfig.FEATURE_INIT_WEIGHT;
 		}
 		this._weights = weights_new;
+		for(int k : dummyFeatList) {
+			this._weights[k] = 0;
+		}
 		
 		// initialize NN params and gradParams
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
@@ -459,6 +465,7 @@ public class GlobalNetworkParam implements Serializable{
 			}
 			HashMap<String, Integer> input2id = output2input.get(output);
 			if(!input2id.containsKey(input)){
+				System.out.println("unknown: "+input+" type: "+type);
 				return -1;
 			}
 			return input2id.get(input);
@@ -480,6 +487,13 @@ public class GlobalNetworkParam implements Serializable{
 			} else {
 				inputToIdx.put(input, this._subSize[threadId]++);
 			}
+		}
+		
+		Instance labeledInst = network.getInstance().getLabeledInstance();
+		boolean dontAdd = NetworkConfig.USE_NEURAL_FEATURES && !type.equals("neural") && labeledInst == null;
+		// don't add if this is a 1) test instance AND 2) it's not a neural feature
+		if(dontAdd) {
+			dummyFeatList.add(featureIntMap.get(type).get(output).get(input));
 		}
 
 		return inputToIdx.get(input);

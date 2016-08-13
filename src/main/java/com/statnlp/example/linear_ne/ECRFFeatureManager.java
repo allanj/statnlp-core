@@ -73,6 +73,8 @@ public class ECRFFeatureManager extends FeatureManager {
 //			featureList.add(this._param_g.toFeature(network,FEATYPE.neural.name(), currEn,  currWord));
 			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+
 										llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt));
+			String prevEntity = Entity.get(childEId).getForm();
+//			featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "E-prev-E",prevEntity+":"+currEn));
 		}else{
 			featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), currEn,  	currWord));
 			featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ET",	currEn+":"+currTag));

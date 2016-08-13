@@ -124,21 +124,25 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 					String childEntity = Entity.get(childArr[1]).getForm();
 					
 					
-					if( (childEntity.startsWith("B-") || childEntity.startsWith("I-")  ) 
-							&& (currEntity.startsWith("I-") || currEntity.startsWith("E-"))
-							&& childEntity.substring(2).equals(currEntity.substring(2)) ) {
-						if(lcrfNetwork.contains(child)){
-							lcrfNetwork.addNode(node);
-							lcrfNetwork.addEdge(node, new long[]{child});
-						}
-						
-					}else if(   (childEntity.startsWith("S-") || childEntity.startsWith("E-") || childEntity.equals("O") ) 
-							&& (currEntity.startsWith("B-") ||currEntity.startsWith("S-") || currEntity.startsWith("O") ) ) {
-						
-						if(lcrfNetwork.contains(child)){
-							lcrfNetwork.addNode(node);
-							lcrfNetwork.addEdge(node, new long[]{child});
-						}
+//					if( (childEntity.startsWith("B-") || childEntity.startsWith("I-")  ) 
+//							&& (currEntity.startsWith("I-") || currEntity.startsWith("E-"))
+//							&& childEntity.substring(2).equals(currEntity.substring(2)) ) {
+//						if(lcrfNetwork.contains(child)){
+//							lcrfNetwork.addNode(node);
+//							lcrfNetwork.addEdge(node, new long[]{child});
+//						}
+//						
+//					}else if(   (childEntity.startsWith("S-") || childEntity.startsWith("E-") || childEntity.equals("O") ) 
+//							&& (currEntity.startsWith("B-") ||currEntity.startsWith("S-") || currEntity.startsWith("O") ) ) {
+//						
+//						if(lcrfNetwork.contains(child)){
+//							lcrfNetwork.addNode(node);
+//							lcrfNetwork.addEdge(node, new long[]{child});
+//						}
+//					}
+					if (lcrfNetwork.contains(child)) {
+						lcrfNetwork.addNode(node);
+						lcrfNetwork.addEdge(node, new long[]{child});
 					}
 				}
 				if(lcrfNetwork.contains(node))

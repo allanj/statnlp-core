@@ -150,22 +150,27 @@ public abstract class NetworkModel implements Serializable{
 	}
 	
 	public void train(Instance[] allInstances, int maxNumIterations) throws InterruptedException{
-		train(allInstances, maxNumIterations, "");
+		train(allInstances, allInstances.length, maxNumIterations, "");
 	}
 	
 	public void train(Instance[] allInstances, int maxNumIterations, String modelPrefix) throws InterruptedException{
+		train(allInstances, allInstances.length, maxNumIterations, "");
+	}
+	
+	public void train(Instance[] allInstances, int trainLength, int maxNumIterations, String modelPrefix) throws InterruptedException{
 		
 		this._numThreads = NetworkConfig.NUM_THREADS;
 		
 		this._allInstances = allInstances;
 		for(int k = 0; k<this._allInstances.length; k++){
-//			System.err.println(k);
+			//System.err.println(_allInstances[k].getInstanceId());
 			this._allInstances[k].setInstanceId(k+1);
 		}
 		this._fm.getParam_G().setInstsNum(this._allInstances.length);
 		HashSet<Integer> batchInstIds = new HashSet<Integer>();
 		ArrayList<Integer> instIds = new ArrayList<Integer>();
-		for(int i=0;i<_allInstances.length;i++) instIds.add(i+1);
+		//for(int i=0;i<_allInstances.length;i++) instIds.add(i+1);
+		for(int i=0;i<trainLength;i++) instIds.add(i+1);
 		
 		//create the threads.
 		this._learners = new LocalNetworkLearnerThread[this._numThreads];
@@ -250,6 +255,8 @@ public abstract class NetworkModel implements Serializable{
 				for(LocalNetworkLearnerThread learner: this._learners){
 					learner.setIterationNumber(it);
 					if(NetworkConfig.USE_BATCH_TRAINING) learner.setInstanceIdSet(batchInstIds);
+					else learner.setInstanceIdSet(new HashSet<Integer>(instIds));
+					// make sure we train only with trainIds
 				}
 				long time = System.currentTimeMillis();
 				if (NetworkConfig.USE_NEURAL_FEATURES) {
@@ -278,7 +285,9 @@ public abstract class NetworkModel implements Serializable{
 				if(it >= maxNumIterations-20) { // save best model for the last 20 iter
 					if(obj > bestObj) {
 						bestObj = obj;
-						saveModel(modelPrefix+".best", it);
+						if (NetworkConfig.SAVE_MODEL_AFTER_ITER >= 0) {
+							saveModel(modelPrefix+".best", it);
+						}
 					}
 				}
 				epochObj += obj;
@@ -295,8 +304,10 @@ public abstract class NetworkModel implements Serializable{
 					}
 				}
 				
-				if (!modelPrefix.equals("") && (it == maxNumIterations || it > 0 && it % NetworkConfig.SAVE_MODEL_AFTER_ITER == 0)) {
-					saveModel(modelPrefix, it);
+				if (!modelPrefix.equals("") && (lastIter || done || it > 0 && it % NetworkConfig.SAVE_MODEL_AFTER_ITER == 0)) {
+					if (NetworkConfig.SAVE_MODEL_AFTER_ITER >= 0) {
+						saveModel(modelPrefix, it);
+					}
 				}
 				
 				if(lastIter){

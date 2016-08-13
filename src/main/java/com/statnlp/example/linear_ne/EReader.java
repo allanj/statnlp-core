@@ -140,7 +140,6 @@ public class EReader {
 					}
 				}
 				
-				
 				output.set(pos, newCurrEntity); 
 				sent.get(pos).setEntity(newCurrEntity);
 				Entity.get(newCurrEntity);
@@ -148,6 +147,9 @@ public class EReader {
 			}
 		}else if(encoding.equals("IOB")){
 			//TODO: do nothing, since by default it's iob encoding.
+			for(int pos=0; pos<inst.size(); pos++){
+				Entity.get(inst.getInput().get(pos).getEntity());
+			}
 		}
 	}
 	
