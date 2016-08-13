@@ -235,7 +235,10 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 						}
 					}
 					
-					fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
+					if (!NetworkConfig.USE_NEURAL_FEATURES || !NetworkConfig.REPLACE_ORIGINAL_EMISSION
+						|| input.equals("[X]") || input.equals("[Y]")) {
+						fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
+					}
 					
 					// createEmissionNeuralFeatures(network, fs, t, output, input);
 					
@@ -321,7 +324,11 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 //							System.out.println("X/Y");
 						}
 					}
-					fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
+					
+					if (!NetworkConfig.USE_NEURAL_FEATURES || !NetworkConfig.REPLACE_ORIGINAL_EMISSION
+						|| input.equals("[X]") || input.equals("[Y]")) {
+						fs[t++] = this._param_g.toFeature(network,FEATURE_TYPE.emission.name(), output, input);
+					}
 					
 					// createEmissionNeuralFeatures(network, fs, w, output, input);
 					

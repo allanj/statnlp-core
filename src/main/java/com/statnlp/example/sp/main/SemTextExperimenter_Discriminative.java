@@ -38,6 +38,7 @@ import com.statnlp.hybridnetworks.GenerativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.neural.NeuralConfig;
 import com.statnlp.neural.NeuralConfigReader;
 
 public class SemTextExperimenter_Discriminative {
@@ -55,23 +56,33 @@ public class SemTextExperimenter_Discriminative {
 	
 	// -thread 4 -lang en -config nn-crf-interface/neural_server/neural.sp.config -lr 0.01 -debug -iter 50 -save-iter 10 -model model/en.best.model
 	private static void parse(String args[]) throws FileNotFoundException {
-		for (int i = 0; i < args.length; i++) {
+		//set default values
+		NetworkConfig.REGULARIZE_NEURAL_FEATURES = false;
+		NetworkConfig.USE_NEURAL_FEATURES = false;
+		NetworkConfig.OPTIMIZE_NEURAL = false;
+		NetworkConfig.REPLACE_ORIGINAL_EMISSION = false;
+		NeuralConfigReader.readConfig("nn-crf-interface/neural_server/neural.sp.config");
+		NeuralConfig.FIX_EMBEDDING = false;
+		
+		int i = 0;
+		while(i < args.length) {
 			String opt = args[i];
 			if(opt.equals("-lang")) {
-				lang = args[i+1];
+				lang = args[++i];
 			} else if(opt.equals("-thread")) {
-				NetworkConfig.NUM_THREADS = Integer.parseInt(args[i+1]);
-			} else if(opt.equals("-config")) {
+				NetworkConfig.NUM_THREADS = Integer.parseInt(args[++i]);
+			} else if(opt.equals("-neural")) {
 				NetworkConfig.USE_NEURAL_FEATURES = true;
-				NeuralConfigReader.readConfig(args[i+1]);
+			} else if(opt.equals("-config")) {
+				NeuralConfigReader.readConfig(args[++i]);
 			} else if(opt.equals("-lr")) {
-				adagrad_learningRate = Double.parseDouble(args[i+1]);
+				adagrad_learningRate = Double.parseDouble(args[++i]);
 			} else if(opt.equals("-iter")) {
-				numIterations = Integer.parseInt(args[i+1]);
+				numIterations = Integer.parseInt(args[++i]);
 			} else if(opt.equals("-save-iter")) {
-				NetworkConfig.SAVE_MODEL_AFTER_ITER = Integer.parseInt(args[i+1]);
+				NetworkConfig.SAVE_MODEL_AFTER_ITER = Integer.parseInt(args[++i]);
 			} else if(opt.equals("-model")) {
-				modelPath = args[i+1];
+				modelPath = args[++i];
 			} else if(opt.equals("-debug")) {
 				debug = true;
 			} else if(opt.equals("-skip-test")) {
@@ -81,14 +92,59 @@ public class SemTextExperimenter_Discriminative {
 			} else if(opt.equals("-test-on-train")) {
 				testOnTrain = true;
 			} else if(opt.equals("-optim")) {
-				optim = args[i+1];
+				optim = args[++i];
 			} else if(opt.equals("-save-prefix")) {
-				savePrefix = args[i+1];
+				savePrefix = args[++i];
 			} else if(opt.equals("-window")) {
-				NetworkConfig.NEURAL_WINDOW_SIZE = Integer.parseInt(args[i+1]);
+				NetworkConfig.NEURAL_WINDOW_SIZE = Integer.parseInt(args[++i]);
 			} else if(opt.equals("-optimize-neural")) {
 				NetworkConfig.OPTIMIZE_NEURAL = true;
+			} else if(opt.equals("-regularize-neural")) {
+				NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
+			} else if(opt.equals("-replace-emission")) {
+				NetworkConfig.REPLACE_ORIGINAL_EMISSION = true;
+			} else if(opt.equals("-l2")) {
+				NetworkConfig.L2_REGULARIZATION_CONSTANT = Double.parseDouble(args[++i]);
+			} else if(opt.equals("-fix-embedding")) {
+				NeuralConfig.FIX_EMBEDDING = true;
+			} else if(opt.equals("-embedding")) {
+				NeuralConfig.EMBEDDING.set(0, args[++i]);
+			} else if(opt.equals("-embedding-size")) {
+				NeuralConfig.EMBEDDING_SIZE.set(0, Integer.parseInt(args[++i]));
+			} else if(opt.equals("-num-layer")) {
+				NeuralConfig.NUM_LAYER = Integer.parseInt(args[++i]);
+			} else if(opt.equals("-hidden")) {
+				NeuralConfig.HIDDEN_SIZE = Integer.parseInt(args[++i]);
+			} else {
+				System.err.println("Unknown option: " + args[i]);
 			}
+			i++;
+		}
+	}
+	
+	private static void printSettings() {
+		System.out.println("STATNLP CONFIGURATIONS:");
+		System.out.println("* #iterations: " + numIterations);
+		System.out.println("* Optimizer: " + optim);
+		if(!optim.equals("lbfgs")) {
+			System.out.println("* Learning rate " + adagrad_learningRate);
+		}
+		System.out.println("* Regularization " + NetworkConfig.L2_REGULARIZATION_CONSTANT);
+		System.out.println("* Neural features: " + NetworkConfig.USE_NEURAL_FEATURES);
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			System.out.println("* Regularize neural: "+ NetworkConfig.REGULARIZE_NEURAL_FEATURES);
+			System.out.println("* Optimize neural: " + NetworkConfig.OPTIMIZE_NEURAL);
+			System.out.println("* Replace emission: " + NetworkConfig.REPLACE_ORIGINAL_EMISSION);
+		}
+		System.out.println("");
+		
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			System.out.println("NEURAL NET CONFIGURATIONS:");
+			System.out.println("* Word embedding: " + NeuralConfig.EMBEDDING.get(0));
+			System.out.println("* Embedding size (0 means OneHot): " + NeuralConfig.EMBEDDING_SIZE.get(0));
+			System.out.println("* Fix embedding: " + NeuralConfig.FIX_EMBEDDING);
+			System.out.println("* Number of layer: " + NeuralConfig.NUM_LAYER);
+			System.out.println("* Hidden size: " +  NeuralConfig.HIDDEN_SIZE);
 		}
 	}
 	
@@ -97,6 +153,7 @@ public class SemTextExperimenter_Discriminative {
 		System.err.println(SemTextExperimenter_Discriminative.class.getCanonicalName());
 		
 		parse(args);
+		printSettings();
 		
 //		String lang = args[1];
 		String inst_filename = "data/geoquery/geoFunql-"+lang+".corpus";
@@ -120,6 +177,10 @@ public class SemTextExperimenter_Discriminative {
 		}
 		String test_ids = "data/geoquery-2012-08-27/splits/split-880/run-0/fold-0/test";
 		
+		if (debug) {
+			test_ids =  "data/geoquery-2012-08-27/splits/split-880/run-0/fold-0/test-20";
+		}
+		
 		boolean isGeoquery = true;
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
@@ -142,8 +203,8 @@ public class SemTextExperimenter_Discriminative {
 		
 		ArrayList<SemTextInstance> inits = SemTextInstanceReader.readInit(init_filename, dm);
 		ArrayList<SemTextInstance> insts_train = SemTextInstanceReader.read(inst_filename, dm, train_ids, true);
-		ArrayList<SemTextInstance> insts_test = null;
-		insts_test = SemTextInstanceReader.read(inst_filename, dm, test_ids, false);
+		ArrayList<SemTextInstance> insts_test_clone = SemTextInstanceReader.read(inst_filename, dm, test_ids, true);
+		ArrayList<SemTextInstance> insts_test = SemTextInstanceReader.read(inst_filename, dm, test_ids, false);
 
 		// rhs: test same as train
 		if(testOnTrain) {
@@ -151,7 +212,7 @@ public class SemTextExperimenter_Discriminative {
 		}
 		
 //		NetworkConfig.USE_NEURAL_FEATURES = false;
-		NetworkConfig.REGULARIZE_NEURAL_FEATURES = false;
+//		NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 //		if (NetworkConfig.USE_NEURAL_FEATURES) {
 //			NeuralConfigReader.readConfig(args[2]);
 //		}
@@ -166,6 +227,18 @@ public class SemTextExperimenter_Discriminative {
 			train_instances[k] = insts_train.get(k);
 			train_instances[k].setInstanceId(k);
 			train_instances[k].setLabeled();
+		}
+		
+		int testSize = insts_test.size();
+		SemTextInstance all_instances[] = new SemTextInstance[size+testSize];
+		int i = 0;
+		for(; i<size; i++) {
+			all_instances[i] = train_instances[i];
+		}
+		int lastId = all_instances[i-1].getInstanceId();
+		for(int j = 0; j<testSize; j++, i++) {
+			all_instances[i] = insts_test_clone.get(j);
+			all_instances[i].setInstanceId(lastId+j+1);
 		}
 				
 		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
@@ -191,7 +264,8 @@ public class SemTextExperimenter_Discriminative {
 			if (optim.equals("lbfgs")) {
 				param_G = new GlobalNetworkParam();
 			} else {
-				param_G =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(adagrad_learningRate));
+//				param_G =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(adagrad_learningRate));
+				param_G =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingSmoothedAdaDeltaThenAdaGrad(0.01, 0.95, 1e-6, 0.75)); 
 			}
 		}
 		
@@ -207,7 +281,7 @@ public class SemTextExperimenter_Discriminative {
 			if (!savePrefix.equals("")) {
 				modelName = savePrefix+"."+lang;
 			}
-			model.train(train_instances, numIterations, modelName);
+			model.train(all_instances, size, numIterations, modelName);
 		}
 		
 		if (printFeats) {
