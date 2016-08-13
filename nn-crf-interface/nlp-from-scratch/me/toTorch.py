@@ -5,9 +5,11 @@ caps = []
 labels = []
 
 labelSet = {}
-labelFile = "/Users/nlp/Documents/workspace/semantic/statnlp-core/nn-crf-interface/nlp-from-scratch/senna-torch/senna/hash/ner.lst"
+#labelFile = "/Users/nlp/Documents/workspace/semantic/statnlp-core/nn-crf-interface/nlp-from-scratch/senna-torch/senna/hash/ner.lst"
+labelFile = "../senna-torch/senna/hash/ner9.lst"
+numLabel = 9
 for line in open(labelFile):
-    if len(labelSet) < 17:
+    if len(labelSet) < numLabel:
         labelSet[line.strip()] = len(labelSet)+1
 
 def apply_offset(lst, idx, offset, pad):
@@ -34,6 +36,6 @@ for line in open(sys.argv[1]):
         continue
     info = line.split()
     words.append(str(int(info[1])+1))
-    caps.append(str(int(info[2])))
+    caps.append(str(int(info[2])+1))
     labels.append(labelSet[info[3]])
 

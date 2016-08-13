@@ -1,15 +1,25 @@
 torch.setdefaulttensortype('torch.FloatTensor')
 
-opt = {
-    binfilename = 'glove_torch/glove.6B.50d.txt',
-    outfilename = 'glove_torch/glove.6B.50d.t7'
-}
+-- opt = {
+--     binfilename = 'glove_torch/glove.6B.50d.txt',
+--     outfilename = 'glove_torch/glove.6B.50d.t7'
+-- }
 local GloVe = {}
-if not paths.filep(opt.outfilename) then
-	GloVe = require('bintot7.lua')
-else
-	GloVe = torch.load(opt.outfilename)
-	print('Done reading GloVe data.')
+-- if not paths.filep(opt.outfilename) then
+-- 	GloVe = require('bintot7.lua')
+-- else
+-- 	GloVe = torch.load(opt.outfilename)
+-- 	print('Done reading GloVe data.')
+-- end
+
+GloVe.load = function (self,dim)
+    local gloveFile = 'glove_torch/glove.6B.' .. dim .. 'd.t7'
+    if not paths.filep(gloveFile) then
+        GloVe.glove = require('bintot7.lua')
+    else
+        GloVe.glove = torch.load(gloveFile)
+        print('Done reading GloVe data.')
+    end
 end
 
 GloVe.distance = function (self,vec,k)
@@ -17,12 +27,12 @@ GloVe.distance = function (self,vec,k)
 	--self.zeros = self.zeros or torch.zeros(self.M:size(1));
 	local norm = vec:norm(2)
 	vec:div(norm)
-	local distances = torch.mv(self.M ,vec)
+	local distances = torch.mv(self.glove.M ,vec)
 	distances , oldindex = torch.sort(distances,1,true)
 	local returnwords = {}
 	local returndistances = {}
 	for i = 1,k do
-		table.insert(returnwords, self.v2wvocab[oldindex[i]])
+		table.insert(returnwords, self.glove.v2wvocab[oldindex[i]])
 		table.insert(returndistances, distances[i])
 	end
 	return {returndistances, returnwords}
@@ -30,17 +40,17 @@ end
 
 GloVe.word2vec = function (self,word,throwerror)
    local throwerror = throwerror or false
-   local ind = self.w2vvocab[word]
+   local ind = self.glove.w2vvocab[word]
    if throwerror then
 		assert(ind ~= nil, 'Word does not exist in the dictionary!')
    end   
 	if ind == nil then
-		ind = self.w2vvocab['UNK']
+		ind = self.glove.w2vvocab['UNK']
         if ind == nil then
-            ind = self.w2vvocab['unk']
+            ind = self.glove.w2vvocab['unk']
         end
 	end
-   return self.M[ind]
+   return self.glove.M[ind]
 end
 
 return GloVe

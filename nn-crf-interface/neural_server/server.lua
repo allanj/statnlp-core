@@ -46,31 +46,34 @@ local socket = context:socket(zmq.REP)
 socket:bind("tcp://*:" .. portNumber)
 
 local ret -- return value to client
+local inputLayer
 local mlp -- our neural net
 local params, gradParams -- mlp's params
-local x -- input to nn, which is fixed
+local x, fixEmbedding -- input to nn, which is fixed
 local numInput
 local outputDim
 local doOptimization, optimizer, optimState
 
 local glove
-GLOVE_DIM = 50
-specialSymbols = {}
-specialSymbols['<PAD>'] = torch.Tensor(GLOVE_DIM):normal(0,1)
-specialSymbols['<S>'] = torch.Tensor(GLOVE_DIM):normal(0,1)
-specialSymbols['</S>'] = torch.Tensor(GLOVE_DIM):normal(0,1)
-function loadGlove(wordList)
+function loadGlove(wordList, dim)
     if glove == nil then
         glove = require 'glove_torch/glove'
     end
-    ltw = nn.LookupTable(#wordList, GLOVE_DIM)
+    glove:load(dim)
+
+    specialSymbols = {}
+    specialSymbols['<PAD>'] = torch.Tensor(dim):normal(0,1)
+    specialSymbols['<S>'] = torch.Tensor(dim):normal(0,1)
+    specialSymbols['</S>'] = torch.Tensor(dim):normal(0,1)
+
+    ltw = nn.LookupTable(#wordList, dim)
     for i=1,#wordList do
-        local emb = torch.Tensor(GLOVE_DIM)
+        local emb = torch.Tensor(dim)
         local p_emb = glove:word2vec(wordList[i])
         if p_emb == nil then
             p_emb = specialSymbols[wordList[i]]
         end
-        for j=1,50 do
+        for j=1,dim do
             emb[j] = p_emb[j]
         end
         ltw.weight[i] = emb
@@ -128,6 +131,7 @@ function init_MLP(data)
 
     -- what to forward
     x = prepare_input(data.vocab, data.numInputList, data.embSizeList)
+    fixEmbedding = data.fixEmbedding
     numInput = x[1]:size(1)
 
     -- input layer
@@ -145,7 +149,7 @@ function init_MLP(data)
                 if data.embedding[i] == 'senna' then
                     lt = loadSenna()
                 elseif data.embedding[i] == 'glove' then
-                    lt = loadGlove(data.wordList)
+                    lt = loadGlove(data.wordList, data.embSizeList[i])
                 elseif data.embedding[i] == 'polyglot' then
                     lt = loadPolyglot(data.wordList)
                 else -- unknown/no embedding, defaults to random init
@@ -167,9 +171,16 @@ function init_MLP(data)
     local rs = nn.Reshape(totalDim)
 
     mlp = nn.Sequential()
-    mlp:add(pt)
-    mlp:add(jt)
-    mlp:add(rs)
+    if data.fixEmbedding then
+        inputLayer = nn.Sequential()
+        inputLayer:add(pt)
+        inputLayer:add(jt)
+        inputLayer:add(rs)
+    else
+        mlp:add(pt)
+        mlp:add(jt)
+        mlp:add(rs)
+    end
 
     -- hidden layer
     for i=1,data.numLayer do
@@ -197,6 +208,9 @@ function init_MLP(data)
         else
             error("activation " .. activation .. " not supported")
         end
+        if act ~= nil then
+            mlp:add(act)
+        end
     end
 
     if data.dropout ~= nil and data.dropout > 0 then
@@ -213,6 +227,7 @@ function init_MLP(data)
     end
     mlp:add(nn.Linear(lastInputDim, outputDim):noBias()) -- no bias
     if gpuid >= 0 then
+        if data.fixEmbedding then inputLayer:cuda() end
         mlp:cuda()
     end
 
@@ -226,8 +241,7 @@ function init_MLP(data)
         optimState = {learningRate=data.learningRate}
     end
 
-    params, gradParams = mlp:getParameters()
-    return mlp, x
+    params, gradParams = mlp:getParameters() 
 end
 
 function fwd_MLP(mlp, x, newParams, training)
@@ -236,10 +250,18 @@ function fwd_MLP(mlp, x, newParams, training)
     else
         mlp:evaluate()
     end
+
     if newParams ~= nil then
         params:copy(newParams)
     end
-    return mlp:forward(x)
+
+    local input_x = x
+
+    if fixEmbedding then
+        input_x = inputLayer:forward(x)
+    end
+
+    return mlp:forward(input_x)
 end
 
 function feval(params) -- for optim
@@ -247,11 +269,18 @@ function feval(params) -- for optim
 end
 
 function bwd_MLP(mlp, x, gradOutput)
-    gradParams:zero() 
-    mlp:backward(x, gradOutput)
+    gradParams:zero()
+
+    local input_x = x
+
+    if fixEmbedding then
+        input_x = inputLayer:forward(x)
+    end
+
+    mlp:backward(input_x, gradOutput)
+    
     if doOptimization then
         optimizer(feval, params, optimState)
-        -- mlp:updateParameters(0.001)
     end
 end
 
@@ -303,7 +332,8 @@ while true do
         request = mp.unpack(request)
         if request.cmd == "init" then
             timer = torch.Timer()
-            mlp, x = init_MLP(request)
+            init_MLP(request)
+            if request.fixEmbedding then print(inputLayer) end
             print(mlp)
             if doOptimization then -- no return array if optim is done here
                 ret = 1

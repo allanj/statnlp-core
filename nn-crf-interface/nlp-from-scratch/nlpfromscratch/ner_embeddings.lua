@@ -1,12 +1,15 @@
 require 'torch'
 require 'nn'
 
+numLabel = 9
+
 -- initial vector creation assuming an input vector with 10 values, 5 of which are word ids and 5 are caps ids
 
 ltw = nn.LookupTable(130000, 50)
 
 -- initialize lookup table with embeddings
-path = '/Users/nlp/Documents/workspace/semantic/statnlp-core/nn-crf-interface/nlp-from-scratch/senna-torch/'
+--path = '/Users/nlp/Documents/workspace/semantic/statnlp-core/nn-crf-interface/nlp-from-scratch/senna-torch/'
+path = '../senna-torch/'
 embeddingsFile = torch.DiskFile(path .. 'senna/embeddings/embeddings.txt');
 embedding = torch.DoubleStorage(50)
 
@@ -35,16 +38,22 @@ mlp:add(rs2)
 -- the NN layers
 ll1 = nn.Linear(275, 300)
 hth = nn.HardTanh()
-ll2 = nn.Linear(300, 17)
+ll2 = nn.Linear(300, numLabel)
 lsm = nn.LogSoftMax()
 
 mlp:add(ll1)
 mlp:add(hth)
 mlp:add(ll2)
-mlp:add(lsm)
 
-trainSize = 172389
-testSize = 44462
+-- let's separate
+mlp2 = nn.Sequential()
+mlp2:add(mlp)
+mlp2:add(lsm)
+
+--trainSize = 172389
+--testSize = 44462
+trainSize = 203621
+testSize = 46435
 -- create training data set
 inputFile = torch.DiskFile('ner_training.txt', 'r')
 inputLine = torch.IntStorage(10)
@@ -69,9 +78,11 @@ end
 inputFile:close()
 
 criterion = nn.ClassNLLCriterion()
-trainer = nn.StochasticGradient(mlp, criterion)
+trainer = nn.StochasticGradient(mlp2, criterion)
 trainer.learningRate = 0.01
 trainer:train(dataset)
+
+torch.save("ner_embeddings.model",mlp)
 
 
 -- Testing
@@ -89,11 +100,11 @@ for i=1,testSize do
       input[j] = inputLine[j]
    end
    local newInput = nn.SplitTable(1):forward(nn.Reshape(2,5):forward(input))
-   output = mlp:forward(newInput)
+   output = mlp2:forward(newInput)
 
    local outputLabel = 1;
    local outputValue = -1000;
-   for k=1,17 do
+   for k=1,numLabel do
       if output[k] > outputValue then
 	 outputLabel = k;
 	 outputValue = output[k];

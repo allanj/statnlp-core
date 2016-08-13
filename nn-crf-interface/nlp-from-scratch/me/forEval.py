@@ -5,14 +5,12 @@ caps = []
 labels = []
 
 idx2label = {}
-labelFile = "/Users/nlp/Documents/workspace/semantic/statnlp-core/nn-crf-interface/nlp-from-scratch/senna-torch/senna/hash/ner.lst"
+#labelFile = "/Users/nlp/Documents/workspace/semantic/statnlp-core/nn-crf-interface/nlp-from-scratch/senna-torch/senna/hash/ner.lst"
+labelFile = "../senna-torch/senna/hash/ner9.lst"
+numLabel = 9
 for line in open(labelFile):
     line = line.strip()
-    if len(idx2label) < 17:
-        #if line[0] == 'S':
-        #    line = 'B'+line[1:]
-        #if line[0] == 'E':
-        #    line = 'I'+line[1:]
+    if len(idx2label) < numLabel:
         idx2label[len(idx2label)+1] = line
 
 pred = []
