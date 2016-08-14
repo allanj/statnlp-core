@@ -23,6 +23,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -103,6 +104,11 @@ public class GlobalNetworkParam implements Serializable{
 	protected NNCRFGlobalNetworkParam _nnController;	
 	/** The weights that some of them will be replaced by neural net if NNCRF is enabled. */
 	private transient double[] concatWeights, concatCounts;
+	
+	protected HashSet<String> unknownSet = new HashSet<String>();
+	public HashSet<String> getUnknownFeatures() {
+		return unknownSet;
+	}
 	
 	public GlobalNetworkParam(){
 		this(OptimizerFactory.getLBFGSFactory());
@@ -461,7 +467,7 @@ public class GlobalNetworkParam implements Serializable{
 			}
 			HashMap<String, Integer> input2id = output2input.get(output);
 			if(!input2id.containsKey(input)){
-				System.out.println("unknown: "+input+" type: "+type);
+				unknownSet.add(type+" "+output+" "+input);
 				return -1;
 			}
 			return input2id.get(input);

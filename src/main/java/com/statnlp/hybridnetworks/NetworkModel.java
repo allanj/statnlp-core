@@ -255,7 +255,7 @@ public abstract class NetworkModel implements Serializable{
 				for(LocalNetworkLearnerThread learner: this._learners){
 					learner.setIterationNumber(it);
 					if(NetworkConfig.USE_BATCH_TRAINING) learner.setInstanceIdSet(batchInstIds);
-					else learner.setInstanceIdSet(new HashSet<Integer>(instIds));
+					else learner.setTrainInstanceIdSet(new HashSet<Integer>(instIds));
 					// make sure we train only with trainIds
 				}
 				long time = System.currentTimeMillis();

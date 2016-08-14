@@ -326,6 +326,13 @@ public class SemTextExperimenter_Discriminative {
 		}
 		output_instances_unlabeled = model.decode(test_instances);
 		
+		if(printFeats) {
+			System.out.println("Unknown features:");
+			for (String f : fm.getParam_G().getUnknownFeatures()) {
+				System.out.println(f);
+			}
+		}
+		
 		double total = output_instances_unlabeled.length;
 		double corr = 0;
 		

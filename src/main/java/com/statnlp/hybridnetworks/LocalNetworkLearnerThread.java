@@ -47,6 +47,8 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	/** Prepare the list of instance ids for the batch selection */
 	private HashSet<Integer> chargeInstsIds = null;
 	
+	private HashSet<Integer> trainInstsIds = null;
+	
 	/**
 	 * Construct a new learner thread using current networks (if cached) or builder (if not cached),
 	 * also advancing the iteration number by 1.
@@ -159,6 +161,8 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 		for(int i = 0; i< this._instances.length; i++){
 			if(NetworkConfig.USE_BATCH_TRAINING && !this.chargeInstsIds.contains(this._instances[i].getInstanceId()) && !this.chargeInstsIds.contains(-this._instances[i].getInstanceId()) )
 				continue;
+			if(this.trainInstsIds != null && !this.trainInstsIds.contains(this._instances[i].getInstanceId()) && !this.trainInstsIds.contains(-this._instances[i].getInstanceId()))
+				continue;
 			Network network = this.getNetwork(i);
 			network.train();
 		}
@@ -192,6 +196,10 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	
 	public void setInstanceIdSet(HashSet<Integer> set){
 		this.chargeInstsIds = set;
+	}
+	
+	public void setTrainInstanceIdSet(HashSet<Integer> set){
+		this.trainInstsIds = set;
 	}
 	
 }
