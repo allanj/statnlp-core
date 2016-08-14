@@ -23,7 +23,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -104,7 +103,6 @@ public class GlobalNetworkParam implements Serializable{
 	protected NNCRFGlobalNetworkParam _nnController;	
 	/** The weights that some of them will be replaced by neural net if NNCRF is enabled. */
 	private transient double[] concatWeights, concatCounts;
-	HashSet<Integer> dummyFeatList = new HashSet<Integer>();
 	
 	public GlobalNetworkParam(){
 		this(OptimizerFactory.getLBFGSFactory());
@@ -364,9 +362,6 @@ public class GlobalNetworkParam implements Serializable{
 				NetworkConfig.FEATURE_INIT_WEIGHT;
 		}
 		this._weights = weights_new;
-		for(int k : dummyFeatList) {
-			this._weights[k] = 0;
-		}
 		
 		// initialize NN params and gradParams
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
@@ -378,8 +373,6 @@ public class GlobalNetworkParam implements Serializable{
 //			}
 			
 		}
-		
-		this.resetCountsAndObj();
 		
 		this._feature2rep = new String[this._size][];
 		Iterator<String> types = this._featureIntMap.keySet().iterator();
@@ -398,6 +391,9 @@ public class GlobalNetworkParam implements Serializable{
 				}
 			}
 		}
+		
+		this.resetCountsAndObj();
+		
 		this._version = 0;
 		if(!NetworkConfig.USE_NEURAL_FEATURES)
 			this._opt = this._optFactory.create(this._weights.length, getFeatureIntMap());
@@ -471,6 +467,11 @@ public class GlobalNetworkParam implements Serializable{
 			return input2id.get(input);
 		}
 		
+		Instance inst = network.getInstance();
+		int instId = inst.getInstanceId();
+		boolean isTestInst = instId > 0 && !inst.isLabeled() || !inst.getLabeledInstance().isLabeled();
+		if (isTestInst && !type.equals("neural")) type = "test";
+		
 		if(!featureIntMap.containsKey(type)){
 			featureIntMap.put(type, new HashMap<String, HashMap<String, Integer>>());
 		}
@@ -488,14 +489,6 @@ public class GlobalNetworkParam implements Serializable{
 				inputToIdx.put(input, this._subSize[threadId]++);
 			}
 		}
-		
-		Instance labeledInst = network.getInstance().getLabeledInstance();
-		boolean dontAdd = NetworkConfig.USE_NEURAL_FEATURES && !type.equals("neural") && labeledInst == null;
-		// don't add if this is a 1) test instance AND 2) it's not a neural feature
-		if(dontAdd) {
-			dummyFeatList.add(featureIntMap.get(type).get(output).get(input));
-		}
-
 		return inputToIdx.get(input);
 	}
 	
@@ -720,6 +713,13 @@ public class GlobalNetworkParam implements Serializable{
 						internalNNCounts[k] += 2 * coef * this._kappa * internalNNWeights[k];
 					}
 				}
+			}
+		}
+		
+		for(int k = 0; k < this._size; k++) {
+			if(_feature2rep[k][0].equals("test")) {
+				this._weights[k] = 0;
+				this._counts[k] = 0;
 			}
 		}
 		

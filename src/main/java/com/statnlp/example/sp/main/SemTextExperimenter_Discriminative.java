@@ -47,6 +47,7 @@ public class SemTextExperimenter_Discriminative {
 	static boolean skipTest = false;
 	static boolean printFeats = false;
 	static boolean testOnTrain = false;
+	static boolean extractFromTest = true;
 	static String lang;
 	static double adagrad_learningRate = 0.01;
 	static int numIterations = 100;
@@ -117,6 +118,7 @@ public class SemTextExperimenter_Discriminative {
 				NeuralConfig.HIDDEN_SIZE = Integer.parseInt(args[++i]);
 			} else {
 				System.err.println("Unknown option: " + args[i]);
+				System.exit(1);
 			}
 			i++;
 		}
@@ -203,7 +205,7 @@ public class SemTextExperimenter_Discriminative {
 		
 		ArrayList<SemTextInstance> inits = SemTextInstanceReader.readInit(init_filename, dm);
 		ArrayList<SemTextInstance> insts_train = SemTextInstanceReader.read(inst_filename, dm, train_ids, true);
-		ArrayList<SemTextInstance> insts_test_clone = SemTextInstanceReader.read(inst_filename, dm, test_ids, true);
+		ArrayList<SemTextInstance> insts_test_clone = SemTextInstanceReader.read(inst_filename, dm, test_ids, false);
 		ArrayList<SemTextInstance> insts_test = SemTextInstanceReader.read(inst_filename, dm, test_ids, false);
 
 		// rhs: test same as train
@@ -239,6 +241,7 @@ public class SemTextExperimenter_Discriminative {
 		for(int j = 0; j<testSize; j++, i++) {
 			all_instances[i] = insts_test_clone.get(j);
 			all_instances[i].setInstanceId(lastId+j+1);
+			all_instances[i].setUnlabeled();
 		}
 				
 		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
@@ -281,7 +284,11 @@ public class SemTextExperimenter_Discriminative {
 			if (!savePrefix.equals("")) {
 				modelName = savePrefix+"."+lang;
 			}
-			model.train(all_instances, size, numIterations, modelName);
+			if (extractFromTest) {
+				model.train(all_instances, size, numIterations, modelName);
+			} else {
+				model.train(train_instances, size, numIterations, modelName);
+			}
 		}
 		
 		if (printFeats) {
