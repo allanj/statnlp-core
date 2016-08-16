@@ -49,11 +49,13 @@ public class SemTextExperimenter_Discriminative {
 	static boolean testOnTrain = false;
 	static boolean extractFromTest = true;
 	static String lang;
-	static double adagrad_learningRate = 0.01;
+	static double learningRate = 0.01;
 	static int numIterations = 100;
 	static String modelPath = "";
 	static String savePrefix = "";
 	static String optim = "adagrad";
+	static String pretrainPath = "";
+	static boolean fixPretrain = false; 
 	
 	// -thread 4 -lang en -config nn-crf-interface/neural_server/neural.sp.config -lr 0.01 -debug -iter 50 -save-iter 10 -model model/en.best.model
 	private static void parse(String args[]) throws FileNotFoundException {
@@ -77,7 +79,8 @@ public class SemTextExperimenter_Discriminative {
 			} else if(opt.equals("-config")) {
 				NeuralConfigReader.readConfig(args[++i]);
 			} else if(opt.equals("-lr")) {
-				adagrad_learningRate = Double.parseDouble(args[++i]);
+				learningRate = Double.parseDouble(args[++i]);
+				NeuralConfig.LEARNING_RATE = learningRate;
 			} else if(opt.equals("-iter")) {
 				numIterations = Integer.parseInt(args[++i]);
 			} else if(opt.equals("-save-iter")) {
@@ -116,6 +119,12 @@ public class SemTextExperimenter_Discriminative {
 				NeuralConfig.NUM_LAYER = Integer.parseInt(args[++i]);
 			} else if(opt.equals("-hidden")) {
 				NeuralConfig.HIDDEN_SIZE = Integer.parseInt(args[++i]);
+			} else if(opt.equals("-dropout")) {
+				NeuralConfig.DROPOUT = Double.parseDouble(args[++i]);
+			} else if(opt.equals("-pretrain")) {
+				pretrainPath = args[++i];
+			} else if(opt.equals("-fix-pretrain")) {
+				fixPretrain = true;
 			} else {
 				System.err.println("Unknown option: " + args[i]);
 				System.exit(1);
@@ -129,7 +138,7 @@ public class SemTextExperimenter_Discriminative {
 		System.out.println("* #iterations: " + numIterations);
 		System.out.println("* Optimizer: " + optim);
 		if(!optim.equals("lbfgs")) {
-			System.out.println("* Learning rate " + adagrad_learningRate);
+			System.out.println("* Learning rate " + learningRate);
 		}
 		System.out.println("* Regularization " + NetworkConfig.L2_REGULARIZATION_CONSTANT);
 		System.out.println("* Neural features: " + NetworkConfig.USE_NEURAL_FEATURES);
@@ -138,6 +147,9 @@ public class SemTextExperimenter_Discriminative {
 			System.out.println("* Optimize neural: " + NetworkConfig.OPTIMIZE_NEURAL);
 			System.out.println("* Replace emission: " + NetworkConfig.REPLACE_ORIGINAL_EMISSION);
 		}
+		if (!pretrainPath.equals("")) {
+			System.out.println("* Pretrain model: " + pretrainPath + (fixPretrain ? " (fixed)" : " (fine-tuned)"));
+		}
 		System.out.println("");
 		
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
@@ -145,8 +157,10 @@ public class SemTextExperimenter_Discriminative {
 			System.out.println("* Word embedding: " + NeuralConfig.EMBEDDING.get(0));
 			System.out.println("* Embedding size (0 means OneHot): " + NeuralConfig.EMBEDDING_SIZE.get(0));
 			System.out.println("* Fix embedding: " + NeuralConfig.FIX_EMBEDDING);
+			System.out.println("* Input window size: " + NetworkConfig.NEURAL_WINDOW_SIZE);
 			System.out.println("* Number of layer: " + NeuralConfig.NUM_LAYER);
 			System.out.println("* Hidden size: " +  NeuralConfig.HIDDEN_SIZE);
+			System.out.println("* Dropout: " + NeuralConfig.DROPOUT);
 		}
 	}
 	
@@ -264,12 +278,24 @@ public class SemTextExperimenter_Discriminative {
             param_G = (GlobalNetworkParam) ois.readObject();
             ois.close();
 		} else {
-			if (optim.equals("lbfgs")) {
+			if (optim.equals("adam")){
+				param_G = new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaM(learningRate, 0.9, 0.999, 1e-8));
+			} else if (optim.equals("adagrad")) {
+				param_G = new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(learningRate));
+			} else if (optim.equals("adadelta+adagrad")) {
+				param_G = new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingSmoothedAdaDeltaThenAdaGrad(0.01, 0.95, 1e-6, 0.75));
+			} else { // defaults to LBFGS
 				param_G = new GlobalNetworkParam();
-			} else {
-//				param_G =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(adagrad_learningRate));
-				param_G =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingSmoothedAdaDeltaThenAdaGrad(0.01, 0.95, 1e-6, 0.75)); 
 			}
+		}
+		
+		GlobalNetworkParam pretrain_param_G;
+		boolean preTrained = !pretrainPath.equals("");
+		if (preTrained) {
+			ObjectInputStream ois = new ObjectInputStream(new FileInputStream(pretrainPath));
+            pretrain_param_G = (GlobalNetworkParam) ois.readObject();
+            ois.close();
+            param_G.setPretrainParams(pretrain_param_G, fixPretrain);
 		}
 		
 		SemTextFeatureManager_Discriminative fm = new SemTextFeatureManager_Discriminative(param_G, g, dm);

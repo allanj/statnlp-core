@@ -19,7 +19,8 @@ local json = require ("dkjson")
 local zmq = require "lzmq"
 local context = zmq.init(1)
 
-torch.manualSeed(1337)
+SEED = 1337
+torch.manualSeed(SEED)
 
 -- GPU setup
 gpuid = opt.gpuid
@@ -31,7 +32,7 @@ if gpuid >= 0 then
     if ok and ok2 then
         print('using CUDA on GPU ' .. gpuid .. '...')
         cutorch.setDevice(gpuid + 1) -- note +1 to make it 0 indexed! sigh lua
-        cutorch.manualSeed(1337)
+        cutorch.manualSeed(SEED)
     else
         print('If cutorch and cunn are installed, your CUDA toolkit may be improperly configured.')
         print('Check your CUDA toolkit installation, rebuild cutorch and cunn, and try again.')
@@ -126,8 +127,8 @@ function init_MLP(data)
     -- vocab
 
     -- re-seed
-    torch.manualSeed(torch.initialSeed())
-    if gpuid >= 0 then cutorch.manualSeed(cutorch.initialSeed()) end
+    torch.manualSeed(SEED)
+    if gpuid >= 0 then cutorch.manualSeed(SEED) end
 
     -- what to forward
     x = prepare_input(data.vocab, data.numInputList, data.embSizeList)
@@ -225,7 +226,8 @@ function init_MLP(data)
     else
         lastInputDim = data.hiddenSize
     end
-    mlp:add(nn.Linear(lastInputDim, outputDim):noBias()) -- no bias
+    -- mlp:add(nn.Linear(lastInputDim, outputDim):noBias()) -- no bias
+    mlp:add(nn.Linear(lastInputDim, outputDim))
     if gpuid >= 0 then
         if data.fixEmbedding then inputLayer:cuda() end
         mlp:cuda()
@@ -239,9 +241,12 @@ function init_MLP(data)
     elseif data.optimizer == 'adagrad' then
         optimizer = optim.adagrad
         optimState = {learningRate=data.learningRate}
+    elseif data.optimizer == 'adam' then
+        optimizer = optim.adam
+        optimState = {learningRate=data.learningRate}
     end
 
-    params, gradParams = mlp:getParameters() 
+    params, gradParams = mlp:getParameters()
 end
 
 function fwd_MLP(mlp, x, newParams, training)

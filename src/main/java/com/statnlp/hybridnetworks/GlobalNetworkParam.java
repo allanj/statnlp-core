@@ -105,7 +105,12 @@ public class GlobalNetworkParam implements Serializable{
 	/** The weights that some of them will be replaced by neural net if NNCRF is enabled. */
 	private transient double[] concatWeights, concatCounts;
 	
-	protected HashSet<String> unknownSet = new HashSet<String>();
+	/** Initialize weights with an existing model */
+	protected GlobalNetworkParam _pretrainG;
+	protected boolean _isFixedPretrain; 
+	
+	/** A set of features only seen in test set */
+	protected HashSet<String> unknownSet;
 	public HashSet<String> getUnknownFeatures() {
 		return unknownSet;
 	}
@@ -398,6 +403,12 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		
+		// resetCountsAndObj() will call copyPretrainWeights only if isFixedPretrain == true
+		// so we still need to call this for the first time
+		if(_pretrainG != null) {
+			copyPretrainWeights();
+		}
+		
 		this.resetCountsAndObj();
 		
 		this._version = 0;
@@ -467,6 +478,7 @@ public class GlobalNetworkParam implements Serializable{
 			}
 			HashMap<String, Integer> input2id = output2input.get(output);
 			if(!input2id.containsKey(input)){
+				if(unknownSet == null) unknownSet = new HashSet<String>();
 				unknownSet.add(type+" "+output+" "+input);
 				return -1;
 			}
@@ -729,6 +741,11 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		
+		// set pretrain weights to initial values
+		if(_pretrainG != null && _isFixedPretrain) {
+			copyPretrainWeights();
+		}
+		
 		this._obj = 0.0;
 		//for regularization
 		if(this.isDiscriminative() && this._kappa > 0){
@@ -756,6 +773,27 @@ public class GlobalNetworkParam implements Serializable{
 	
 	public void setInstsNum(int number){
 		this.totalNumInsts = number;
+	}
+	
+	public void setPretrainParams(GlobalNetworkParam pretrain_g, boolean isFixed) {
+		this._pretrainG = pretrain_g;
+		this._isFixedPretrain = isFixed;
+	}
+	
+	public boolean isFixedPretrain() {
+		return this._isFixedPretrain;
+	}
+	
+	public void copyPretrainWeights() {
+		if (_pretrainG != null) {
+			double[] pretrainWeights = _pretrainG.getWeights();
+			for(int i = 0; i < pretrainWeights.length; i++) {
+				String[] featRep = _pretrainG.getFeatureRep(i); 
+				int featIdx = _featureIntMap.get(featRep[0]).get(featRep[1]).get(featRep[2]);
+				_weights[featIdx] = pretrainWeights[i];
+				_counts[featIdx] = 0;
+			}
+		}
 	}
 	
 	public boolean checkEqual(GlobalNetworkParam p){

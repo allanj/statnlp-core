@@ -49,6 +49,7 @@ public class LinearNEMain {
 	public static boolean printFeats = false;
 	public static boolean printNeuralFeats = false;
 	public static boolean loadNeuralWeights = false;
+	public static boolean fixEmbedding = false;
 	
 	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException{
 		
@@ -89,6 +90,10 @@ public class LinearNEMain {
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 			NeuralConfigReader.readConfig(neural_config);
 			//gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(adagrad_learningRate));
+		}
+		
+		if(fixEmbedding) {
+			NeuralConfig.FIX_EMBEDDING = true;
 		}
 		
 		
@@ -254,6 +259,7 @@ public class LinearNEMain {
 					case "-printFeats": printFeats = true; break;
 					case "-printNeuralFeats": printNeuralFeats = true; break;
 					case "-loadNeuralWeights": loadNeuralWeights = true; break;
+					case "-fixEmbedding": fixEmbedding = true; break;
 					default: System.err.println("Invalid arguments, please check usage."); System.exit(0);
 				}
 			}

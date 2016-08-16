@@ -258,6 +258,12 @@ public abstract class NetworkModel implements Serializable{
 					else learner.setTrainInstanceIdSet(new HashSet<Integer>(instIds));
 					// make sure we train only with trainIds
 				}
+
+				// fix pretrain weights if needed
+				if (this._fm.getParam_G().isFixedPretrain()) {
+					this._fm.getParam_G().copyPretrainWeights();
+				}
+				
 				long time = System.currentTimeMillis();
 				if (NetworkConfig.USE_NEURAL_FEATURES) {
 					nnController.forwardNetwork(true);
