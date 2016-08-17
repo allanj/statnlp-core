@@ -48,12 +48,13 @@ for line in io.lines(opt.binfilename) do
 	if norm ~= 0 then vecrep:div(norm) end
 
     -- lowercase
+    strlow = str
     if str ~= "<S>" and str ~= "</S>" and str ~= "<PAD>" and str ~= "<UNK>" then
-        str = utf8.lower(str)
+        strlow = utf8.lower(str)
     end
-    if w2vvocab[str] == nil then
-    	w2vvocab[str] = i
-    	v2wvocab[i] = str
+    if w2vvocab[strlow] == nil or strlow == str then
+    	w2vvocab[strlow] = i
+    	v2wvocab[i] = strlow
     	M[{{i},{}}] = vecrep
         i = i + 1
     end

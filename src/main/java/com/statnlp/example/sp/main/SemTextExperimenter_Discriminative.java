@@ -315,7 +315,10 @@ public class SemTextExperimenter_Discriminative {
 		if (isTrain) {
 			String modelName = lang;
 			if (!savePrefix.equals("")) {
-				modelName = savePrefix+"."+lang;
+				modelName = savePrefix;
+				if(!savePrefix.endsWith("."+lang)) {
+					modelName += "."+lang;
+				}
 			}
 			if (extractFromTest) {
 				model.train(all_instances, size, numIterations, modelName);
