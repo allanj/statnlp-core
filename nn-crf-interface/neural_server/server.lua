@@ -105,10 +105,11 @@ function loadSenna(lt)
 end
 
 local polyglot
-function loadPolyglot(wordList)
+function loadPolyglot(wordList, lang)
     if polyglot == nil then
         polyglot = require 'polyglot/polyglot'
     end
+    polyglot:load(lang)
     ltw = nn.LookupTable(#wordList, 64)
     for i=1,#wordList do
         local emb = torch.Tensor(64)
@@ -152,7 +153,7 @@ function init_MLP(data)
                 elseif data.embedding[i] == 'glove' then
                     lt = loadGlove(data.wordList, data.embSizeList[i])
                 elseif data.embedding[i] == 'polyglot' then
-                    lt = loadPolyglot(data.wordList)
+                    lt = loadPolyglot(data.wordList, data.lang)
                 else -- unknown/no embedding, defaults to random init
                     lt = nn.LookupTable(inputDim, data.embSizeList[i])
                 end

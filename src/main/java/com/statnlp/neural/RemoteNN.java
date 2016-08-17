@@ -75,16 +75,17 @@ public class RemoteNN {
 	}
 	
 	public double[] initNetwork(List<Integer> numInputList, List<Integer> inputDimList, List<String> wordList,
-						   List<String> embeddingList, List<Integer> embSizeList,
+						   String lang, List<String> embeddingList, List<Integer> embSizeList,
 						   int outputDim, List<List<Integer>> vocab) {
 		MessageBufferPacker packer = MessagePack.newDefaultBufferPacker();
 		try {
-			packer.packMapHeader(15);
+			packer.packMapHeader(16);
 			packer.packString("cmd").packString("init");
 			
 			packList(packer, "numInputList", numInputList);
 			packList(packer, "inputDimList", inputDimList);
 			packList(packer, "wordList", wordList);
+			packer.packString("lang").packString(lang);
 			packList(packer, "embedding", embeddingList);
 			packList(packer, "embSizeList", embSizeList);
 			packer.packString("outputDim").packInt(outputDim);

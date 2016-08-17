@@ -66,18 +66,20 @@ public class SemTextExperimenter_Discriminative {
 		NetworkConfig.REPLACE_ORIGINAL_EMISSION = false;
 		NeuralConfigReader.readConfig("nn-crf-interface/neural_server/neural.sp.config");
 		NeuralConfig.FIX_EMBEDDING = false;
+		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
 		
 		int i = 0;
 		while(i < args.length) {
 			String opt = args[i];
-			if(opt.equals("-lang")) {
+			if(opt.equals("-config")) {
+				NeuralConfigReader.readConfig(args[++i]);
+			} else if(opt.equals("-lang")) {
 				lang = args[++i];
+				NeuralConfig.LANGUAGE = lang;
 			} else if(opt.equals("-thread")) {
 				NetworkConfig.NUM_THREADS = Integer.parseInt(args[++i]);
 			} else if(opt.equals("-neural")) {
 				NetworkConfig.USE_NEURAL_FEATURES = true;
-			} else if(opt.equals("-config")) {
-				NeuralConfigReader.readConfig(args[++i]);
 			} else if(opt.equals("-lr")) {
 				learningRate = Double.parseDouble(args[++i]);
 				NeuralConfig.LEARNING_RATE = learningRate;
@@ -125,6 +127,10 @@ public class SemTextExperimenter_Discriminative {
 				pretrainPath = args[++i];
 			} else if(opt.equals("-fix-pretrain")) {
 				fixPretrain = true;
+			} else if(opt.equals("-sequential-touch")) {
+				NetworkConfig.PARALLEL_FEATURE_EXTRACTION = false;
+			} else if(opt.equals("-skip-test-extract")) {
+				extractFromTest = false;
 			} else {
 				System.err.println("Unknown option: " + args[i]);
 				System.exit(1);
@@ -154,6 +160,7 @@ public class SemTextExperimenter_Discriminative {
 		
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
 			System.out.println("NEURAL NET CONFIGURATIONS:");
+			System.out.println("* Language: " + NeuralConfig.LANGUAGE);
 			System.out.println("* Word embedding: " + NeuralConfig.EMBEDDING.get(0));
 			System.out.println("* Embedding size (0 means OneHot): " + NeuralConfig.EMBEDDING_SIZE.get(0));
 			System.out.println("* Fix embedding: " + NeuralConfig.FIX_EMBEDDING);
@@ -202,7 +209,7 @@ public class SemTextExperimenter_Discriminative {
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 //		NetworkConfig.NUM_THREADS = Integer.parseInt(args[0]);
-		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true; // true may change result
+//		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true; // true may change result
 //		NetworkConfig._SEMANTIC_PARSING_NGRAM = Integer.parseInt(args[2]);
 		
 //		int numIterations = 100;//Integer.parseInt(args[3]);

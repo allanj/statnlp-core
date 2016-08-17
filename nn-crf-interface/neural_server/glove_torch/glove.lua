@@ -15,7 +15,7 @@ local GloVe = {}
 GloVe.load = function (self,dim)
     local gloveFile = 'glove_torch/glove.6B.' .. dim .. 'd.t7'
     if not paths.filep(gloveFile) then
-        GloVe.glove = require('bintot7.lua')
+        error('Please run bintot7.lua to preprocess Glove data!')
     else
         GloVe.glove = torch.load(gloveFile)
         print('Done reading GloVe data.')
