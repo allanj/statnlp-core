@@ -820,8 +820,10 @@ public class GlobalNetworkParam implements Serializable{
 		this._size = in.readInt();
 		this._fixedFeaturesSize = in.readInt();
 		this._locked = in.readBoolean();
-		this._nnController = (NNCRFGlobalNetworkParam)in.readObject();
-		//this._nnController.setRemoteNN(new RemoteNN());
+		if (in.available() > 0) {
+			this._nnController = (NNCRFGlobalNetworkParam)in.readObject();
+			//this._nnController.setRemoteNN(new RemoteNN());
+		}
 	}
 	
 }

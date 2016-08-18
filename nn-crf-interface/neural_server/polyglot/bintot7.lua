@@ -32,6 +32,7 @@ local v2wvocab = {}
 local M = torch.FloatTensor(words,size)
 
 --Reading Contents
+isGerman = string.find(opt.binfilename,"-de")
 
 i = 1
 for line in io.lines(opt.binfilename) do
@@ -51,6 +52,12 @@ for line in io.lines(opt.binfilename) do
     strlow = str
     if str ~= "<S>" and str ~= "</S>" and str ~= "<PAD>" and str ~= "<UNK>" then
         strlow = utf8.lower(str)
+    end
+    if isGerman then
+        strlow = utf8.gsub(strlow, "ä", "ae")
+        strlow = utf8.gsub(strlow, "ö", "oe")
+        strlow = utf8.gsub(strlow, "ü", "ue")
+        strlow = utf8.gsub(strlow, "ß", "ss")
     end
     if w2vvocab[strlow] == nil or strlow == str then
     	w2vvocab[strlow] = i

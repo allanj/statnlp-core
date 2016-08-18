@@ -159,7 +159,7 @@ public class SemTextInstanceReader {
 				if(!ids.contains(id)){
 					continue;
 				}
-				String[] words = scan.readLine().substring(3).trim().split("\\s");
+				String[] words = scan.readLine().substring(3).trim().split("\\s+");
 				WordToken[] wTokens = new WordToken[words.length];
 				for(int k = 0; k<words.length; k++){
 					wTokens[k] = new WordToken(words[k]);
