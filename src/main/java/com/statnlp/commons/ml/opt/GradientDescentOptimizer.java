@@ -270,7 +270,11 @@ public class GradientDescentOptimizer implements Optimizer{
 			} else if (currentAdaptiveMethod == AdaptiveMethod.ADAM){ // based on http://cs231n.github.io/neural-networks-3/#anneal
 				prevGradients[k] = adamBeta1 * prevGradients[k] + (1-adamBeta1)*this._g[k];
 				prevSqGradients[k] = adamBeta2 * prevSqGradients[k] + (1-adamBeta2) * Math.pow(this._g[k], 2);
-				this._x[k] -= (this.learningRate / (Math.sqrt(prevSqGradients[k]) + adamEps)) * prevGradients[k];
+				// bias correction
+				double biasCorrection1 = 1 - Math.pow(adamBeta1, this.iterNum+1);
+				double biasCorrection2 = 1 - Math.pow(adamBeta2, this.iterNum+1);
+				double correctedLearningRate = this.learningRate*Math.sqrt(biasCorrection2)/biasCorrection1;
+				this._x[k] -= (correctedLearningRate / (Math.sqrt(prevSqGradients[k]) + adamEps)) * prevGradients[k];
 			}
 		}
 		this.iterNum += 1; 

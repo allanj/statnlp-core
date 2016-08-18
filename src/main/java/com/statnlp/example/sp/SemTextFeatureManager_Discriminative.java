@@ -352,6 +352,9 @@ public class SemTextFeatureManager_Discriminative extends FeatureManager{
 		} else if(target == sent.length()) {
 			return "</S>";
 		} else if(target >= 0 && target < sent.length()) {
+			if(sent.get(target).getName().equals("")) { // for multiple whitespaces..
+				return "<UNK>";
+			}
 			return sent.get(target).getName();
 		} else {
 			return "<PAD>";
