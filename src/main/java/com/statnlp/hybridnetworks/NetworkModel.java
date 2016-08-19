@@ -229,7 +229,8 @@ public abstract class NetworkModel implements Serializable{
 			int epochNum = 0;
 			double epochObj = 0.0;
 			double bestObj = -1e7;
-			for(int it = 0; it<=maxNumIterations; it++){
+			//for(int it = 0; it<=maxNumIterations; it++){
+			for(int it = 0; it<maxNumIterations; it++){
 				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
 				if(NetworkConfig.USE_BATCH_TRAINING){
 					batchInstIds.clear();
@@ -279,23 +280,25 @@ public abstract class NetworkModel implements Serializable{
 				
 				
 				boolean done = true;
-				boolean lastIter = (it == maxNumIterations);
-				if(lastIter){
-					done = this._fm.update(true);
-				} else {
-					done = this._fm.update();
-				}
+//				boolean lastIter = (it == maxNumIterations);
+				boolean lastIter = (it == maxNumIterations-1);
+//				if(lastIter){
+//					done = this._fm.update(true);
+//				} else {
+//					done = this._fm.update();
+//				}
+				done = this._fm.update();
 				time = System.currentTimeMillis() - time;
 				double obj = this._fm.getParam_G().getObj_old();
 				
-				if(it >= maxNumIterations-20) { // save best model for the last 20 iter
-					if(obj > bestObj) {
-						bestObj = obj;
-						if (NetworkConfig.SAVE_MODEL_AFTER_ITER >= 0) {
-							saveModel(modelPrefix+".best", it);
-						}
-					}
-				}
+//				if(it >= maxNumIterations-20) { // save best model for the last 20 iter
+//					if(obj > bestObj) {
+//						bestObj = obj;
+//						if (NetworkConfig.SAVE_MODEL_AFTER_ITER >= 0) {
+//							saveModel(modelPrefix+".best", it);
+//						}
+//					}
+//				}
 				epochObj += obj;
 				
 				print(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0), outstreams);
@@ -320,10 +323,10 @@ public abstract class NetworkModel implements Serializable{
 					print("Training completes. The specified number of iterations ("+it+") has passed.", outstreams);
 					break;
 				}
-				if(done){
-					print("Training completes. No significant progress (<objtol) after "+it+" iterations.", outstreams);
-					break;
-				}
+//				if(done){
+//					print("Training completes. No significant progress (<objtol) after "+it+" iterations.", outstreams);
+//					break;
+//				}
 			}
 		} finally {
 			pool.shutdown();

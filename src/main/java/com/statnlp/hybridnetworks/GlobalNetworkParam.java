@@ -658,6 +658,10 @@ public class GlobalNetworkParam implements Serializable{
     	} catch(ExceptionWithIflag e){
     		throw new NetworkException("Exception with Iflag:"+e.getMessage());
     	}
+    	if(Math.abs(this.getObj()-this.getObj_old())<NetworkConfig.OBJTOL){
+    		done = true;
+    	}
+    	/*
     	if(this._opt.name().contains("LBFGS Optimizer")){
 	    	double diff = this.getObj()-this.getObj_old();
 	    	if(diff >= 0 && diff < NetworkConfig.OBJTOL){
@@ -685,6 +689,7 @@ public class GlobalNetworkParam implements Serializable{
         		this._weights[i] = LBFGS.solution_cache[i];
         	}
     	}
+    	*/
     	
     	if (NetworkConfig.USE_NEURAL_FEATURES) {
     		_nnController.updateNonNeuralAndInternalNeuralWeights(concatWeights);

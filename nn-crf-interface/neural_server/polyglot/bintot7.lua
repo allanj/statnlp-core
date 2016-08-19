@@ -59,7 +59,7 @@ for line in io.lines(opt.binfilename) do
         strlow = utf8.gsub(strlow, "ü", "ue")
         strlow = utf8.gsub(strlow, "ß", "ss")
     end
-    if w2vvocab[strlow] == nil then
+    if w2vvocab[strlow] == nil or strlow == str then
     	w2vvocab[strlow] = i
     	v2wvocab[i] = strlow
     	M[{{i},{}}] = vecrep
