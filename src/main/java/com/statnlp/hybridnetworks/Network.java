@@ -17,6 +17,7 @@
 package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,15 +39,26 @@ public abstract class Network implements Serializable, HyperGraph{
 	
 	private static final long serialVersionUID = -3630379919120581209L;
 	
-	/** The working array for each thread for calculating inside scores */
-	protected static double[][] insideSharedArray = new double[NetworkConfig.NUM_THREADS][]; // TODO: The value of NetworkConfig.NUM_THREADS might change after first access to Network class 
-	/** The working array for each thread for calculating outside scores */
+	/**
+	 * The working array for each thread for calculating inside scores
+	 * This is done to avoid reallocating a new array for each network
+	 */
+	protected static double[][] insideSharedArray = new double[NetworkConfig.NUM_THREADS][]; // TODO: The value of NetworkConfig.NUM_THREADS might change after first access to Network class
+	/**
+	 * The working array for each thread for calculating outside scores
+	 * This is done to avoid reallocating a new array for each network
+	 */
 	protected static double[][] outsideSharedArray = new double[NetworkConfig.NUM_THREADS][];
-	/** The working array for each thread for calculating max scores */
+
+	/**
+	 * The working array for each thread for calculating max scores
+	 * This is done to avoid reallocating a new array for each network
+	 */
 	protected static double[][] maxSharedArray = new double[NetworkConfig.NUM_THREADS][];
-	/** The working array for each thread for calculating cost */
-	protected static double[][] costSharedArray = new double[NetworkConfig.NUM_THREADS][];
-	/** The working array for each thread for storing max paths (for backtracking) */
+	/**
+	 * The working array for each thread for storing max paths (for backtracking)
+	 * This is done to avoid reallocating a new array for each network
+	 */
 	protected static int[][][] maxPathsSharedArrays = new int[NetworkConfig.NUM_THREADS][][];
 	/** The working array for each thread for calculating max k  scores */
 	protected static double[][][] maxKSharedArray = new double[NetworkConfig.NUM_THREADS][][];
@@ -55,6 +67,12 @@ public abstract class Network implements Serializable, HyperGraph{
 	/** The working array for each thread for storing max k  paths (for backtracking) */
 	protected static int[][][][] maxKPathsListBestSharedArrays = new int[NetworkConfig.NUM_THREADS][][][];
 
+	/**
+	 * The working array for each thread for calculating the top-K output
+	 * This is done to avoid reallocating a new array for each network
+	 */
+	@SuppressWarnings("unchecked")
+	protected static ArrayList<Hypothesis>[][] topKSharedArray = new ArrayList[NetworkConfig.NUM_THREADS][];
 	
 	/** The IDs associated with the network (within the scope of the thread). */
 	protected int _networkId;
@@ -157,12 +175,6 @@ public abstract class Network implements Serializable, HyperGraph{
 		if(maxSharedArray[this._threadId] == null || this.countNodes() > maxSharedArray[this._threadId].length)
 			maxSharedArray[this._threadId] = new double[this.countNodes()];
 		return maxSharedArray[this._threadId];
-	}
-
-	protected double[] getCostSharedArray(){
-		if(costSharedArray[this._threadId] == null || this.countNodes() > costSharedArray[this._threadId].length)
-			costSharedArray[this._threadId] = new double[this.countNodes()];
-		return costSharedArray[this._threadId];
 	}
 
 	protected int[][] getMaxPathSharedArray(){
@@ -486,7 +498,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			return;
 		}
 		
-		double inside = 0.0;
+		double inside = Double.NEGATIVE_INFINITY;
 		int[][] childrenList_k = this.getChildren(k);
 		
 		// If this node has no child edge, assume there is one edge with no child node
