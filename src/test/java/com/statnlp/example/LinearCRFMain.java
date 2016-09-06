@@ -255,7 +255,7 @@ public class LinearCRFMain {
 			}
 			modelTextWriter.close();
 		}
-
+		
 		LinearCRFInstance[] testInstances = readCoNLLData(testPath, true, false);
 //		testInstances = Arrays.copyOf(testInstances, 1);
 		int k = 8;
