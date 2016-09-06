@@ -428,5 +428,12 @@ public abstract class NetworkModel implements Serializable{
 		return results;
 	}
 	
+	public Instance[] decodeTopK(Instance[] allInstances, int k){
+		return decodeTopK(allInstances, k, false);
+	}
+	
+	public Instance[] decodeTopK(Instance[] allInstances, int k, boolean cacheFeatures){
+		return allInstances;
+	}
 	
 }
