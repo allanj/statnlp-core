@@ -25,6 +25,7 @@ public abstract class OptimizerFactory implements Serializable {
 	
 	private static final long serialVersionUID = 70815268952763513L;
 	public static final double DEFAULT_LEARNING_RATE = 1e-3;
+	public static final double DEFAULT_LEARNING_RATE_DECAY = 0.9;
 	public static final double DEFAULT_ADADELTA_PHI = 0.95;
 	public static final double DEFAULT_ADADELTA_EPS = 1e-7;
 	public static final double DEFAULT_ADADELTA_GRAD_DECAY = 0.75;
@@ -288,7 +289,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingRMSProp(){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.RMSPROP, DEFAULT_LEARNING_RATE, 0.0, 0.0, 0.0, DEFAULT_RMSPROP_DECAY, DEFAULT_RMSPROP_EPS, 0.0, 0.0, 0.0);
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.RMSPROP, DEFAULT_LEARNING_RATE, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, DEFAULT_RMSPROP_DECAY, DEFAULT_RMSPROP_EPS, 0.0, 0.0, 0.0);
 	}
 	
 	/**
@@ -301,7 +302,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingRMSProp(double learningRate, double rmsPropDecay, double rmsPropEps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.RMSPROP, learningRate, 0.0, 0.0, 0.0, rmsPropDecay, rmsPropEps, 0.0, 0.0, 0.0);
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.RMSPROP, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, rmsPropDecay, rmsPropEps, 0.0, 0.0, 0.0);
 	}
 	
 	/**
@@ -317,7 +318,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaM(){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM, DEFAULT_LEARNING_RATE, 0.0, 0.0, 0.0, 0.0, 0.0, DEFAULT_ADAM_BETA1, DEFAULT_ADAM_BETA2, DEFAULT_ADAM_EPS);
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM, DEFAULT_LEARNING_RATE, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, DEFAULT_ADAM_BETA1, DEFAULT_ADAM_BETA2, DEFAULT_ADAM_EPS);
 	}
 	
 	/**
@@ -331,7 +332,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaM(double learningRate, double adamBeta1, double adamBeta2, double adamEps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM, learningRate, 0.0, 0.0, 0.0, 0.0, 0.0, adamBeta1, adamBeta2, adamEps);
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, adamBeta1, adamBeta2, adamEps);
 	}
 	
 	public abstract Optimizer create(int numWeights);
