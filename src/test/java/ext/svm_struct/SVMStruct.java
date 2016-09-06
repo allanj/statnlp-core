@@ -94,7 +94,17 @@ public class SVMStruct {
 				throw new IllegalArgumentException("Unrecognized argument: "+args[argIndex]);
 			}
 		}
+		String[] argsToFeatureManager = new String[args.length-argIndex];
+		for(int i=argIndex; i<args.length; i++){
+			argsToFeatureManager[i-argIndex] = args[i];
+		}
 		
+		runSVMStruct(trainFilename, testFilename, modelFilename, resultFilename, logFilename, svmStructDir, c, argsToFeatureManager);
+	}
+
+	private static void runSVMStruct(String trainFilename, String testFilename, String modelFilename,
+			String resultFilename, String logFilename, String svmStructDir, double c, String[] argsToFeatureManager)
+					throws IOException, FileNotFoundException, InterruptedException, NumberFormatException {
 		ProcessBuilder processBuilder;
 		PrintStream outstream = null;
 		
@@ -114,10 +124,6 @@ public class SVMStruct {
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.MODEL_TYPE = ModelType.CRF;
 		
-		String[] argsToFeatureManager = new String[args.length-argIndex];
-		for(int i=argIndex; i<args.length; i++){
-			argsToFeatureManager[i-argIndex] = args[i];
-		}
 		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(new GlobalNetworkParam(), argsToFeatureManager);
 		
 		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler();
