@@ -204,6 +204,42 @@ public class RemoteNN {
 		
 	}
 	
+	public void saveNetwork(String prefix) {
+		try {
+			MessageBufferPacker packer = MessagePack.newDefaultBufferPacker();
+			packer.packMapHeader(2);
+			packer.packString("cmd").packString("save");
+			packer.packString("savePrefix").packString(prefix);
+			packer.close();
+			requester.send(packer.toByteArray(), 0);
+			
+			byte[] reply = requester.recv(0);
+			if (DEBUG) {
+				System.out.println("Save returns " + new String(reply));
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void loadNetwork(String prefix) {
+		try {
+			MessageBufferPacker packer = MessagePack.newDefaultBufferPacker();
+			packer.packMapHeader(2);
+			packer.packString("cmd").packString("load");
+			packer.packString("savePrefix").packString(prefix);
+			packer.close();
+			requester.send(packer.toByteArray(), 0);
+			
+			byte[] reply = requester.recv(0);
+			if (DEBUG) {
+				System.out.println("Save returns " + new String(reply));
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	public void cleanUp() {
 		requester.close();
 		context.term();

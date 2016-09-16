@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Scanner;
 
 /**
@@ -176,7 +177,7 @@ public class GeoqueryEvaluator {
 		dataOut.println("]).");
 		dataOut.println(":-halt.");
 		dataOut.close();
-		
+
 		// run Geoquery evaluation scripts on SICSTUS
 		try {
 			String cmd = execFile+" -l "+dataFile.getPath();
@@ -196,13 +197,16 @@ public class GeoqueryEvaluator {
 		} catch (InterruptedException e) {
 			return isCorrect;
 		}
-		
 		// read output of the evaluation scripts
 		TokenReader in = new TokenReader(new BufferedReader(new FileReader(outputFile)));
 		String[] line;
-		while ((line = in.readLine()) != null)
+		while ((line = in.readLine()) != null) {
+			for(int k = 0; k < 3; k++) {
+				line[k] = line[k].replaceAll("'", "");
+			}
 			if (line[2].equals("y"))
 				isCorrect[Integer.parseInt(line[0])][Integer.parseInt(line[1])] = true;
+		}
 		in.close();
 		return isCorrect;
 		

@@ -39,6 +39,7 @@ import com.statnlp.commons.types.Instance;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 
 public abstract class NetworkModel implements Serializable{
+	private static boolean printDecodeMessage = true;
 	
 	private static final Random RANDOM = new Random(NetworkConfig.RANDOM_BATCH_SEED);
 
@@ -92,7 +93,9 @@ public abstract class NetworkModel implements Serializable{
 	
 	public Instance[][] splitInstancesForTest() {
 		
-		System.err.println("#instances="+this._allInstances.length);
+		if (printDecodeMessage) {
+			System.err.println("#instances="+this._allInstances.length);
+		}
 		
 		Instance[][] insts = new Instance[this._numThreads][];
 
@@ -116,7 +119,9 @@ public abstract class NetworkModel implements Serializable{
 				Instance inst = insts_list.get(threadId).get(i);
 				insts[threadId][i] = inst;
 			}
-			print("Thread "+threadId+" has "+insts[threadId].length+" instances.", outstreams);
+			if (printDecodeMessage) {
+				print("Thread "+threadId+" has "+insts[threadId].length+" instances.", outstreams);
+			}
 		}
 		
 		return insts;
@@ -278,6 +283,9 @@ public abstract class NetworkModel implements Serializable{
 					}
 				}
 				
+//				for(int ii = 0; ii < this._fm._param_g._size; ii++) {
+//					System.out.println(Arrays.toString(this._fm._param_g.getFeatureRep(ii)) + ": "+this._fm._param_g.getWeight(ii));
+//				}
 				
 				boolean done = true;
 //				boolean lastIter = (it == maxNumIterations);
@@ -307,15 +315,21 @@ public abstract class NetworkModel implements Serializable{
 				}
 				obj_old = obj;
 
-				if (NetworkConfig.USE_NEURAL_FEATURES) {
-					if (lastIter || done) {
+				if (lastIter || done) {
+					if (NetworkConfig.USE_NEURAL_FEATURES) {
 						nnController.forwardNetwork(false);
+					}
+					if (this._fm.getParam_G().isFixedPretrain()) {
+						this._fm.getParam_G().copyPretrainWeights();
 					}
 				}
 				
 				if (!modelPrefix.equals("") && (lastIter || done || it > 0 && it % NetworkConfig.SAVE_MODEL_AFTER_ITER == 0)) {
 					if (NetworkConfig.SAVE_MODEL_AFTER_ITER >= 0) {
 						saveModel(modelPrefix, it);
+						if (NetworkConfig.USE_NEURAL_FEATURES) {
+							nnController.saveNetwork(modelPrefix);
+						}
 					}
 				}
 				
@@ -323,14 +337,19 @@ public abstract class NetworkModel implements Serializable{
 					print("Training completes. The specified number of iterations ("+it+") has passed.", outstreams);
 					break;
 				}
-//				if(done){
-//					print("Training completes. No significant progress (<objtol) after "+it+" iterations.", outstreams);
-//					break;
-//				}
+				if(done){
+					print("Training completes. No significant progress (<objtol) after "+it+" iterations.", outstreams);
+					break;
+				}
 			}
 		} finally {
 			pool.shutdown();
 		}
+	}
+	
+	public void loadPretrainNN(String prefix) {
+		nnController.loadNetwork(prefix);
+		nnController.forwardNetwork(false);
 	}
 
 	private void touch(Instance[][] insts, boolean keepExisting) throws InterruptedException {
@@ -400,7 +419,10 @@ public abstract class NetworkModel implements Serializable{
 //		}
 		
 		this._numThreads = NetworkConfig.NUM_THREADS;
-		System.err.println("#threads:"+this._numThreads);
+		
+		if (printDecodeMessage) {
+			System.err.println("#threads:"+this._numThreads);
+		}
 		
 		Instance[] results = new Instance[allInstances.length];
 		
@@ -423,7 +445,9 @@ public abstract class NetworkModel implements Serializable{
 			}
 		}
 		
-		System.err.println("Okay. Decoding started.");
+		if (printDecodeMessage) {
+			System.err.println("Okay. Decoding started.");
+		}
 		
 		long time = System.currentTimeMillis();
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
@@ -433,9 +457,11 @@ public abstract class NetworkModel implements Serializable{
 			this._decoders[threadId].join();
 		}
 		
-		System.err.println("Okay. Decoding done.");
-		time = System.currentTimeMillis() - time;
-		System.err.println("Overall decoding time = "+ time/1000.0 +" secs.");
+		if (printDecodeMessage) {
+			System.err.println("Okay. Decoding done.");
+			time = System.currentTimeMillis() - time;
+			System.err.println("Overall decoding time = "+ time/1000.0 +" secs.");
+		}
 		
 		int k = 0;
 		for(int threadId = 0; threadId<this._numThreads; threadId++){

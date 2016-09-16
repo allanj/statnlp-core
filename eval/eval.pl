@@ -1,5 +1,8 @@
 %:- ensure_loaded(geoquery).
 
+:- style_check(-singleton).
+:- style_check(-discontiguous).
+
 eval([]).
 eval([I,J,F1,F2|L]) :-
    execute_funql_query(F1, A1),

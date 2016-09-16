@@ -639,6 +639,7 @@ public class GlobalNetworkParam implements Serializable{
 				concatCounts = new double[concatDim];
 			}
 			_nnController.getNonNeuralAndInternalNeuralWeights(concatWeights, concatCounts);
+			
 			this._opt.setVariables(concatWeights);
 			this._opt.setGradients(concatCounts);
 		}else{
@@ -658,11 +659,8 @@ public class GlobalNetworkParam implements Serializable{
     	} catch(ExceptionWithIflag e){
     		throw new NetworkException("Exception with Iflag:"+e.getMessage());
     	}
-    	if(Math.abs(this.getObj()-this.getObj_old())<NetworkConfig.OBJTOL){
-    		done = true;
-    	}
-    	/*
-    	if(this._opt.name().contains("LBFGS Optimizer")){
+    	
+    	if(NetworkConfig.RATIO_STOP_CRIT && this._opt.name().contains("LBFGS Optimizer")){
 	    	double diff = this.getObj()-this.getObj_old();
 	    	if(diff >= 0 && diff < NetworkConfig.OBJTOL){
 	    		done = true;
@@ -676,6 +674,10 @@ public class GlobalNetworkParam implements Serializable{
 	    	if(this.smallChangeCount == 3){
 	    		done = true;
 	    	}
+    	} else {
+    		if(Math.abs(this.getObj()-this.getObj_old())<NetworkConfig.OBJTOL){
+        		done = true;
+        	}
     	}
     	
     	if(done && this._opt.name().contains("LBFGS Optimizer") && !NetworkConfig.USE_NEURAL_FEATURES){
@@ -689,7 +691,6 @@ public class GlobalNetworkParam implements Serializable{
         		this._weights[i] = LBFGS.solution_cache[i];
         	}
     	}
-    	*/
     	
     	if (NetworkConfig.USE_NEURAL_FEATURES) {
     		_nnController.updateNonNeuralAndInternalNeuralWeights(concatWeights);
@@ -793,8 +794,19 @@ public class GlobalNetworkParam implements Serializable{
 		if (_pretrainG != null) {
 			double[] pretrainWeights = _pretrainG.getWeights();
 			for(int i = 0; i < pretrainWeights.length; i++) {
-				String[] featRep = _pretrainG.getFeatureRep(i); 
-				int featIdx = _featureIntMap.get(featRep[0]).get(featRep[1]).get(featRep[2]);
+				String[] featRep = _pretrainG.getFeatureRep(i);
+				int featIdx = -1;
+				try {
+					featIdx = _featureIntMap.get(featRep[0]).get(featRep[1]).get(featRep[2]);
+				} catch (NullPointerException ex) {
+					continue;
+				}
+				if(featRep[0].equals("test")) {
+					if(pretrainWeights[i] != 0.0) {
+						System.err.println("test feature must have zero weights!");
+						System.exit(1);
+					}
+				}
 				_weights[featIdx] = pretrainWeights[i];
 				_counts[featIdx] = 0;
 			}

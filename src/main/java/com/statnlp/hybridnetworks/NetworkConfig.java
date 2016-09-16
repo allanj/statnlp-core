@@ -208,4 +208,5 @@ public class NetworkConfig {
 	
 	public static boolean REPLACE_ORIGINAL_EMISSION = false;
 	
+	public static boolean RATIO_STOP_CRIT = false;
 }

@@ -1,0 +1,4 @@
+NLTK's WordNet was modified to include latest OMW version for deu and swe.
+- /Users/nlp/nltk_data/corpora/omw/{deu,swe}
+- /Users/nlp/anaconda/lib/python2.7/site-packages/nltk/corpus/__init__.py
+- /Users/nlp/anaconda/lib/python2.7/site-packages/nltk/corpus/wordnet.py

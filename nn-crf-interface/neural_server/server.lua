@@ -51,6 +51,7 @@ local inputLayer
 local mlp -- our neural net
 local params, gradParams -- mlp's params
 local x, fixEmbedding -- input to nn, which is fixed
+local wordList, word2idx
 local numInput
 local outputDim
 local doOptimization, optimizer, optimState
@@ -134,6 +135,11 @@ function init_MLP(data)
     -- what to forward
     x = prepare_input(data.vocab, data.numInputList, data.embSizeList)
     fixEmbedding = data.fixEmbedding
+    wordList = data.wordList
+    word2idx = {}
+    for i=1,#wordList do
+        word2idx[wordList[i]] = i
+    end
     numInput = x[1]:size(1)
 
     -- input layer
@@ -312,6 +318,32 @@ function deserialize(data, row, col)
     return ret
 end
 
+function save_model(prefix)
+    local obj = {}
+    obj["mlp"] = mlp
+    obj["word2idx"] = word2idx
+    torch.save("model/" .. prefix .. ".t7",obj)
+    -- torch.save("model/" .. prefix .. ".mlp.t7",mlp)
+    -- torch.save("model/" .. prefix .. ".vocab.t7",word2idx)
+end
+
+function load_model(prefix)
+    local saved_obj = torch.load("model/" .. prefix .. ".t7")
+    local saved_mlp = saved_obj.mlp
+    local saved_word2idx = saved_obj.word2idx
+    local saved_lt = saved_mlp:get(1):get(1):get(1)
+    local orig_lt = mlp:get(1):get(1):get(1)
+    for i=1,#wordList do
+        saved_word_idx = saved_word2idx[wordList[i]]
+        if saved_word_idx ~= nil then
+            orig_lt.weight[i]:copy(saved_lt.weight[saved_word_idx])
+        end
+    end
+    saved_lt.weight = orig_lt.weight
+    mlp = saved_mlp
+    mlp:get(1):get(1):get(2):resetSize(numInput,-1)
+end
+
 function prepare_input(vocab, numInputList, embSizeList)
     local result = {}
     local startIdx = 0
@@ -369,6 +401,18 @@ while true do
             end
             time = timer:time().real
             print(string.format("Backward took %.4fs", time))
+        elseif request.cmd == "save" then
+            local timer = torch.Timer()
+            save_model(request.savePrefix)
+            time = timer:time().real
+            print(string.format("Saving model took %.4fs", time))
+            ret = 1
+        elseif request.cmd == "load" then
+            local timer = torch.Timer()
+            load_model(request.savePrefix)
+            time = timer:time().real
+            print(string.format("Loading model took %.4fs", time))
+            ret = 1
         end
         -- ret = json.encode (ret, { indent = true })
         ret = mp.pack(ret)

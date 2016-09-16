@@ -3,7 +3,7 @@ package com.statnlp.neural;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
@@ -16,7 +16,7 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 	private GlobalNetworkParam param_G;
 	
 	// "input" and "output" vocab
-	private HashSet<String> inputSet = new HashSet<String>();
+	private LinkedHashSet<String> inputSet = new LinkedHashSet<String>();
 	private HashMap<Integer, String> idx2strOutput = new HashMap<Integer, String>();
 	private ArrayList<HashMap<String, Integer>> fieldMapList = new ArrayList<HashMap<String, Integer>>();
 	
@@ -96,7 +96,6 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 	
 	@Override
 	public void updateExternalNeuralWeights(double[] weights) {
-		//System.out.println(weights.length+" ||| "+externalWeightIndex.length);
 		for (int i = 0; i < externalWeightIndex.length; i++) {
 			if (externalWeightIndex[i] != -1) {
 				param_G.overRideWeight(externalWeightIndex[i], weights[i]);
