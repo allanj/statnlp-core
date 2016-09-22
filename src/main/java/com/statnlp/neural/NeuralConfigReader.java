@@ -18,6 +18,8 @@ public class NeuralConfigReader {
 				NeuralConfig.NEURAL_SERVER_ADDRESS = info[1];
 			} else if(info[0].equals("serverPort")) {
 				NeuralConfig.NEURAL_SERVER_PORT= Integer.parseInt(info[1]);
+			} else if(info[0].equals("lang")) {
+				NeuralConfig.LANGUAGE = info[1];
 			} else if(info[0].equals("wordEmbedding")) {
 				NeuralConfig.EMBEDDING = new ArrayList<String>();
 				for (int i = 1; i < info.length; i++) {
