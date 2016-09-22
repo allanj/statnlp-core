@@ -149,5 +149,5 @@ public class EReader {
 			//TODO: do nothing, since by default it's iob encoding.
 		}
 	}
-	
+ 	
 }
