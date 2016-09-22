@@ -187,6 +187,10 @@ public class NetworkConfig {
 	public static boolean OPTIMIZE_NEURAL = false;   //false means not update the neural network parameters in CRF.
 	/** false: the feature is the word itself. true: word is the indexed word **/
 	public static boolean IS_INDEXED_NEURAL_FEATURES = false;
+	/** Randomly choose the batch at every iteration. (false may give better result)**/
+	public static boolean RANDOM_BATCH = false;
+	
+	public static String NEURAL_FEATURE_TYPE = "neural";
 	
 	
 }
