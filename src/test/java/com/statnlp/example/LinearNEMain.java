@@ -48,7 +48,7 @@ public class LinearNEMain {
 		List<ECRFInstance> testInstances = null;
 		
 		
-		trainInstances = EReader.readData(trainPath,true,trainNumber, "IOBES");
+		trainInstances = EReader.readData(trainPath,true,trainNumber, "IOB");
 		testInstances = EReader.readData(testFile,false,testNumber,"IOB");
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
@@ -56,20 +56,35 @@ public class LinearNEMain {
 		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
 		
 		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory());
+		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 			NeuralConfigReader.readConfig(neural_config);
-			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(adagrad_learningRate));
+			//gnp =  new GlobalNetworkParam(OptimizerFactory.);
 		}
-		
 		
 		System.err.println("[Info] "+Entity.Entities.size()+" entities: "+Entity.Entities.toString());
 		
+		ECRFInstance all_instances[] = new ECRFInstance[trainInstances.size()+testInstances.size()];
+        int i = 0;
+        for(; i<trainInstances.size(); i++) {
+            all_instances[i] = trainInstances.get(i);
+        }
+        int lastId = all_instances[i-1].getInstanceId();
+        for(int j = 0; j<testInstances.size(); j++, i++) {
+            all_instances[i] = testInstances.get(j);
+            all_instances[i].setInstanceId(lastId+j+1);
+            all_instances[i].setUnlabeled();
+        }
 		
 		ECRFFeatureManager fa = new ECRFFeatureManager(gnp);
 		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler();
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
 		ECRFInstance[] ecrfs = trainInstances.toArray(new ECRFInstance[trainInstances.size()]);
-		model.train(ecrfs, numIteration);
+		if(NetworkConfig.USE_NEURAL_FEATURES){
+			model.train(all_instances, trainInstances.size(), numIteration);
+		}else{
+			model.train(ecrfs, numIteration);
+		}
 		Instance[] predictions = model.decode(testInstances.toArray(new ECRFInstance[testInstances.size()]));
 		ECRFEval.evalNER(predictions, nerOut);
 	}
@@ -96,8 +111,8 @@ public class LinearNEMain {
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;
 					case "-neural": if(args[i+1].equals("true")){ 
 											NetworkConfig.USE_NEURAL_FEATURES = true; 
-											NetworkConfig.OPTIMIZE_NEURAL = true;  //not optimize in CRF..
-											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
+											NetworkConfig.OPTIMIZE_NEURAL = true;  //false: optimize in neural network
+											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = true; //only used when using the senna embedding.
 										}
 									break;
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;
