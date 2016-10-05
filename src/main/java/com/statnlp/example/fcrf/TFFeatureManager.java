@@ -24,7 +24,7 @@ public class TFFeatureManager extends FeatureManager {
 	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k) {
 		// TODO Auto-generated method stub
 		TFInstance inst = ((TFInstance)network.getInstance());
-		int instanceId = inst.getInstanceId();
+		//int instanceId = inst.getInstanceId();
 		Sentence sent = inst.getInput();
 		long node = network.getNode(parent_k);
 		int[] nodeArr = NetworkIDMapper.toHybridNodeArray(node);
@@ -91,10 +91,7 @@ public class TFFeatureManager extends FeatureManager {
 			String rw = pos<sent.length()-1? sent.get(pos+1).getName():"END";
 			String r2w = rw.equals("END")? "END1":pos==(sent.length()-2)? "END": sent.get(pos+2).getName();
 			String r3w = r2w.equals("END1")?"END2":pos==(sent.length()-2)? "END1":pos==(sent.length()-3)?"END":sent.get(pos+3).getName();
-			String lshape = pos>0? shape(sent.get(pos-1).getName()):"STR-SHA";
-			String rshape = pos<sent.length()-1? shape(sent.get(pos+1).getName()):"END-SHA";
 			String currWord = sent.get(pos).getName();
-			String currShape = shape(sent.get(pos).getName());
 			String currEn = Entity.get(eId).getForm();
 			String prevEntity = childPos<0? "O":Entity.get(childEId).getForm();
 			
@@ -105,7 +102,6 @@ public class TFFeatureManager extends FeatureManager {
 			featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ERW",	currEn+":"+rw));
 			featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ER2W",	currEn+":"+r2w));
 			featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ER3W",	currEn+":"+r3w));
-			featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "E-WS",  	currEn+":"+currShape));
 //			featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "E-LWS",	currEn+":"+lshape));
 //			featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "E-RWS",	currEn+":"+rshape));
 			
@@ -128,7 +124,6 @@ public class TFFeatureManager extends FeatureManager {
 			featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "currW-prevE-currE",currWord+":"+prevEntity+":"+currEn));
 			featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "prevW-prevE-currE",lw+":"+prevEntity+":"+currEn));
 			featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "nextW-prevE-currE",rw+":"+prevEntity+":"+currEn));
-			featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "currS-prevE-currE",currShape+":"+prevEntity+":"+currEn));
 //			featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "prevS-prevE-currE",lshape+":"+prevEntity+":"+currEn));
 //			featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "nextS-prevE-currE",rshape+":"+prevEntity+":"+currEn));
 		}
@@ -151,24 +146,24 @@ public class TFFeatureManager extends FeatureManager {
 		String nextShape = tId==(Entity.ENTS.size()+Tag.TAGS.size())? "END1-SHA": pos==(sent.length()-1)? "END-SHA": shape(sent.get(pos+1).getName());
 		
 		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-currW", currTag+":"+currWord));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-prevW", currTag+":"+prevWord));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-p2W", currTag+":"+p2w));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-p3W", currTag+":"+p3w));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-nextW", currTag+":"+nextWord));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-n2w", currTag+":"+n2w));
-//		if(n3w!=null)
-//			featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-n3w", currTag+":"+n3w));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-currS", currTag+":"+currShape));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-prevS", currTag+":"+prevShape));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-nextS", currTag+":"+nextShape));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-prevW", currTag+":"+prevWord));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-p2W", currTag+":"+p2w));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-p3W", currTag+":"+p3w));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-nextW", currTag+":"+nextWord));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-n2w", currTag+":"+n2w));
+		if(n3w!=null)
+			featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-n3w", currTag+":"+n3w));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-currS", currTag+":"+currShape));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-prevS", currTag+":"+prevShape));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "currT-nextS", currTag+":"+nextShape));
 		
 		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT",prevTag+":"+currTag));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT-currW",prevTag+":"+currTag+":"+currWord));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT-prevW",prevTag+":"+currTag+":"+prevWord));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT-nextW",prevTag+":"+currTag+":"+nextWord));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT-currS",prevTag+":"+currTag+":"+currShape));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT-prevS",prevTag+":"+currTag+":"+prevShape));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT-nextS",prevTag+":"+currTag+":"+nextShape));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT-currW",prevTag+":"+currTag+":"+currWord));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT-prevW",prevTag+":"+currTag+":"+prevWord));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT-nextW",prevTag+":"+currTag+":"+nextWord));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT-currS",prevTag+":"+currTag+":"+currShape));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT-prevS",prevTag+":"+currTag+":"+prevShape));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.tagging.name(), "prevT-currT-nextS",prevTag+":"+currTag+":"+nextShape));
 	}
 	
 	private void addJointFeatures(ArrayList<Integer> featureList, Network network, Sentence sent, int pos, int paId, int[] children_k, boolean paTchildE){
@@ -189,12 +184,12 @@ public class TFFeatureManager extends FeatureManager {
 			String currEn = paTchildE? Entity.get(k_child[2]).getForm():Entity.get(paId).getForm();
 			featureList.add(this._param_g.toFeature(network,FEATYPE.joint.name(), "Tag-Entity", currTag+":"+currEn));
 			featureList.add(this._param_g.toFeature(network,FEATYPE.joint.name(), "Tag-Entity-Word", currTag+":"+currEn+":"+currWord));
-//			featureList.add(this._param_g.toFeature(network,FEATYPE.joint.name(), "Tag-Entity-prevW", currTag+":"+currEn+":"+prevWord));
-//			featureList.add(this._param_g.toFeature(network,FEATYPE.joint.name(), "Tag-Entity-nextW", currTag+":"+currEn+":"+nextWord));
-//			
-//			featureList.add(this._param_g.toFeature(network,FEATYPE.joint.name(), "Tag-Entity-WS", currTag+":"+currEn+":"+currShape));
-//			featureList.add(this._param_g.toFeature(network,FEATYPE.joint.name(), "Tag-Entity-prevWS", currTag+":"+currEn+":"+prevShape));
-//			featureList.add(this._param_g.toFeature(network,FEATYPE.joint.name(), "Tag-Entity-nextWS", currTag+":"+currEn+":"+nextShape));
+			featureList.add(this._param_g.toFeature(network,FEATYPE.joint.name(), "Tag-Entity-prevW", currTag+":"+currEn+":"+prevWord));
+			featureList.add(this._param_g.toFeature(network,FEATYPE.joint.name(), "Tag-Entity-nextW", currTag+":"+currEn+":"+nextWord));
+			
+			featureList.add(this._param_g.toFeature(network,FEATYPE.joint.name(), "Tag-Entity-WS", currTag+":"+currEn+":"+currShape));
+			featureList.add(this._param_g.toFeature(network,FEATYPE.joint.name(), "Tag-Entity-prevWS", currTag+":"+currEn+":"+prevShape));
+			featureList.add(this._param_g.toFeature(network,FEATYPE.joint.name(), "Tag-Entity-nextWS", currTag+":"+currEn+":"+nextShape));
 		}
 		
 	}

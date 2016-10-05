@@ -38,7 +38,7 @@ public class GRMMFeatureManager extends FeatureManager {
 		
 		int eId = nodeArr[2];
 		//System.err.println(Arrays.toString(nodeArr));
-		int[] child = NetworkIDMapper.toHybridNodeArray(network.getNode(children_k[0]));
+		//int[] child = NetworkIDMapper.toHybridNodeArray(network.getNode(children_k[0]));
 		
 		//int childPos = child[0]-1;
 		
