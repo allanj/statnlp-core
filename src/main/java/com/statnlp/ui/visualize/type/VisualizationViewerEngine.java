@@ -187,7 +187,7 @@ public abstract class VisualizationViewerEngine {
 		
 		initNodeCoordinate(vg);
 		
-		DefaultModalGraphMouse gm = new DefaultModalGraphMouse();
+		DefaultModalGraphMouse<VNode, VLink> gm = new DefaultModalGraphMouse<VNode, VLink>();
 		// gm.setMode(ModalGraphMouse.Mode.TRANSFORMING);
 		gm.add(new TranslatingGraphMousePlugin(MouseEvent.BUTTON1_MASK));
 		gm.add(new ScalingGraphMousePlugin(new CrossoverScalingControl(), 0, 1.1f, 0.9f));
@@ -337,7 +337,7 @@ public abstract class VisualizationViewerEngine {
 	};
 
 	public static Transformer<VLink, Stroke> edgeStroke = new Transformer<VLink, Stroke>() {
-		float dash[] = { 10.0f };
+//		float dash[] = { 10.0f };
 
 		public Stroke transform(VLink i) {
 			return new BasicStroke(0.6f);
