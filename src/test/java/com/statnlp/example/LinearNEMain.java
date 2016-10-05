@@ -48,7 +48,7 @@ public class LinearNEMain {
 		List<ECRFInstance> testInstances = null;
 		
 		
-		trainInstances = EReader.readData(trainPath,true,trainNumber, "IOB");
+		trainInstances = EReader.readData(trainPath,true,trainNumber, "IOBES");
 		testInstances = EReader.readData(testFile,false,testNumber,"IOB");
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
