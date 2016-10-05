@@ -16,6 +16,7 @@
  */
 package com.statnlp.hybridnetworks;
 
+
 public class NetworkConfig {
 	
 	/**
@@ -193,4 +194,18 @@ public class NetworkConfig {
 	public static String NEURAL_FEATURE_TYPE = "neural";
 	
 	
+	
+	public static enum InferenceType {
+		MEAN_FIELD,
+		FORWARD_BACKWARD;
+		private InferenceType(){
+			
+		}
+	}
+	
+	public static InferenceType INFERENCE = InferenceType.FORWARD_BACKWARD;
+	
+	/**For mean-field inference..***/
+	public static int MF_ROUND = 10;
+	public static int NUM_STRUCTS = 2;
 }

@@ -17,6 +17,7 @@
 package com.statnlp.hybridnetworks;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
 
 public class LocalNetworkDecoderThread extends Thread{
 	
@@ -82,10 +83,36 @@ public class LocalNetworkDecoderThread extends Thread{
 		if(!_cacheParam){
 			this._param.disableCache();
 		}
-		network.max();
-		if(NetworkConfig.MAX_MARGINAL_DECODING){
+		if(NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD){
+			for(int it=0;it<NetworkConfig.MF_ROUND;it++){
+				for(int curr=0; curr<NetworkConfig.NUM_STRUCTS; curr++){
+					for(int other=0; other<NetworkConfig.NUM_STRUCTS; other++){
+						if(curr==other) continue;
+						network.removeKthStructure(other);
+					}
+					network.inference();
+					network.saveKthStructureScore(curr);
+				}
+				network.renewCurrMarginals();
+			}
+			Instance inst = null;
+			for(int curr=0; curr<NetworkConfig.NUM_STRUCTS; curr++){
+				for(int other=0; other<NetworkConfig.NUM_STRUCTS; other++){
+					if(curr==other) continue;
+					network.removeKthStructure(other);
+				}
+				network.max();
+				network.setStructure(curr);
+				inst = this._compiler.decompile(network);
+			}
+			return inst;
+		}else if(NetworkConfig.MAX_MARGINAL_DECODING){
 			network.marginal();
+		}else{
+			network.max();
+			return this._compiler.decompile(network);
 		}
+		
 //		System.err.println("max="+network.getMax());
 		return this._compiler.decompile(network);
 	}
