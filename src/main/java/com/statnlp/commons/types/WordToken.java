@@ -11,6 +11,8 @@ public class WordToken extends InputToken{
 	private String entity;
 	private String depLabel;
 	
+	private String[] fs; //feature string, useless for general purpose.
+	
 	public WordToken(String name) {
 		super(name);
 		this.tag = "";
@@ -107,5 +109,6 @@ public class WordToken extends InputToken{
 		return "WORD:"+this._name;
 	}
 	
-	
+	public String[] getFS(){return this.fs;}
+	public void setFS(String[] fs){this.fs = fs;}
 }
