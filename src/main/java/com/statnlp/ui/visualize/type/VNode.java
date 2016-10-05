@@ -157,6 +157,7 @@ public class VNode{
 		if (hyperlinks.isEmpty())
 		{
 			HyperLink hyperlink = new HyperLink(this);
+			hyperlinks.add(hyperlink);
 		}
 		
 		return hyperlinks.get(0);
@@ -217,6 +218,9 @@ public class VNode{
 				break;
 			case X:
 				return new int[]{0, 0, 0, 0, 0};
+			case UNKNOWN:
+			case Edge:
+				break;
 			}
 		}
 		int hybridType = type.ordinal();
@@ -252,6 +256,9 @@ public class VNode{
 		case X:
 			this.content = "";
 			break;
+		case UNKNOWN:
+		case Edge:
+			break;
 		}
 		
 		
@@ -284,6 +291,9 @@ public class VNode{
 
 		case X:
 			return "";
+		case UNKNOWN:
+		case Edge:
+			break;
 		}
 		
 		return "<UNKNOWN TYPE>";
@@ -295,7 +305,7 @@ public class VNode{
 		if (picked)
 			return Color.PINK;
 		
-		switch (this.type) {
+		switch (type) {
 		case ROOT:
 			return Color.RED;
 		case A:
@@ -310,6 +320,8 @@ public class VNode{
 			return Color.LIGHT_GRAY;
 		case UNKNOWN:
 			return Color.WHITE;
+		case Edge:
+			break;
 		}
 
 		return Color.WHITE;
