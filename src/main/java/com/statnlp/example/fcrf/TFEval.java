@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import com.statnlp.commons.io.RAWF;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Sentence;
-import com.statnlp.example.fcrf.utils.DPConfig;
 
 public class TFEval {
 
@@ -40,7 +39,7 @@ public class TFEval {
 		try{
 			System.err.println("perl data/semeval10t1/conlleval.pl < "+outputFile);
 			ProcessBuilder pb = null;
-			if(DPConfig.windows){
+			if(TFConfig.windows){
 				pb = new ProcessBuilder("D:/Perl64/bin/perl","E:/Framework/data/semeval10t1/conlleval.pl"); 
 			}else{
 				pb = new ProcessBuilder("data/conlleval.pl"); 

@@ -3,7 +3,6 @@ package com.statnlp.example;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 
@@ -16,8 +15,6 @@ import com.statnlp.example.fcrf.TFInstance;
 import com.statnlp.example.fcrf.TFNetworkCompiler;
 import com.statnlp.example.fcrf.TFReader;
 import com.statnlp.example.fcrf.Tag;
-import com.statnlp.example.fcrf.utils.DPConfig;
-import com.statnlp.example.fcrf.utils.Init;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
@@ -36,7 +33,6 @@ public class TFMain {
 	public static String nerOut;
 	public static String posOut;
 	public static String[] selectedEntities = {"person","organization","gpe","MISC"};
-	public static HashSet<String> dataTypeSet;
 	public static HashMap<String, Integer> entityMap;
 	
 	public static void initializeEntityMap(){
@@ -65,7 +61,6 @@ public class TFMain {
 		numThreads = 5;
 		numIteration = 200;
 		processArgs(args);
-		dataTypeSet = Init.iniOntoNotesData();
 		initializeEntityMap();
 		
 		trainFile = TFConfig.CONLL_train;
@@ -104,7 +99,7 @@ public class TFMain {
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
-		NetworkConfig.L2_REGULARIZATION_CONSTANT = DPConfig.L2;
+		NetworkConfig.L2_REGULARIZATION_CONSTANT = TFConfig.l2val;
 		NetworkConfig.NUM_THREADS = numThreads;
 		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
 		NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = false;
@@ -140,8 +135,8 @@ public class TFMain {
 					case "-thread": numThreads = Integer.valueOf(args[i+1]); break;
 					case "-ent": selectedEntities = args[i+1].split(","); break;
 					case "-testFile": testFile = args[i+1]; break;
-					case "-reg": DPConfig.L2 = Double.valueOf(args[i+1]); break;
-					case "-windows":DPConfig.windows = true; break;
+					case "-reg": TFConfig.l2val = Double.valueOf(args[i+1]); break;
+					case "-windows":TFConfig.windows = true; break;
 					case "-mfround":NetworkConfig.MF_ROUND = Integer.valueOf(args[i+1]); break;
 					default: System.err.println("Invalid arguments, please check usage."); System.exit(0);
 				}
@@ -151,8 +146,7 @@ public class TFMain {
 			System.err.println("[Info] numIter: "+numIteration);
 			System.err.println("[Info] numThreads: "+numThreads);
 			System.err.println("[Info] Selected Entities: "+Arrays.toString(selectedEntities));
-			System.err.println("[Info] Data type: "+DPConfig.dataType);
-			System.err.println("[Info] Regularization Parameter: "+DPConfig.L2);
+			System.err.println("[Info] Regularization Parameter: "+TFConfig.l2val);	
 		}
 	}
 }
