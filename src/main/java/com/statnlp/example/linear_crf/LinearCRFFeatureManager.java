@@ -20,7 +20,6 @@
 package com.statnlp.example.linear_crf;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.FeatureArray;
@@ -45,7 +44,6 @@ public class LinearCRFFeatureManager extends FeatureManager{
 	public int posHalfWindowSize = -1;
 	public boolean productWithOutput = true;
 	
-	private HashMap<Long, HashMap<Long, Integer>> edge2idx;
 	private String OUT_SEP = NeuralConfig.OUT_SEP; 
 	private String IN_SEP = NeuralConfig.IN_SEP; 
 	
@@ -112,7 +110,6 @@ public class LinearCRFFeatureManager extends FeatureManager{
 				FeatureType.valueOf(feat.toUpperCase()).enable();
 			}
 		}
-		edge2idx = LinearCRFNetworkCompiler.edge2idx;
 	}
 
 	@Override
@@ -139,7 +136,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 			return FeatureArray.EMPTY;
 		}
 		
-		long childNode = network.getNode(children_k[0]);
+		//long childNode = network.getNode(children_k[0]);
 		int child_tag_id = network.getNodeArray(children_k[0])[1];
 		int childNodeType = network.getNodeArray(children_k[0])[4];
 		

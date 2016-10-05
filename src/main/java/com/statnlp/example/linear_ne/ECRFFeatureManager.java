@@ -1,7 +1,6 @@
 package com.statnlp.example.linear_ne;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import com.statnlp.commons.types.Sentence;
 import com.statnlp.hybridnetworks.FeatureArray;
