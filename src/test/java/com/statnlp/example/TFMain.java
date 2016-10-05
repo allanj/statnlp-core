@@ -2,8 +2,6 @@ package com.statnlp.example;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 
 import com.statnlp.commons.types.Instance;
@@ -20,6 +18,7 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
 import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.neural.NeuralConfigReader;
 
 public class TFMain {
 
@@ -33,25 +32,7 @@ public class TFMain {
 	public static String nerOut;
 	public static String posOut;
 	public static String[] selectedEntities = {"person","organization","gpe","MISC"};
-	public static HashMap<String, Integer> entityMap;
-	
-	public static void initializeEntityMap(){
-		entityMap = new HashMap<String, Integer>();
-		int index = 0;
-		entityMap.put("O", index++);  
-		for(int i=0;i<selectedEntities.length;i++){
-			entityMap.put("B-"+selectedEntities[i], index++);
-			entityMap.put("I-"+selectedEntities[i], index++);
-		}
-		entities = new String[entityMap.size()];
-		Iterator<String> iter = entityMap.keySet().iterator();
-		while(iter.hasNext()){
-			String entity = iter.next();
-			entities[entityMap.get(entity)] = entity;
-		}
-	}
-
-	
+	public static String neural_config = "nn-crf-interface/neural_server/neural.config";
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 		// TODO Auto-generated method stub
@@ -61,7 +42,6 @@ public class TFMain {
 		numThreads = 5;
 		numIteration = 200;
 		processArgs(args);
-		initializeEntityMap();
 		
 		trainFile = TFConfig.CONLL_train;
 		testFile = TFConfig.CONLL_test;
@@ -74,8 +54,10 @@ public class TFMain {
 		List<TFInstance> testInstances = null;
 		/***********DEBUG*****************/
 		trainFile = "data/dat/conll2000.train1k.txt";
+		String trainSrcFile = "data/dat/conll1000train.txt";
 		trainNumber = -1;
 		testFile = "data/dat/conll2000.test1k.txt";;
+		String testSrcFile = "data/dat/conll1000test.txt";
 		testNumber = -1;
 		/***************************/
 		
@@ -87,9 +69,8 @@ public class TFMain {
 //		trainInstances = TFReader.readCONLLData(trainFile, true, trainNumber);
 //		testInstances = TFReader.readCONLLData(testFile, false, testNumber);
 		
-		trainInstances = TFReader.readGRMMData(trainFile, true, trainNumber);
-		testInstances = TFReader.readGRMMData(testFile, false, testNumber);
-		
+		trainInstances = TFReader.readGRMMDataAndWord(trainFile, true, trainNumber, trainSrcFile);
+		testInstances = TFReader.readGRMMDataAndWord(testFile, false, testNumber, testSrcFile);
 		
 		System.err.println("entity size:"+Entity.ENTS_INDEX.toString());
 		System.err.println("tag size:"+Tag.TAGS.size());
@@ -104,6 +85,15 @@ public class TFMain {
 		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
 		NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = false;
 		NetworkConfig.INFERENCE = InferenceType.MEAN_FIELD;
+		
+		
+		/***Neural network Configuration**/
+		NetworkConfig.USE_NEURAL_FEATURES = true; 
+		if(NetworkConfig.USE_NEURAL_FEATURES)
+			NeuralConfigReader.readConfig(neural_config);
+		NetworkConfig.OPTIMIZE_NEURAL = false;  //false: optimize in neural network
+		NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
+		/****/
 		
 //		TFFeatureManager fa = new TFFeatureManager(new GlobalNetworkParam());
 		GRMMFeatureManager fa = new GRMMFeatureManager(new GlobalNetworkParam());
