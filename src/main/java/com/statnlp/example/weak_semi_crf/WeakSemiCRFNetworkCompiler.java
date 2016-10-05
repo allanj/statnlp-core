@@ -84,6 +84,16 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 			
 			network.addNode(begin);
 			network.addNode(end);
+			for(int i=span.start; i<span.end; i++){
+				for(int j=0; j<Label.LABELS.size(); j++){
+					try{
+						network.addNode(toNode_begin(i, j));
+					} catch (Exception e){}
+					try{
+						network.addNode(toNode_end(i, j));
+					} catch (Exception e){}
+				}
+			}
 			
 			network.addEdge(begin, new long[]{prevNode});
 			network.addEdge(end, new long[]{begin});

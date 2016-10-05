@@ -53,7 +53,7 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 		NodeType parentType = NodeType.values()[parent_arr[1]];
 		int parentLabelId = parent_arr[2];
 		
-		if(parentType == NodeType.LEAF){
+		if(parentType == NodeType.LEAF || children_k.length == 0){
 			return FeatureArray.EMPTY;
 		}
 		

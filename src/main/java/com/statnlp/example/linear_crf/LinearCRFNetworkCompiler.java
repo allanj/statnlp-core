@@ -55,7 +55,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	public static HashMap<Long, HashMap<Long, Integer>> edge2idx;
 	private int edgeId;
 	
-	private LinearCRFViewer viewer;
+	protected LinearCRFViewer viewer;
 	
 	public LinearCRFNetworkCompiler(){
 		this._labels = new ArrayList<Label>();

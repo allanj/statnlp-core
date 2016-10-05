@@ -37,6 +37,7 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 
 	}
 	
+	@SuppressWarnings("unchecked")
 	protected void initData()
 	{
 		this.instance = (LinearCRFInstance)super.instance;
@@ -62,7 +63,7 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 
 	@Override
 	protected String label_mapping(int[] ids) {
-		int size = instance.size();
+//		int size = instance.size();
 		int pos = ids[0]-1; // position
 		int nodeId = ids[1];
 		int nodeType = ids[4];
@@ -103,7 +104,7 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 		for(VNode node : vg.getNodes())
 		{
 			int[] ids = node.ids;
-			int size = this.inputs.size();
+//			int size = this.inputs.size();
 			int pos = ids[0]-1;
 			int labelId = ids[1];
 			int nodeType = ids[4];

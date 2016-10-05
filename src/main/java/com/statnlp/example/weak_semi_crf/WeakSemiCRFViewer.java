@@ -4,7 +4,6 @@ import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
-import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler.NodeType;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.NetworkCompiler;
@@ -38,6 +37,7 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 
 	}
 	
+	@SuppressWarnings("unchecked")
 	protected void initData()
 	{
 		this.instance = (WeakSemiCRFInstance)super.instance;
@@ -63,7 +63,7 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 
 	@Override
 	protected String label_mapping(int[] ids) {
-		int size = instance.size();
+//		int size = instance.size();
 		int pos = ids[0]; // position
 		int nodeId = ids[2];
 		int nodeType = ids[1];
@@ -87,12 +87,14 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 			{
 				int[] ids = node.ids;
 //				int pos = ids[0];
-				int nodeId = ids[2];
+//				int nodeId = ids[2];
 				int nodeType = ids[1];
 				if(nodeType == NodeType.LEAF.ordinal() || nodeType == NodeType.ROOT.ordinal()){
 					node.color = colorMap[0];
 				} else if(nodeType == NodeType.BEGIN.ordinal()){
-					;
+					node.color = colorMap[1];
+				} else if(nodeType == NodeType.END.ordinal()){
+					node.color = colorMap[2];
 				}
 			}
 		}
@@ -104,12 +106,15 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 		for(VNode node : vg.getNodes())
 		{
 			int[] ids = node.ids;
-			int size = this.inputs.length;
+//			int size = this.inputs.length;
 			int pos = ids[0];
 			int labelId = ids[2];
 			int nodeType = ids[1];
 			
-			double x = pos * span_width;
+			double x = pos * span_width * 2;
+			if(nodeType == NodeType.END.ordinal()){
+				x += 0.5*span_width;
+			}
 			int mappedId = labelId;
 //			switch(mappedId){
 //			case 0:
@@ -120,8 +125,8 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 //				mappedId = 0; break;
 //			}
 			double y = mappedId * span_height + offset_height;
-			if(nodeType == NODE_TYPES.ROOT.ordinal()){
-				x = (pos + 1) * span_width;
+			if(nodeType == NodeType.ROOT.ordinal()){
+				x = (pos + 1) * span_width * 2;
 				y = 3 * span_height + offset_height;
 			}
 			

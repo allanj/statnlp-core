@@ -32,7 +32,7 @@ public class WeakSemiCRFMain {
 	public static boolean USE_SINGLE_OUTSIDE_TAG = true;
 	
 	public static void main(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException, NoSuchFieldException, SecurityException, InterruptedException, IllegalArgumentException, IllegalAccessException{
-		boolean serializeModel = true;
+		boolean serializeModel = false;
 		boolean useCoNLLData = false;
 		boolean limitNumInstances = true;
 		
