@@ -10,14 +10,13 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
-import com.statnlp.neural.NeuralConfig;
 
 public class GRMMFeatureManager extends FeatureManager {
 
 	private static final long serialVersionUID = 376931974939202432L;
 
 	public enum FEATYPE {grmm, neural};
-	private String IN_SEP = NeuralConfig.IN_SEP;
+//	private String IN_SEP = NeuralConfig.IN_SEP;
 	
 	public GRMMFeatureManager(GlobalNetworkParam param_g) {
 		super(param_g);
