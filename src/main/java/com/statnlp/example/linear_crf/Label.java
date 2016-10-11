@@ -27,7 +27,7 @@ import java.util.Map;
  * @author wei_lu
  *
  */
-public class Label implements Serializable{
+public class Label implements Serializable, Comparable<Label>{
 	
 	private static final long serialVersionUID = -5006849791095171763L;
 	
@@ -91,6 +91,14 @@ public class Label implements Serializable{
 	
 	public String toString(){
 		return _form;
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Comparable#compareTo(java.lang.Object)
+	 */
+	@Override
+	public int compareTo(Label o) {
+		return Integer.compare(_id, o._id);
 	}
 	
 }

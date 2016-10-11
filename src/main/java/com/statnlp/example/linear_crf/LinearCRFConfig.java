@@ -12,6 +12,7 @@ public class LinearCRFConfig {
 	public int posHalfWindowSize = 0;
 	
 	public boolean productWithOutput = true;
+	public boolean useBoundaryTag = true;
 	
 	public String[] features = new String[]{
 			"word",
@@ -39,6 +40,10 @@ public class LinearCRFConfig {
 				break;
 			case "productWithOutput":
 				productWithOutput = Boolean.parseBoolean(args[argIndex+1]);
+				argIndex += 2;
+				break;
+			case "useBoundaryTag":
+				useBoundaryTag = Boolean.parseBoolean(args[argIndex+1]);
 				argIndex += 2;
 				break;
 			case "h":

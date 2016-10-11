@@ -17,6 +17,11 @@
 package com.statnlp.commons.types;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.statnlp.hybridnetworks.Network;
+import com.statnlp.hybridnetworks.NetworkCompiler;
 
 /**
  * A base class representing an instance, to hold the surface form (e.g., the words of a sentence) of a 
@@ -167,6 +172,13 @@ public abstract class Instance implements Serializable{
 	public abstract Object getInput();
 	public abstract Object getOutput();
 	public abstract Object getPrediction();
+	
+	@SuppressWarnings("unchecked")
+	public <T extends List<? super Object>> T getTopKPredictions(){
+		T result = (T)new ArrayList<Object>();
+		result.add(getPrediction());
+		return result;
+	}
 	
 	public abstract boolean hasOutput();
 	public abstract boolean hasPrediction();

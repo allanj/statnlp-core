@@ -32,18 +32,31 @@ public class LocalNetworkDecoderThread extends Thread{
 	//the builder.
 	private NetworkCompiler _compiler;
 	private boolean _cacheParam = true;
+	private int numPredictionsGenerated = 1;
 	
 	//please make sure the threadId is 0-indexed.
 	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler){
 		this(threadId, fm, instances, compiler, false);
 	}
 	
+	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, int numPredictionsGenerated){
+		this(threadId, fm, instances, compiler, false, numPredictionsGenerated);
+	}
+	
 	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, boolean cacheParam){
-		this(threadId, fm, instances, compiler, new LocalNetworkParam(threadId, fm, instances.length), cacheParam);
+		this(threadId, fm, instances, compiler, cacheParam, 1);
+	}
+	
+	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, boolean cacheParam, int numPredictionsGenerated){
+		this(threadId, fm, instances, compiler, new LocalNetworkParam(threadId, fm, instances.length), cacheParam, numPredictionsGenerated);
+	}
+
+	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, LocalNetworkParam param, boolean cacheParam){
+		this(threadId, fm, instances, compiler, param, cacheParam, 1);
 	}
 	
 	//please make sure the threadId is 0-indexed.
-	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, LocalNetworkParam param, boolean cacheParam){
+	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, LocalNetworkParam param, boolean cacheParam, int numPredictionsGenerated){
 		this._threadId = threadId;
 		this._param = param;
 		fm.setLocalNetworkParams(this._threadId, this._param);
@@ -56,6 +69,7 @@ public class LocalNetworkDecoderThread extends Thread{
 		this._instances_input = instances;
 		this._compiler = compiler;
 		this._cacheParam = cacheParam;
+		this.numPredictionsGenerated = numPredictionsGenerated;
 	}
 	
 	public LocalNetworkParam getParam(){
@@ -120,11 +134,13 @@ public class LocalNetworkDecoderThread extends Thread{
 			network.marginal();
 		}else{
 			network.max();
-			return this._compiler.decompile(network);
 		}
 		
-//		System.err.println("max="+network.getMax());
-		return this._compiler.decompile(network);
+		if(numPredictionsGenerated == 1){
+			return this._compiler.decompile(network);
+		} else {
+			return this._compiler.decompile(network, numPredictionsGenerated);
+		}
 	}
 	
 	public Instance[] getOutputs(){
