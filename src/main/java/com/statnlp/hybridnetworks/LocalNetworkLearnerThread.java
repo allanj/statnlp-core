@@ -54,6 +54,8 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	/** whether message is passing or not. default: false. */
 	private boolean messagePassing = false;
 	
+	/**default: false. Depend on whether network config precompile or not.**/
+	private boolean precompile = false;
 	
 	/**
 	 * Construct a new learner thread using current networks (if cached) or builder (if not cached),
@@ -113,6 +115,10 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	
     @Override
     public void run () {
+    	if(precompile){
+    		this.preCompileNetwork();
+    		return;
+    	}
     	if(!isTouching){
     		this.train(this._it);
     	} else {
@@ -157,6 +163,15 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 		this.isTouching = false;
 	}
 	
+	public void preCompileNetwork(){
+		for(int networkId = 0; networkId< this._instances.length; networkId++){
+			Network network = this.getNetwork(networkId);
+			if(!network.getInstance().isLabeled())
+				network.clearMarginalMap(); //initialize the marginal map for the unlabeled network
+			network.initJointFeatureMap();
+		}
+	}
+	
 	/**
 	 * Do one iteration of training
 	 * add the batch size here is we are using the batch gradient descent, 
@@ -171,21 +186,18 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 				continue;
 			Network network = this.getNetwork(i);
 			if(NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD){
-				for(int curr=0; curr<NetworkConfig.NUM_STRUCTS; curr++){
-					for(int other=0; other<NetworkConfig.NUM_STRUCTS; other++){
+				for(int curr=0; curr< NetworkConfig.NUM_STRUCTS; curr++){
+					//System.err.println("current structure is:"+curr+"th structure. ");
+					for(int other = 0; other < NetworkConfig.NUM_STRUCTS; other++){
 						if(other==curr) continue;
 						network.removeKthStructure(other);
 					}
 //					System.out.println("current structure:"+curr);
-					if(messagePassing) network.inference();
+					if(messagePassing)  network.inference(true);
 					else network.train();
-					network.saveKthStructureScore(curr); //save to the new score structures.
 				}
-				//the old then should be equals to the new.
-				//the new should create a new one.
-				network.renewCurrMarginals();
-				//if after each training iteration, clear all the things.
-				if(!messagePassing) network.clearMaginalsMap();
+				//only the unlabeled network needs the marginal map.
+				if(!messagePassing && !network.getInstance().isLabeled()) network.clearMarginalMap();
 			}else network.train();
 		}
 	}
@@ -230,4 +242,8 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	public void unsetMessagePassing(){
 		this.messagePassing = false;
 	}
+	
+	
+	public void setPrecompile(){this.precompile = true;}
+	public void unsetPrecompile(){this.precompile = false;}
 }
