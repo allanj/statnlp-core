@@ -18,7 +18,7 @@ public class FCRFEval {
 	 * @param nerOut: word, true pos, true entity, pred entity
 	 * @throws IOException
 	 */
-	public static void evalNER(Instance[] testInsts, String nerOut) throws IOException{
+	public static void evalFscore(Instance[] testInsts, String nerOut) throws IOException{
 		PrintWriter pw = RAWF.writer(nerOut);
 		for(int index=0;index<testInsts.length;index++){
 			FCRFInstance eInst = (FCRFInstance)testInsts[index];
@@ -31,18 +31,18 @@ public class FCRFEval {
 			pw.write("\n");
 		}
 		pw.close();
-		evalNER(nerOut);
+		evalFscore(nerOut);
 	}
 	
 	
-	private static void evalNER(String outputFile) throws IOException{
+	private static void evalFscore(String outputFile) throws IOException{
 		try{
 			System.err.println("perl data/semeval10t1/conlleval.pl < "+outputFile);
 			ProcessBuilder pb = null;
 			if(FCRFConfig.windows){
 				pb = new ProcessBuilder("D:/Perl64/bin/perl","E:/Framework/data/semeval10t1/conlleval.pl"); 
 			}else{
-				pb = new ProcessBuilder("data/conlleval.pl"); 
+				pb = new ProcessBuilder("eval/conlleval.pl"); 
 			}
 			pb.redirectInput(new File(outputFile));
 			pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
@@ -59,7 +59,7 @@ public class FCRFEval {
 	 * @param posOut: the output of the pos file: word, trueTag, predTag, trueChunk
 	 * @throws IOException
 	 */
-	public static void evalPOS(Instance[] testInsts, String posOut) throws IOException{
+	public static void evalPOSAcc(Instance[] testInsts, String posOut) throws IOException{
 		PrintWriter pw = RAWF.writer(posOut);
 		int corr = 0;
 		int total = 0;
@@ -75,11 +75,11 @@ public class FCRFEval {
 			}
 			pw.write("\n");
 		}
-		System.out.println("[POS Result]:"+ corr*1.0/total);
+		System.out.printf("[POS Accuracy]: %.2f%%\n", corr*1.0/total*100);
 		pw.close();
 	}
 	
-	public static void evalSingleE(Instance[] testInsts) throws IOException{
+	public static void evalChunkAcc(Instance[] testInsts) throws IOException{
 		int corr = 0;
 		int total = 0;
 		for(int index=0;index<testInsts.length;index++){
@@ -92,10 +92,10 @@ public class FCRFEval {
 				total++;
 			}
 		}
-		System.out.println("[NE notion Result]:"+ corr*1.0/total);
+		System.out.printf("[Chunking Accuracy]: %.2f%%\n", corr*1.0/total*100);
 	}
 	
-	public static void evalSingleJoint(Instance[] testInsts) throws IOException{
+	public static void evalJointAcc(Instance[] testInsts) throws IOException{
 		int corr = 0;
 		int total = 0;
 		for(int index=0;index<testInsts.length;index++){
@@ -109,9 +109,8 @@ public class FCRFEval {
 					corr++;
 				total++;
 			}
-			
 		}
-		System.out.println("[joint notion Result]:"+ corr*1.0/total);
+		System.out.printf("[Joint Accuracy]: %.2f%%\n", corr*1.0/total*100);
 	}
 	
 }

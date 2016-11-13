@@ -183,18 +183,15 @@ public class FCRFExampleMain {
 			out.close();
 		}
 		
-		
 		Instance[] predictions = model.decode(testInstances.toArray(new FCRFInstance[testInstances.size()]));
 		/**Evaluation part**/
-		if(task == TASK.NER || task == TASK.JOINT){
-			FCRFEval.evalNER(predictions, nerOut);
-			FCRFEval.evalSingleE(predictions);
-		}
-		if(task == TASK.TAGGING || task == TASK.JOINT){
-			FCRFEval.evalPOS(predictions, posOut);
-		}
-		if(task == TASK.JOINT)
-			FCRFEval.evalSingleJoint(predictions);
+		if (task == TASK.NER || task == TASK.JOINT) {
+			FCRFEval.evalFscore(predictions, nerOut);
+			FCRFEval.evalChunkAcc(predictions);
+		} else if (task == TASK.TAGGING || task == TASK.JOINT) {
+			FCRFEval.evalPOSAcc(predictions, posOut);
+		} else if (task == TASK.JOINT)
+			FCRFEval.evalJointAcc(predictions);
 	}
 
 	
