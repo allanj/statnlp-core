@@ -146,6 +146,10 @@ public class GlobalNetworkParam implements Serializable{
 		return this._weights;
 	}
 	
+	public void setWeights(double[] newWeights){
+		this._weights = newWeights;
+	}
+	
 	/**
 	 * Return the current number of features
 	 * @see #countFixedFeatures()
@@ -474,7 +478,7 @@ public class GlobalNetworkParam implements Serializable{
 		Instance inst = network.getInstance();
 		int instId = inst.getInstanceId();
 		boolean isTestInst = instId > 0 && !inst.isLabeled() || !inst.getLabeledInstance().isLabeled();
-		if (isTestInst && !type.startsWith(NetworkConfig.NEURAL_FEATURE_TYPE_PREFIX)) type = DUMP_TYPE;
+		if (NetworkConfig.USE_NEURAL_FEATURES && isTestInst && !type.startsWith(NetworkConfig.NEURAL_FEATURE_TYPE_PREFIX)) type = DUMP_TYPE;
 		
 		if(!featureIntMap.containsKey(type)){
 			featureIntMap.put(type, new HashMap<String, HashMap<String, Integer>>());
@@ -645,7 +649,7 @@ public class GlobalNetworkParam implements Serializable{
     	} catch(ExceptionWithIflag e){
     		throw new NetworkException("Exception with Iflag:"+e.getMessage());
     	}
-    	if(this._opt.name().contains("LBFGS Optimizer")){
+    	if(this._opt.name().contains("LBFGS Optimizer") ){//|| this._opt.name().contains("ADAGRAD")|| this._opt.name().contains("ADAM")){
 	    	double diff = this.getObj()-this.getObj_old();
 	    	if(diff >= 0 && diff < NetworkConfig.OBJTOL){
 	    		done = true;
@@ -720,13 +724,15 @@ public class GlobalNetworkParam implements Serializable{
 				}
 			}
 		}
-		
-		for(int k = 0; k < this._size; k++) {
-			if(_feature2rep[k][0].equals(DUMP_TYPE)) {
-				this._weights[k] = 0;
-				this._counts[k] = 0;
+		if (NetworkConfig.USE_NEURAL_FEATURES){
+			for(int k = 0; k < this._size; k++) {
+				if(_feature2rep[k][0].equals(DUMP_TYPE)) {
+					this._weights[k] = 0;
+					this._counts[k] = 0;
+				}
 			}
 		}
+		
 		
 		this._obj = 0.0;
 		//for regularization

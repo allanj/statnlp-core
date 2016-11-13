@@ -50,10 +50,6 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	/** Prepare the list of training inst ids **/
 	private HashSet<Integer> trainInstsIds = null;
 	
-	
-	/** whether message is passing or not. default: false. */
-	private boolean messagePassing = false;
-	
 	/**default: false. Depend on whether network config precompile or not.**/
 	private boolean precompile = false;
 	
@@ -178,27 +174,36 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	 * every time we shuffle the list.
 	 * @param it
 	 */
-	private void train(int it){
-		for(int i = 0; i< this._instances.length; i++){
-			if(NetworkConfig.USE_BATCH_TRAINING && !this.chargeInstsIds.contains(this._instances[i].getInstanceId()) && !this.chargeInstsIds.contains(-this._instances[i].getInstanceId()) )
+	private void train(int it) {
+		for (int i = 0; i < this._instances.length; i++) {
+			if (NetworkConfig.USE_BATCH_TRAINING && !this.chargeInstsIds.contains(this._instances[i].getInstanceId())
+					&& !this.chargeInstsIds.contains(-this._instances[i].getInstanceId()))
 				continue;
-			if(this.trainInstsIds != null && !this.trainInstsIds.contains(this._instances[i].getInstanceId()) && !this.trainInstsIds.contains(-this._instances[i].getInstanceId()))
+			if (this.trainInstsIds != null && !this.trainInstsIds.contains(this._instances[i].getInstanceId())
+					&& !this.trainInstsIds.contains(-this._instances[i].getInstanceId()))
 				continue;
 			Network network = this.getNetwork(i);
-			if(NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD){
-				for(int curr=0; curr< NetworkConfig.NUM_STRUCTS; curr++){
-					//System.err.println("current structure is:"+curr+"th structure. ");
-					for(int other = 0; other < NetworkConfig.NUM_STRUCTS; other++){
-						if(other==curr) continue;
-						network.removeKthStructure(other);
+			if (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD) {
+				// only the unlabeled network needs the marginal map.
+				if (!network.getInstance().isLabeled()){
+					network.clearMarginalMap();
+					for (int smallIt = 0; smallIt < NetworkConfig.MF_ROUND; smallIt++) {
+						for (int curr = 0; curr < NetworkConfig.NUM_STRUCTS; curr++) {
+							network.enableKthStructure(curr);
+							network.inference(true);
+						}
+						network.renewCurrentMarginalMap();
 					}
-//					System.out.println("current structure:"+curr);
-					if(messagePassing)  network.inference(true);
-					else network.train();
 				}
-				//only the unlabeled network needs the marginal map.
-				if(!messagePassing && !network.getInstance().isLabeled()) network.clearMarginalMap();
-			}else network.train();
+				//update the network
+				for (int curr = 0; curr < NetworkConfig.NUM_STRUCTS; curr++) {
+					network.enableKthStructure(curr);
+					network.train();
+				}
+			}else{
+				network.train();
+			}
+			
 		}
 	}
 	
@@ -234,15 +239,6 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	public void setTrainInstanceIdSet(HashSet<Integer> set){
 		this.trainInstsIds = set;
 	}
-	
-	public void setMessagePassing(){
-		this.messagePassing = true;
-	}
-	
-	public void unsetMessagePassing(){
-		this.messagePassing = false;
-	}
-	
 	
 	public void setPrecompile(){this.precompile = true;}
 	public void unsetPrecompile(){this.precompile = false;}

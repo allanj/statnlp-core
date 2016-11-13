@@ -1,33 +1,30 @@
 package com.statnlp.example.fcrf;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import com.statnlp.commons.types.Sentence;
-import com.statnlp.example.fcrf.TFNetworkCompiler.NODE_TYPES;
+import com.statnlp.example.fcrf.FCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
-import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
-import com.statnlp.neural.NeuralConfig;
 
 public class GRMMFeatureManager extends FeatureManager {
 
 	private static final long serialVersionUID = 376931974939202432L;
 
-	public enum FEATYPE {grmm, neural_1, neural_2};
-	private String IN_SEP = NeuralConfig.IN_SEP;
+	public enum FEATYPE {grmm, joint};
 	
 	public GRMMFeatureManager(GlobalNetworkParam param_g) {
 		super(param_g);
 	}
-	//
+	
 	@Override
 	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k) {
-		// TODO Auto-generated method stub
-		TFInstance inst = ((TFInstance)network.getInstance());
-		//int instanceId = inst.getInstanceId();
+		
+		FCRFInstance inst = ((FCRFInstance)network.getInstance());
 		Sentence sent = inst.getInput();
 		long node = network.getNode(parent_k);
 		int[] nodeArr = NetworkIDMapper.toHybridNodeArray(node);
@@ -40,53 +37,21 @@ public class GRMMFeatureManager extends FeatureManager {
 			return FeatureArray.EMPTY;
 		
 		int eId = nodeArr[2];
-		//System.err.println(Arrays.toString(nodeArr));
 		
 		
-		if(nodeArr[1]==NODE_TYPES.ENODE.ordinal() ){
+		if (nodeArr[1] == NODE_TYPES.ENODE.ordinal()) {
 			String[] fs = sent.get(pos).getFS();
-			for(String f: fs)
-				featureList.add(this._param_g.toFeature(network, FEATYPE.grmm.name(), Entity.get(eId).getForm(), f));
-			if(NetworkConfig.USE_NEURAL_FEATURES){
-				String lw = pos>0? sent.get(pos-1).getName():"<PAD>";
-//				String llw = pos==0? "<PAD>": pos==1? "<PAD>":sent.get(pos-2).getName();
-				String rw = pos<sent.length()-1? sent.get(pos+1).getName():"<PAD>";
-//				String rrw = pos==sent.length()-1? "<PAD>": pos==sent.length()-2? "<PAD>":sent.get(pos+2).getName();
-				String currWord = sent.get(pos).getName();
-				featureList.add(this._param_g.toFeature(network, FEATYPE.neural_1.name(), Entity.get(eId).getForm(), lw.toLowerCase()+IN_SEP+
-						currWord.toLowerCase()+IN_SEP+rw.toLowerCase()));
-//				featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), Entity.get(eId).getForm(), currWord.toLowerCase() ));
-				/**Use collapsed features**/
-				//int[] tag_child = NetworkIDMapper.toHybridNodeArray(network.getNode(children_k[1]));
-				//int tag_child_id = tag_child[2];
-//				featureList.add(this._param_g.toFeature(network, FEATYPE.neural_1.name(), Entity.get(eId).getForm(), currWord.toLowerCase() ));
-			}
+			for (String f : fs)
+				featureList.add(this._param_g.toFeature(network, FEATYPE.grmm.name(), Chunk.get(eId).getForm(), f));
+			 addJointFeatures(featureList, network, sent, pos, eId, parent_k, children_k, false);
 		}
-		
-		if(nodeArr[1]==NODE_TYPES.TNODE.ordinal()){
+
+		if (nodeArr[1] == NODE_TYPES.TNODE.ordinal()) {
 			String[] fs = sent.get(pos).getFS();
-			for(String f: fs)
+			for (String f : fs)
 				featureList.add(this._param_g.toFeature(network, FEATYPE.grmm.name(), Tag.get(eId).getForm(), f));
-			String lw = pos>0? sent.get(pos-1).getName():"<PAD>";
-			String currWord = sent.get(pos).getName();
-			String rw = pos<sent.length()-1? sent.get(pos+1).getName():"<PAD>";
-			if(NetworkConfig.USE_NEURAL_FEATURES){
-				//featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), Tag.get(eId).getForm(), currWord.toLowerCase()));
-				//int[] entity_child = NetworkIDMapper.toHybridNodeArray(network.getNode(children_k[1]));
-				//int entity_child_id = entity_child[2];
-				featureList.add(this._param_g.toFeature(network, FEATYPE.neural_2.name(), Tag.get(eId).getForm(), lw.toLowerCase()+IN_SEP+
-						currWord.toLowerCase()+IN_SEP+rw.toLowerCase() ));
-			}
+			 addJointFeatures(featureList, network, sent, pos, eId, parent_k, children_k, true);
 		}
-		
-//		if(NetworkConfig.USE_NEURAL_FEATURES && (nodeArr[1]==NODE_TYPES.ENODE_HYP.ordinal() || nodeArr[1]==NODE_TYPES.TNODE_HYP.ordinal())){
-//			String lw = pos>0? sent.get(pos-1).getName():"<PAD>";
-//			String llw = pos==0? "<PAD>": pos==1? "<PAD>":sent.get(pos-2).getName();
-//			String rw = pos<sent.length()-1? sent.get(pos+1).getName():"<PAD>";
-//			String rrw = pos==sent.length()-1? "<PAD>": pos==sent.length()-2? "<PAD>":sent.get(pos+2).getName();
-//			String currWord = sent.get(pos).getName();
-//			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), Entity.get(eId).getForm(), currWord));
-//		}
 		
 		ArrayList<Integer> finalList = new ArrayList<Integer>();
 		for(int i=0;i<featureList.size();i++){
@@ -101,6 +66,51 @@ public class GRMMFeatureManager extends FeatureManager {
 		return fa;
 	}
 	
+	
+	private void addJointFeatures(ArrayList<Integer> featureList, Network network, Sentence sent, int pos, int paId, int parent_k, int[] children_k, boolean paTchildE){
+		//TFNetwork tfnetwork = (TFNetwork)network;
+		if(children_k.length!=1)
+			throw new RuntimeException("The joint features should only have one children also");
+		String currLabel = paTchildE? Tag.get(paId).getForm():Chunk.get(paId).getForm();
+		int jointFeatureIdx = -1; 
+		int[] arr = null;
+		int nodeType = -1;
+		if(!paTchildE){
+			//current it's NE structure, need to refer to Tag node.
+			nodeType = NODE_TYPES.TNODE.ordinal();
+			for(int t=0;t<Tag.TAGS_INDEX.size();t++){
+				String tag =  Tag.get(t).getForm();
+				arr = new int[]{pos+1, nodeType, t};
+				long unlabeledDstNode = NetworkIDMapper.toHybridNodeID(arr);
+				FCRFNetwork unlabeledNetwork = (FCRFNetwork)network.getUnlabeledNetwork();
+				int unlabeledDstNodeIdx = Arrays.binarySearch(unlabeledNetwork.getAllNodes(), unlabeledDstNode);
+				if(unlabeledDstNodeIdx>=0){
+					jointFeatureIdx = this._param_g.toFeature(network, FEATYPE.joint.name(), currLabel + " & " + tag, "");
+					network.putJointFeature(parent_k, jointFeatureIdx, unlabeledDstNodeIdx);
+					featureList.add(jointFeatureIdx);
+				}
+			}
+			
+		}else{
+			//current it's POS structure, need to refer to Entity node
+			nodeType = NODE_TYPES.ENODE.ordinal();
+			for(int e=0; e<Chunk.ENTS_INDEX.size(); e++){
+				String entity = Chunk.get(e).getForm();
+				arr = new int[]{pos+1, nodeType, e};
+				long unlabeledDstNode = NetworkIDMapper.toHybridNodeID(arr);
+				FCRFNetwork unlabeledNetwork = (FCRFNetwork)network.getUnlabeledNetwork();
+				int unlabeledDstNodeIdx = Arrays.binarySearch(unlabeledNetwork.getAllNodes(), unlabeledDstNode);
+				if(unlabeledDstNodeIdx>=0){
+					jointFeatureIdx = this._param_g.toFeature(network, FEATYPE.joint.name(), entity + " & " + currLabel, "");
+					featureList.add(jointFeatureIdx);
+					network.putJointFeature(parent_k, jointFeatureIdx, unlabeledDstNodeIdx);
+				}
+			}
+			
+		}
+			
+		
+	}
 	
 
 }

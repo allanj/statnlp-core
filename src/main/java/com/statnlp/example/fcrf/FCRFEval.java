@@ -9,7 +9,7 @@ import com.statnlp.commons.io.RAWF;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Sentence;
 
-public class TFEval {
+public class FCRFEval {
 
 	
 	/**
@@ -21,8 +21,8 @@ public class TFEval {
 	public static void evalNER(Instance[] testInsts, String nerOut) throws IOException{
 		PrintWriter pw = RAWF.writer(nerOut);
 		for(int index=0;index<testInsts.length;index++){
-			TFInstance eInst = (TFInstance)testInsts[index];
-			ArrayList<String> predEntities = eInst.getEntityPredictons();
+			FCRFInstance eInst = (FCRFInstance)testInsts[index];
+			ArrayList<String> predEntities = eInst.getChunkPredictons();
 			ArrayList<String> trueEntities = eInst.getOutput();
 			Sentence sent = eInst.getInput();
 			for(int i=0;i<sent.length();i++){
@@ -39,7 +39,7 @@ public class TFEval {
 		try{
 			System.err.println("perl data/semeval10t1/conlleval.pl < "+outputFile);
 			ProcessBuilder pb = null;
-			if(TFConfig.windows){
+			if(FCRFConfig.windows){
 				pb = new ProcessBuilder("D:/Perl64/bin/perl","E:/Framework/data/semeval10t1/conlleval.pl"); 
 			}else{
 				pb = new ProcessBuilder("data/conlleval.pl"); 
@@ -53,19 +53,25 @@ public class TFEval {
 		}
 	}
 	
+	/**
+	 * Evaluation of POS tagging result
+	 * @param testInsts
+	 * @param posOut: the output of the pos file: word, trueTag, predTag, trueChunk
+	 * @throws IOException
+	 */
 	public static void evalPOS(Instance[] testInsts, String posOut) throws IOException{
 		PrintWriter pw = RAWF.writer(posOut);
 		int corr = 0;
 		int total = 0;
 		for(int index=0;index<testInsts.length;index++){
-			TFInstance eInst = (TFInstance)testInsts[index];
+			FCRFInstance eInst = (FCRFInstance)testInsts[index];
 			ArrayList<String> tPred = eInst.getTagPredictons();
 			Sentence sent = eInst.getInput();
 			for(int i=0;i<sent.length();i++){
 				if(sent.get(i).getTag().equals(tPred.get(i)))
 					corr++;
 				total++;
-				pw.write(sent.get(i).getName()+" "+sent.get(i).getTag()+" "+tPred.get(i)+"\n");
+				pw.write(sent.get(i).getName()+" "+sent.get(i).getTag()+" "+tPred.get(i)+" "+sent.get(i).getEntity()+"\n");
 			}
 			pw.write("\n");
 		}
@@ -77,8 +83,8 @@ public class TFEval {
 		int corr = 0;
 		int total = 0;
 		for(int index=0;index<testInsts.length;index++){
-			TFInstance eInst = (TFInstance)testInsts[index];
-			ArrayList<String> tPred = eInst.getEntityPredictons();
+			FCRFInstance eInst = (FCRFInstance)testInsts[index];
+			ArrayList<String> tPred = eInst.getChunkPredictons();
 			ArrayList<String> trueEntities = eInst.getOutput();
 			for(int i=0;i<tPred.size();i++){
 				if(tPred.get(i).equals(trueEntities.get(i)))
@@ -93,8 +99,8 @@ public class TFEval {
 		int corr = 0;
 		int total = 0;
 		for(int index=0;index<testInsts.length;index++){
-			TFInstance eInst = (TFInstance)testInsts[index];
-			ArrayList<String> ePred = eInst.getEntityPredictons();
+			FCRFInstance eInst = (FCRFInstance)testInsts[index];
+			ArrayList<String> ePred = eInst.getChunkPredictons();
 			ArrayList<String> trueEntities = eInst.getOutput();
 			ArrayList<String> tPred = eInst.getTagPredictons();
 			Sentence sent = eInst.getInput();

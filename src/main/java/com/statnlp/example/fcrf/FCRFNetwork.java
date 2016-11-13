@@ -2,11 +2,11 @@ package com.statnlp.example.fcrf;
 
 import java.util.Arrays;
 
-import com.statnlp.example.fcrf.TFNetworkCompiler.NODE_TYPES;
+import com.statnlp.example.fcrf.FCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.TableLookupNetwork;
 
-public class TFNetwork extends TableLookupNetwork{
+public class FCRFNetwork extends TableLookupNetwork{
 
 	private static final long serialVersionUID = -5035676335489326537L;
 
@@ -14,15 +14,15 @@ public class TFNetwork extends TableLookupNetwork{
 	
 	int structure; 
 	
-	public TFNetwork(){
+	public FCRFNetwork(){
 		
 	}
 	
-	public TFNetwork(int networkId, TFInstance inst, LocalNetworkParam param){
+	public FCRFNetwork(int networkId, FCRFInstance inst, LocalNetworkParam param){
 		super(networkId, inst, param);
 	}
 	
-	public TFNetwork(int networkId, TFInstance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes){
+	public FCRFNetwork(int networkId, FCRFInstance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes){
 		super(networkId, inst,nodes, children, param);
 		this._numNodes = numNodes;
 		this.isVisible = new boolean[nodes.length];
@@ -58,26 +58,27 @@ public class TFNetwork extends TableLookupNetwork{
 	 * 0 is the entity chain
 	 * 1 is the PoS chain
 	 */
-	public void removeKthStructure(int kthStructure){
-		if(kthStructure==0){
-			//remove the NE structure
-			for(int i=0;i<this.countNodes();i++){
+	public void enableKthStructure(int kthStructure){
+		if (kthStructure == 0) {
+			// enable the chunking structure
+			for (int i = 0; i < this.countNodes(); i++) {
 				int[] node_k = this.getNodeArray(i);
-				if(node_k[1] == NODE_TYPES.ENODE.ordinal()) 
-					remove(i);
-				else recover(i);
+				if (node_k[1] == NODE_TYPES.ENODE.ordinal() || node_k[1] == NODE_TYPES.LEAF.ordinal()
+						|| node_k[1] == NODE_TYPES.ROOT.ordinal())
+					recover(i);
+				else remove(i);
 			}
-		}else if(kthStructure==1){
-			//remove tag structure
-			for(int i=0;i<this.countNodes();i++){
+		} else if (kthStructure == 1) {
+			// enable POS tagging structure
+			for (int i = 0; i < this.countNodes(); i++) {
 				int[] node_k = this.getNodeArray(i);
-				if(node_k[1] == NODE_TYPES.TNODE.ordinal() ) 
-					remove(i);
-				else recover(i);
+				if (node_k[1] == NODE_TYPES.TNODE.ordinal() || node_k[1] == NODE_TYPES.LEAF.ordinal()
+						|| node_k[1] == NODE_TYPES.ROOT.ordinal())
+					recover(i);
+				else remove(i);
 			}
-		}else{
+		} else {
 			throw new RuntimeException("removing unknown structures");
 		}
-		
 	}
 }

@@ -23,6 +23,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -237,23 +238,6 @@ public abstract class NetworkModel implements Serializable{
 				if (NetworkConfig.USE_NEURAL_FEATURES) {
 					nnController.forwardNetwork(true);
 				}
-				/***If using the mean-field inference, this part is enabled*****/
-				if(NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD){
-					for(int threadId=0; threadId<this._numThreads; threadId++) this._learners[threadId].setMessagePassing();
-					for(int smallIt=0;smallIt<NetworkConfig.MF_ROUND; smallIt++){
-						List<Future<Void>> results = pool.invokeAll(callables);
-						for(Future<Void> result: results){
-							try{
-								result.get(); // To ensure any exception is thrown
-							} catch (ExecutionException e){
-								throw new RuntimeException(e);
-							}
-						}
-//						System.out.println("Mean-Field iteration "+(smallIt+1));
-					}
-					for(int threadId=0; threadId<this._numThreads; threadId++) this._learners[threadId].unsetMessagePassing();
-				}
-				/***End****/
 				List<Future<Void>> results = pool.invokeAll(callables);
 				for(Future<Void> result: results){
 					try{
@@ -427,6 +411,15 @@ public abstract class NetworkModel implements Serializable{
 				results[k++] = output;
 			}
 		}
+		
+		Arrays.sort(results, new Comparator<Instance>(){
+			@Override
+			public int compare(Instance o1, Instance o2) {
+				if(o1.getInstanceId()<o2.getInstanceId())
+				return -1;
+				else return 1;
+			}
+		});
 		
 		return results;
 	}

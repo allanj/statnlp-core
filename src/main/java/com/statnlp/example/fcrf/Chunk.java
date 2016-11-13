@@ -28,35 +28,39 @@ import java.util.Map;
  * Actually this file is the chunk label
  *
  */
-public class Entity implements Serializable{
+public class Chunk implements Serializable{
 	
 	private static final long serialVersionUID = -5006849791095171763L;
+	private static boolean locked = false;
+	public static final Map<String, Chunk> ENTS = new HashMap<String, Chunk>();
+	public static final Map<Integer, Chunk> ENTS_INDEX = new HashMap<Integer, Chunk>();
 	
-	public static final Map<String, Entity> ENTS = new HashMap<String, Entity>();
-	public static final Map<Integer, Entity> ENTS_INDEX = new HashMap<Integer, Entity>();
-	
-	public static Entity get(String form){
+	public static Chunk get(String form){
 		if(!ENTS.containsKey(form)){
-			Entity label = new Entity(form, ENTS.size());
+			if(locked) 
+				throw new RuntimeException("Unknown entity type:"+form);
+			Chunk label = new Chunk(form, ENTS.size());
 			ENTS.put(form, label);
 			ENTS_INDEX.put(label._id, label);
 		}
 		return ENTS.get(form);
 	}
 	
-	public static Entity get(int id){
+	public static void lock(){locked = true;} 
+	
+	public static Chunk get(int id){
 		return ENTS_INDEX.get(id);
 	}
 	
 	private String _form;
 	private int _id;
 	
-	public Entity(Entity lbl){
+	public Chunk(Chunk lbl){
 		this._form = lbl._form;
 		this._id = lbl._id;
 	}
 	
-	private Entity(String form, int id){
+	private Chunk(String form, int id){
 		this._form = form;
 		this._id = id;
 	}
@@ -74,8 +78,8 @@ public class Entity implements Serializable{
 	}
 	
 	public boolean equals(Object o){
-		if(o instanceof Entity){
-			Entity l = (Entity)o;
+		if(o instanceof Chunk){
+			Chunk l = (Chunk)o;
 			return this._form.equals(l._form);
 		}
 		return false;

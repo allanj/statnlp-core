@@ -1,6 +1,6 @@
 package com.statnlp.example.fcrf;
 
-public class TFConfig {
+public class FCRFConfig {
 
 	public static String CONLL_train = "data/conll2000/train.txt";
 	public static String CONLL_test = "data/conll2000/test.txt";
@@ -15,4 +15,9 @@ public class TFConfig {
 	
 	public static boolean windows = false;
 	
+	public static enum TASK{
+		NER,
+		TAGGING,
+		JOINT;
+	}
 }

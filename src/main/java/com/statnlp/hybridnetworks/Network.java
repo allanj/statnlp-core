@@ -102,7 +102,8 @@ public abstract class Network implements Serializable, HyperGraph{
 	**/
 	protected transient HashMap<Integer, HashMap<Integer, Integer>> src2fIdx2Dst;
 	/** The marginal map used in mean-field inference. To save the marginal score of the unlabeled network.**/
-	protected transient HashMap<Integer, Double> marginalMap = new HashMap<Integer, Double>();
+	protected transient HashMap<Integer, Double> currentMarginalMap;
+	protected transient HashMap<Integer, Double> newMarginalMap;
 	
 	/** The current structure that the network is using*/
 	protected int currentStructure; 
@@ -325,16 +326,6 @@ public abstract class Network implements Serializable, HyperGraph{
 		return this._max_k_path_listbest[nodeIdx][k];
 	}
 	
-
-	/**
-	 * Calculate insideOutside then the marginal score for all nodes 
-	 */
-	public void marginalize(){
-		this.inside();
-		this.outside();
-		marginal();
-	}
-	
 	/**
 	 * Calculate the marginal score for all nodes 
 	 */
@@ -346,7 +337,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			//for mean-field, only need to gather the marginal from the unlabeled network
 			if(NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD && !this.getInstance().isLabeled()
 					&& !this.isRemoved(k) &&  src2fIdx2Dst.containsKey(k)){
-				marginalMap.put(k, _marginal[k]);
+				newMarginalMap.put(k, _marginal[k]);
 			}
 		}
 	}
@@ -387,6 +378,9 @@ public abstract class Network implements Serializable, HyperGraph{
 				//actually for the labeled network, no need to do the marginalize
 				//since the marginal score of labeled network is not used.
 				this.marginal();
+				//if(!this.getInstance().isLabeled())
+				//	for(int k = 0; k < this.countNodes(); k++)
+				//		System.out.println("marginal[" + k + "] = " + this._marginal[k]);
 			}
 		} else { // Use real max
 			this.max();
@@ -518,8 +512,8 @@ public abstract class Network implements Serializable, HyperGraph{
 			} else {
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-			 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().marginalMap):fa.getScore(this._param);
-				if(NetworkConfig.MODEL_TYPE.USE_COST){
+			 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap):fa.getScore(this._param);
+			 	if(NetworkConfig.MODEL_TYPE.USE_COST){
 					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
 				for(int child_k : children_k){
@@ -542,7 +536,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-		 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().marginalMap):fa.getScore(this._param);
+		 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap):fa.getScore(this._param);
 
  			if(NetworkConfig.MODEL_TYPE.USE_COST){
 				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
@@ -589,7 +583,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-		 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().marginalMap):fa.getScore(this._param);
+		 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap):fa.getScore(this._param);
 			if(NetworkConfig.MODEL_TYPE.USE_COST){
 				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 			}
@@ -652,7 +646,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 				double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-			 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().marginalMap):fa.getScore(this._param);
+			 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap):fa.getScore(this._param);
 				if(NetworkConfig.MODEL_TYPE.USE_COST){
 					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
@@ -670,7 +664,11 @@ public abstract class Network implements Serializable, HyperGraph{
 			count *= this._weight;
 //			if(Double.isNaN(count))
 //				throw new RuntimeException("count is NaN in updating gradient?");
-			fa.update(this._param, count);
+			if (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)){
+				fa.update_MF_Version(this._param, count, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap);
+			}else{
+				fa.update(this._param, count);
+			}
 			if(!NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 				for(int child_k: children_k){
 					this.updateGradient(child_k);	
@@ -725,7 +723,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				} else {
 					FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 					double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-				 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().marginalMap):fa.getScore(this._param);
+				 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap):fa.getScore(this._param);
 					if(NetworkConfig.MODEL_TYPE.USE_COST){
 						try{
 							score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
@@ -756,7 +754,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-			 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().marginalMap):fa.getScore(this._param);
+			 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap):fa.getScore(this._param);
 				if(NetworkConfig.MODEL_TYPE.USE_COST){
 					try{
 						score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
@@ -789,7 +787,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-			 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().marginalMap):fa.getScore(this._param);
+			 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap):fa.getScore(this._param);
 				if(NetworkConfig.MODEL_TYPE.USE_COST){
 					try{
 						score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
@@ -850,7 +848,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			FeatureArray fa = this._param.extract(this, nodeIdx, children_k, children_k_index);
 			double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(nodeIdx)?
-		 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(nodeIdx), this.getUnlabeledNetwork().marginalMap):fa.getScore(this._param);
+		 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(nodeIdx), this.getUnlabeledNetwork().currentMarginalMap):fa.getScore(this._param);
 			double firstBest = score;
 			for(int child_k : children_k){
 				firstBest += this._max_k[child_k][0];
@@ -1043,7 +1041,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * Only required when we used the mean-field inference method.
 	 * Need to implemented in user's own network. No need to implement if not using mean-field inference.
 	 */
-	public void removeKthStructure(int kthStructure){}
+	public void enableKthStructure(int kthStructure){}
 	
 	/**
 	 * For mean-field inference, set the current structure in this network  
@@ -1071,6 +1069,8 @@ public abstract class Network implements Serializable, HyperGraph{
 		if(fIdx==-1)
 			throw new RuntimeException("The feature idx is -1?");
 		if(src2fIdx2Dst.containsKey(srcNode)){
+			if(this.getInstance().isLabeled() && src2fIdx2Dst.get(srcNode).containsKey(fIdx))
+				throw new RuntimeException("repeated?");
 			src2fIdx2Dst.get(srcNode).put(fIdx, dstNode);
 		}else{
 			HashMap<Integer, Integer> map = new HashMap<Integer, Integer>();
@@ -1090,7 +1090,13 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * new the marginal map, clear all elements
 	 */
 	public void clearMarginalMap(){
-		this.marginalMap = new HashMap<Integer, Double>();
+		this.currentMarginalMap = new HashMap<>();
+		this.newMarginalMap = new HashMap<>();
+	}
+	
+	public void renewCurrentMarginalMap(){
+		this.currentMarginalMap = this.newMarginalMap;
+		this.newMarginalMap = new HashMap<>();
 	}
 }
 
