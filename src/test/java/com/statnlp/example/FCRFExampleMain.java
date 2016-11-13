@@ -188,9 +188,10 @@ public class FCRFExampleMain {
 		if (task == TASK.NER || task == TASK.JOINT) {
 			FCRFEval.evalFscore(predictions, nerOut);
 			FCRFEval.evalChunkAcc(predictions);
-		} else if (task == TASK.TAGGING || task == TASK.JOINT) {
+		}
+		if (task == TASK.TAGGING || task == TASK.JOINT)
 			FCRFEval.evalPOSAcc(predictions, posOut);
-		} else if (task == TASK.JOINT)
+		if (task == TASK.JOINT)
 			FCRFEval.evalJointAcc(predictions);
 	}
 
