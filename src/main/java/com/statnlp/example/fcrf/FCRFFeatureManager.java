@@ -80,7 +80,7 @@ public class FCRFFeatureManager extends FeatureManager {
 		
 		
 		if (nodeArr[1] == NODE_TYPES.ENODE.ordinal()){
-			if(pos==inst.size() || eId==(Chunk.ENTS.size()+Tag.TAGS.size())) return FeatureArray.EMPTY;
+			if(pos==inst.size() || eId==(Chunk.CHUNKS.size()+Tag.TAGS.size())) return FeatureArray.EMPTY;
 			addchunkFeatures(featureList, network, sent, pos, eId);
 			//false: means it's NE structure
 			if(useJointFeatures)
@@ -88,8 +88,8 @@ public class FCRFFeatureManager extends FeatureManager {
 																
 		} else if (nodeArr[1] == NODE_TYPES.TNODE.ordinal() ){//|| nodeArr[1] == NODE_TYPES.ROOT.ordinal()){
 															//can uncomment this after debugging, we might need to end features for POS tagging	
-			if (pos!=inst.size() && eId==(Chunk.ENTS.size()+Tag.TAGS.size() )) return FeatureArray.EMPTY;
-			if (pos==inst.size() && eId!=(Chunk.ENTS.size()+Tag.TAGS.size() )) return FeatureArray.EMPTY;
+			if (pos!=inst.size() && eId==(Chunk.CHUNKS.size()+Tag.TAGS.size() )) return FeatureArray.EMPTY;
+			if (pos==inst.size() && eId!=(Chunk.CHUNKS.size()+Tag.TAGS.size() )) return FeatureArray.EMPTY;
 			addPOSFeatures(featureList, network, sent, pos, eId);
 			if(useJointFeatures && pos != inst.size())
 				addJointFeatures(featureList, network, sent, pos, eId, parent_k, children_k, true);
@@ -263,7 +263,7 @@ public class FCRFFeatureManager extends FeatureManager {
 		}else{
 			//current it's POS structure, need to refer to chunk node
 			nodeType = NODE_TYPES.ENODE.ordinal();
-			for(int e=0; e<Chunk.ENTS_INDEX.size(); e++){
+			for(int e=0; e<Chunk.CHUNKS_INDEX.size(); e++){
 				String chunk = Chunk.get(e).getForm();
 				if (this.iobes && pos == sent.length()-1 && (chunk.startsWith("B") || chunk.startsWith("I")) ) 
 					continue;

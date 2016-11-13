@@ -45,7 +45,7 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 	}
 	
 	public long toNode_leaf(){
-		int[] arr = new int[]{0, NODE_TYPES.LEAF.ordinal(), Chunk.ENTS.size()+Tag.TAGS.size()};
+		int[] arr = new int[]{0, NODE_TYPES.LEAF.ordinal(), Chunk.CHUNKS.size()+Tag.TAGS.size()};
 		return NetworkIDMapper.toHybridNodeID(arr);
 	}
 	
@@ -71,7 +71,7 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 	 * @return
 	 */
 	public long toNode_root(int size){
-		int[] arr = new int[]{size+1,NODE_TYPES.ROOT.ordinal(),Chunk.ENTS.size()+Tag.TAGS.size()};
+		int[] arr = new int[]{size+1,NODE_TYPES.ROOT.ordinal(),Chunk.CHUNKS.size()+Tag.TAGS.size()};
 		return NetworkIDMapper.toHybridNodeID(arr);
 	}
 	
@@ -95,7 +95,7 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 			long[] e_children = new long[] { leaf };
 			for (int i = 0; i < inst.size(); i++) {
 				// output is actually the chunk.
-				int chunkId = Chunk.ENTS.get(inst.getOutput().get(i)).getId();
+				int chunkId = Chunk.CHUNKS.get(inst.getOutput().get(i)).getId();
 				long e_node = toNode_e(i, chunkId);
 				lcrfNetwork.addNode(e_node);
 				long[] current_e_Nodes = new long[] { e_node };
@@ -147,14 +147,14 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 			long root = toNode_root(i+1); // the size should be i+1
 			lcrfNetwork.addNode(root);
 			if(task==TASK.NER || task==TASK.JOINT){
-				long[] currentNodes = new long[Chunk.ENTS.size()];
-				for(int e=0;e<Chunk.ENTS.size();e++){
+				long[] currentNodes = new long[Chunk.CHUNKS.size()];
+				for(int e=0;e<Chunk.CHUNKS.size();e++){
 					long enode = toNode_e(i, e);
-					String currChunk = Chunk.ENTS_INDEX.get(e).getForm();
+					String currChunk = Chunk.CHUNKS_INDEX.get(e).getForm();
 					for(long child: children){
 						if(child==-1) continue;
 						int[] childArr = NetworkIDMapper.toHybridNodeArray(child);
-						String childChunk = i==0? "O":Chunk.ENTS_INDEX.get(childArr[2]).getForm(); //i=0; child is the leaf
+						String childChunk = i==0? "O":Chunk.CHUNKS_INDEX.get(childArr[2]).getForm(); //i=0; child is the leaf
 						if(childChunk.startsWith("I")){
 							if(currChunk.startsWith("I") && !childChunk.substring(1).equals(currChunk.substring(1))) continue;
 							if(currChunk.startsWith("E") && !childChunk.substring(1).equals(currChunk.substring(1))) continue;
@@ -187,7 +187,7 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 				for(long child:currentNodes){
 					if(child==-1) continue;
 					int[] childArr = NetworkIDMapper.toHybridNodeArray(child);
-					String childChunk = i==0? "O":Chunk.ENTS_INDEX.get(childArr[2]).getForm(); //i=0; child is the leaf
+					String childChunk = i==0? "O":Chunk.CHUNKS_INDEX.get(childArr[2]).getForm(); //i=0; child is the leaf
 					if (IOBESencoding && childChunk.startsWith("B")) continue;
 					if (IOBESencoding && childChunk.startsWith("I")) continue;
 					lcrfNetwork.addEdge(root, new long[]{child});
@@ -257,7 +257,7 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 			rootIdx = child_k;
 			int[] childArr = NetworkIDMapper.toHybridNodeArray(child);
 			int eId = childArr[2];
-			String resChunk = Chunk.ENTS_INDEX.get(eId).getForm();
+			String resChunk = Chunk.CHUNKS_INDEX.get(eId).getForm();
 			//assume it's the IOBES encoding.
 			if(resChunk.startsWith("S")) resChunk = "B"+resChunk.substring(1);
 			if(resChunk.startsWith("E")) resChunk = "I"+resChunk.substring(1);

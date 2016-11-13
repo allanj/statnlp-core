@@ -32,24 +32,24 @@ public class Chunk implements Serializable{
 	
 	private static final long serialVersionUID = -5006849791095171763L;
 	private static boolean locked = false;
-	public static final Map<String, Chunk> ENTS = new HashMap<String, Chunk>();
-	public static final Map<Integer, Chunk> ENTS_INDEX = new HashMap<Integer, Chunk>();
+	public static final Map<String, Chunk> CHUNKS = new HashMap<String, Chunk>();
+	public static final Map<Integer, Chunk> CHUNKS_INDEX = new HashMap<Integer, Chunk>();
 	
 	public static Chunk get(String form){
-		if(!ENTS.containsKey(form)){
+		if(!CHUNKS.containsKey(form)){
 			if(locked) 
 				throw new RuntimeException("Unknown entity type:"+form);
-			Chunk label = new Chunk(form, ENTS.size());
-			ENTS.put(form, label);
-			ENTS_INDEX.put(label._id, label);
+			Chunk label = new Chunk(form, CHUNKS.size());
+			CHUNKS.put(form, label);
+			CHUNKS_INDEX.put(label._id, label);
 		}
-		return ENTS.get(form);
+		return CHUNKS.get(form);
 	}
 	
 	public static void lock(){locked = true;} 
 	
 	public static Chunk get(int id){
-		return ENTS_INDEX.get(id);
+		return CHUNKS_INDEX.get(id);
 	}
 	
 	private String _form;

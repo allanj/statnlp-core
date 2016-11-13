@@ -94,7 +94,7 @@ public class GRMMFeatureManager extends FeatureManager {
 		}else{
 			//current it's POS structure, need to refer to Entity node
 			nodeType = NODE_TYPES.ENODE.ordinal();
-			for(int e=0; e<Chunk.ENTS_INDEX.size(); e++){
+			for(int e=0; e<Chunk.CHUNKS_INDEX.size(); e++){
 				String entity = Chunk.get(e).getForm();
 				arr = new int[]{pos+1, nodeType, e};
 				long unlabeledDstNode = NetworkIDMapper.toHybridNodeID(arr);

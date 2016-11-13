@@ -55,8 +55,7 @@ public class FCRFExampleMain {
 	/** The option to use existing model **/
 	public static boolean useExistingModel = false;
 	
-	public static void main(String[] args) throws IOException, InterruptedException{
-		// TODO Auto-generated method stub
+	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException{
 		
 		trainNumber = 80;
 		testNumber = 2;
@@ -68,7 +67,6 @@ public class FCRFExampleMain {
 		posOut = FCRFConfig.posOut;
 		
 		processArgs(args);
-	
 		
 		List<FCRFInstance> trainInstances = null;
 		List<FCRFInstance> testInstances = null;
@@ -111,7 +109,7 @@ public class FCRFExampleMain {
 		Tag.lock();
 		
 		
-		System.err.println("chunk size:"+Chunk.ENTS_INDEX.toString());
+		System.err.println("chunk size:"+Chunk.CHUNKS_INDEX.toString());
 		System.err.println("tag size:"+Tag.TAGS.size());
 		System.err.println("tag size:"+Tag.TAGS_INDEX.toString());
 		
@@ -123,8 +121,6 @@ public class FCRFExampleMain {
 		NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = false;
 		NetworkConfig.NUM_STRUCTS = 2;
 		NetworkConfig.INFERENCE = task == TASK.JOINT ? InferenceType.MEAN_FIELD : InferenceType.FORWARD_BACKWARD;
-		
-		
 		
 		/***Neural network Configuration**/
 		NetworkConfig.USE_NEURAL_FEATURES = false; 
@@ -139,18 +135,14 @@ public class FCRFExampleMain {
 		GlobalNetworkParam param_g = null; 
 		if(useExistingModel){
 			ObjectInputStream in = new ObjectInputStream(new FileInputStream(modelFile));
-			try {
-				param_g = (GlobalNetworkParam)in.readObject();
-			} catch (ClassNotFoundException e) {
-				e.printStackTrace();
-			}
+			param_g = (GlobalNetworkParam)in.readObject();
 			in.close();
 		}else{
 			param_g = new GlobalNetworkParam(optimizer);
 		}
-		param_g = new GlobalNetworkParam(optimizer);
 		
 		FeatureManager fa = null;
+		param_g = new GlobalNetworkParam(optimizer);
 		fa = new FCRFFeatureManager(param_g, useJointFeatures, cascade, task, windowSize, IOBESencoding);
 //		fa = new GRMMFeatureManager(param_g);
 		FCRFNetworkCompiler compiler = new FCRFNetworkCompiler(task, IOBESencoding);
