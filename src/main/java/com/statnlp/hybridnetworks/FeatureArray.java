@@ -23,30 +23,29 @@ public class FeatureArray implements Serializable{
 	
 	private static final long serialVersionUID = 9170537017171193020L;
 	
-	private double _score;
+	private double _totalScore;
+	private double _currScore;
 	private int[] _fs;
 	private boolean _isLocal = false;
 	
 	public static final FeatureArray EMPTY = new FeatureArray(new int[0]);
 	public static final FeatureArray NEGATIVE_INFINITY = new FeatureArray(Double.NEGATIVE_INFINITY);
 	
+	private int _version;
+	private FeatureArray _next;
+	
+	private boolean _alwaysChange = false;
+	
 	/**
 	 * Merges the features in <code>fs</code> and in <code>next</code>
-	 * @deprecated This one is inefficient. Use {@link #FeatureArray(int[])} instead.
+//	 *@deprecated This one is inefficient. Use {@link #FeatureArray(int[])} instead.
 	 * @param fs
 	 * @param next
 	 */
 	public FeatureArray(int[] fs, FeatureArray next) {
 		this._fs = fs;
-		if(next != null && next._fs != null){
-			this._fs = new int[fs.length+next._fs.length];
-			for(int i=0; i<fs.length; i++){
-				this._fs[i] = fs[i];
-			}
-			for(int i=0; i<next._fs.length; i++){
-				this._fs[i+fs.length] = next._fs[i];
-			}
-		}
+		this._next = next;
+		this._version = -1; //the score is not calculated yet.
 	}
 	
 	/**
@@ -56,10 +55,16 @@ public class FeatureArray implements Serializable{
 	public FeatureArray(int[] fs) {
 		this._fs = fs;
 		this._isLocal = false;
+		this._next = null;
+		this._version = -1;
 	}
 	
 	private FeatureArray(double score) {
-		this._score = score;
+		this._totalScore = score;
+	}
+	
+	public void setAlwaysChange(){
+		this._alwaysChange = true;
 	}
 	
 	public FeatureArray toLocal(LocalNetworkParam param){
@@ -96,13 +101,23 @@ public class FeatureArray implements Serializable{
 			}
 		}
 		
-		FeatureArray fa = new FeatureArray(fs_local);
+		FeatureArray fa;
+		if (this._next != null){
+			fa = new FeatureArray(fs_local, this._next.toLocal(param));
+		}else{
+			fa = new FeatureArray(fs_local);
+		}
 		fa._isLocal = true;
+		fa._alwaysChange = this._alwaysChange;
 		return fa;
 	}
 	
 	public int[] getCurrent(){
 		return this._fs;
+	}
+	
+	public FeatureArray getNext(){
+		return this._next;
 	}
 	
 	public void update(LocalNetworkParam param, double count){
@@ -117,6 +132,9 @@ public class FeatureArray implements Serializable{
 		for(int f_local : fs_local){
 			param.addCount(f_local, count);
 		}
+		if(this._next != null){
+			this._next.update(param, count);
+		}
 	}
 	
 	
@@ -130,6 +148,9 @@ public class FeatureArray implements Serializable{
 			double featureValue = fIdx2DstNode.containsKey(f_local) ? Math.exp(marginalMap.get(fIdx2DstNode.get(f_local))): 1.0;
 			param.addCount(f_local, featureValue * count);
 		}
+		if(this._next != null){
+			this._next.update_MF_Version(param, count, fIdx2DstNode, marginalMap);
+		}
 	}
 	
 	/**
@@ -137,22 +158,29 @@ public class FeatureArray implements Serializable{
 	 * @param param
 	 * @return
 	 */
-	public double getScore(LocalNetworkParam param){
+	public double getScore(LocalNetworkParam param, int version){
 		if(this == NEGATIVE_INFINITY){
-			return this._score;
+			return this._totalScore;
 		}
+		
 		if(!this._isLocal != param.isGlobalMode()) {
 			throw new RuntimeException("This FeatureArray is local? "+this._isLocal+"; The param is "+param.isGlobalMode());
 		}
 		
 		//if the score is negative infinity, it means disabled.
-		if(this._score == Double.NEGATIVE_INFINITY){
-			return this._score;
+		if(this._totalScore == Double.NEGATIVE_INFINITY){
+			return this._totalScore;
 		}
-		
-		this._score = this.computeScore(param, this.getCurrent());
-		
-		return this._score;
+		this._totalScore = 0.0;
+		if (this._version != version){
+			this._currScore = this.computeScore(param, this.getCurrent());
+			this._version = version;
+		}
+		this._totalScore += this._currScore;
+		if (this._next != null){
+			this._totalScore += this._next.getScore(param, version);
+		}
+		return this._totalScore;
 	}
 	
 	/**
@@ -182,36 +210,46 @@ public class FeatureArray implements Serializable{
 	 * @param marginals score array, serve as being the feature value. 
 	 * @return
 	 */
-	public double getScore_MF_Version(LocalNetworkParam param, HashMap<Integer, Integer> fIdx2DstNode, HashMap<Integer, Double> marginalMap){
+	public double getScore_MF_Version(LocalNetworkParam param, HashMap<Integer, Integer> fIdx2DstNode, HashMap<Integer, Double> marginalMap, int version){
 		if(this == NEGATIVE_INFINITY){
-			return this._score;
+			return this._totalScore;
 		}
 		if(!this._isLocal != param.isGlobalMode()) {
 			throw new RuntimeException("This FeatureArray is local? "+this._isLocal+"; The param is "+param.isGlobalMode());
 		}
-		
 		//if the score is negative infinity, it means disabled.
-		if(this._score == Double.NEGATIVE_INFINITY){
-			return this._score;
+		if(this._totalScore == Double.NEGATIVE_INFINITY){
+			return this._totalScore;
 		}
-		
-		this._score = 0.0;
-		for(int f : this.getCurrent()){
-			if(f!=-1){
-				//note that in training, f is the local feature index.
-				//in testing, f is the global feature index
-				double featureValue = fIdx2DstNode.containsKey(f)? 
-											marginalMap.containsKey(fIdx2DstNode.get(f))? Math.exp(marginalMap.get(fIdx2DstNode.get(f))) : 0.0 
-											: 1.0;
-				_score += param.getWeight(f) * featureValue;
+		this._totalScore = 0.0;
+		if (this._version != version || this._alwaysChange){
+			this._currScore = 0.0;
+			for(int f : this.getCurrent()){
+				if(f!=-1){
+					//note that in training, f is the local feature index.
+					//in testing, f is the global feature index
+					double featureValue = fIdx2DstNode.containsKey(f)? 
+												marginalMap.containsKey(fIdx2DstNode.get(f))? Math.exp(marginalMap.get(fIdx2DstNode.get(f))) : 0.0 
+												: 1.0;
+					this._currScore += param.getWeight(f) * featureValue;
+				}
 			}
+			this._version = version;
 		}
-		return this._score;
+		this._totalScore += this._currScore;
+		
+		if (this._next != null){
+			this._totalScore += this._next.getScore_MF_Version(param, fIdx2DstNode, marginalMap, version);
+		}
+		return this._totalScore;
 	}
 	
 	//returns the number of elements in the feature array
 	public int size(){
 		int size = this._fs.length;
+		if (this._next != null){
+			size += this._next.size();
+		}
 		return size;
 	}
 	
@@ -234,6 +272,9 @@ public class FeatureArray implements Serializable{
 		for(int i = 0; i<this._fs.length; i++){
 			code ^= this._fs[i];
 		}
+		if (this._next != null){
+			code = code ^ this._next.hashCode();
+		}
 		return code;
 	}
 	
@@ -246,7 +287,14 @@ public class FeatureArray implements Serializable{
 					return false;
 				}
 			}
-			return true;
+			if(this._next == null){
+				if(fa._next != null){
+					return false;
+				}
+				return true;
+			}else{
+				return this._next.equals(fa._next);
+			}
 		}
 		return false;
 	}
