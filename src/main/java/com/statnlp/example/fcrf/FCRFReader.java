@@ -30,7 +30,7 @@ public class FCRFReader {
 				words.toArray(wordsArr);
 				Sentence sent = new Sentence(wordsArr);
 				FCRFInstance inst = new FCRFInstance(index++,1.0,sent);
-				if((task==TASK.NER || task==TASK.JOINT) && IOBES) {
+				if((task==TASK.CHUNKING || task==TASK.JOINT) && IOBES) {
 					encodeIOBES(es);
 				}
 				inst.chunks = es;
@@ -47,7 +47,7 @@ public class FCRFReader {
 			String pos = values[1];
 			String word = values[0];
 			
-			if(task==TASK.NER && cascade) {
+			if(task==TASK.CHUNKING && cascade) {
 				pos = values[2];
 				rawChunk = values[3];
 			}
@@ -58,10 +58,10 @@ public class FCRFReader {
 			String chunk = null;
 			if(task==TASK.TAGGING){
 				chunk = npchunk? getNPChunk(rawChunk):rawChunk;
-			}else if(task==TASK.NER || task==TASK.JOINT ){
+			}else if(task==TASK.CHUNKING || task==TASK.JOINT ){
 				chunk = npchunk? getNPChunk(rawChunk):rawChunk;
 			}
-			if(task==TASK.NER || task==TASK.JOINT) Chunk.get(chunk);
+			if(task==TASK.CHUNKING || task==TASK.JOINT) Chunk.get(chunk);
 			if(task==TASK.TAGGING || task==TASK.JOINT) Tag.get(pos);
 			
 			

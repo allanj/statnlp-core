@@ -75,9 +75,9 @@ public class FCRFExampleMain {
 		trainNumber = 100;
 		testFile = "data/conll2000/test.txt";;
 		testNumber = 100;
-		numIteration = 1000;   
+		numIteration = 500;   
 //		testFile = trainFile;
-		NetworkConfig.MF_ROUND = 3;
+		NetworkConfig.MAX_MF_UPDATES = 10;
 		useJointFeatures = true;
 		task = TASK.JOINT;
 		IOBESencoding = true;
@@ -97,7 +97,7 @@ public class FCRFExampleMain {
 		System.err.println("[Info] nerOut: "+nerOut);
 		System.err.println("[Info] posOut: "+posOut);
 		System.err.println("[Info] task: "+task.toString());
-
+		
 		trainInstances = FCRFReader.readCONLLData(trainFile, true, trainNumber, npchunking, IOBESencoding, task);
 		boolean iobesOnTest = task == TASK.TAGGING && cascade ? true : false;
 		testInstances = FCRFReader.readCONLLData(testFile, false, testNumber, npchunking, iobesOnTest, task, cascade);
@@ -177,7 +177,7 @@ public class FCRFExampleMain {
 		
 		Instance[] predictions = model.decode(testInstances.toArray(new FCRFInstance[testInstances.size()]));
 		/**Evaluation part**/
-		if (task == TASK.NER || task == TASK.JOINT) {
+		if (task == TASK.CHUNKING || task == TASK.JOINT) {
 			FCRFEval.evalFscore(predictions, nerOut);
 			FCRFEval.evalChunkAcc(predictions);
 		}
@@ -208,11 +208,11 @@ public class FCRFExampleMain {
 					case "-testFile": testFile = args[i+1]; break;
 					case "-reg": FCRFConfig.l2val = Double.valueOf(args[i+1]); break;
 					case "-windows":FCRFConfig.windows = args[i+1].equals("true")? true:false; break;
-					case "-mfround":NetworkConfig.MF_ROUND = Integer.valueOf(args[i+1]);
-									if(NetworkConfig.MF_ROUND==0) useJointFeatures = false;
+					case "-mfround":NetworkConfig.MAX_MF_UPDATES = Integer.valueOf(args[i+1]);
+									if(NetworkConfig.MAX_MF_UPDATES==0) useJointFeatures = false;
 									break;
 					case "-task": 
-						if(args[i+1].equals("ner"))  task = TASK.NER;
+						if(args[i+1].equals("ner"))  task = TASK.CHUNKING;
 						else if (args[i+1].equals("tagging")) task  = TASK.TAGGING;
 						else if (args[i+1].equals("joint"))  task  = TASK.JOINT;
 						else throw new RuntimeException("Unknown task:"+args[i+1]+"?"); break;

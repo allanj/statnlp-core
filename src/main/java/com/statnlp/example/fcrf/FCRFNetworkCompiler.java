@@ -90,7 +90,7 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 		long root = toNode_root(inst.size());
 		lcrfNetwork.addNode(root);
 
-		if (task == TASK.NER || task == TASK.JOINT) {
+		if (task == TASK.CHUNKING || task == TASK.JOINT) {
 			// NE chain structure
 			long[] e_children = new long[] { leaf };
 			for (int i = 0; i < inst.size(); i++) {
@@ -146,7 +146,7 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 		for(int i = 0; i < _size; i++){
 			long root = toNode_root(i+1); // the size should be i+1
 			lcrfNetwork.addNode(root);
-			if(task==TASK.NER || task==TASK.JOINT){
+			if(task==TASK.CHUNKING || task==TASK.JOINT){
 				long[] currentNodes = new long[Chunk.CHUNKS.size()];
 				for(int e=0;e<Chunk.CHUNKS.size();e++){
 					long enode = toNode_e(i, e);
@@ -227,7 +227,7 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 
 	@Override
 	public FCRFInstance decompile(Network network) {
-		if(task==TASK.NER)
+		if(task==TASK.CHUNKING)
 			return decompileNE(network);
 		else if(task==TASK.TAGGING)
 			return decompilePOS(network);

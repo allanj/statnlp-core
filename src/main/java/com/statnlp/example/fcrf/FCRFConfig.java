@@ -16,7 +16,7 @@ public class FCRFConfig {
 	public static boolean windows = false;
 	
 	public static enum TASK{
-		NER,
+		CHUNKING,
 		TAGGING,
 		JOINT;
 	}
