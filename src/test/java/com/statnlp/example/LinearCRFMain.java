@@ -268,7 +268,7 @@ public class LinearCRFMain {
 			LinearCRFInstance instance = (LinearCRFInstance)ins;
 			ArrayList<Label> goldLabel = instance.getOutput();
 			ArrayList<Label> actualLabel = instance.getPrediction();
-			ArrayList<ArrayList<Label>> topKPredictions = instance.getTopKPredictions();
+			List<ArrayList<Label>> topKPredictions = instance.<ArrayList<Label>>getTopKPredictions();
 			ArrayList<String[]> words = instance.getInput();
 			for(int i=0; i<goldLabel.size(); i++){
 				if(goldLabel.get(i).equals(actualLabel.get(i))){

@@ -16,6 +16,9 @@
  */
 package com.statnlp.hybridnetworks;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
 
@@ -139,7 +142,57 @@ public class LocalNetworkDecoderThread extends Thread{
 		if(numPredictionsGenerated == 1){
 			return this._compiler.decompile(network);
 		} else {
-			return this._compiler.decompile(network, numPredictionsGenerated);
+			try{
+				// Try calling the implementation for top-K decompiler (not decoding)
+				return this._compiler.decompile(network, numPredictionsGenerated);
+			} catch (UnsupportedOperationException e){
+				// If not implemented, then do a hack by changing the max array into the k-th best prediction
+				// Then call decompile to get the k-th best structure.
+				Instance result = this._compiler.decompile(network);
+				List<Object> topKPredictions = new ArrayList<>();
+				result.setTopKPredictions(topKPredictions);
+				topKPredictions.add(result.getPrediction());
+				NodeHypothesis rootHypothesis = network.getNodeHypothesis(network.getRootId());
+				for(int i=1; i<numPredictionsGenerated; i++){
+					IndexedScore kthPrediction = rootHypothesis.getKthBestHypothesis(i);
+					if(kthPrediction == null){
+						break;
+					}
+					setMaxArrayForKthPrediction(network, kthPrediction, rootHypothesis);
+					Instance tmp = this._compiler.decompile(network);
+					topKPredictions.add(tmp.getPrediction());
+				}
+				// Set the max to the true max again
+				setMaxArrayForKthPrediction(network, rootHypothesis.getKthBestHypothesis(0), rootHypothesis);
+				return result;
+			}
+		}
+	}
+	
+	/**
+	 * This method is to override the max array with the k-th prediction structure.<br>
+	 * In the case where there is no decompile (not decoding) method defined for top-K prediction,
+	 * we override the max array based on the k-th prediction, then we can call max decompile to
+	 * get the k-th output prediction.
+	 * @param network
+	 * @param kthPrediction
+	 * @param nodeHypothesis
+	 */
+	private void setMaxArrayForKthPrediction(Network network, IndexedScore kthPrediction, NodeHypothesis nodeHypothesis){
+		int nodeIndex = nodeHypothesis.nodeIndex();
+		EdgeHypothesis edge = nodeHypothesis.parents()[kthPrediction.index[0]];
+		IndexedScore score = edge.getKthBestHypothesis(kthPrediction.index[1]);
+		IndexedScore[] nextPath = new IndexedScore[edge.parents.length];
+		if(network._max_paths[nodeIndex].length != edge.parents().length){
+			network._max_paths[nodeIndex] = new int[edge.parents().length];
+		}
+		for(int i=0; i<edge.parents.length; i++){
+			nextPath[i] = edge.parents()[i].getKthBestHypothesis(score.index[i]);
+			network._max_paths[nodeIndex][i] = edge.parents()[i].nodeIndex();
+		}
+		network._max[nodeIndex] = kthPrediction.score;
+		for(int i=0; i<edge.parents.length; i++){
+			setMaxArrayForKthPrediction(network, nextPath[i], edge.parents()[i]);
 		}
 	}
 	

@@ -974,6 +974,14 @@ public abstract class Network implements Serializable, HyperGraph{
 	}
 	
 	/**
+	 * Get the index of the root node in the network
+	 * @return
+	 */
+	public int getRootId(){
+		return this.countNodes()-1;
+	}
+	
+	/**
 	 * Get the array form of the node at the specified index in the node array
 	 */
 	public int[] getNodeArray(int k){

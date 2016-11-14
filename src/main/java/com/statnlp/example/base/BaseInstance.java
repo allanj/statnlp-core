@@ -1,7 +1,6 @@
 package com.statnlp.example.base;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.List;
 
 import com.statnlp.commons.types.Instance;
 
@@ -11,7 +10,6 @@ public abstract class BaseInstance<SELF extends BaseInstance<SELF, IN, OUT>, IN,
 	public IN input;
 	public OUT output;
 	public OUT prediction;
-	public List<OUT> topKPredictions;
 
 	public BaseInstance(int instanceId, double weight) {
 		super(instanceId, weight);
@@ -87,12 +85,6 @@ public abstract class BaseInstance<SELF extends BaseInstance<SELF, IN, OUT>, IN,
 		return prediction;
 	}
 	
-	@SuppressWarnings("unchecked")
-	@Override
-	public <T extends List<? super Object>> T getTopKPredictions(){
-		return (T)topKPredictions;
-	}
-
 	@Override
 	public boolean hasOutput() {
 		return output != null;
@@ -112,11 +104,6 @@ public abstract class BaseInstance<SELF extends BaseInstance<SELF, IN, OUT>, IN,
 	@Override
 	public void setPrediction(Object o) {
 		prediction = (OUT)o;
-	}
-	
-	@SuppressWarnings("unchecked")
-	public void setTopKPredictions(Object o){
-		topKPredictions = (List<OUT>)o;
 	}
 
 }

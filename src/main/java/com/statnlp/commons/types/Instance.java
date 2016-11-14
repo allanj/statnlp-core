@@ -49,6 +49,8 @@ public abstract class Instance implements Serializable{
 	private Instance _labeledInstance;
 	/** The unlabeled version of this instance, if exists, null otherwise */
 	private Instance _unlabeledInstance;
+	/** The top-K predictions of this instance */
+	protected List<?> _topKPredictions;
 	
 	/**
 	 * Create an instance.
@@ -174,9 +176,12 @@ public abstract class Instance implements Serializable{
 	public abstract Object getPrediction();
 	
 	@SuppressWarnings("unchecked")
-	public <T extends List<? super Object>> T getTopKPredictions(){
-		T result = (T)new ArrayList<Object>();
-		result.add(getPrediction());
+	public <T> List<T> getTopKPredictions(){
+		if(this._topKPredictions != null){
+			return (List<T>)this._topKPredictions;
+		}
+		List<T> result = (List<T>)new ArrayList<Object>();
+		result.add((T)getPrediction());
 		return result;
 	}
 	
@@ -184,5 +189,8 @@ public abstract class Instance implements Serializable{
 	public abstract boolean hasPrediction();
 	
 	public abstract void setPrediction(Object o);
+	public void setTopKPredictions(List<?> topKPredictions){
+		this._topKPredictions = topKPredictions;
+	}
 	
 }
