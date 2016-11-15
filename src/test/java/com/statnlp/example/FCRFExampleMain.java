@@ -72,14 +72,14 @@ public class FCRFExampleMain {
 		List<FCRFInstance> testInstances = null;
 		/***********DEBUG*****************/
 		trainFile = "data/conll2000/train.txt";
-		trainNumber = 100;
+		trainNumber = 300;
 		testFile = "data/conll2000/test.txt";;
 		testNumber = 100;
 		numIteration = 500;   
 //		testFile = trainFile;
-		NetworkConfig.MAX_MF_UPDATES = 10;
-		useJointFeatures = true;
-		task = TASK.JOINT;
+		NetworkConfig.MAX_MF_UPDATES = 0;
+		useJointFeatures = false;
+		task = TASK.TAGGING;
 		IOBESencoding = true;
 		saveModel = false;
 		modelFile = "data/conll2000/model";

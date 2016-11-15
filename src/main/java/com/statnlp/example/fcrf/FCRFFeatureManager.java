@@ -2,11 +2,13 @@ package com.statnlp.example.fcrf;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 
 import com.statnlp.commons.types.Sentence;
 import com.statnlp.example.fcrf.FCRFConfig.TASK;
 import com.statnlp.example.fcrf.FCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.FeatureArray;
+import com.statnlp.hybridnetworks.FeatureBox;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
@@ -116,10 +118,15 @@ public class FCRFFeatureManager extends FeatureManager {
 		int[] jointFeaturesArr = new int[joint.size()];
 		for (int i = 0; i < joint.size(); i++)
 			jointFeaturesArr[i] = joint.get(i);
-		FeatureArray jointFa = new FeatureArray(jointFeaturesArr);
-		jointFa.setAlwaysChange();
+//		FeatureArray jointFa = new FeatureArray(jointFeaturesArr);
+//		jointFa.setAlwaysChange();
+//		
+//		fa = new FeatureArray(features, jointFa);
 		
-		fa = new FeatureArray(features, jointFa);
+		fa = new FeatureArray(FeatureBox.getFeatureBox(features, this.getParams_L()[network.getThreadId()]));
+		FeatureArray jointFa =  new FeatureArray(FeatureBox.getFeatureBox(jointFeaturesArr, this.getParams_L()[network.getThreadId()]));
+		jointFa.setAlwaysChange();
+		fa.next(jointFa);
 		
 		return fa;
 	}
