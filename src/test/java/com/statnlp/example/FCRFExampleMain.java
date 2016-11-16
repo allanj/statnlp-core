@@ -72,19 +72,21 @@ public class FCRFExampleMain {
 		List<FCRFInstance> testInstances = null;
 		/***********DEBUG*****************/
 		trainFile = "data/conll2000/train.txt";
-		trainNumber = 300;
+		trainNumber = 2000;
 		testFile = "data/conll2000/test.txt";;
-		testNumber = 100;
-		numIteration = 500;   
+		testNumber = -1;
+//		numIteration = 500;   
 //		testFile = trainFile;
-		NetworkConfig.MAX_MF_UPDATES = 0;
-		useJointFeatures = false;
-		task = TASK.TAGGING;
+//		NetworkConfig.MAX_MF_UPDATES = 2;
+//		useJointFeatures = true;
+		task = TASK.JOINT;
 		IOBESencoding = true;
 		saveModel = false;
 		modelFile = "data/conll2000/model";
 		useExistingModel = false;
+		npchunking = false;
 		FCRFConfig.l2val = 0.01;
+		NetworkConfig.AVOID_DUPLICATE_FEATURES = true;
 //		cascade = true;
 //		testFile = "data/conll2000/NP_chunk_final_prediction.txt";
 //		npchunking = true;
@@ -97,13 +99,14 @@ public class FCRFExampleMain {
 		System.err.println("[Info] nerOut: "+nerOut);
 		System.err.println("[Info] posOut: "+posOut);
 		System.err.println("[Info] task: "+task.toString());
+		System.err.println("[Info] #max-mf: " + NetworkConfig.MAX_MF_UPDATES);
 		
 		trainInstances = FCRFReader.readCONLLData(trainFile, true, trainNumber, npchunking, IOBESencoding, task);
 		boolean iobesOnTest = task == TASK.TAGGING && cascade ? true : false;
 		testInstances = FCRFReader.readCONLLData(testFile, false, testNumber, npchunking, iobesOnTest, task, cascade);
 		
-//		trainInstances = TFReader.readGRMMData("data/conll2000/conll2000.train1k.txt", true, -1);
-//		testInstances = TFReader.readGRMMData("data/conll2000/conll2000.test1k.txt", false, -1);
+//		trainInstances = FCRFReader.readGRMMData("data/conll2000/conll2000.train1k.txt", true, -1);
+//		testInstances = FCRFReader.readGRMMData("data/conll2000/conll2000.test1k.txt", false, -1);
 		
 		Chunk.lock();
 		Tag.lock();
@@ -144,7 +147,7 @@ public class FCRFExampleMain {
 		FeatureManager fa = null;
 		param_g = new GlobalNetworkParam(optimizer);
 		fa = new FCRFFeatureManager(param_g, useJointFeatures, cascade, task, windowSize, IOBESencoding);
-//		fa = new GRMMFeatureManager(param_g);
+//		fa = new GRMMFeatureManager(param_g, useJointFeatures);
 		FCRFNetworkCompiler compiler = new FCRFNetworkCompiler(task, IOBESencoding);
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
 		FCRFInstance[] ecrfs = trainInstances.toArray(new FCRFInstance[trainInstances.size()]);
@@ -209,7 +212,8 @@ public class FCRFExampleMain {
 					case "-reg": FCRFConfig.l2val = Double.valueOf(args[i+1]); break;
 					case "-windows":FCRFConfig.windows = args[i+1].equals("true")? true:false; break;
 					case "-mfround":NetworkConfig.MAX_MF_UPDATES = Integer.valueOf(args[i+1]);
-									if(NetworkConfig.MAX_MF_UPDATES==0) useJointFeatures = false;
+									useJointFeatures = true;
+									if(NetworkConfig.MAX_MF_UPDATES == 0) useJointFeatures = false;
 									break;
 					case "-task": 
 						if(args[i+1].equals("ner"))  task = TASK.CHUNKING;

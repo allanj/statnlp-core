@@ -7,3 +7,4 @@ experiments/*
 nn-crf-interface/*
 data/*
 .gitignore
+*.jar

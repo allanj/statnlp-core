@@ -15,10 +15,12 @@ public class GRMMFeatureManager extends FeatureManager {
 
 	private static final long serialVersionUID = 376931974939202432L;
 
-	public enum FEATYPE {grmm, joint};
+	public enum FeaType {grmm, joint};
+	private boolean useJointFeatures;
 	
-	public GRMMFeatureManager(GlobalNetworkParam param_g) {
+	public GRMMFeatureManager(GlobalNetworkParam param_g, boolean useJointFeatures) {
 		super(param_g);
+		this.useJointFeatures = useJointFeatures; 
 	}
 	
 	@Override
@@ -42,15 +44,17 @@ public class GRMMFeatureManager extends FeatureManager {
 		if (nodeArr[1] == NODE_TYPES.ENODE.ordinal()) {
 			String[] fs = sent.get(pos).getFS();
 			for (String f : fs)
-				featureList.add(this._param_g.toFeature(network, FEATYPE.grmm.name(), Chunk.get(eId).getForm(), f));
-			 addJointFeatures(featureList, network, sent, pos, eId, parent_k, children_k, false);
+				featureList.add(this._param_g.toFeature(network, FeaType.grmm.name(), Chunk.get(eId).getForm(), f));
+			if(useJointFeatures)
+				addJointFeatures(featureList, network, sent, pos, eId, parent_k, children_k, false);
 		}
 
 		if (nodeArr[1] == NODE_TYPES.TNODE.ordinal()) {
 			String[] fs = sent.get(pos).getFS();
 			for (String f : fs)
-				featureList.add(this._param_g.toFeature(network, FEATYPE.grmm.name(), Tag.get(eId).getForm(), f));
-			 addJointFeatures(featureList, network, sent, pos, eId, parent_k, children_k, true);
+				featureList.add(this._param_g.toFeature(network, FeaType.grmm.name(), Tag.get(eId).getForm(), f));
+			if(useJointFeatures)
+				addJointFeatures(featureList, network, sent, pos, eId, parent_k, children_k, true);
 		}
 		
 		ArrayList<Integer> finalList = new ArrayList<Integer>();
@@ -85,7 +89,7 @@ public class GRMMFeatureManager extends FeatureManager {
 				FCRFNetwork unlabeledNetwork = (FCRFNetwork)network.getUnlabeledNetwork();
 				int unlabeledDstNodeIdx = Arrays.binarySearch(unlabeledNetwork.getAllNodes(), unlabeledDstNode);
 				if(unlabeledDstNodeIdx>=0){
-					jointFeatureIdx = this._param_g.toFeature(network, FEATYPE.joint.name(), currLabel + " & " + tag, "");
+					jointFeatureIdx = this._param_g.toFeature(network, FeaType.joint.name(), currLabel + " & " + tag, "");
 					network.putJointFeature(parent_k, jointFeatureIdx, unlabeledDstNodeIdx);
 					featureList.add(jointFeatureIdx);
 				}
@@ -101,7 +105,7 @@ public class GRMMFeatureManager extends FeatureManager {
 				FCRFNetwork unlabeledNetwork = (FCRFNetwork)network.getUnlabeledNetwork();
 				int unlabeledDstNodeIdx = Arrays.binarySearch(unlabeledNetwork.getAllNodes(), unlabeledDstNode);
 				if(unlabeledDstNodeIdx>=0){
-					jointFeatureIdx = this._param_g.toFeature(network, FEATYPE.joint.name(), entity + " & " + currLabel, "");
+					jointFeatureIdx = this._param_g.toFeature(network, FeaType.joint.name(), entity + " & " + currLabel, "");
 					featureList.add(jointFeatureIdx);
 					network.putJointFeature(parent_k, jointFeatureIdx, unlabeledDstNodeIdx);
 				}
