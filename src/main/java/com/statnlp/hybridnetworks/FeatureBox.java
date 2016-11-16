@@ -45,6 +45,9 @@ public class FeatureBox implements Serializable {
 	 */
 	public static FeatureBox getFeatureBox(int[] fs, LocalNetworkParam param){
 		FeatureBox fb = new FeatureBox(fs);
+		if (!NetworkConfig.AVOID_DUPLICATE_FEATURES) {
+			return fb;
+		}
 		if (param.fb2Idx == null) {
 			param.fb2Idx = new HashMap<>();
 			param.fbList = new ArrayList<>();
