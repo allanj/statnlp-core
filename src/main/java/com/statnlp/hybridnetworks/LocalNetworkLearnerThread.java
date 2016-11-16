@@ -188,7 +188,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 				if (!network.getInstance().isLabeled()){
 					network.clearMarginalMap();
 					boolean prevDone = false;
-					for (int smallIt = 0; smallIt < NetworkConfig.MAX_MF_UPDATES; smallIt++) {
+					for (int mf = 0; mf < NetworkConfig.MAX_MF_UPDATES; mf++) {
 //						double unlabeledObj = 0;
 //						double labeledObj = 0;
 						for (int curr = 0; curr < NetworkConfig.NUM_STRUCTS; curr++) {
