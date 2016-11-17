@@ -156,7 +156,7 @@ public class FeatureArray implements Serializable{
 			if (fIdx2DstNode.containsKey(f_local)) {
 				int dstNode = fIdx2DstNode.get(f_local);
 				if (marginalMap.containsKey(dstNode))
-					featureValue = marginalMap.get(dstNode);
+					featureValue = Math.exp(marginalMap.get(dstNode));
 				else
 					featureValue = 0.0;
 			}
@@ -246,7 +246,7 @@ public class FeatureArray implements Serializable{
 					if (fIdx2DstNode.containsKey(f)) {
 						int dstNode = fIdx2DstNode.get(f);
 						if (marginalMap.containsKey(dstNode))
-							featureValue = marginalMap.get(dstNode);
+							featureValue = Math.exp(marginalMap.get(dstNode));
 						else
 							featureValue = 0.0;
 					}
