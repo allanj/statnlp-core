@@ -16,6 +16,7 @@
  */
 package com.statnlp.hybridnetworks;
 
+
 public class NetworkConfig {
 	
 	/**
@@ -80,7 +81,7 @@ public class NetworkConfig {
 	/**
 	 * The value used for stopping criterion of change in objective value in generative models
 	 */
-	public static double OBJTOL = 1e-14;
+	public static double OBJTOL = 10e-15;
 	/** @deprecated Use {@link #OBJTOL} instead*/
 	public static final double objtol = OBJTOL;
 
@@ -171,4 +172,47 @@ public class NetworkConfig {
 	/** @deprecated Use {@link #NUM_THREADS} instead */
 	public static final int _numThreads = NUM_THREADS;
 	
+	/** Decoding the max-marginal for each node as well. if set to true */
+	public static boolean MAX_MARGINAL_DECODING = false;
+	
+	public static int _topKValue = 1;
+	
+	/***
+	 * Please read carefully about the README.txt to install the NN server and also the communication package for Neural CRF
+	 */
+	/** If enable the neural CRF model, set it true.  */
+	public static boolean USE_NEURAL_FEATURES = false;
+	/** Regularized the neural features in CRF or not. set to false then can be done by dropout***/
+	public static boolean REGULARIZE_NEURAL_FEATURES = false;
+	/** If true: Optimized the neural net in CRF. optimizer in neural config must be set to none **/
+	public static boolean OPTIMIZE_NEURAL = false;   //false means not update the neural network parameters in CRF. false is faster
+	/** false: the feature is the word itself. true: word is the indexed word **/
+	public static boolean IS_INDEXED_NEURAL_FEATURES = false;
+	/** Randomly choose the batch at every iteration. (false may give better result)**/
+	public static boolean RANDOM_BATCH = false;
+	
+	public static String NEURAL_FEATURE_TYPE_PREFIX = "neural";
+	
+	
+	
+	public static enum InferenceType {
+		MEAN_FIELD,
+		FORWARD_BACKWARD;
+		private InferenceType(){
+			
+		}
+	}
+	
+	public static InferenceType INFERENCE = InferenceType.FORWARD_BACKWARD;
+	
+	/**For mean-field inference..***/
+	public static int MAX_MF_UPDATES = 0;
+	public static int NUM_STRUCTS = 2;
+	/**Currently only used by Mean-field inference. That's why protected. true if mean-field, false otherwise**/
+	protected static boolean PRE_COMPILE_NETWORKS;
+	
+	/**
+	 * Enable to saving the memory or not
+	 */
+	public static boolean AVOID_DUPLICATE_FEATURES = false;
 }

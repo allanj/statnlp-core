@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 //one thread should have one such LocalFeatureMap.
 /**
@@ -63,6 +64,12 @@ public class LocalNetworkParam implements Serializable{
 	
 	//if this is true, then we bypass the local params.
 	protected boolean _globalMode;
+	
+	/**
+	 * For memory-optimized, map an integer array object to a feature array object
+	 * avoid creating duplicate integer array. 
+	 * **/
+	protected Map<FeatureBox, FeatureBox> fbMap;
 	
 	public LocalNetworkParam(int threadId, FeatureManager fm, int numNetworks){
 		this._threadId = threadId;
@@ -151,8 +158,12 @@ public class LocalNetworkParam implements Serializable{
 	 */
 	public double getWeight(int featureID){
 		if(this.isGlobalMode()){
+			//note that during testing, it is global mode.
 			return this._fm.getParam_G().getWeight(featureID);
 		} else {
+			//so _fs[featureID] must be the global feature Index
+			//featureID is the local feature index.
+			//System.out.println(featureID+" "+this._fs[featureID]+" "+ Arrays.toString(this._fm.getParam_G().getFeatureRep(this._fs[featureID])));
 			return this._fm.getParam_G().getWeight(this._fs[featureID]);
 		}
 	}
@@ -231,7 +242,7 @@ public class LocalNetworkParam implements Serializable{
 														|| NetworkConfig.NUM_THREADS == 1
 														|| !NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY
 														|| this._isFinalized);
-		if(shouldCache){
+  		if(shouldCache){
 			if(this._cache == null){
 				this._cache = new FeatureArray[this._numNetworks][][];
 			}

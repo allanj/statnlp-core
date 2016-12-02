@@ -3,3 +3,8 @@
 .settings
 bin
 target/
+experiments/*
+nn-crf-interface/*
+data/*
+.gitignore
+*.jar

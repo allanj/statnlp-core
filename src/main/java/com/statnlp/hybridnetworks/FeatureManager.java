@@ -25,6 +25,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import com.statnlp.neural.NNCRFGlobalNetworkParam;
+
 /**
  * The base class for the feature manager.
  * The only function to be implemented is the {@link #extract_helper(Network, int, int[])} method.
@@ -55,6 +57,11 @@ public abstract class FeatureManager implements Serializable{
 	protected boolean _cacheEnabled = false;
 	
 	protected int _numThreads;
+	
+	/**
+	 * The communication controller for Neural CRF.
+	 */
+	private NNCRFGlobalNetworkParam nnController;
 	
 	public FeatureManager(GlobalNetworkParam param_g){
 		this._param_g = param_g;
@@ -102,9 +109,14 @@ public abstract class FeatureManager implements Serializable{
 			this._param_g._obj_old = this._param_g._obj;
 			return false;
 		}
-		
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			if (nnController == null) {
+				nnController = this._param_g._nnController;
+			}
+			nnController.backwardNetwork();
+		}
 		boolean done = this._param_g.update();
-		
+
 		if(NetworkConfig.NUM_THREADS != 1){
 			for(LocalNetworkParam param_l : this._params_l){
 				param_l.reset();
@@ -154,6 +166,7 @@ public abstract class FeatureManager implements Serializable{
 
 		this._param_g._size = 0;
 		for(int t=0;t<this._param_g._subFeatureIntMaps.size();t++){
+			//This method basically filling the _globalFeature2LocalFeature map for each thread.
 			addIntoGlobalFeatures(globalFeature2IntMap, this._param_g._subFeatureIntMaps.get(t), this._params_l[t]._globalFeature2LocalFeature);
 			this._param_g._subFeatureIntMaps.set(t, null);
 		}
@@ -162,6 +175,7 @@ public abstract class FeatureManager implements Serializable{
 	/**
 	 * Used during parallel touch, this method copies features extracted from each thread into the global feature index.
 	 * @param globalMap The global feature index, storing the features from all thread.
+	 * 		  map<type, <output, <input, globalFeatureIndex>>> The feature string is comprised by <type+output+input>
 	 * @param localMap The local feature index, storing the features from one thread.
 	 * @param gf2lf The feature indices mapping from global feature indices to local feature indices.<br>
 	 * 				This is used in each local network param to get the correct local feature indices.
@@ -174,6 +188,7 @@ public abstract class FeatureManager implements Serializable{
 			if(!globalMap.containsKey(localType)){
 				globalMap.put(localType, new HashMap<String, HashMap<String, Integer>>());
 			}
+			//this map
 			HashMap<String, HashMap<String, Integer>> globalOutput2input = globalMap.get(localType);
 			Iterator<String> iter2 = localOutput2input.keySet().iterator();
 			while(iter2.hasNext()){

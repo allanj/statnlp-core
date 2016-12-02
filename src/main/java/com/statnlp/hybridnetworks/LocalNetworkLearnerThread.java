@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.concurrent.Callable;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
 
 public class LocalNetworkLearnerThread extends Thread implements Callable<Void> {
 	
@@ -46,6 +47,11 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	
 	/** Prepare the list of instance ids for the batch selection */
 	private HashSet<Integer> chargeInstsIds = null;
+	/** Prepare the list of training inst ids **/
+	private HashSet<Integer> trainInstsIds = null;
+	
+	/**default: false. Depend on whether network config precompile or not.**/
+	private boolean precompile = false;
 	
 	/**
 	 * Construct a new learner thread using current networks (if cached) or builder (if not cached),
@@ -105,6 +111,10 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	
     @Override
     public void run () {
+    	if(precompile){
+    		this.preCompileNetwork();
+    		return;
+    	}
     	if(!isTouching){
     		this.train(this._it);
     	} else {
@@ -149,18 +159,67 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 		this.isTouching = false;
 	}
 	
+	public void preCompileNetwork(){
+		for(int networkId = 0; networkId< this._instances.length; networkId++){
+			Network network = this.getNetwork(networkId);
+			if(!network.getInstance().isLabeled())
+				network.clearMarginalMap(); //initialize the marginal map for the unlabeled network
+			network.initJointFeatureMap();
+		}
+	}
+	
 	/**
 	 * Do one iteration of training
 	 * add the batch size here is we are using the batch gradient descent, 
 	 * every time we shuffle the list.
 	 * @param it
 	 */
-	private void train(int it){
-		for(int i = 0; i< this._instances.length; i++){
-			if(NetworkConfig.USE_BATCH_TRAINING && !this.chargeInstsIds.contains(this._instances[i].getInstanceId()) && !this.chargeInstsIds.contains(-this._instances[i].getInstanceId()) )
+	private void train(int it) {
+		for (int i = 0; i < this._instances.length; i++) {
+			if (NetworkConfig.USE_BATCH_TRAINING && !this.chargeInstsIds.contains(this._instances[i].getInstanceId())
+					&& !this.chargeInstsIds.contains(-this._instances[i].getInstanceId()))
+				continue;
+			if (this.trainInstsIds != null && !this.trainInstsIds.contains(this._instances[i].getInstanceId())
+					&& !this.trainInstsIds.contains(-this._instances[i].getInstanceId()))
 				continue;
 			Network network = this.getNetwork(i);
-			network.train();
+			if (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD) {
+				// only the unlabeled network needs the marginal map.
+				if (!network.getInstance().isLabeled()){
+					network.clearMarginalMap();
+					boolean prevDone = false;
+					for (int mf = 0; mf < NetworkConfig.MAX_MF_UPDATES; mf++) {
+//						double unlabeledObj = 0;
+//						double labeledObj = 0;
+						for (int curr = 0; curr < NetworkConfig.NUM_STRUCTS; curr++) {
+							network.enableKthStructure(curr);
+							network.inference(true);
+//							unlabeledObj += network.getInside() * network._weight;
+						}
+//						for (int curr = 0; curr < NetworkConfig.NUM_STRUCTS; curr++) {
+//							network.getLabeledNetwork().enableKthStructure(curr);
+//							network.getLabeledNetwork().inference(false);
+//							labeledObj += network.getLabeledNetwork().getInside() * network.getLabeledNetwork()._weight;
+//						}
+//						System.out.println("SmallIteration " + smallIt + " label : " + labeledObj + " unlabeled: " + unlabeledObj  + " obj: "+ (labeledObj+unlabeledObj));
+						boolean done = network.compareMarginalMap();
+						if (prevDone && done){
+							network.renewCurrentMarginalMap();
+							break;
+						}
+						prevDone = done;
+						network.renewCurrentMarginalMap();
+					}
+				}
+				//update the network
+				for (int curr = 0; curr < NetworkConfig.NUM_STRUCTS; curr++) {
+					network.enableKthStructure(curr);
+					network.train();
+				}
+			}else{
+				network.train();
+			}
+			
 		}
 	}
 	
@@ -193,5 +252,10 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	public void setInstanceIdSet(HashSet<Integer> set){
 		this.chargeInstsIds = set;
 	}
+	public void setTrainInstanceIdSet(HashSet<Integer> set){
+		this.trainInstsIds = set;
+	}
 	
+	public void setPrecompile(){this.precompile = true;}
+	public void unsetPrecompile(){this.precompile = false;}
 }
