@@ -72,16 +72,16 @@ public class FCRFExampleMain {
 		List<FCRFInstance> testInstances = null;
 		/***********DEBUG*****************/
 		trainFile = "data/conll2000/train.txt";
-		trainNumber = 2000;
+		trainNumber = 100;
 		testFile = "data/conll2000/test.txt";;
-		testNumber = -1;
-//		numIteration = 500;   
+		testNumber = 1000;
+		numIteration = 500;   
 //		testFile = trainFile;
-//		NetworkConfig.MAX_MF_UPDATES = 2;
-//		useJointFeatures = true;
+		NetworkConfig.MAX_MF_UPDATES = 0;
+		useJointFeatures = false;
 		task = TASK.JOINT;
 		IOBESencoding = true;
-		saveModel = false;
+		saveModel = true;
 		modelFile = "data/conll2000/model";
 		useExistingModel = false;
 		npchunking = false;
