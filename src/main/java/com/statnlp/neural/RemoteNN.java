@@ -98,7 +98,7 @@ public class RemoteNN {
 			//packer.packString("outputDim").packInt(outputDim);
 			packer.packString("numLayer").packInt(NeuralConfig.NUM_LAYER);
 			packer.packString("hiddenSize").packInt(NeuralConfig.HIDDEN_SIZE);
-			packer.packString("activation").packString(NeuralConfig.ACTIVATION);
+//			packer.packString("activation").packString(NeuralConfig.ACTIVATION);
 			packer.packString("dropout").packDouble(NeuralConfig.DROPOUT);
 			packer.packString("optimizer").packString(NeuralConfig.OPTIMIZER);
 			packer.packString("learningRate").packDouble(NeuralConfig.LEARNING_RATE);

@@ -3,17 +3,20 @@ package com.statnlp.neural;
 import java.util.Arrays;
 import java.util.List;
 
+import org.statnlp.neural.util.Config.Activation;
+import org.statnlp.neural.util.Config.WordEmbedding;
+
 public class NeuralConfig {
 	public static int NEURAL_SERVER_PORT = 6666;
 	public static String NEURAL_SERVER_PREFIX = "tcp://";
 	public static String NEURAL_SERVER_ADDRESS = "172.18.240.32";
 	
 	public static String LANGUAGE = "en";
-	public static List<String> EMBEDDING = (List<String>) Arrays.asList("none");
+	public static List<WordEmbedding> EMBEDDING = (List<WordEmbedding>) Arrays.asList(WordEmbedding.RANDOM);
 	public static List<Integer> EMBEDDING_SIZE = (List<Integer>) Arrays.asList(100);
 	public static int NUM_LAYER = 0;
 	public static int HIDDEN_SIZE = 100;
-	public static String ACTIVATION = "tanh";
+	public static Activation ACTIVATION = Activation.TANH;
 	public static double DROPOUT = 0;
 	public static String OPTIMIZER = "sgd";
 	public static double LEARNING_RATE = 0.001;
