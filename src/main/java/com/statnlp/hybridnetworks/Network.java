@@ -387,6 +387,10 @@ public abstract class Network implements Serializable, HyperGraph{
 
 			boolean ignoreflag = false;
 			for(int child_k : children_k){
+				if(child_k < 0){
+					// A negative child_k is not a reference to a node, it's just a number associated with this edge
+					continue;
+				}
 				if(this.isRemoved(child_k)){
 					ignoreflag = true;
 				}
@@ -400,6 +404,10 @@ public abstract class Network implements Serializable, HyperGraph{
 					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
 				for(int child_k : children_k){
+					if(child_k < 0){
+						// A negative child_k is not a reference to a node, it's just a number associated with this edge
+						continue;
+					}
 					score += this._inside[child_k];
 				}
 				inside = score;
@@ -411,6 +419,10 @@ public abstract class Network implements Serializable, HyperGraph{
 
 			boolean ignoreflag = false;
 			for(int child_k : children_k){
+				if(child_k < 0){
+					// A negative child_k is not a reference to a node, it's just a number associated with this edge
+					continue;
+				}
 				if(this.isRemoved(child_k)){
 					ignoreflag = true;
 				}
@@ -423,6 +435,10 @@ public abstract class Network implements Serializable, HyperGraph{
 				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 			}
 			for(int child_k : children_k){
+				if(child_k < 0){
+					// A negative child_k is not a reference to a node, it's just a number associated with this edge
+					continue;
+				}
 				score += this._inside[child_k];
 			}
 			
@@ -455,10 +471,15 @@ public abstract class Network implements Serializable, HyperGraph{
 			int[] children_k = childrenList_k[children_k_index];
 			
 			boolean ignoreflag = false;
-			for(int child_k : children_k)
+			for(int child_k : children_k){
+				if(child_k < 0){
+					// A negative child_k is not a reference to a node, it's just a number associated with this edge
+					continue;
+				}
 				if(this.isRemoved(child_k)){
 					ignoreflag = true; break;
 				}
+			}
 			if(ignoreflag)
 				continue;
 			
@@ -469,6 +490,10 @@ public abstract class Network implements Serializable, HyperGraph{
 			}
 			score += this._outside[k];
 			for(int child_k : children_k){
+				if(child_k < 0){
+					// A negative child_k is not a reference to a node, it's just a number associated with this edge
+					continue;
+				}
 				score += this._inside[child_k];
 			}
 
@@ -476,6 +501,10 @@ public abstract class Network implements Serializable, HyperGraph{
 				continue;
 			
 			for(int child_k : children_k){
+				if(child_k < 0){
+					// A negative child_k is not a reference to a node, it's just a number associated with this edge
+					continue;
+				}
 				double v1 = this._outside[child_k];
 				double v2 = score - this._inside[child_k];
 				this._outside[child_k] = sumLog(v1, v2);
@@ -509,6 +538,10 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			boolean ignoreflag = false;
 			for(int child_k : children_k){
+				if(child_k < 0){
+					// A negative child_k is not a reference to a node, it's just a number associated with this edge
+					continue;
+				}
 				if(this.isRemoved(child_k)){
 					ignoreflag = true;
 					break;
@@ -531,6 +564,10 @@ public abstract class Network implements Serializable, HyperGraph{
 				}
 				score += this._outside[k];  // beta(s')
 				for(int child_k : children_k){
+					if(child_k < 0){
+						// A negative child_k is not a reference to a node, it's just a number associated with this edge
+						continue;
+					}
 					score += this._inside[child_k]; // alpha(s)
 				}
 				double normalization = this.getInside();
@@ -543,6 +580,10 @@ public abstract class Network implements Serializable, HyperGraph{
 			fa.update(this._param, count);
 			if(!NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 				for(int child_k: children_k){
+					if(child_k < 0){
+						// A negative child_k is not a reference to a node, it's just a number associated with this edge
+						continue;
+					}
 					this.updateGradient(child_k);	
 				}
 			}
@@ -588,9 +629,15 @@ public abstract class Network implements Serializable, HyperGraph{
 				int[] children_k = childrenList_k[children_k_index];
 				
 				boolean ignoreflag = false;
-				for(int child_k : children_k)
-					if(this.isRemoved(child_k))
+				for(int child_k : children_k){
+					if(child_k < 0){
+						// A negative child_k is not a reference to a node, it's just a number associated with this edge
+						continue;
+					}
+					if(this.isRemoved(child_k)){
 						ignoreflag = true;
+					}
+				}
 				if(ignoreflag){
 					inside = Double.NEGATIVE_INFINITY;
 				} else {
@@ -604,6 +651,10 @@ public abstract class Network implements Serializable, HyperGraph{
 						}
 					}
 					for(int child_k : children_k){
+						if(child_k < 0){
+							// A negative child_k is not a reference to a node, it's just a number associated with this edge
+							continue;
+						}
 						score += this._max[child_k];
 					}
 					inside = score;
@@ -618,9 +669,15 @@ public abstract class Network implements Serializable, HyperGraph{
 				int[] children_k = childrenList_k[children_k_index];
 
 				boolean ignoreflag = false;
-				for(int child_k : children_k)
-					if(this.isRemoved(child_k))
+				for(int child_k : children_k){
+					if(child_k < 0){
+						// A negative child_k is not a reference to a node, it's just a number associated with this edge
+						continue;
+					}
+					if(this.isRemoved(child_k)){
 						ignoreflag = true;
+					}
+				}
 				if(ignoreflag)
 					continue;
 				
@@ -634,6 +691,10 @@ public abstract class Network implements Serializable, HyperGraph{
 					}
 				}
 				for(int child_k : children_k){
+					if(child_k < 0){
+						// A negative child_k is not a reference to a node, it's just a number associated with this edge
+						continue;
+					}
 					score += this._max[child_k];
 				}
 				
@@ -649,10 +710,15 @@ public abstract class Network implements Serializable, HyperGraph{
 			for(int children_k_index = 0; children_k_index < childrenList_k.length; children_k_index++){
 				int[] children_k = childrenList_k[children_k_index];
 				boolean ignoreflag = false;
-				for(int child_k : children_k)
+				for(int child_k : children_k){
+					if(child_k < 0){
+						// A negative child_k is not a reference to a node, it's just a number associated with this edge
+						continue;
+					}
 					if(this.isRemoved(child_k)){
 						ignoreflag = true; break;
 					}
+				}
 				if(ignoreflag)
 					continue;
 				
@@ -666,6 +732,10 @@ public abstract class Network implements Serializable, HyperGraph{
 					}
 				}
 				for(int child_k : children_k){
+					if(child_k < 0){
+						// A negative child_k is not a reference to a node, it's just a number associated with this edge
+						continue;
+					}
 					score += this._max[child_k];
 				}
 				if(score >= this._max[k]){

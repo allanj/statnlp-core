@@ -157,6 +157,10 @@ public abstract class NetworkCompiler implements Serializable{
 		}
 		long[] childNodes = new long[child_k.length];
 		for(int i=0; i<child_k.length; i++){
+			if(child_k[i] < 0){
+				// A negative child_k is not a reference to a node, it's just a number associated with this edge
+				continue;
+			}
 			childNodes[i] = network.getNode(child_k[i]);
 		}
 		int[][] children_k = labeledNet.getChildren(node_k);
@@ -164,6 +168,10 @@ public abstract class NetworkCompiler implements Serializable{
 		for(int[] children: children_k){
 			long[] childrenNodes = new long[children.length];
 			for(int i=0; i<children.length; i++){
+				if(children[i] < 0){
+					// A negative child_k is not a reference to a node, it's just a number associated with this edge
+					continue;
+				}
 				childrenNodes[i] = labeledNet.getNode(children[i]);
 			}
 			if(Arrays.equals(childrenNodes, childNodes)){

@@ -379,7 +379,11 @@ public abstract class TableLookupNetwork extends Network{
 					long[] children = childrens.get(k);
 					int[] children_index = new int[children.length];
 					for(int m = 0; m<children.length; m++){
-						children_index[m] = nodesValue2IdMap.get(children[m]);
+						if(children[m] < 0){
+							children_index[m] = (int)children[m];
+						} else {
+							children_index[m] = nodesValue2IdMap.get(children[m]);
+						}
 					}
 					this._children[parent_index][k] = children_index;
 				}
@@ -396,6 +400,10 @@ public abstract class TableLookupNetwork extends Network{
 	private void checkLinkValidity(long parent, long[] children){
 		/**/
 		for(long child : children){
+			if(child < 0){
+				// A negative child_k is not a reference to a node, it's just a number associated with this edge
+				continue;
+			}
 			if(child >= parent){
 				System.err.println(Arrays.toString(NetworkIDMapper.toHybridNodeArray(parent)));
 				System.err.println(Arrays.toString(NetworkIDMapper.toHybridNodeArray(children[0])));
@@ -407,6 +415,10 @@ public abstract class TableLookupNetwork extends Network{
 		
 		this.checkNodeValidity(parent);
 		for(long child : children){
+			if(child < 0){
+				// A negative child_k is not a reference to a node, it's just a number associated with this edge
+				continue;
+			}
 			this.checkNodeValidity(child);
 		}
 	}
