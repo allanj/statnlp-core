@@ -27,6 +27,7 @@ import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
+import com.statnlp.neural.NeuralConfigReader;
 import com.statnlp.hybridnetworks.NetworkModel;
 
 public class LinearCRFMain {
@@ -43,11 +44,11 @@ public class LinearCRFMain {
 		boolean writeModelText = Boolean.parseBoolean(System.getProperty("writeModelText", "false"));
 
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = Boolean.parseBoolean(System.getProperty("generativeTraining", "false"));
-		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = Boolean.parseBoolean(System.getProperty("parallelTouch", "false"));
+		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = Boolean.parseBoolean(System.getProperty("parallelTouch", "true"));
 		NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = Boolean.parseBoolean(System.getProperty("featuresFromLabeledOnly", "false"));
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = Boolean.parseBoolean(System.getProperty("cacheFeatures", "true"));
-		NetworkConfig.L2_REGULARIZATION_CONSTANT = Double.parseDouble(System.getProperty("l2", "0.01"));
-		NetworkConfig.NUM_THREADS = Integer.parseInt(System.getProperty("numThreads", "4"));
+		NetworkConfig.L2_REGULARIZATION_CONSTANT = Double.parseDouble(System.getProperty("l2", "0.01")); //0.01
+		NetworkConfig.NUM_THREADS = Integer.parseInt(System.getProperty("numThreads", "8"));
 		
 		NetworkConfig.MODEL_TYPE = ModelType.valueOf(System.getProperty("modelType", "CRF")); // The model to be used: CRF, SSVM, or SOFTMAX_MARGIN
 		NetworkConfig.USE_BATCH_TRAINING = Boolean.parseBoolean(System.getProperty("useBatchTraining", "false")); // To use or not to use mini-batches in gradient descent optimizer
@@ -56,11 +57,16 @@ public class LinearCRFMain {
 		
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
-		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
+		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;  
+		NetworkConfig.USE_NEURAL_FEATURES = true;
+		NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 		String weightInitFile = null;
 		
-		int numIterations = Integer.parseInt(System.getProperty("numIter", "500"));
+		int numIterations = Integer.parseInt(System.getProperty("numIter", "1000"));
 		
+		if(NetworkConfig.USE_NEURAL_FEATURES){
+			NeuralConfigReader.readConfig("nn-crf-interface/neural_server/neural.config");
+		}
 		int argIndex = 0;
 		boolean shouldStop = false;
 		while(argIndex < args.length && !shouldStop){
@@ -166,8 +172,10 @@ public class LinearCRFMain {
 		if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 			optimizerFactory = OptimizerFactory.getLBFGSFactory();
 		} else {
-			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingSmoothedAdaDeltaThenGD(1e-2, 0.95, 5e-5, 0.9);
+			//optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingSmoothedAdaDeltaThenGD(1e-2, 0.95, 5e-5, 0.9);
+			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaGrad();
 		}
+		optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(0.1);
 		if(weightInitFile != null){
 			HashMap<String, HashMap<String, HashMap<String, Double>>> featureWeightMap = new HashMap<String, HashMap<String, HashMap<String, Double>>>();
 			Scanner reader = new Scanner(new File(weightInitFile));
@@ -204,14 +212,15 @@ public class LinearCRFMain {
 		for(int i=argIndex; i<args.length; i++){
 			argsToFeatureManager[i-argIndex] = args[i];
 		}
+		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler();
 		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(new GlobalNetworkParam(optimizerFactory), argsToFeatureManager);
 		
-		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler();
+		
 		
 		NetworkModel model = DiscriminativeNetworkModel.create(fm, compiler, outstream);
 		
 		model.train(trainInstances, numIterations);
-
+		
 		if(writeModelText){
 			PrintStream modelTextWriter = new PrintStream(modelPath+".txt");
 			modelTextWriter.println("Model path: "+modelPath);
@@ -249,6 +258,7 @@ public class LinearCRFMain {
 		}
 
 		LinearCRFInstance[] testInstances = readCoNLLData(testPath, true, false);
+		//for(LinearCRFInstance inst: trainInstances) inst.setUnlabeled();
 		Instance[] predictions = model.decode(testInstances);
 		
 		PrintStream[] outstreams = new PrintStream[]{outstream, System.out};

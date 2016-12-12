@@ -17,6 +17,7 @@
 package com.statnlp.hybridnetworks;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
 
 public class LocalNetworkDecoderThread extends Thread{
 	
@@ -79,11 +80,42 @@ public class LocalNetworkDecoderThread extends Thread{
 	
 	public Instance max(Instance instance, int networkId){
 		Network network = this._compiler.compileAndStore(networkId, instance, this._param);
-		//make sure we disable the cache..
 		if(!_cacheParam){
 			this._param.disableCache();
 		}
-		network.max();
+		if(NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD){
+			//initialize the joint feature map and also the marginal score map.
+			network.initJointFeatureMap();
+			network.clearMarginalMap();
+			boolean prevDone = false;
+			for (int it = 0; it < NetworkConfig.MAX_MF_UPDATES; it++) {
+				for (int curr = 0; curr < NetworkConfig.NUM_STRUCTS; curr++) {
+					network.enableKthStructure(curr);
+					network.inference(true);
+				}
+				boolean done = network.compareMarginalMap();
+				if (prevDone && done){
+					network.renewCurrentMarginalMap();
+					break;
+				}
+				prevDone = done;
+				network.renewCurrentMarginalMap();
+			}
+			Instance inst = null;
+			for (int curr = 0; curr < NetworkConfig.NUM_STRUCTS; curr++) {
+				network.enableKthStructure(curr);
+				network.max();
+				network.setStructure(curr);
+				inst = this._compiler.decompile(network);
+			}
+			return inst;
+		}else if(NetworkConfig.MAX_MARGINAL_DECODING){
+			network.marginal();
+		}else{
+			network.max();
+			return this._compiler.decompile(network);
+		}
+		
 //		System.err.println("max="+network.getMax());
 		return this._compiler.decompile(network);
 	}

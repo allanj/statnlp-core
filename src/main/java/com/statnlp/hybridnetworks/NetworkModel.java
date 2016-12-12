@@ -23,6 +23,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -33,6 +34,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
+import com.statnlp.neural.NNCRFGlobalNetworkParam;
 
 public abstract class NetworkModel implements Serializable{
 	
@@ -54,6 +57,8 @@ public abstract class NetworkModel implements Serializable{
 	private transient LocalNetworkLearnerThread[] _learners;
 	//the local decoder.
 	private transient LocalNetworkDecoderThread[] _decoders;
+	//neuralCRF/SSVM socket controller
+	private NNCRFGlobalNetworkParam nnController;
 	private transient PrintStream[] outstreams = new PrintStream[]{System.out};
 	
 	public NetworkModel(FeatureManager fm, NetworkCompiler compiler, PrintStream... outstreams){
@@ -117,6 +122,10 @@ public abstract class NetworkModel implements Serializable{
 	}
 	
 	public void train(Instance[] allInstances, int maxNumIterations) throws InterruptedException{
+		train(allInstances, allInstances.length, maxNumIterations);
+	}
+	
+	public void train(Instance[] allInstances, int trainLength, int maxNumIterations) throws InterruptedException{
 		
 		this._numThreads = NetworkConfig.NUM_THREADS;
 		
@@ -128,15 +137,26 @@ public abstract class NetworkModel implements Serializable{
 		this._fm.getParam_G().setInstsNum(this._allInstances.length);
 		HashSet<Integer> batchInstIds = new HashSet<Integer>();
 		ArrayList<Integer> instIds = new ArrayList<Integer>();
-		for(int i=0;i<_allInstances.length;i++) instIds.add(i+1);
+		for(int i=0;i<trainLength;i++) instIds.add(i+1);
 		
 		//create the threads.
 		this._learners = new LocalNetworkLearnerThread[this._numThreads];
 		
 		Instance[][] insts = this.splitInstancesForTrain();
 		
+		
+		/**
+		 * pre compile the network
+		 * In mean-field, we need to pre compile because we need the 
+		 * unlabeled network information in feature extraction process for the labeled network.
+		 */
+		NetworkConfig.PRE_COMPILE_NETWORKS = NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD? true:false;
+		if(NetworkConfig.PRE_COMPILE_NETWORKS){
+			preCompileNetworks(insts);
+		}
+		boolean keepExistingThreads = NetworkConfig.PRE_COMPILE_NETWORKS? true:false;
 		// The first touch
-		touch(insts, false);
+		touch(insts, keepExistingThreads);
 		
 		for(int threadId=0; threadId<this._numThreads; threadId++){
 			if(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY){
@@ -155,6 +175,7 @@ public abstract class NetworkModel implements Serializable{
 		
 		//finalize the features.
 		this._fm.getParam_G().lockIt();
+		nnController = this._fm.getParam_G()._nnController;
 		
 		if(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY && NetworkConfig.CACHE_FEATURES_DURING_TRAINING){
 			touch(insts, true); // Touch again to cache the features, both in labeled and unlabeled
@@ -182,21 +203,41 @@ public abstract class NetworkModel implements Serializable{
 		//run the EM-style algorithm now...
 		long startTime = System.currentTimeMillis();
 		try{
+			int batchId = 0;
+			int epochNum = 0;
+			double epochObj = 0.0;
 			for(int it = 0; it<=maxNumIterations; it++){
 				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
 				if(NetworkConfig.USE_BATCH_TRAINING){
 					batchInstIds.clear();
-					Collections.shuffle(instIds, RANDOM);
+					if(NetworkConfig.RANDOM_BATCH || batchId == 0) {
+						Collections.shuffle(instIds, RANDOM);
+					}
 					int size = NetworkConfig.BATCH_SIZE >= this._allInstances.length ? this._allInstances.length:NetworkConfig.BATCH_SIZE; 
 					for(int iid = 0; iid<size; iid++){
-						batchInstIds.add(instIds.get(iid));
+						int offset = NetworkConfig.BATCH_SIZE*batchId;
+						batchInstIds.add(instIds.get(iid+offset));
+					}
+					if(!NetworkConfig.RANDOM_BATCH) {
+						batchId++;
+						int offset = NetworkConfig.BATCH_SIZE*batchId;
+						if(size+offset > instIds.size()) {
+							batchId = 0;
+							// this means one epoch
+							print(String.format("Epoch %d: Obj=%-18.12f", epochNum++, epochObj/instIds.size()), outstreams);
+							epochObj = 0.0;
+						}
 					}
 				}
 				for(LocalNetworkLearnerThread learner: this._learners){
 					learner.setIterationNumber(it);
 					if(NetworkConfig.USE_BATCH_TRAINING) learner.setInstanceIdSet(batchInstIds);
+					else learner.setTrainInstanceIdSet(new HashSet<Integer>(instIds));
 				}
 				long time = System.currentTimeMillis();
+				if (NetworkConfig.USE_NEURAL_FEATURES) {
+					nnController.forwardNetwork(true);
+				}
 				List<Future<Void>> results = pool.invokeAll(callables);
 				for(Future<Void> result: results){
 					try{
@@ -205,6 +246,8 @@ public abstract class NetworkModel implements Serializable{
 						throw new RuntimeException(e);
 					}
 				}
+				
+				
 				boolean done = true;
 				boolean lastIter = (it == maxNumIterations);
 				if(lastIter){
@@ -214,11 +257,17 @@ public abstract class NetworkModel implements Serializable{
 				}
 				time = System.currentTimeMillis() - time;
 				double obj = this._fm.getParam_G().getObj_old();
+				epochObj += obj;
 				print(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0), outstreams);
 				if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE && it>1 && obj<obj_old && Math.abs(obj-obj_old)>1E-5){
 					throw new RuntimeException("Error:\n"+obj_old+"\n>\n"+obj);
 				}
 				obj_old = obj;
+				if (NetworkConfig.USE_NEURAL_FEATURES) {
+					if (lastIter || done) {
+						nnController.forwardNetwork(false);
+					}
+				}
 				if(lastIter){
 					print("Training completes. The specified number of iterations ("+it+") has passed.", outstreams);
 					break;
@@ -233,6 +282,19 @@ public abstract class NetworkModel implements Serializable{
 		}
 	}
 
+	private void preCompileNetworks(Instance[][] insts) throws InterruptedException{
+		for(int threadId = 0; threadId < this._numThreads; threadId++){
+			this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, -1);
+			this._learners[threadId].setPrecompile();
+			this._learners[threadId].start();
+		}
+		for(int threadId = 0; threadId < this._numThreads; threadId++){
+			this._learners[threadId].join();
+			this._learners[threadId].unsetPrecompile();
+		}	
+		System.err.println("Finish precompile the networks.");
+	}
+	
 	private void touch(Instance[][] insts, boolean keepExisting) throws InterruptedException {
 		if(!NetworkConfig.PARALLEL_FEATURE_EXTRACTION || NetworkConfig.NUM_THREADS == 1){
 			for(int threadId = 0; threadId<this._numThreads; threadId++){
@@ -258,7 +320,12 @@ public abstract class NetworkModel implements Serializable{
 				this._learners[threadId].join();
 				this._learners[threadId].setUnTouch();
 			}
-			if(!keepExisting){
+			
+			if(NetworkConfig.PRE_COMPILE_NETWORKS || !keepExisting){
+				//this one is because in the first touch, we don't have the exisiting threads if not precompile network. 
+				//So we merge in first feature extraction.
+				//If precompile network, we keep exisiting threads. But we still need to merge features because
+				//it is still the first touch. That's why we have the "OR" operation here.
 				this._fm.mergeSubFeaturesToGlobalFeatures();
 			}
 		}
@@ -319,7 +386,7 @@ public abstract class NetworkModel implements Serializable{
 			if(cacheFeatures && this._decoders[threadId] != null){
 				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, this._decoders[threadId].getParam(), true);
 			} else {
-				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, true);
+				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, false);
 			}
 		}
 		
@@ -345,7 +412,17 @@ public abstract class NetworkModel implements Serializable{
 			}
 		}
 		
+		Arrays.sort(results, new Comparator<Instance>(){
+			@Override
+			public int compare(Instance o1, Instance o2) {
+				if(o1.getInstanceId()<o2.getInstanceId())
+				return -1;
+				else return 1;
+			}
+		});
+		
 		return results;
 	}
+	
 	
 }
