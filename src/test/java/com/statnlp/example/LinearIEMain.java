@@ -16,10 +16,11 @@ import com.statnlp.commons.types.Instance;
 import com.statnlp.example.linear_ie.AttributedWord;
 import com.statnlp.example.linear_ie.Label;
 import com.statnlp.example.linear_ie.LinearIEFeatureManager;
+import com.statnlp.example.linear_ie.LinearIEFeatureManager.FeatureType;
 import com.statnlp.example.linear_ie.LinearIEInstance;
+import com.statnlp.example.linear_ie.LinearIEInstance.WordsAndTags;
 import com.statnlp.example.linear_ie.LinearIENetworkCompiler;
 import com.statnlp.example.linear_ie.Span;
-import com.statnlp.example.linear_ie.LinearIEFeatureManager.FeatureType;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GenerativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
@@ -108,7 +109,7 @@ public class LinearIEMain {
 			for(Instance inst: predictions){
 				LinearIEInstance instance = (LinearIEInstance)inst;
 				System.out.println("Words:");
-				System.out.println(toString(instance.words));
+				System.out.println(toString(instance.input.words));
 				System.out.println("Gold:");
 				System.out.println(instance.output);
 				System.out.println("Prediction:");
@@ -203,9 +204,10 @@ public class LinearIEMain {
 		while(br.ready()){
 			String words = br.readLine();
 			LinearIEInstance instance = new LinearIEInstance(instanceId++, 1.0);
-			instance.words = markWords(words.trim().split(" "));
+//			instance.words = markWords(words.trim().split(" "));
 			String posTags = br.readLine();
-			instance.posTags = posTags.trim().split(" ");
+//			instance.posTags = posTags.trim().split(" ");
+			instance.input = new WordsAndTags(markWords(words.trim().split(" ")), posTags.trim().split(" "));
 			String[] spans = br.readLine().split("\\|");
 			if(spans.length == 1 && spans[0].length() == 0){
 				spans = new String[0];

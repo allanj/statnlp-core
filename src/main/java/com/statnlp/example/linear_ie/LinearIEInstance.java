@@ -1,5 +1,6 @@
 package com.statnlp.example.linear_ie;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,7 +9,8 @@ import com.statnlp.example.linear_ie.LinearIEInstance.WordsAndTags;
 
 public class LinearIEInstance extends BaseInstance<LinearIEInstance, WordsAndTags, List<Span>>{
 	
-	public class WordsAndTags {
+	public static class WordsAndTags implements Serializable{
+		private static final long serialVersionUID = -9022041107687594823L;
 		public AttributedWord[] words;
 		public String[] posTags;
 		public WordsAndTags(WordsAndTags other){
@@ -22,8 +24,6 @@ public class LinearIEInstance extends BaseInstance<LinearIEInstance, WordsAndTag
 	}
 	
 	private static final long serialVersionUID = -9133939568122739620L;
-	public AttributedWord[] words;
-	public String[] posTags;
 	
 	public LinearIEInstance(int instanceId, double weight){
 		super(instanceId, weight);
@@ -43,15 +43,15 @@ public class LinearIEInstance extends BaseInstance<LinearIEInstance, WordsAndTag
 
 	@Override
 	public int size() {
-		return words.length;
+		return input.words.length;
 	}
 
 	public String toString(){
 		StringBuilder builder = new StringBuilder();
 		builder.append(getInstanceId()+":");
-		for(int i=0; i<words.length; i++){
+		for(int i=0; i<input.words.length; i++){
 			if(i > 0) builder.append(" ");
-			builder.append(words[i]+"/"+posTags[i]);
+			builder.append(input.words[i]+"/"+input.posTags[i]);
 		}
 		if(hasOutput()){
 			builder.append("\n");
@@ -64,8 +64,8 @@ public class LinearIEInstance extends BaseInstance<LinearIEInstance, WordsAndTag
 
 	public LinearIEInstance duplicate(){
 		LinearIEInstance result = super.duplicate();
-		result.words = result.input.words;
-		result.posTags = result.input.posTags;
+//		result.words = result.input.words;
+//		result.posTags = result.input.posTags;
 		return result;
 	}
 }

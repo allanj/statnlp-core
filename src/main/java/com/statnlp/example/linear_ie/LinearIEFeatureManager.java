@@ -39,6 +39,7 @@ public class LinearIEFeatureManager extends FeatureManager {
 		ALL_CAPS,
 		ALL_DIGITS,
 		ALL_ALPHANUMERIC,
+		ALL_LOWERCASE,
 		CONTAINS_DIGITS,
 		CONTAINS_DOTS,
 		CONTAINS_HYPHEN,
@@ -60,8 +61,8 @@ public class LinearIEFeatureManager extends FeatureManager {
 	protected FeatureArray extract_helper(Network net, int parent_k, int[] children_k) {
 		LinearIENetwork network = (LinearIENetwork)net;
 		LinearIEInstance instance = (LinearIEInstance)network.getInstance();
-		AttributedWord[] words = instance.words;
-		String[] posTags = instance.posTags;
+		AttributedWord[] words = instance.input.words;
+		String[] posTags = instance.input.posTags;
 		int size = instance.size();
 		
 		int[] parent_arr = network.getNodeArray(parent_k);
@@ -143,7 +144,9 @@ public class LinearIEFeatureManager extends FeatureManager {
 				case ALL_CAPS:
 				case ALL_DIGITS:
 				case ALL_ALPHANUMERIC:
+				case ALL_LOWERCASE:
 				case CONTAINS_DIGITS:
+				case CONTAINS_DOTS:
 				case CONTAINS_HYPHEN:
 				case INITIAL_CAPS:
 				case LONELY_INITIAL:
