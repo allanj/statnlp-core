@@ -15,7 +15,7 @@ public class ECRFFeatureManager extends FeatureManager {
 
 	private static final long serialVersionUID = 376931974939202432L;
 
-	public enum FEATYPE {local,entity, neural};
+	public enum FEATYPE {local,entity, neural_1};
 	private String OUT_SEP = NeuralConfig.OUT_SEP; 
 	private String IN_SEP = NeuralConfig.IN_SEP;
 	
@@ -68,12 +68,12 @@ public class ECRFFeatureManager extends FeatureManager {
 		
 		String currEn = Entity.get(eId).getForm();
 		if(NetworkConfig.USE_NEURAL_FEATURES){
-//			featureList.add(this._param_g.toFeature(network,FEATYPE.neural.name(), currEn,  currWord));
-			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+
-										llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt));
+			featureList.add(this._param_g.toFeature(network,FEATYPE.neural_1.name(), currEn,  currWord));
+//			featureList.add(this._param_g.toFeature(network, FEATYPE.neural_1.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+
+//										llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt));
 //			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw));
 		}
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), currEn,  	currWord));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), currEn,  	currWord));
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ET",	currEn+":"+currTag));
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELW",	currEn+":"+lw));
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELT",	currEn+":"+lt));
