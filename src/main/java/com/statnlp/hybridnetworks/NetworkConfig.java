@@ -71,6 +71,21 @@ public class NetworkConfig {
 	public static double L2_REGULARIZATION_CONSTANT = 0.01;
 	
 	/**
+	 * The L1 regularization parameter
+	 */
+	public static double L1_REGULARIZATION_CONSTANT = 0.01;
+	
+	public static enum REG_TYPE {
+		L1,
+		L2;
+	}
+	
+	/**
+	 * Regularization method. Default: L2
+	 */
+	public static REG_TYPE REGULARIZATION = REG_TYPE.L2;
+	
+	/**
 	 * Network is the core of StatNLP framework.<br>
 	 * This defines the default capacity for defining the nodes of the network<br>
 	 * For more information, see {@link Network}
@@ -184,6 +199,8 @@ public class NetworkConfig {
 	public static boolean USE_NEURAL_FEATURES = false;
 	/** Regularized the neural features in CRF or not. set to false then can be done by dropout***/
 	public static boolean REGULARIZE_NEURAL_FEATURES = false;
+	/** If true: Optimized the neural net in CRF. optimizer in neural config must be set to none **/
+	public static boolean OPTIMIZE_NEURAL = false;   //false means not update the neural network parameters in CRF. false is faster
 	/** false: the feature is the word itself. true: word is the indexed word **/
 	public static boolean IS_INDEXED_NEURAL_FEATURES = false;
 	/** Randomly choose the batch at every iteration. (false may give better result)**/
