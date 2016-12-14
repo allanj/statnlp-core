@@ -60,12 +60,12 @@ public abstract class NNCRFInterface implements Serializable {
 		nn.backwardNetwork();
 	}
 	
-	public void saveNetwork(String prefix) {
-		nn.saveNetwork(prefix);
-	}
-	
-	public void loadNetwork(String prefix) {
-		nn.loadNetwork(prefix);
-	}
+//	public void saveNetwork(String prefix) {
+//		nn.saveNetwork(prefix);
+//	}
+//	
+//	public void loadNetwork(String prefix) {
+//		nn.loadNetwork(prefix);
+//	}
 
 }

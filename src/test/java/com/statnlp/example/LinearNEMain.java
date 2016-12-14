@@ -47,6 +47,10 @@ public class LinearNEMain {
 		List<ECRFInstance> trainInstances = null;
 		List<ECRFInstance> testInstances = null;
 		
+		/***Debug info**/
+//		testFile = trainPath;
+//		NetworkConfig.RANDOM_INIT_WEIGHT = false;
+		/*************/
 		
 		trainInstances = EReader.readData(trainPath,true,trainNumber, "IOBES");
 		testInstances = EReader.readData(testFile,false,testNumber,"IOB");
@@ -112,7 +116,7 @@ public class LinearNEMain {
 					case "-neural": if(args[i+1].equals("true")){ 
 											NetworkConfig.USE_NEURAL_FEATURES = true; 
 											NetworkConfig.OPTIMIZE_NEURAL = true;  //false: optimize in neural network
-											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = true; //only used when using the senna embedding.
+											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
 										}
 									break;
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;

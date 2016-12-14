@@ -28,6 +28,8 @@ public class NeuralConfigReader {
 				for (int i = 1; i < info.length; i++) {
 					NeuralConfig.EMBEDDING.add(WordEmbedding.valueOf(info[i].toUpperCase()));
 				}
+			} else if(info[0].equals("embeddingPath")) {
+				NeuralConfig.EMBEDDING_PATH = info[1];
 			} else if(info[0].equals("embeddingSize")) {
 				NeuralConfig.EMBEDDING_SIZE = new ArrayList<Integer>();
 				for (int i = 1; i < info.length; i++) {

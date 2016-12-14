@@ -43,7 +43,7 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 	public NNCRFGlobalNetworkParam(GlobalNetworkParam param_G) {
 		super();
 		this.param_G = param_G;
-		neuralFeatureIntMap = new HashMap<String, HashMap<String, Integer>>();
+		neuralFeatureIntMap = param_G.getFeatureIntMap().get(NetworkConfig.NEURAL_FEATURE_TYPE_PREFIX);
 	}
 	
 	@Override
@@ -206,7 +206,7 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 								wordList.add(elements[j]);
 							}
 						}
-						entry.add(fieldMap.get(elements[j])+1); // 1-indexing
+						entry.add(fieldMap.get(elements[j])); // 0-indexing
 					}
 				}
 				if (!inputSet.contains(input)) {

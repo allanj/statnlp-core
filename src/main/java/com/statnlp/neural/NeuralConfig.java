@@ -22,6 +22,7 @@ public class NeuralConfig {
 	public static double LEARNING_RATE = 0.001;
 	public static boolean FIX_EMBEDDING = false;
 	public static int NUM_NEURAL_NETS = 1;
+	public static String EMBEDDING_PATH = "/Users/nlp/Documents/workspace/semantic/statnlp-core/nn-crf-interface/neural_server/polyglot/polyglot-en.txt";
 	
 	public static String OUT_SEP = "#OUT#";
 	public static String IN_SEP = "#IN#";

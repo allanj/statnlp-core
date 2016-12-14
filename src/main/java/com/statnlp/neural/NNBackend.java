@@ -6,6 +6,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.statnlp.neural.model.MultiLayerPerceptron;
 import org.statnlp.neural.util.Config.WordEmbedding;
+import org.statnlp.neural.util.INDArrayList;
 
 public class NNBackend {
 	private boolean DEBUG = false;
@@ -28,7 +29,7 @@ public class NNBackend {
 						   int outputDim, List<List<Integer>> vocab) {
 		mlp = new MultiLayerPerceptron(NeuralConfig.NUM_LAYER, NeuralConfig.HIDDEN_SIZE,
 				NeuralConfig.ACTIVATION, inputDimList, numInputList, embeddingList, 
-				embSizeList, outputDim, true);
+				embSizeList, outputDim, true, wordList, NeuralConfig.EMBEDDING_PATH);
 		double[][] vocabArr = new double[vocab.size()][vocab.get(0).size()];
 		for (int r = 0; r < vocabArr.length; r++) {
 			List<Integer> list = vocab.get(r);
@@ -36,7 +37,7 @@ public class NNBackend {
 				vocabArr[r][c] = list.get(c);
 			}
 		}
-		vocabINDArray = Nd4j.create(vocabArr);
+		vocabINDArray = new INDArrayList(Nd4j.create(vocabArr));
 		return getNetworkParameters();
 	}
 	
@@ -82,9 +83,10 @@ public class NNBackend {
 	
 	public void setNetworkParameters(double[] parameters) {
 		int k = 0;
+		
 		for (INDArray p : mlp.getParameters()) {
 			for (int i = 0 ; i < p.data().length(); i++) {
-				p.data().assign(parameters[k], i);
+				p.data().put(i, parameters[k]);
 				k++;
 			}
 		}
@@ -93,6 +95,7 @@ public class NNBackend {
 	public void forwardNetwork(boolean training) {
 		double[] nnInternalWeights = controller.getInternalNeuralWeights();
 		setNetworkParameters(nnInternalWeights);
+		
 		INDArray output = mlp.forward(vocabINDArray);
 		if(outputShape == null) {
 			outputShape = output.shape();
