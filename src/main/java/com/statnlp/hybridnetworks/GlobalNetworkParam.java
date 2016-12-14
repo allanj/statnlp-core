@@ -29,6 +29,7 @@ import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
+import com.statnlp.neural.NNBackend;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.neural.RemoteNN;
 import com.statnlp.commons.ml.opt.MathsVector;
@@ -372,7 +373,7 @@ public class GlobalNetworkParam implements Serializable{
 		// initialize NN params and gradParams
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
 			_nnController = new NNCRFGlobalNetworkParam(this);
-			_nnController.setRemoteNN(new RemoteNN(NetworkConfig.OPTIMIZE_NEURAL));
+			_nnController.setNNBackend(new NNBackend());
 			_nnController.initializeInternalNeuralWeights();
 //			if(NeuralConfig.NUM_LAYER == 0 && NeuralConfig.EMBEDDING_SIZE.get(0)==0){
 //				_nnController.setInternalNeuralWeights(_weights);

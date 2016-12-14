@@ -47,10 +47,6 @@ public class LinearNEMain {
 		List<ECRFInstance> trainInstances = null;
 		List<ECRFInstance> testInstances = null;
 		
-		/***Debug**/
-		NetworkConfig.RANDOM_INIT_WEIGHT = false;
-		/*****/
-		
 		trainInstances = EReader.readData(trainPath,true,trainNumber, "IOBES");
 		testInstances = EReader.readData(testFile,false,testNumber,"IOB");
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
