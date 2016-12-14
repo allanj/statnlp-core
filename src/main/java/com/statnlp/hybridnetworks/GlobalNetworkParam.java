@@ -29,13 +29,12 @@ import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
-import com.statnlp.neural.NNBackend;
-import com.statnlp.neural.NNCRFGlobalNetworkParam;
-import com.statnlp.neural.RemoteNN;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
+import com.statnlp.neural.NNBackend;
+import com.statnlp.neural.NNCRFGlobalNetworkParam;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
