@@ -49,14 +49,14 @@ public class ECRFFeatureManager extends FeatureManager {
 		int childEId = child[1];
 //		int childPos = child[0]-1;
 		
-		String lw = pos>0? sent.get(pos-1).getName():"1738";
-		String llw = pos==0? "1738": pos==1? "1738":sent.get(pos-2).getName();
-		String llt = pos==0? "0": pos==1? "0":sent.get(pos-2).getTag();
-		String lt = pos>0? sent.get(pos-1).getTag():"0";
-		String rw = pos<sent.length()-1? sent.get(pos+1).getName():"1738";
-		String rt = pos<sent.length()-1? sent.get(pos+1).getTag():"0";
-		String rrw = pos==sent.length()-1? "1738": pos==sent.length()-2? "1738":sent.get(pos+2).getName();
-		String rrt = pos==sent.length()-1? "0": pos==sent.length()-2? "0":sent.get(pos+2).getTag();
+		String lw = pos>0? sent.get(pos-1).getName():"unk";
+		String llw = pos==0? "unk": pos==1? "unk":sent.get(pos-2).getName();
+		String llt = pos==0? "unk": pos==1? "unk":sent.get(pos-2).getTag();
+		String lt = pos>0? sent.get(pos-1).getTag():"unk";
+		String rw = pos<sent.length()-1? sent.get(pos+1).getName():"unk";
+		String rt = pos<sent.length()-1? sent.get(pos+1).getTag():"unk";
+		String rrw = pos==sent.length()-1? "unk": pos==sent.length()-2? "unk":sent.get(pos+2).getName();
+		String rrt = pos==sent.length()-1? "unk": pos==sent.length()-2? "unk":sent.get(pos+2).getTag();
 		
 		String currWord = inst.getInput().get(pos).getName();
 		String currTag = inst.getInput().get(pos).getTag();
@@ -68,12 +68,12 @@ public class ECRFFeatureManager extends FeatureManager {
 		
 		String currEn = Entity.get(eId).getForm();
 		if(NetworkConfig.USE_NEURAL_FEATURES){
-			featureList.add(this._param_g.toFeature(network,FEATYPE.neural.name(), currEn,  currWord));
-//			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+
-//										llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt));
+//			featureList.add(this._param_g.toFeature(network,FEATYPE.neural.name(), currEn,  currWord.toLowerCase()));
+			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+
+										llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt));
 //			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw));
 		}
-		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), currEn,  	currWord));
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), currEn,  	currWord));
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ET",	currEn+":"+currTag));
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELW",	currEn+":"+lw));
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELT",	currEn+":"+lt));

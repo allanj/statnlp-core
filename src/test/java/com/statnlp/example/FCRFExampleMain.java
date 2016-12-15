@@ -129,7 +129,6 @@ public class FCRFExampleMain {
 		NetworkConfig.USE_NEURAL_FEATURES = false; 
 		if(NetworkConfig.USE_NEURAL_FEATURES)
 			NeuralConfigReader.readConfig(neural_config);
-		NetworkConfig.OPTIMIZE_NEURAL = false;  //false: optimize in neural network
 		NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
 		NetworkConfig.REGULARIZE_NEURAL_FEATURES = false; //true means regularize in the crf part
 		NeuralConfig.NUM_NEURAL_NETS = 2;
