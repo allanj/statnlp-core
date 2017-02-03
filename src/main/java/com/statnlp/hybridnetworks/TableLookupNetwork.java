@@ -59,7 +59,11 @@ public abstract class TableLookupNetwork extends Network{
 	private long[] toNodes(int[] ks){
 		long[] nodes = new long[ks.length];
 		for(int i = 0; i<nodes.length; i++){
-			nodes[i] = this.getNode(ks[i]);
+			if(ks[i] < 0){
+				nodes[i] = ks[i];
+			} else {
+				nodes[i] = this.getNode(ks[i]);
+			}
 		}
 		return nodes;
 	}
@@ -504,6 +508,9 @@ public abstract class TableLookupNetwork extends Network{
 				sb.append('(');
 				int[] children = childrenList[i];
 				for(int j = 0; j<children.length; j++){
+					if(children[j] < 0){
+						continue;
+					}
 					sb.append('\n');
 					sb.append('\t'+Arrays.toString(NetworkIDMapper.toHybridNodeArray(this._nodes[children[j]])));
 				}
