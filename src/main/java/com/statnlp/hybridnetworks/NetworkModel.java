@@ -89,9 +89,9 @@ public abstract class NetworkModel implements Serializable{
 	
 	protected abstract Instance[][] splitInstancesForTrain();
 	
-	public Instance[][] splitInstancesForTest() {
+	public Instance[][] splitInstancesForTest(Instance[] testInsts) {
 		
-		System.err.println("#instances="+this._allInstances.length);
+		System.err.println("#instances="+testInsts.length);
 		
 		Instance[][] insts = new Instance[this._numThreads][];
 
@@ -102,8 +102,8 @@ public abstract class NetworkModel implements Serializable{
 		}
 		
 		threadId = 0;
-		for(int k = 0; k<this._allInstances.length; k++){
-			Instance inst = this._allInstances[k];
+		for(int k = 0; k< testInsts.length; k++){
+			Instance inst = testInsts[k];
 			insts_list.get(threadId).add(inst);
 			threadId = (threadId+1)%this._numThreads;
 		}
@@ -126,6 +126,10 @@ public abstract class NetworkModel implements Serializable{
 	}
 	
 	public void train(Instance[] allInstances, int trainLength, int maxNumIterations) throws InterruptedException{
+		train(allInstances, allInstances.length, maxNumIterations, null, null);
+	}
+	
+	public void train(Instance[] allInstances, int trainLength, int maxNumIterations, Instance[] testInsts, String modelFile) throws InterruptedException{
 		
 		this._numThreads = NetworkConfig.NUM_THREADS;
 		
@@ -246,8 +250,6 @@ public abstract class NetworkModel implements Serializable{
 						throw new RuntimeException(e);
 					}
 				}
-				
-				
 				boolean done = true;
 				boolean lastIter = (it == maxNumIterations);
 				if(lastIter){
@@ -276,6 +278,7 @@ public abstract class NetworkModel implements Serializable{
 					print("Training completes. No significant progress (<objtol) after "+it+" iterations.", outstreams);
 					break;
 				}
+				
 			}
 		} finally {
 			pool.shutdown();
@@ -372,14 +375,14 @@ public abstract class NetworkModel implements Serializable{
 		Instance[] results = new Instance[allInstances.length];
 		
 		//all the instances.
-		this._allInstances = allInstances;
+		//this._allInstances = allInstances;
 		
 		//create the threads.
 		if(this._decoders == null || !cacheFeatures){
 			this._decoders = new LocalNetworkDecoderThread[this._numThreads];
 		}
 		
-		Instance[][] insts = this.splitInstancesForTest();
+		Instance[][] insts = this.splitInstancesForTest(allInstances);
 		
 		//distribute the works into different threads.
 		for(int threadId = 0; threadId<this._numThreads; threadId++){

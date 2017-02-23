@@ -7,12 +7,12 @@ public abstract class NNCRFInterface implements Serializable {
 	private static final long serialVersionUID = -9106600200597945640L;
 
 	// The remote neural network
-	protected transient NNBackend nn;
+	protected transient RemoteNN nn;
 
 	// Internal Neural weights and gradients
 	protected double[] _nnWeights, _nnGrads;
 	
-	public void setNNBackend(NNBackend nn) {
+	public void setRemoteNN(RemoteNN nn) {
 		this.nn = nn;
 		nn.setController(this);
 	}
@@ -60,12 +60,12 @@ public abstract class NNCRFInterface implements Serializable {
 		nn.backwardNetwork();
 	}
 	
-//	public void saveNetwork(String prefix) {
-//		nn.saveNetwork(prefix);
-//	}
-//	
-//	public void loadNetwork(String prefix) {
-//		nn.loadNetwork(prefix);
-//	}
+	public void saveNetwork(String prefix) {
+		nn.saveNetwork(prefix);
+	}
+	
+	public void loadNetwork(String prefix) {
+		nn.loadNetwork(prefix);
+	}
 
 }
