@@ -29,8 +29,8 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 
 /**
  * The main class to run CRF++ with the same pipeline as other models<br>

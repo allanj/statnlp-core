@@ -2,6 +2,7 @@ package com.statnlp.commons.ml.opt;
 
 import java.util.Arrays;
 
+import com.statnlp.commons.ml.opt.LBFGSOptimizer;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 
 public class LBFGSOptimizerTest {

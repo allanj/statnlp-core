@@ -15,8 +15,8 @@ import com.statnlp.example.linear_ne.Entity;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.neural.NeuralConfigReader;
 
 public class LinearNEMain {
