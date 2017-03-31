@@ -15,12 +15,14 @@
             <version>4.11</version>
             <scope>test</scope>
         </dependency>
+        <!-- 
         
         <dependency>
         	<groupId>org.statnlp</groupId>
 			<artifactId>statnlp-neural</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
         </dependency>
+         -->
 
        <dependency>
 		    <groupId>org.msgpack</groupId>
@@ -48,6 +50,7 @@
         </plugins>
     </build>
     
+    <!-- 
     
     <distributionManagement>
     	<snapshotRepository>
@@ -56,6 +59,7 @@
         	<url>http://172.18.240.32:8081/artifactory/libs-snapshot-local</url>
     	</snapshotRepository>
 	</distributionManagement>
+     -->
 	
 </project>
 
