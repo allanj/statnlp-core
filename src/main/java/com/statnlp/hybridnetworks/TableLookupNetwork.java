@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
 
 /**
  * An extension of {@link Network} which defines more functions related to managing nodes and edges.<br>
@@ -371,6 +372,9 @@ public abstract class TableLookupNetwork extends Network{
 			this._nodes[k] = values.get(k);
 			this.isVisible[k] = true;
 			nodesValue2IdMap.put(this._nodes[k], k);
+		}
+		if (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD) {
+			this.structArr = new int[this._nodes.length];
 		}
 		
 //		this._nodes_tmp = null;

@@ -35,4 +35,9 @@ public class ECRFNetwork extends TableLookupNetwork{
 	public boolean isRemoved(int k){
 		return false;
 	}
+
+	@Override
+	public void initStructArr() {
+		
+	}
 }

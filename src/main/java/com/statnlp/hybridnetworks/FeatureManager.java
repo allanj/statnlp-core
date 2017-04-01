@@ -170,6 +170,7 @@ public abstract class FeatureManager implements Serializable{
 			addIntoGlobalFeatures(globalFeature2IntMap, this._param_g._subFeatureIntMaps.get(t), this._params_l[t]._globalFeature2LocalFeature);
 			this._param_g._subFeatureIntMaps.set(t, null);
 		}
+		this._param_g._subSize = null;
 	}
 
 	/**

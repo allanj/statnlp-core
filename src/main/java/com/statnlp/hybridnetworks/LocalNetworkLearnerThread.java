@@ -162,9 +162,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	public void preCompileNetwork(){
 		for(int networkId = 0; networkId< this._instances.length; networkId++){
 			Network network = this.getNetwork(networkId);
-			if(!network.getInstance().isLabeled())
-				network.clearMarginalMap(); //initialize the marginal map for the unlabeled network
-			network.initJointFeatureMap();
+			network.initStructArr();
 		}
 	}
 	
@@ -210,7 +208,6 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 			}else{
 				network.train();
 			}
-			
 		}
 	}
 	

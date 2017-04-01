@@ -63,6 +63,10 @@ public class WordToken extends InputToken{
 		return this.aTag;
 	}
 	
+	public void setTag(String tag) {
+		 this.tag = tag;
+	}
+	
 	public void setHead(int index){
 		this.headIndex = index;
 	}

@@ -123,7 +123,9 @@ public class GlobalNetworkParam implements Serializable{
 			this._kappa = NetworkConfig.L2_REGULARIZATION_CONSTANT;
 		}
 		this._featureIntMap = new HashMap<String, HashMap<String, HashMap<String, Integer>>>();
-		this._type2inputMap = new HashMap<String, ArrayList<String>>();
+		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
+			this._type2inputMap = new HashMap<String, ArrayList<String>>();
+		}
 		this._optFactory = optimizerFactory;
 		if (NetworkConfig.PARALLEL_FEATURE_EXTRACTION && NetworkConfig.NUM_THREADS > 1){
 			this._subFeatureIntMaps = new ArrayList<HashMap<String, HashMap<String, HashMap<String, Integer>>>>();

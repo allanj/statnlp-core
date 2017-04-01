@@ -18,7 +18,6 @@ package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 
 import com.statnlp.commons.types.Instance;
@@ -55,6 +54,10 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected static int[][][][] maxKPathsSharedArrays = new int[NetworkConfig.NUM_THREADS][][][];
 	/** The working array for each thread for storing max k  paths (for backtracking) */
 	protected static int[][][][] maxKPathsListBestSharedArrays = new int[NetworkConfig.NUM_THREADS][][][];
+	/** The working array for each thread for calculating outside scores */
+	protected static double[][] unlabeledMarginalSharedArray = new double[NetworkConfig.NUM_THREADS][];
+	/** The working array for each thread for calculating outside scores */
+	protected static double[][] unlabeledNewMarginalSharedArray = new double[NetworkConfig.NUM_THREADS][];
 
 	
 	/** The IDs associated with the network (within the scope of the thread). */
@@ -84,8 +87,6 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected transient int[][][] _max_k_path_listbest;
 	/** To mark whether a node has been visited in one iteration */
 	protected transient boolean[] _visited;
-	/** The marginal score for each node */
-	protected transient double[] _marginal;
 	
 	/** The compiler that created this network */
 	protected NetworkCompiler _compiler;
@@ -96,17 +97,16 @@ public abstract class Network implements Serializable, HyperGraph{
 	
 	/** store the information of removal of each node **/
 	protected transient boolean[] isVisible;
+	/** The marginal score for each node */
+	protected transient double[] _marginal;
+	protected transient double[] _newMarginal;
 		
-	/** The (srcNode, (featureIdx, destination node in unlabeled network)) map for mean-field inference. 
-	 * (local feature index in the sense of Parallel touching)
-	**/
-	protected transient HashMap<Integer, HashMap<Integer, Integer>> src2fIdx2Dst;
-	/** The marginal map used in mean-field inference. To save the marginal score of the unlabeled network.**/
-	protected transient HashMap<Integer, Double> currentMarginalMap;
-	protected transient HashMap<Integer, Double> newMarginalMap;
 	
 	/** The current structure that the network is using*/
 	protected int currentStructure; 
+	
+	/** store the information of structure of each node in network. 0: leaf, 1: NE chain, 2 POS chain, 3: root**/
+	protected transient int[] structArr;
 	
 	/**
 	 * Default constructor. Note that the network constructed using this default constructor is lacking 
@@ -188,6 +188,18 @@ public abstract class Network implements Serializable, HyperGraph{
 		if(maxKPathsListBestSharedArrays[this._threadId] == null || this.countNodes() > maxKPathsListBestSharedArrays[this._threadId].length)
 			maxKPathsListBestSharedArrays[this._threadId] = new int[this.countNodes()][][];
 		return maxKPathsListBestSharedArrays[this._threadId];
+	}
+	
+	protected double[] getMarginalSharedArray(){
+		if(unlabeledMarginalSharedArray[this._threadId] == null || this.countNodes() > unlabeledMarginalSharedArray[this._threadId].length)
+			unlabeledMarginalSharedArray[this._threadId] = new double[this.countNodes()];
+		return unlabeledMarginalSharedArray[this._threadId];
+	}
+	
+	protected double[] getNewMarginalSharedArray(){
+		if(unlabeledNewMarginalSharedArray[this._threadId] == null || this.countNodes() > unlabeledNewMarginalSharedArray[this._threadId].length)
+			unlabeledNewMarginalSharedArray[this._threadId] = new double[this.countNodes()];
+		return unlabeledNewMarginalSharedArray[this._threadId];
 	}
 	
 	public int getNetworkId(){
@@ -328,16 +340,18 @@ public abstract class Network implements Serializable, HyperGraph{
 	
 	/**
 	 * Calculate the marginal score for all nodes 
+	 * Currently it's focusing on mean-field inference. Be careful to use this.
+	 * And the new marginal is containing the probability instead of the log score.
 	 */
 	public void marginal(){
-		this._marginal = new double[this.countNodes()];
-		Arrays.fill(this._marginal, Double.NEGATIVE_INFINITY);
+		this._newMarginal = this.getNewMarginalSharedArray();
+		//Arrays.fill(this._newMarginal, Double.NEGATIVE_INFINITY);
 		for(int k=0; k<this.countNodes(); k++){
-			this.marginal(k);
 			//for mean-field, only need to gather the marginal from the unlabeled network
 			if(NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD && !this.getInstance().isLabeled()
-					&& !this.isRemoved(k) &&  src2fIdx2Dst.containsKey(k)){
-				newMarginalMap.put(k, _marginal[k]);
+					&& !this.isRemoved(k)){
+				this.marginal(k);
+				this._newMarginal[k] = Math.exp(this._newMarginal[k]);
 			}
 		}
 	}
@@ -345,6 +359,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	
 	/**
 	 * Calculate the marginal score at the specific node
+	 * Specifically for the mean-field inference method. be careful to use this.
 	 * @param k
 	 */
 	protected void marginal(int k){
@@ -352,7 +367,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			return;
 		}
 		//since inside and outside are in log space
-		this._marginal[k] = this._inside[k] + this._outside[k] - this.getInside();
+		this._newMarginal[k] = this._inside[k] + this._outside[k] - this.getInside();
 	}
 	
 	/**
@@ -374,13 +389,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			this.inside();
 			this.outside();
 			if(marginalize){
-				//save the marginal score;
-				//actually for the labeled network, no need to do the marginalize
-				//since the marginal score of labeled network is not used.
 				this.marginal();
-				//if(!this.getInstance().isLabeled())
-				//	for(int k = 0; k < this.countNodes(); k++)
-				//		System.out.println("marginal[" + k + "] = " + this._marginal[k]);
 			}
 		} else { // Use real max
 			this.max();
@@ -512,8 +521,8 @@ public abstract class Network implements Serializable, HyperGraph{
 			} else {
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				int globalParamVersion = this._param._fm.getParam_G().getVersion();
-				double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-			 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap, globalParamVersion):
+				double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD  ?
+			 			fa.getScore_MF_Version(this._param, this.getUnlabeledNetwork().getMarginalSharedArray(), globalParamVersion):
 			 				fa.getScore(this._param, globalParamVersion);
 			 	
 			 	if(NetworkConfig.MODEL_TYPE.USE_COST){
@@ -539,8 +548,8 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			int globalParamVersion = this._param._fm.getParam_G().getVersion();
-			double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-		 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap, globalParamVersion):
+			double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD ?
+		 			fa.getScore_MF_Version(this._param, this.getUnlabeledNetwork().getMarginalSharedArray(), globalParamVersion):
 		 				fa.getScore(this._param, globalParamVersion);
 
  			if(NetworkConfig.MODEL_TYPE.USE_COST){
@@ -587,8 +596,8 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			int globalParamVersion = this._param._fm.getParam_G().getVersion();
-			double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-		 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap, globalParamVersion):
+			double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD?
+		 			fa.getScore_MF_Version(this._param, this.getUnlabeledNetwork().getMarginalSharedArray(), globalParamVersion):
 		 				fa.getScore(this._param, globalParamVersion);
 			if(NetworkConfig.MODEL_TYPE.USE_COST){
 				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
@@ -652,8 +661,8 @@ public abstract class Network implements Serializable, HyperGraph{
 			FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 			int globalParamVersion = this._param._fm.getParam_G().getVersion();
 			if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
-				double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-			 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap, globalParamVersion):
+				double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD ?
+			 			fa.getScore_MF_Version(this._param, this.getUnlabeledNetwork().getMarginalSharedArray(), globalParamVersion):
 			 				fa.getScore(this._param, globalParamVersion);
 				if(NetworkConfig.MODEL_TYPE.USE_COST){
 					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
@@ -672,8 +681,8 @@ public abstract class Network implements Serializable, HyperGraph{
 			count *= this._weight;
 //			if(Double.isNaN(count))
 //				throw new RuntimeException("count is NaN in updating gradient?");
-			if (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)){
-				fa.update_MF_Version(this._param, count, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap);
+			if (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD){
+				fa.update_MF_Version(this._param, count, this.getUnlabeledNetwork().getMarginalSharedArray());
 			}else{
 				fa.update(this._param, count);
 			}
@@ -731,8 +740,8 @@ public abstract class Network implements Serializable, HyperGraph{
 				} else {
 					FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 					int globalParamVersion = this._param._fm.getParam_G().getVersion();
-					double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-				 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap, globalParamVersion):
+					double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD  ? 
+				 			fa.getScore_MF_Version(this._param, this.getUnlabeledNetwork().getMarginalSharedArray(), globalParamVersion):
 				 				fa.getScore(this._param, globalParamVersion);
 					if(NetworkConfig.MODEL_TYPE.USE_COST){
 						try{
@@ -764,8 +773,8 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				int globalParamVersion = this._param._fm.getParam_G().getVersion();
-				double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-			 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap, globalParamVersion):
+				double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD? 
+			 			fa.getScore_MF_Version(this._param, this.getUnlabeledNetwork().getMarginalSharedArray(), globalParamVersion):
 			 				fa.getScore(this._param, globalParamVersion);
 				if(NetworkConfig.MODEL_TYPE.USE_COST){
 					try{
@@ -799,8 +808,8 @@ public abstract class Network implements Serializable, HyperGraph{
 				
 				FeatureArray fa = this._param.extract(this, k, children_k, children_k_index);
 				int globalParamVersion = this._param._fm.getParam_G().getVersion();
-				double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(k)?
-			 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap, globalParamVersion):
+				double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD  ?
+			 			fa.getScore_MF_Version(this._param, this.getUnlabeledNetwork().getMarginalSharedArray(), globalParamVersion):
 			 				fa.getScore(this._param, globalParamVersion);
 				if(NetworkConfig.MODEL_TYPE.USE_COST){
 					try{
@@ -862,8 +871,8 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			FeatureArray fa = this._param.extract(this, nodeIdx, children_k, children_k_index);
 			int globalParamVersion = this._param._fm.getParam_G().getVersion();
-			double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD && src2fIdx2Dst.containsKey(nodeIdx)?
-		 			fa.getScore_MF_Version(this._param, src2fIdx2Dst.get(nodeIdx), this.getUnlabeledNetwork().currentMarginalMap, globalParamVersion):
+			double score = NetworkConfig.INFERENCE==InferenceType.MEAN_FIELD ?
+		 			fa.getScore_MF_Version(this._param, this.getUnlabeledNetwork().getMarginalSharedArray(), globalParamVersion):
 		 				fa.getScore(this._param, globalParamVersion);
 			double firstBest = score;
 			for(int child_k : children_k){
@@ -1072,43 +1081,27 @@ public abstract class Network implements Serializable, HyperGraph{
 	}
 	
 	/**
-	 * Save the joint feature information here for mean-field inference.
-	 * @param srcNode: the source node index in current network
-	 * @param fIdx: the local feature index. note it's not global
-	 * @param dstNode: the destination node index in the unlabeled network.
+	 * specifically for mean-field experiments
+	 * Need to implement this while using mean field inference 
 	 */
-	public void putJointFeature(int srcNode, int fIdx,  int dstNode){
-		if(fIdx==-1)
-			throw new RuntimeException("The feature idx is -1?");
-		if(src2fIdx2Dst.containsKey(srcNode)){
-			if(this.getInstance().isLabeled() && src2fIdx2Dst.get(srcNode).containsKey(fIdx))
-				throw new RuntimeException("repeated?");
-			src2fIdx2Dst.get(srcNode).put(fIdx, dstNode);
-		}else{
-			HashMap<Integer, Integer> map = new HashMap<Integer, Integer>();
-			map.put(fIdx, dstNode);
-			src2fIdx2Dst.put(srcNode, map);
-		}
-	}
-	
-	/**
-	 * Initialize the joint feature map for mean-field inference.
-	 */
-	public void initJointFeatureMap(){
-		src2fIdx2Dst = new HashMap<Integer, HashMap<Integer, Integer>>();
-	}
+	public void initStructArr(){
+		
+	};
 	
 	/**
 	 * new the marginal map, clear all elements
 	 */
 	public void clearMarginalMap(){
-		this.currentMarginalMap = new HashMap<>();
-		this.newMarginalMap = new HashMap<>();
+		double[] marginal = this.getMarginalSharedArray();
+		Arrays.fill(marginal, 0.0);
 	}
 	
 	public void renewCurrentMarginalMap(){
-		this.currentMarginalMap = this.newMarginalMap;
-		this.newMarginalMap = new HashMap<>();
+		this._marginal = this.getMarginalSharedArray();
+		for (int k = 0; k < this._marginal.length; k++) {
+			this._marginal[k] = this._newMarginal[k];
+		}
+		Arrays.fill(this._newMarginal, 0.0);
 	}
 	
 	/**
@@ -1117,15 +1110,13 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * @return almost equal OR not
 	 */
 	public boolean compareMarginalMap(){
-		if(this.currentMarginalMap == null || this.currentMarginalMap.size() == 0)
+		if(this._marginal == null)
 			return false;
 		double diff = 0;
-		for(Integer key: this.newMarginalMap.keySet()){
-			double curr = this.currentMarginalMap.get(key);
-			double newM = this.newMarginalMap.get(key);
-			diff += Math.abs(newM-curr);
+		for (int k = 0; k < this._marginal.length; k++) {
+			diff += Math.abs(this._marginal[k]-this._newMarginal[k]);
 		}
-		diff /= this.newMarginalMap.size();
+		diff /= this._marginal.length;
 		if(diff < 0.0001)
 			return true;
 		return false;

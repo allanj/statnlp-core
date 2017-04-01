@@ -389,7 +389,10 @@ public abstract class NetworkModel implements Serializable{
 			if(cacheFeatures && this._decoders[threadId] != null){
 				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, this._decoders[threadId].getParam(), true);
 			} else {
-				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, false);
+				if (cacheFeatures) 
+					this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, true);
+				else 
+					this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, false);
 			}
 		}
 		
