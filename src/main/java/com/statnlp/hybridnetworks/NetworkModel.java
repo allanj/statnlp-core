@@ -126,7 +126,7 @@ public abstract class NetworkModel implements Serializable{
 	}
 	
 	public void train(Instance[] allInstances, int trainLength, int maxNumIterations) throws InterruptedException{
-		train(allInstances, allInstances.length, maxNumIterations, null, null);
+		train(allInstances, trainLength, maxNumIterations, null, null);
 	}
 	
 	public void train(Instance[] allInstances, int trainLength, int maxNumIterations, Instance[] testInsts, String modelFile) throws InterruptedException{
