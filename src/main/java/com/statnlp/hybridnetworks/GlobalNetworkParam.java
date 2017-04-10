@@ -422,6 +422,10 @@ public class GlobalNetworkParam implements Serializable{
 		return this._locked;
 	}
 	
+	public void setVersion(int version){
+		this._version = version;
+	}
+	
 	public int getVersion(){
 		return this._version;
 	}
