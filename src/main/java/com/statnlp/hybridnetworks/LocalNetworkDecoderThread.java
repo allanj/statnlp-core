@@ -68,6 +68,11 @@ public class LocalNetworkDecoderThread extends Thread{
 	}
 	
 	public void max(){
+		int numSentences = this._instances_input.length;
+		int numTokens = 0;
+		for(Instance instance: this._instances_input){
+			numTokens += instance.size();
+		}
 		long time = System.currentTimeMillis();
 		this._instances_output = new Instance[this._instances_input.length];
 		for(int k = 0; k<this._instances_input.length; k++){
@@ -75,7 +80,9 @@ public class LocalNetworkDecoderThread extends Thread{
 			this._instances_output[k] = this.max(this._instances_input[k], k);
 		}
 		time = System.currentTimeMillis() - time;
-		System.err.println("Decoding time for thread "+this._threadId+" = "+ time/1000.0 +" secs.");
+		double timeInSecond = time/1000.0;
+		System.err.println("Decoding time for thread "+this._threadId+" = "+ timeInSecond +" secs "+
+				String.format("(%d/%.3f = %.3f tokens/s, %d/%.3f = %.3f sentences/s)", numTokens, timeInSecond, numTokens/timeInSecond, numSentences, timeInSecond, numSentences/timeInSecond));
 	}
 	
 	public Instance max(Instance instance, int networkId){
