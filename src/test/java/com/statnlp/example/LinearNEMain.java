@@ -110,6 +110,7 @@ public class LinearNEMain {
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;
 					case "-neural": if(args[i+1].equals("true")){ 
 											NetworkConfig.USE_NEURAL_FEATURES = true; 
+											NetworkConfig.OPTIMIZE_NEURAL = true;
 											NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
 										}

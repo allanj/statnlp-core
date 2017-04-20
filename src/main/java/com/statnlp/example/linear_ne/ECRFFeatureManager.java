@@ -72,7 +72,7 @@ public class ECRFFeatureManager extends FeatureManager {
 			featureList.add(this._param_g.toFeature(network, FEATYPE.neural_1.name(), currEn, currWord));
 //			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw));
 		}
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), currEn,  	currWord));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), currEn,  	currWord));
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ET",	currEn+":"+currTag));
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELW",	currEn+":"+lw));
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELT",	currEn+":"+lt));
