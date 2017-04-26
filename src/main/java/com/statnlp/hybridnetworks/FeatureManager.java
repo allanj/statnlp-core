@@ -159,7 +159,7 @@ public abstract class FeatureManager implements Serializable{
 	}
 	
 	/**
-	 * Starts the routine to copy all local feature index into global feature index<br>
+	 * Starts the routine to copy all local feature index into global feature index.
 	 */
 	public void mergeSubFeaturesToGlobalFeatures(){
 		HashMap<String, HashMap<String, HashMap<String, Integer>>> globalFeature2IntMap = this._param_g.getFeatureIntMap();

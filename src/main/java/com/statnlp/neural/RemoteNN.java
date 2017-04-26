@@ -11,6 +11,10 @@ import org.msgpack.value.IntegerValue;
 import org.msgpack.value.Value;
 import org.zeromq.ZMQ;
 
+/**
+ * The class that serves as the interface to access the neural network backend.
+ * This uses ZeroMQ (http://zeromq.org/) to transfer the data between the JVM and the NN backend.
+ */
 public class RemoteNN {
 	private boolean DEBUG = false;
 	
@@ -40,8 +44,7 @@ public class RemoteNN {
 		this.controller = controller;
 	}
 	
-	@SuppressWarnings("rawtypes")
-	private void packList(MessageBufferPacker packer, String key, List arr){
+	private void packList(MessageBufferPacker packer, String key, List<?> arr){
 		try {
 			if(key!=null) packer.packString(key);
 			packer.packArrayHeader(arr.size());
@@ -49,11 +52,11 @@ public class RemoteNN {
 				if(a instanceof Integer){
 					int x = (Integer)a;
 					packer.packInt(x);
-				}else if(a instanceof String){
+				} else if(a instanceof String){
 					String x = (String)a;
 					packer.packString(x);
-				}else if(a instanceof List){
-					List x = (List)a;;
+				} else if(a instanceof List){
+					List<?> x = (List<?>)a;
 					packList(packer, null, x);
 				}
 			}
@@ -132,7 +135,7 @@ public class RemoteNN {
 	
 	public void forwardNetwork(boolean training) {
 		MessageBufferPacker packer = MessagePack.newDefaultBufferPacker();
-		int mapSize = optimizeNeural? 3:2;
+		int mapSize = optimizeNeural ? 3 : 2;
 		try {
 			packer.packMapHeader(mapSize);
 			packer.packString("cmd").packString("fwd");
