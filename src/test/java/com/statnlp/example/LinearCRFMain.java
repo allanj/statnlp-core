@@ -57,7 +57,7 @@ public class LinearCRFMain {
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
-		NetworkConfig.USE_NEURAL_FEATURES = true;
+		NetworkConfig.USE_NEURAL_FEATURES = false;
 		NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 		NetworkConfig.OPTIMIZE_NEURAL = false;
 		String weightInitFile = null;
@@ -276,9 +276,7 @@ public class LinearCRFMain {
 				}
 				total++;
 				if(count < 3){
-//					System.out.println(words.get(i)[0]+" "+words.get(i)[1]+" "+goldLabel.get(i).getId()+" "+actualLabel.get(i).getId());
-//					print(words.get(i)[0]+" "+goldLabel.get(i)+" "+actualLabel.get(i), outstreams);
-					print(words.get(i)[0]+" "+goldLabel.get(i)+" "+actualLabel.get(i)+" "+topKPredictions.get(k-1).get(i), outstreams);
+					print(String.format("%15s %6s %6s %6s%s", words.get(i)[0], goldLabel.get(i), actualLabel.get(i), topKPredictions.get(k-1).get(i), actualLabel.get(i) == topKPredictions.get(k-1).get(i) ? "" : " DIFFERENT"), outstreams);
 				}
 				resultStream.println(words.get(i)[0]+" "+goldLabel.get(i)+" "+actualLabel.get(i));
 			}
