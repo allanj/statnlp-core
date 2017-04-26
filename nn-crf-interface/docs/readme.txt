@@ -1,50 +1,63 @@
-DOCUMENTATIONS
-==============
+## Installation of Neural Network Binding
 
-Refer to nn_specs.pdf for information regarding the system design.
+Ensure you have Java 8:
 
-CODE
-====
+```
+sudo add-apt-repository ppa:webupd8team/java
+sudo apt-get update
+sudo apt-get install oracle-java8-installer
+```
 
-Source code can be found in the following directory:
+You will also need Java binding for ZeroMQ (JZMQ):
 
-src/: Java interface code controlling interactions with NN and CRF
-neural_server/: NN code in Torch
+Using Homebrew:
+```
+brew install zmq
+```
 
+Install manually:
 
-INSTALLATION
-============
+```
+git clone https://github.com/zeromq/jzmq
+cd jzmq/jzmq-jni
+./autogen.sh && ./configure && make
+sudo make install
+```
 
-* Install ZeroMQ library: (http://zeromq.org/intro:get-the-software)
+Make sure you have Torch installed:
 
-git clone https://github.com/zeromq/libzmq
-./autogen.sh && ./configure && make -j 4
-make check && make install && sudo ldconfig
-
-* Install Torch: (http://torch.ch/docs/getting-started.html#_)
-
+```
 git clone https://github.com/torch/distro.git ~/torch --recursive
 cd ~/torch; bash install-deps;
 ./install.sh
-source ~/.bashrc
+```
 
-Type "th" to check if Torch is working.
+and then install Torch dependency libraries:
 
-* Torch dependency libraries
-
-luarocks install nn
-luarocks install dkjson
+```
 luarocks install lzmq
+luarocks install lua-messagepack
+luarocks install luautf8
+```
 
-* Run NN server listening on port 5556 with CPU:
 
+## Word embedding
+
+Below is the list of word embedding supported by this package:
+
+polyglot:
+Download the .pkl files from [Polyglot]( https://sites.google.com/site/rmyeid/projects/polyglot#TOC-Download-the-Embeddings).
+Put these files in `neural_server/polyglot`, then run the following to preprocess for Torch:
+
+```
+python pkl2txt.py polyglot-en.pkl > polyglot-en.txt
+th bintot7.lua polyglot-en.ttxt polyglot-en.t7
+```
+
+Run a neural net server that listens on port 5556 and specify the `gpuid` (>= 0 for GPU, -1 for CPU)
+
+```
 th server.lua -port 5556 -gpuid -1
+```
 
-* Add the following when running the Java program
-
--Djava.library.path=/usr/local/lib
-
-and add the following in the classpath:
-
-lib/json-20140107.jar
-lib/zmq.jar
+Then configure the neural.config accordingly to run your desired neural network.

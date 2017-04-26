@@ -58,7 +58,7 @@ public class LinearCRFMain {
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
-		NetworkConfig.USE_NEURAL_FEATURES = false;
+		NetworkConfig.USE_NEURAL_FEATURES = true;
 		NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 		NetworkConfig.OPTIMIZE_NEURAL = false;
 		String weightInitFile = null;
