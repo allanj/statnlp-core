@@ -893,15 +893,14 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * Using the normal approach, each node we maintain a top-k list.
 	 * top-k viterbi decoding. 
 	 */
-	protected void topK(){
-		int topK = NetworkConfig._topKValue;
+	protected void topK(int topK){
 		this._max_k = getMaxKSharedArray();
 		this._max_k_paths = getMaxKPathSharedArray();
 		this._max_k_path_listbest  = getMaxKPathListBestSharedArray();
 		for(int nodeIdx=0; nodeIdx<this.countNodes(); nodeIdx++){
-			this._max_k[nodeIdx] = new double[NetworkConfig._topKValue];
-			this._max_k_paths[nodeIdx] = new int[NetworkConfig._topKValue][];
-			this._max_k_path_listbest[nodeIdx]  = new int[NetworkConfig._topKValue][];
+			this._max_k[nodeIdx] = new double[topK];
+			this._max_k_paths[nodeIdx] = new int[topK][];
+			this._max_k_path_listbest[nodeIdx]  = new int[topK][];
 			this.askKBest(nodeIdx, topK);
 		}
 	}
@@ -923,7 +922,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			if(ignoreflag)
 				continue;
 			
-			BinaryHeap heap = new BinaryHeap(NetworkConfig._topKValue+1);
+			BinaryHeap heap = new BinaryHeap(TOPK+1);
 			int n = 0;
 			
 			int currMaxPath[][] = new int[TOPK][children_k.length]; //topk and (l-best, r-best)
@@ -992,7 +991,7 @@ public abstract class Network implements Serializable, HyperGraph{
 					this._max_k[nodeIdx][tk] = tkbest+score;
 				}
 			}else{
-				this._max_k_path_listbest[nodeIdx] = this.merge(currMaxPath, children_k,nodeIdx, score);
+				this._max_k_path_listbest[nodeIdx] = this.merge(currMaxPath, children_k,nodeIdx, score, TOPK);
 			}
 			
 		}
@@ -1005,9 +1004,9 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * @param maxKScore[nodeIdx][kthbest]: only know the children
 	 * @return
 	 */
-	private int[][] merge(int currMaxPath[][], int[] children, int nodeIdx, double score){
-		int[][] answer = new int[NetworkConfig._topKValue][children.length];//pair is two
-		int[][] answerPath = new int[NetworkConfig._topKValue][children.length];
+	private int[][] merge(int currMaxPath[][], int[] children, int nodeIdx, double score, int topK){
+		int[][] answer = new int[topK][children.length];//pair is two
+		int[][] answerPath = new int[topK][children.length];
 		int i=0, j=0, k=0;
 		while(k<answer.length){
 //			System.err.println("node idx:"+nodeIdx+" i:"+i+" j:"+j);

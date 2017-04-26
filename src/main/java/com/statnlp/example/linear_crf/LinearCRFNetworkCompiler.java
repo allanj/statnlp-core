@@ -178,22 +178,49 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	
 	@Override
 	public LinearCRFInstance decompile(Network network) {
+		return decompile(network, 1);
+	}
+	
+	public LinearCRFInstance decompile(Network network, int numPredictionsGenerated){
 		LinearCRFNetwork lcrfNetwork = (LinearCRFNetwork)network;
 		LinearCRFInstance instance = (LinearCRFInstance)lcrfNetwork.getInstance();
-		int size = instance.size();
+		
+		ArrayList<ArrayList<Label>> topKPredictions = new ArrayList<ArrayList<Label>>();
+		for(int k=0; k<numPredictionsGenerated; k++){
+			topKPredictions.add(getKthBestPrediction(instance, lcrfNetwork, k));
+		}
 		
 		LinearCRFInstance result = instance.duplicate();
+		
+		result.setPrediction(topKPredictions.get(0));
+		result.setTopKPredictions(topKPredictions);
+		
+		return result;
+	}
+	
+	private ArrayList<Label> getKthBestPrediction(LinearCRFInstance instance, LinearCRFNetwork lcrfNetwork, int kth){
+		int k = kth;
+		int size = instance.size();
 		ArrayList<Label> predictions = new ArrayList<Label>();
 		long root = toNode_root(size);
 		int node_k = Arrays.binarySearch(_allNodes, root);
+//		NodeHypothesis nodeHypothesis = lcrfNetwork.getNodeHypothesis(node_k);
+//		IndexedScore bestPath = nodeHypothesis.getKthBestHypothesis(k);
 		
 		for(int i=size-1; i>=0; i--){
-			int[] children_k = lcrfNetwork.getMaxPath(node_k);
+			int[] children_k_real = lcrfNetwork.getMaxPath(node_k);
+			int[] children_k = lcrfNetwork.getMaxTopKPath(node_k, k);
+//			IndexedScore[] children_k = lcrfNetwork.getMaxPath(nodeHypothesis, bestPath);
+			k = lcrfNetwork.getMaxTopKBestListPath(node_k, k)[0];
 			if(children_k.length != 1){
 				System.err.println("Child length not 1!");
 			}
 			int child_k = children_k[0];
+			if(lcrfNetwork.getNetworkId() < 3 && kth == 0 && child_k != children_k_real[0]){
+				System.out.println("k: "+k+", TopK: "+child_k+", Real: "+children_k_real[0]);
+			}
 			long child = lcrfNetwork.getNode(child_k);
+//			nodeHypothesis = lcrfNetwork.getNodeHypothesis(child_k);
 			int[] child_arr = NetworkIDMapper.toHybridNodeArray(child);
 			int pos = child_arr[0]-1;
 			int tag_id = child_arr[1];
@@ -202,11 +229,9 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 			}
 			predictions.add(0, Label.get(tag_id));
 			node_k = child_k;
+//			bestPath = children_k[0];
 		}
-		
-		result.setPrediction(predictions);
-		
-		return result;
+		return predictions;
 	}
 	
 	public double costAt(Network network, int parent_k, int[] child_k){

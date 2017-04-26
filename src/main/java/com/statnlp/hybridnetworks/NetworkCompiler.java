@@ -110,7 +110,12 @@ public abstract class NetworkCompiler implements Serializable{
 	 */
 	public abstract Instance decompile(Network network);
 
-	
+	public Instance decompile(Network network, int k){
+		throw new UnsupportedOperationException("The top-k decompiler is not implemented.\n"
+				+ "If you are a developer, please override decompile(Network, int) "
+				+ "in your custom NetworkCompiler");
+	}
+
 	/**
 	 * The cost of the structure from leaf nodes up to node <code>k</code>.<br>
 	 * This is used for structured SVM, and generally the implementation requires the labeled Instance.<br>

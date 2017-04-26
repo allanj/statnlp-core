@@ -175,8 +175,6 @@ public class NetworkConfig {
 	/** Decoding the max-marginal for each node as well. if set to true */
 	public static boolean MAX_MARGINAL_DECODING = false;
 	
-	public static int _topKValue = 1;
-	
 	/***
 	 * Please read carefully about the README.txt to install the NN server and also the communication package for Neural CRF
 	 */
