@@ -258,8 +258,11 @@ function init_MLP(data)
         else
             lastInputDim = data.hiddenSize
         end
-        -- middleLayers:add(nn.Linear(lastInputDim, outputDim):noBias()) -- no bias
-        middleLayers:add(nn.Linear(lastInputDim, outputDim))
+        if data.useOutputBias then
+            middleLayers:add(nn.Linear(lastInputDim, outputDim))
+        else
+            middleLayers:add(nn.Linear(lastInputDim, outputDim):noBias())
+        end
         ct:add(middleLayers)
     end
     mlp:add(ct)
