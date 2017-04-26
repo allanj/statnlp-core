@@ -4,6 +4,12 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 
+/**
+ * The class used by {@link FeatureArray} to store the list of feature indices and 
+ * the cached score of the features associated with this list.
+ * This can also be used to save memory usage by not allocating new FeatureBox with 
+ * the same feature indices as the one that is already created. 
+ */
 public class FeatureBox implements Serializable {
 
 	private static final long serialVersionUID = 1779316632297457057L;
@@ -12,7 +18,6 @@ public class FeatureBox implements Serializable {
 	 * Feature index array
 	 */
 	protected int[] _fs;
-//	protected double _totalScore;
 	protected double _currScore;
 	
 	protected int _version;
@@ -67,6 +72,5 @@ public class FeatureBox implements Serializable {
 		FeatureBox other = (FeatureBox)obj;
 		return Arrays.equals(_fs, other._fs);
 	}
-	
 	
 }

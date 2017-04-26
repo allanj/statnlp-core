@@ -165,9 +165,8 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		}
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
-			
-			
 			String postag = input.get(pos)[1];
+//			features.add(param_g.toFeature(network, FeatureType.neural.name(), tag_id+"",input.get(pos)[0]));
 			features.add(param_g.toFeature(network, FeatureType.neural.name(), tag_id+"", prevWord+IN_SEP+input.get(pos)[0]+IN_SEP+nextWord+OUT_SEP+prevPos+IN_SEP+postag));
 		}else{
 			features.add(param_g.toFeature(network, FeatureType.WORD.name(), tag_id+"",input.get(pos)[0]));

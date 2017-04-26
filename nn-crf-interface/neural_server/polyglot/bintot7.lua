@@ -24,9 +24,6 @@ end
 words = ctr
 size = encodingsize
 
-
-
-
 local w2vvocab = {}
 local v2wvocab = {}
 local M = torch.FloatTensor(words,size)
@@ -75,9 +72,4 @@ Polyglot.w2vvocab = w2vvocab
 Polyglot.v2wvocab = v2wvocab
 torch.save(opt.outfilename,Polyglot)
 print('Writing t7 File for future usage.')
-
-
-
 return Polyglot
-
-

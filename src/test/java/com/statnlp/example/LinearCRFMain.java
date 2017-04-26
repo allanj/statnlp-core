@@ -48,7 +48,7 @@ public class LinearCRFMain {
 		NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = Boolean.parseBoolean(System.getProperty("featuresFromLabeledOnly", "false"));
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = Boolean.parseBoolean(System.getProperty("cacheFeatures", "true"));
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = Double.parseDouble(System.getProperty("l2", "0.01")); //0.01
-		NetworkConfig.NUM_THREADS = Integer.parseInt(System.getProperty("numThreads", "8"));
+		NetworkConfig.NUM_THREADS = Integer.parseInt(System.getProperty("numThreads", "4"));
 		
 		NetworkConfig.MODEL_TYPE = ModelType.valueOf(System.getProperty("modelType", "CRF")); // The model to be used: CRF, SSVM, or SOFTMAX_MARGIN
 		NetworkConfig.USE_BATCH_TRAINING = Boolean.parseBoolean(System.getProperty("useBatchTraining", "false")); // To use or not to use mini-batches in gradient descent optimizer
@@ -57,9 +57,10 @@ public class LinearCRFMain {
 		
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
-		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;  
+		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
 		NetworkConfig.USE_NEURAL_FEATURES = true;
 		NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
+		NetworkConfig.OPTIMIZE_NEURAL = false;
 		String weightInitFile = null;
 		
 		int numIterations = Integer.parseInt(System.getProperty("numIter", "1000"));
@@ -169,13 +170,11 @@ public class LinearCRFMain {
 		System.err.println("Read.."+size+" instances from "+trainPath);
 		
 		OptimizerFactory optimizerFactory;
-		if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
+		if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX && !(NetworkConfig.USE_NEURAL_FEATURES && !NetworkConfig.OPTIMIZE_NEURAL)){
 			optimizerFactory = OptimizerFactory.getLBFGSFactory();
 		} else {
-			//optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingSmoothedAdaDeltaThenGD(1e-2, 0.95, 5e-5, 0.9);
-			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaGrad();
+			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaDeltaThenStop(OptimizerFactory.DEFAULT_ADADELTA_PHI, OptimizerFactory.DEFAULT_ADADELTA_EPS);
 		}
-		optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(0.1);
 		if(weightInitFile != null){
 			HashMap<String, HashMap<String, HashMap<String, Double>>> featureWeightMap = new HashMap<String, HashMap<String, HashMap<String, Double>>>();
 			Scanner reader = new Scanner(new File(weightInitFile));

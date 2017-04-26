@@ -124,7 +124,7 @@ public class FCRFFeatureManager extends FeatureManager {
 		
 		fa = new FeatureArray(FeatureBox.getFeatureBox(features, this.getParams_L()[network.getThreadId()]));
 		FeatureArray jointFa =  new FeatureArray(FeatureBox.getFeatureBox(jointFeaturesArr, this.getParams_L()[network.getThreadId()]));
-		jointFa.setAlwaysChange();
+		jointFa.setAlwaysChange(true);
 		fa.next(jointFa);
 		
 		return fa;

@@ -12,20 +12,19 @@ import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.example.fcrf.Chunk;
 import com.statnlp.example.fcrf.FCRFConfig;
+import com.statnlp.example.fcrf.FCRFConfig.TASK;
 import com.statnlp.example.fcrf.FCRFEval;
 import com.statnlp.example.fcrf.FCRFFeatureManager;
 import com.statnlp.example.fcrf.FCRFInstance;
 import com.statnlp.example.fcrf.FCRFNetworkCompiler;
 import com.statnlp.example.fcrf.FCRFReader;
 import com.statnlp.example.fcrf.Tag;
-import com.statnlp.example.fcrf.FCRFConfig.TASK;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
-import com.statnlp.neural.NeuralConfig;
+import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.neural.NeuralConfigReader;
 
 public class FCRFExampleMain {
@@ -132,7 +131,6 @@ public class FCRFExampleMain {
 		NetworkConfig.OPTIMIZE_NEURAL = false;  //false: optimize in neural network
 		NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
 		NetworkConfig.REGULARIZE_NEURAL_FEATURES = false; //true means regularize in the crf part
-		NeuralConfig.NUM_NEURAL_NETS = 2;
 		/****/
 		
 		GlobalNetworkParam param_g = null; 
