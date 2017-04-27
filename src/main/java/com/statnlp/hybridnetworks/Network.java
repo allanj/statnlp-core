@@ -906,7 +906,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	}
 
 	/**
-	 * Ask the k^{th} best of nodeIdx, currently specific for CKY-styly parsing
+	 * Ask the k^{th} best of nodeIdx
 	 * @param nodeIdx
 	 * @param q
 	 */
@@ -1007,6 +1007,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	private int[][] merge(int currMaxPath[][], int[] children, int nodeIdx, double score, int topK){
 		int[][] answer = new int[topK][children.length];//pair is two
 		int[][] answerPath = new int[topK][children.length];
+		double[] answerScore = new double[topK];
 		int i=0, j=0, k=0;
 		while(k<answer.length){
 //			System.err.println("node idx:"+nodeIdx+" i:"+i+" j:"+j);
@@ -1016,15 +1017,17 @@ public abstract class Network implements Serializable, HyperGraph{
 				for(int ith=0;ith<children.length;ith++){
 					left += this._max_k[children[ith]][currMaxPath[i][ith]];
 				}
+				left += score;
 			}
 			
 			int[] pathChildren = this._max_k_paths[nodeIdx][j]==null? null:this._max_k_paths[nodeIdx][j];
 			
 			double right = Double.NEGATIVE_INFINITY;
 			if(!(pathChildren==null || this._max_k_path_listbest[nodeIdx][j]==null)){
-				right = 0;
-				for(int pth=0;pth<pathChildren.length;pth++)
-					right += this._max_k[pathChildren[pth]][this._max_k_path_listbest[nodeIdx][j][pth]];
+				right = this._max_k[nodeIdx][j];
+//				right = 0;
+//				for(int pth=0;pth<pathChildren.length;pth++)
+//					right += this._max_k[pathChildren[pth]][this._max_k_path_listbest[nodeIdx][j][pth]];
 			}
 			
 			
@@ -1034,12 +1037,14 @@ public abstract class Network implements Serializable, HyperGraph{
 			
 			if(left > right){
 				answer[k] = currMaxPath[i];
-				this._max_k[nodeIdx][k] = left + score;
+				answerScore[k] = left;
+//				this._max_k[nodeIdx][k] = left + score;
 				answerPath[k] = children;
 				i++;
 			}else{
 				answer[k] = this._max_k_path_listbest[nodeIdx][j];
-				this._max_k[nodeIdx][k] = right + score;
+				answerScore[k] = right;
+//				this._max_k[nodeIdx][k] = right + score;
 				System.arraycopy(this._max_k_paths[nodeIdx][j], 0, answerPath[k], 0, this._max_k_paths[nodeIdx][j].length); //a faster way to copy array
 				//answerPath[k] = this._max_k_paths[nodeIdx][j].clone();
 				j++;
@@ -1047,7 +1052,13 @@ public abstract class Network implements Serializable, HyperGraph{
 			k++;
 			
 		}
-		for(int x=k;x<answer.length;x++) {answer[x] = null; answerPath[x]= null;}
+		this._max_k[nodeIdx] = answerScore;
+		for(int x=k;x<answer.length;x++) {
+			answer[x] = null;
+			answerPath[x]= null;
+			this._max_k[nodeIdx][x]= Double.NEGATIVE_INFINITY;
+		}
+//		for(int x=k;x<answer.length;x++) {answer[x] = null; answerPath[x]= null;}
 		this._max_k_paths[nodeIdx] = answerPath;
 		return answer;
 	}

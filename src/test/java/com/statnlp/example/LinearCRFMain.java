@@ -258,7 +258,7 @@ public class LinearCRFMain {
 
 		LinearCRFInstance[] testInstances = readCoNLLData(testPath, true, false);
 		//for(LinearCRFInstance inst: trainInstances) inst.setUnlabeled();
-		int k = 2;
+		int k = 256;
 		Instance[] predictions = model.decode(testInstances, k);
 		
 		PrintStream[] outstreams = new PrintStream[]{outstream, System.out};
