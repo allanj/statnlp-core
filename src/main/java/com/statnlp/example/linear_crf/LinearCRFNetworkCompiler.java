@@ -213,7 +213,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		for(int i=size-1; i>=0; i--){
 			try{
 				children_k = lcrfNetwork.getMaxPath(nodeHypothesis, bestPath);
-			} catch (NullPointerException e){
+			} catch (NoSuchElementException e){
 				throw new NoSuchElementException("There is no "+k+"-best result!");
 			}
 			if(children_k.length != 1){

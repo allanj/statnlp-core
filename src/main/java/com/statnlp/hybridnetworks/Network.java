@@ -19,6 +19,7 @@ package com.statnlp.hybridnetworks;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.NoSuchElementException;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
@@ -335,14 +336,26 @@ public abstract class Network implements Serializable, HyperGraph{
 		return this._max_k_paths[nodeIdx][k];
 	}
 	
-	public IndexedScore[] getMaxPath(NodeHypothesis node, IndexedScore bestPath){
-		EdgeHypothesis edge = node.parents()[bestPath.index[0]];
-		IndexedScore score = edge.getKthBestHypothesis(bestPath.index[1]);
-		IndexedScore[] result = new IndexedScore[edge.parents.length];
-		for(int i=0; i<edge.parents.length; i++){
-			result[i] = edge.parents()[i].getKthBestHypothesis(score.index[i]);
+	/**
+	 * Return the max path according to the configuration specified in the bestPath IndexedScore object.<br>
+	 * This is used in returning the top-k result also.
+	 * @param node
+	 * @param bestPath
+	 * @return
+	 * @throws NoSuchElementException
+	 */
+	public IndexedScore[] getMaxPath(NodeHypothesis node, IndexedScore bestPath) throws NoSuchElementException {
+		try{
+			EdgeHypothesis edge = node.children()[bestPath.index[0]];
+			IndexedScore score = edge.getKthBestHypothesis(bestPath.index[1]);
+			IndexedScore[] result = new IndexedScore[edge.children.length];
+			for(int i=0; i<edge.children.length; i++){
+				result[i] = edge.children()[i].getKthBestHypothesis(score.index[i]);
+			}
+			return result;
+		} catch (NullPointerException e){
+			throw new NoSuchElementException("The requested k-best exceeds the maximum number of structures.");
 		}
-		return result;
 	}
 	
 	public NodeHypothesis getNodeHypothesis(int k){
@@ -931,10 +944,10 @@ public abstract class Network implements Serializable, HyperGraph{
 //			System.out.println("Node: "+this._hypotheses[k]);
 //			System.out.println("Edges: "+Arrays.toString(parentOfThisNodeHypothesis));
 //			System.out.println(bestPath);
-			EdgeHypothesis edge = this._hypotheses[k].parents()[bestPath.index[0]];
-			this._max_paths[k] = new int[edge.parents.length];
-			for(int i=0; i<edge.parents.length; i++){
-				this._max_paths[k][i] = edge.parents()[i].nodeIndex();
+			EdgeHypothesis edge = this._hypotheses[k].children()[bestPath.index[0]];
+			this._max_paths[k] = new int[edge.children.length];
+			for(int i=0; i<edge.children.length; i++){
+				this._max_paths[k][i] = edge.children()[i].nodeIndex();
 			}
 			this._max[k] = bestPath.score;
 		}

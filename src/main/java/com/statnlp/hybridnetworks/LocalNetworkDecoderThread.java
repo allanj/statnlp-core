@@ -180,19 +180,19 @@ public class LocalNetworkDecoderThread extends Thread{
 	 */
 	private void setMaxArrayForKthPrediction(Network network, IndexedScore kthPrediction, NodeHypothesis nodeHypothesis){
 		int nodeIndex = nodeHypothesis.nodeIndex();
-		EdgeHypothesis edge = nodeHypothesis.parents()[kthPrediction.index[0]];
+		EdgeHypothesis edge = nodeHypothesis.children()[kthPrediction.index[0]];
 		IndexedScore score = edge.getKthBestHypothesis(kthPrediction.index[1]);
-		IndexedScore[] nextPath = new IndexedScore[edge.parents.length];
-		if(network._max_paths[nodeIndex].length != edge.parents().length){
-			network._max_paths[nodeIndex] = new int[edge.parents().length];
+		IndexedScore[] nextPath = new IndexedScore[edge.children.length];
+		if(network._max_paths[nodeIndex].length != edge.children().length){
+			network._max_paths[nodeIndex] = new int[edge.children().length];
 		}
-		for(int i=0; i<edge.parents.length; i++){
-			nextPath[i] = edge.parents()[i].getKthBestHypothesis(score.index[i]);
-			network._max_paths[nodeIndex][i] = edge.parents()[i].nodeIndex();
+		for(int i=0; i<edge.children.length; i++){
+			nextPath[i] = edge.children()[i].getKthBestHypothesis(score.index[i]);
+			network._max_paths[nodeIndex][i] = edge.children()[i].nodeIndex();
 		}
 		network._max[nodeIndex] = kthPrediction.score;
-		for(int i=0; i<edge.parents.length; i++){
-			setMaxArrayForKthPrediction(network, nextPath[i], edge.parents()[i]);
+		for(int i=0; i<edge.children.length; i++){
+			setMaxArrayForKthPrediction(network, nextPath[i], edge.children()[i]);
 		}
 	}
 	
