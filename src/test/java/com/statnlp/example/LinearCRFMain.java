@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -58,7 +57,7 @@ public class LinearCRFMain {
 		// Set weight to not random to make meaningful comparison between sequential and parallel touch
 		NetworkConfig.RANDOM_INIT_WEIGHT = false;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 0.0;
-		NetworkConfig.USE_NEURAL_FEATURES = true;
+		NetworkConfig.USE_NEURAL_FEATURES = false;
 		NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 		NetworkConfig.OPTIMIZE_NEURAL = false;
 		String weightInitFile = null;
@@ -232,11 +231,9 @@ public class LinearCRFMain {
 			modelTextWriter.println("Max iter: "+numIterations);
 			modelTextWriter.println();
 			modelTextWriter.println("Labels:");
-			List<?> labelsUsed = new ArrayList<Object>();
-			labelsUsed = Arrays.asList(((LinearCRFNetworkCompiler)compiler)._labels);
-			for(Object obj: labelsUsed){
-				modelTextWriter.println(obj);
-			}
+			List<Label> labelsUsed = new ArrayList<Label>(compiler._labels);
+			Collections.sort(labelsUsed);
+			modelTextWriter.println(labelsUsed);
 			GlobalNetworkParam paramG = fm.getParam_G();
 			modelTextWriter.println("Num features: "+paramG.countFeatures());
 			modelTextWriter.println("Features:");
@@ -257,8 +254,9 @@ public class LinearCRFMain {
 		}
 
 		LinearCRFInstance[] testInstances = readCoNLLData(testPath, true, false);
-		//for(LinearCRFInstance inst: trainInstances) inst.setUnlabeled();
-		Instance[] predictions = model.decode(testInstances);
+//		testInstances = Arrays.copyOf(testInstances, 1);
+		int k = 8;
+		Instance[] predictions = model.decode(testInstances, k);
 		
 		PrintStream[] outstreams = new PrintStream[]{outstream, System.out};
 		PrintStream resultStream = new PrintStream(resultPath);
@@ -270,6 +268,7 @@ public class LinearCRFMain {
 			LinearCRFInstance instance = (LinearCRFInstance)ins;
 			ArrayList<Label> goldLabel = instance.getOutput();
 			ArrayList<Label> actualLabel = instance.getPrediction();
+			List<ArrayList<Label>> topKPredictions = instance.<ArrayList<Label>>getTopKPredictions();
 			ArrayList<String[]> words = instance.getInput();
 			for(int i=0; i<goldLabel.size(); i++){
 				if(goldLabel.get(i).equals(actualLabel.get(i))){
@@ -277,8 +276,7 @@ public class LinearCRFMain {
 				}
 				total++;
 				if(count < 3){
-//					System.out.println(words.get(i)[0]+" "+words.get(i)[1]+" "+goldLabel.get(i).getId()+" "+actualLabel.get(i).getId());
-					print(words.get(i)[0]+" "+goldLabel.get(i)+" "+actualLabel.get(i), outstreams);
+					print(String.format("%15s %6s %6s %6s%s", words.get(i)[0], goldLabel.get(i), actualLabel.get(i), topKPredictions.get(k-1).get(i), actualLabel.get(i) == topKPredictions.get(k-1).get(i) ? "" : " DIFFERENT"), outstreams);
 				}
 				resultStream.println(words.get(i)[0]+" "+goldLabel.get(i)+" "+actualLabel.get(i));
 			}

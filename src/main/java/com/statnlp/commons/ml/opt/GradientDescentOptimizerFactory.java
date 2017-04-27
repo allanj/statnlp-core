@@ -29,6 +29,7 @@ public class GradientDescentOptimizerFactory extends OptimizerFactory {
 	private AdaptiveStrategy adaptiveStrategy;
 	
 	private double learningRate;
+	private double learningRateDecay;
 	
 	private double adadeltaPhi;
 	private double adadeltaEps;
@@ -42,20 +43,25 @@ public class GradientDescentOptimizerFactory extends OptimizerFactory {
 	private double adamEps;
 	
 	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate) {
-		this(adaptiveStrategy, learningRate, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+		this(adaptiveStrategy, learningRate, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+	}
+	
+	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay) {
+		this(adaptiveStrategy, learningRate, learningRateDecay, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 	}
 	
 	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double adadeltaPhi, double adadeltaEps) {
-		this(adaptiveStrategy, learningRate, adadeltaPhi, adadeltaEps, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+		this(adaptiveStrategy, learningRate, 1.0, adadeltaPhi, adadeltaEps, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 	}
 
 	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double adadeltaPhi, double adadeltaEps, double adadeltaDecay) {
-		this(adaptiveStrategy, learningRate, adadeltaPhi, adadeltaEps, adadeltaDecay, 0.0, 0.0, 0.0, 0.0, 0.0);
+		this(adaptiveStrategy, learningRate, 1.0, adadeltaPhi, adadeltaEps, adadeltaDecay, 0.0, 0.0, 0.0, 0.0, 0.0);
 	}
 
-	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps) {
+	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps) {
 		this.adaptiveStrategy = adaptiveStrategy;
 		this.learningRate = learningRate;
+		this.learningRateDecay = learningRateDecay;
 		this.adadeltaPhi = adadeltaPhi;
 		this.adadeltaEps = adadeltaEps;
 		this.adadeltaGradDecay = adadeltaGradDecay;
@@ -68,7 +74,7 @@ public class GradientDescentOptimizerFactory extends OptimizerFactory {
 
 	@Override
 	public GradientDescentOptimizer create(int numWeights) {
-		return new GradientDescentOptimizer(adaptiveStrategy, learningRate, adadeltaPhi, adadeltaEps, adadeltaGradDecay, rmsPropDecay, rmsPropEps, adamBeta1, adamBeta2, adamEps, numWeights);
+		return new GradientDescentOptimizer(adaptiveStrategy, learningRate, learningRateDecay, adadeltaPhi, adadeltaEps, adadeltaGradDecay, rmsPropDecay, rmsPropEps, adamBeta1, adamBeta2, adamEps, numWeights);
 	}
 
 }

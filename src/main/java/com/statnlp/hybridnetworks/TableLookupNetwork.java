@@ -377,9 +377,8 @@ public abstract class TableLookupNetwork extends Network{
 			nodesValue2IdMap.put(this._nodes[k], k);
 		}
 		
-//		this._nodes_tmp = null;
 		this._children = new int[this._nodes.length][][];
-		
+
 		Iterator<Long> parents = this._children_tmp.keySet().iterator();
 		while(parents.hasNext()){
 			long parent = parents.next();
@@ -403,6 +402,10 @@ public abstract class TableLookupNetwork extends Network{
 				}
 			}
 		}
+		// If any node has no child edge, assume there is one edge with no child node
+		// This is done so that every node is visited in the feature extraction step
+		// This is consistent with what's written in http://portal.acm.org/citation.cfm?doid=1654494.1654500
+		// See Definition 3 on "source vertex"
 		for(int k = 0 ; k<this._children.length; k++){
 			if(this._children[k]==null){
 				this._children[k] = new int[1][0];

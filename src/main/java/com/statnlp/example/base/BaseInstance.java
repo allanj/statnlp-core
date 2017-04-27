@@ -84,7 +84,7 @@ public abstract class BaseInstance<SELF extends BaseInstance<SELF, IN, OUT>, IN,
 	public OUT getPrediction() {
 		return prediction;
 	}
-
+	
 	@Override
 	public boolean hasOutput() {
 		return output != null;

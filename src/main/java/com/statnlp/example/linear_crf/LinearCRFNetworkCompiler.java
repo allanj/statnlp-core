@@ -23,12 +23,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.hybridnetworks.IndexedScore;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
+import com.statnlp.hybridnetworks.NodeHypothesis;
 
 /**
  * @author wei_lu
@@ -52,11 +55,6 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		this._labels = new ArrayList<Label>();
 		for(Label label: Label.LABELS.values()){
 			this._labels.add(new Label(label));
-		}
-		int i=0;
-		for(Label label: _labels){
-			label.setId(i);
-			i++;
 		}
 		edge2idx = new HashMap<Long, HashMap<Long, Integer>>();
 		edgeId = 0;
@@ -178,22 +176,52 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	
 	@Override
 	public LinearCRFInstance decompile(Network network) {
+		return decompile(network, 1);
+	}
+	
+	public LinearCRFInstance decompile(Network network, int numPredictionsGenerated){
+
 		LinearCRFNetwork lcrfNetwork = (LinearCRFNetwork)network;
 		LinearCRFInstance instance = (LinearCRFInstance)lcrfNetwork.getInstance();
-		int size = instance.size();
+		
+		ArrayList<ArrayList<Label>> topKPredictions = new ArrayList<ArrayList<Label>>();
+		for(int k=0; k<numPredictionsGenerated; k++){
+			try{
+				topKPredictions.add(getKthBestPrediction(instance, lcrfNetwork, k));
+			} catch (NoSuchElementException e){
+				break;
+			}
+		}
 		
 		LinearCRFInstance result = instance.duplicate();
+		
+		result.setPrediction(topKPredictions.get(0));
+		result.setTopKPredictions(topKPredictions);
+		
+		return result;
+	}
+	
+	private ArrayList<Label> getKthBestPrediction(LinearCRFInstance instance, LinearCRFNetwork lcrfNetwork, int k){
+		int size = instance.size();
 		ArrayList<Label> predictions = new ArrayList<Label>();
 		long root = toNode_root(size);
 		int node_k = Arrays.binarySearch(_allNodes, root);
-		
+		NodeHypothesis nodeHypothesis = lcrfNetwork.getNodeHypothesis(node_k);
+		IndexedScore bestPath = nodeHypothesis.getKthBestHypothesis(k);
+
+		IndexedScore[] children_k;
 		for(int i=size-1; i>=0; i--){
-			int[] children_k = lcrfNetwork.getMaxPath(node_k);
+			try{
+				children_k = lcrfNetwork.getMaxPath(nodeHypothesis, bestPath);
+			} catch (NoSuchElementException e){
+				throw new NoSuchElementException("There is no "+k+"-best result!");
+			}
 			if(children_k.length != 1){
 				System.err.println("Child length not 1!");
 			}
-			int child_k = children_k[0];
+			int child_k = children_k[0].node_k;
 			long child = lcrfNetwork.getNode(child_k);
+			nodeHypothesis = lcrfNetwork.getNodeHypothesis(child_k);
 			int[] child_arr = NetworkIDMapper.toHybridNodeArray(child);
 			int pos = child_arr[0]-1;
 			int tag_id = child_arr[1];
@@ -201,12 +229,10 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 				System.err.println("Position encoded in the node array not the same as the interpretation!");
 			}
 			predictions.add(0, Label.get(tag_id));
-			node_k = child_k;
+//			node_k = child_k;
+			bestPath = children_k[0];
 		}
-		
-		result.setPrediction(predictions);
-		
-		return result;
+		return predictions;
 	}
 	
 	public double costAt(Network network, int parent_k, int[] child_k){

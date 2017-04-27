@@ -37,7 +37,6 @@ public class GradientDescentOptimizer implements Optimizer{
 	
 	public static final int DEFAULT_MAX_STAGNANT_ITER_COUNT = 40;
 	
-	private double learningRate;
 	private double[] _x;
 	private double[] _g;
 	private double _obj;
@@ -68,6 +67,7 @@ public class GradientDescentOptimizer implements Optimizer{
 	public static enum AdaptiveStrategy {
 		NONE,
 		ADAGRAD,
+		ADAGRAD_DECAYING,
 		ADADELTA,
 		ADADELTA_DECAYING,
 		ADADELTA_THEN_ADAGRAD,
@@ -93,6 +93,9 @@ public class GradientDescentOptimizer implements Optimizer{
 	
 	private AdaptiveStrategy adaptiveStrategy;
 	private AdaptiveMethod currentAdaptiveMethod;
+	private double learningRate;
+	private double learningRateDecay;
+	
 	private double adadeltaPhi;
 	private double adadeltaEps;
 	private double adadeltaGradDecay;
@@ -106,7 +109,7 @@ public class GradientDescentOptimizer implements Optimizer{
 	
 	private int iterNum;
 	
-	public GradientDescentOptimizer(AdaptiveStrategy adaptiveStrategy, double learningRate, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps, int weightLength){
+	public GradientDescentOptimizer(AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps, int weightLength){
 		this.prevGradients = new double[weightLength];
 		this.prevSqGradients = new double[weightLength];
 		this.prevDelta = new double[weightLength];
@@ -114,6 +117,7 @@ public class GradientDescentOptimizer implements Optimizer{
 		this.adaptiveStrategy = adaptiveStrategy;
 		
 		this.learningRate = learningRate;
+		this.learningRateDecay = learningRateDecay;
 		
 		this.adadeltaPhi = adadeltaPhi;
 		this.adadeltaEps = adadeltaEps;
@@ -133,6 +137,7 @@ public class GradientDescentOptimizer implements Optimizer{
 			currentAdaptiveMethod = AdaptiveMethod.NONE;
 			break;
 		case ADAGRAD:
+		case ADAGRAD_DECAYING:
 			currentAdaptiveMethod = AdaptiveMethod.ADAGRAD;
 			break;
 		case ADADELTA:
@@ -241,6 +246,11 @@ public class GradientDescentOptimizer implements Optimizer{
 			} else if(adaptiveStrategy == AdaptiveStrategy.ADADELTA_THEN_STOP){
 				copyBest();
 				return true;
+			} else if (adaptiveStrategy == AdaptiveStrategy.ADAGRAD_DECAYING){
+				copyBest();
+				
+				learningRate *= learningRateDecay;
+				System.err.println("[AdaGrad]Reset from obj = "+this._obj+", new learning rate = "+learningRate);
 			}
 		}
 //		clipGradients();

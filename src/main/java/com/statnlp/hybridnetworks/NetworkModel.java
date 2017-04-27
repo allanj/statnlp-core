@@ -361,6 +361,14 @@ public abstract class NetworkModel implements Serializable{
 	}
 	
 	public Instance[] decode(Instance[] allInstances, boolean cacheFeatures) throws InterruptedException{
+		return decode(allInstances, cacheFeatures, 1);
+	}
+	
+	public Instance[] decode(Instance[] allInstances, int numPredictionsGenerated) throws InterruptedException {
+		return decode(allInstances, false, numPredictionsGenerated);
+	}
+	
+	public Instance[] decode(Instance[] allInstances, boolean cacheFeatures, int numPredictionsGenerated) throws InterruptedException{
 		
 //		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
 //			this._fm.getParam_G().expandFeaturesForGenerativeModelDuringTesting();
@@ -385,12 +393,12 @@ public abstract class NetworkModel implements Serializable{
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
 			if(cacheFeatures){
 				if(this._decoders[threadId] != null){
-					this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, this._decoders[threadId].getParam(), true);
+					this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, this._decoders[threadId].getParam(), true, numPredictionsGenerated);
 				} else {
-					this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, true);
+					this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, true, numPredictionsGenerated);
 				}
 			} else {
-				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, false);
+				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, false, numPredictionsGenerated);
 			}
 		}
 		
@@ -427,6 +435,5 @@ public abstract class NetworkModel implements Serializable{
 		
 		return results;
 	}
-	
 	
 }

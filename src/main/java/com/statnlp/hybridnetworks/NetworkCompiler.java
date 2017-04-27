@@ -109,7 +109,12 @@ public abstract class NetworkCompiler implements Serializable{
 	 * @return
 	 */
 	public abstract Instance decompile(Network network);
-
+	
+	public Instance decompile(Network network, int k){
+		throw new UnsupportedOperationException("The top-k decompiler is not implemented.\n"
+				+ "If you are a developer, please override decompile(Network, int) "
+				+ "in your custom NetworkCompiler");
+	}
 	
 	/**
 	 * The cost of the structure from leaf nodes up to node <code>k</code>.<br>
