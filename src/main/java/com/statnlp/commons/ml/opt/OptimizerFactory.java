@@ -335,6 +335,34 @@ public abstract class OptimizerFactory implements Serializable {
 		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, adamBeta1, adamBeta2, adamEps);
 	}
 	
+	/**
+	 * Return the factory object to create a gradient descent optimizer.<br>
+	 * The returned factory will create instances of GradientDescentOptimizer with AdaM adaptive method,
+	 * then stops when no progress is seen after some number of iterations (specified by {@link GradientDescentOptimizer#maxStagnantIterCount}).<br>
+	 * Note that this is well-defined only when full-batch is used (i.e., no mini-batch)<br>
+	 * The hyperparameters are set according to the passed values.
+	 * @param learningRate
+	 * @param adamBeta1
+	 * @param adamBeta2
+	 * @param adamEps
+	 * @return
+	 */
+	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaMThenStop(double learningRate, double adamBeta1, double adamBeta2, double adamEps){
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM_THEN_STOP, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, adamBeta1, adamBeta2, adamEps);
+	}
+	
+	/**
+	 * Return the factory object to create a gradient descent optimizer.<br>
+	 * The returned factory will create instances of GradientDescentOptimizer with AdaM adaptive method,
+	 * then stops when no progress is seen after some number of iterations (specified by {@link GradientDescentOptimizer#maxStagnantIterCount}).<br>
+	 * Note that this is well-defined only when full-batch is used (i.e., no mini-batch)<br>
+	 * The hyperparameters are set according to the passed values.
+	 * @return
+	 */
+	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaMThenStop(){
+		return getGradientDescentFactoryUsingAdaMThenStop(DEFAULT_LEARNING_RATE*5, DEFAULT_ADAM_BETA1, DEFAULT_ADAM_BETA2, DEFAULT_ADAM_EPS);
+	}
+	
 	public abstract Optimizer create(int numWeights);
 	
 	public Optimizer create(int numWeights, HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap){

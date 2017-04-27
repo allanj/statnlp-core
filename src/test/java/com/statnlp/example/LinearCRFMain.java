@@ -172,7 +172,7 @@ public class LinearCRFMain {
 		if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX && !(NetworkConfig.USE_NEURAL_FEATURES && !NetworkConfig.OPTIMIZE_NEURAL)){
 			optimizerFactory = OptimizerFactory.getLBFGSFactory();
 		} else {
-			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaDeltaThenStop(OptimizerFactory.DEFAULT_ADADELTA_PHI, OptimizerFactory.DEFAULT_ADADELTA_EPS);
+			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaMThenStop();
 		}
 		if(weightInitFile != null){
 			HashMap<String, HashMap<String, HashMap<String, Double>>> featureWeightMap = new HashMap<String, HashMap<String, HashMap<String, Double>>>();

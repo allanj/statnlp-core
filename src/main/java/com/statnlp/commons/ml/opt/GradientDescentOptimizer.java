@@ -30,7 +30,7 @@ import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
  * <li>RMSProp (http://cs231n.github.io/neural-networks-3/#anneal)</li>
  * <li>AdaM (http://cs231n.github.io/neural-networks-3/#anneal)</li>
  * </ol>
- * @author Aldrian Obaja <aldrianobaja.m@gmail.com>
+ * @author Aldrian Obaja (aldrianobaja.m@gmail.com)
  *
  */
 public class GradientDescentOptimizer implements Optimizer{
@@ -75,6 +75,7 @@ public class GradientDescentOptimizer implements Optimizer{
 		ADADELTA_THEN_STOP,
 		RMSPROP,
 		ADAM,
+		ADAM_THEN_STOP,
 	}
 	
 	/**
@@ -151,6 +152,7 @@ public class GradientDescentOptimizer implements Optimizer{
 			currentAdaptiveMethod = AdaptiveMethod.RMSPROP;
 			break;
 		case ADAM:
+		case ADAM_THEN_STOP:
 			currentAdaptiveMethod = AdaptiveMethod.ADAM;
 			break;
 		}
@@ -243,7 +245,7 @@ public class GradientDescentOptimizer implements Optimizer{
 				
 				adadeltaEps /= 2;
 				System.err.println("[AdaDelta]Reset from obj = "+this._obj+", new eps = "+adadeltaEps);
-			} else if(adaptiveStrategy == AdaptiveStrategy.ADADELTA_THEN_STOP){
+			} else if(adaptiveStrategy == AdaptiveStrategy.ADADELTA_THEN_STOP || adaptiveStrategy == AdaptiveStrategy.ADAM_THEN_STOP){
 				copyBest();
 				return true;
 			} else if (adaptiveStrategy == AdaptiveStrategy.ADAGRAD_DECAYING){
@@ -280,7 +282,12 @@ public class GradientDescentOptimizer implements Optimizer{
 			} else if (currentAdaptiveMethod == AdaptiveMethod.ADAM){ // based on http://cs231n.github.io/neural-networks-3/#anneal
 				prevGradients[k] = adamBeta1 * prevGradients[k] + (1-adamBeta1)*this._g[k];
 				prevSqGradients[k] = adamBeta2 * prevSqGradients[k] + (1-adamBeta2) * Math.pow(this._g[k], 2);
-				this._x[k] -= (this.learningRate / (Math.sqrt(prevSqGradients[k]) + adamEps)) * prevGradients[k];
+				// bias correction
+				double biasCorrection1 = 1 - Math.pow(adamBeta1, this.iterNum+1);
+				double biasCorrection2 = 1 - Math.pow(adamBeta2, this.iterNum+1);
+				double correctedLearningRate = this.learningRate*Math.sqrt(biasCorrection2)/biasCorrection1;
+				this._x[k] -= (correctedLearningRate / (Math.sqrt(prevSqGradients[k]) + adamEps)) * prevGradients[k];
+
 			}
 		}
 		this.iterNum += 1; 
