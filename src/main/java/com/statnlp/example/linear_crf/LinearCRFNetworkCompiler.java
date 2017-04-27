@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.IndexedScore;
@@ -185,7 +186,11 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		
 		ArrayList<ArrayList<Label>> topKPredictions = new ArrayList<ArrayList<Label>>();
 		for(int k=0; k<numPredictionsGenerated; k++){
-			topKPredictions.add(getKthBestPrediction(instance, lcrfNetwork, k));
+			try{
+				topKPredictions.add(getKthBestPrediction(instance, lcrfNetwork, k));
+			} catch (NoSuchElementException e){
+				break;
+			}
 		}
 		
 		LinearCRFInstance result = instance.duplicate();
@@ -203,9 +208,14 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		int node_k = Arrays.binarySearch(_allNodes, root);
 		NodeHypothesis nodeHypothesis = lcrfNetwork.getNodeHypothesis(node_k);
 		IndexedScore bestPath = nodeHypothesis.getKthBestHypothesis(k);
-		
+
+		IndexedScore[] children_k;
 		for(int i=size-1; i>=0; i--){
-			IndexedScore[] children_k = lcrfNetwork.getMaxPath(nodeHypothesis, bestPath);
+			try{
+				children_k = lcrfNetwork.getMaxPath(nodeHypothesis, bestPath);
+			} catch (NullPointerException e){
+				throw new NoSuchElementException("There is no "+k+"-best result!");
+			}
 			if(children_k.length != 1){
 				System.err.println("Child length not 1!");
 			}
