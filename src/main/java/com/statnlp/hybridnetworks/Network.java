@@ -87,12 +87,6 @@ public abstract class Network implements Serializable, HyperGraph{
 	protected transient double[] _max;
 	/** Stores the paths associated with the above tree */
 	protected transient int[][] _max_paths;
-	/** At each index, store the score of the max k  tree */
-	protected transient double[][] _max_k;
-	/** Stores the paths associated with the above tree */
-	protected transient int[][][] _max_k_paths;
-	/** Stores the paths best list associated with the above tree */
-	protected transient int[][][] _max_k_path_listbest;
 	/** Stores the hypothesis (listing possible direction to take) */
 	protected transient NodeHypothesis[] _hypotheses;
 	/** To mark whether a node has been visited in one iteration */
@@ -328,14 +322,6 @@ public abstract class Network implements Serializable, HyperGraph{
 		return this._max_paths[k];
 	}
 	
-	public double getMaxTopK(int nodeIdx, int k){
-		return this._max_k[nodeIdx][k];
-	}
-
-	public int[] getMaxTopKPath(int nodeIdx, int k){
-		return this._max_k_paths[nodeIdx][k];
-	}
-	
 	/**
 	 * Return the max path according to the configuration specified in the bestPath IndexedScore object.<br>
 	 * This is used in returning the top-k result also.
@@ -362,10 +348,6 @@ public abstract class Network implements Serializable, HyperGraph{
 		return this._hypotheses[k];
 	}
 
-	public int[] getMaxTopKBestListPath(int nodeIdx, int k){
-		return this._max_k_path_listbest[nodeIdx][k];
-	}
-	
 	/**
 	 * Calculate the marginal score for all nodes 
 	 */
@@ -385,14 +367,14 @@ public abstract class Network implements Serializable, HyperGraph{
 	
 	/**
 	 * Calculate the marginal score at the specific node
-	 * @param k
+	 * @param node_k
 	 */
-	protected void marginal(int k){
-		if(this.isRemoved(k)){
+	protected void marginal(int node_k){
+		if(this.isRemoved(node_k)){
 			return;
 		}
 		//since inside and outside are in log space
-		this._marginal[k] = this._inside[k] + this._outside[k] - this.getInside();
+		this._marginal[node_k] = this._inside[node_k] + this._outside[node_k] - this.getInside();
 	}
 	
 	/**
@@ -888,7 +870,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			int[][] childrenList_k = this.getChildren(k);
 			this._max[k] = Double.NEGATIVE_INFINITY;
 			
-			EdgeHypothesis[] parentOfThisNodeHypothesis = new EdgeHypothesis[childrenList_k.length];
+			EdgeHypothesis[] childrenOfThisNodeHypothesis = new EdgeHypothesis[childrenList_k.length];
 			
 			for(int children_k_index = 0; children_k_index < childrenList_k.length; children_k_index++){
 				int[] children_k = childrenList_k[children_k_index];
@@ -925,21 +907,16 @@ public abstract class Network implements Serializable, HyperGraph{
 //					this._max[k] = score;
 //					this._max_paths[k] = children_k;
 //				}
-				int parentsLength = 0;
-				for(int child_k: children_k){
-					if(child_k < 0){
-						// A negative child_k is not a reference to a node, it's just a number associated with this edge
-						continue;
+				NodeHypothesis[] children = new NodeHypothesis[children_k.length];
+				for(int i=0; i<children.length; i++){
+					if(children_k[i] < 0){
+						children[i] = new NodeHypothesis(children_k[i]);
 					}
-					parentsLength += 1;
+					children[i] = this._hypotheses[children_k[i]];
 				}
-				NodeHypothesis[] parents = new NodeHypothesis[parentsLength];
-				for(int i=0; i<parents.length; i++){
-					parents[i] = this._hypotheses[children_k[i]];
-				}
-				parentOfThisNodeHypothesis[children_k_index] = new EdgeHypothesis(k, parents, score);
+				childrenOfThisNodeHypothesis[children_k_index] = new EdgeHypothesis(k, children, score);
 			}
-			this._hypotheses[k] = new NodeHypothesis(k, parentOfThisNodeHypothesis);
+			this._hypotheses[k] = new NodeHypothesis(k, childrenOfThisNodeHypothesis);
 			IndexedScore bestPath = this._hypotheses[k].getKthBestHypothesis(0);
 //			System.out.println("Node: "+this._hypotheses[k]);
 //			System.out.println("Edges: "+Arrays.toString(parentOfThisNodeHypothesis));
@@ -1028,8 +1005,6 @@ public abstract class Network implements Serializable, HyperGraph{
 	/**Abstract methods for mean-field inference.
 	 * 
 	 * Not really abstract methods here since other projects do not implement due to old version.
-	 * **/
-	/**
 	 * Only required when we used the mean-field inference method.
 	 * Need to implemented in user's own network. No need to implement if not using mean-field inference.
 	 */

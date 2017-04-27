@@ -60,6 +60,9 @@ public class EdgeHypothesis extends Hypothesis{
 			// Below, we consider the next best candidate for each child node in this hyperedge 
 			// and put them to the candidate priority queue.
 			for(int i=0; i<lastBestIndex[0].index.length; i++){
+				if(children()[i].nodeIndex < 0){
+					continue;
+				}
 				int[] newIndex = Arrays.copyOf(lastBestIndex[0].index, lastBestIndex[0].index.length);
 				newIndex[i] += 1;
 				IndexedScore nextBestChildCandidate = IndexedScore.get(nodeIndex, newIndex, (EdgeHypothesis)this);

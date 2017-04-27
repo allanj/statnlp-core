@@ -36,9 +36,12 @@ public class IndexedScore implements Comparable<IndexedScore>{
 	 * 		   this will return null.
 	 */
 	public static IndexedScore get(int node_k, int[] index, EdgeHypothesis hypothesis){
-		Hypothesis[] children = hypothesis.children;
+		NodeHypothesis[] children = hypothesis.children();
 		double score = hypothesis.score();
 		for(int i=0; i<index.length; i++){
+			if(children[i].nodeIndex < 0){
+				continue;
+			}
 			IndexedScore kthBestChildrenAtIthPos = children[i].getKthBestHypothesis(index[i]);
 			if(kthBestChildrenAtIthPos == null){
 				// If the request contains an invalid k-th best path for any child,
@@ -64,7 +67,7 @@ public class IndexedScore implements Comparable<IndexedScore>{
 	 * 		   this will return null.
 	 */
 	public static IndexedScore get(int node_k, int[] index, NodeHypothesis hypothesis){
-		Hypothesis[] children = hypothesis.children;
+		EdgeHypothesis[] children = hypothesis.children();
 		IndexedScore kthBestChildrenAtIthPos = children[index[0]].getKthBestHypothesis(index[1]);
 		if(kthBestChildrenAtIthPos == null){
 			return null;
