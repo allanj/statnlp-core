@@ -81,20 +81,27 @@ public class IndexedScore implements Comparable<IndexedScore>{
 	public boolean equals(Object o){
 		if(o instanceof IndexedScore){
 			IndexedScore s = (IndexedScore)o;
-			if(!Arrays.equals(index, s.index)){
+			if(s.node_k != node_k){
 				return false;
 			}
-			return s.node_k == node_k;
+			return Arrays.equals(index, s.index);
 		}
 		return false;
 	}
 
-	/* (non-Javadoc)
-	 * @see java.lang.Comparable#compareTo(java.lang.Object)
-	 */
 	@Override
 	public int compareTo(IndexedScore o) {
-		return Double.compare(o.score, this.score);
+		int result = Double.compare(o.score, this.score);
+		if(result != 0)	return result;
+		result = Integer.compare(node_k, o.node_k);
+		if(result != 0) return result;
+		result = Integer.compare(index.length, o.index.length);
+		if(result != 0) return result;
+		for(int i=0; i<index.length; i++){
+			result = Integer.compare(index[i], o.index[i]);
+			if(result != 0) return result;
+		}
+		return 0;
 	}
 	
 	@Override
@@ -104,7 +111,7 @@ public class IndexedScore implements Comparable<IndexedScore>{
 	
 	@Override
 	public int hashCode(){
-		return index.hashCode();
+		return Double.hashCode(score)^Integer.hashCode(node_k)^index.hashCode();
 	}
 
 }

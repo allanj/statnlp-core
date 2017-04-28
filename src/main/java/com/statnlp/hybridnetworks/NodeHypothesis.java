@@ -53,8 +53,7 @@ public class NodeHypothesis extends Hypothesis{
 			// lastBestIndex[0].node_k and this NodeHypothesis, e is represented by this.children()[newIndex[0]],
 			// and j is represented by e.bestChildList.get(newIndex[1])
 			IndexedScore nextBestCandidate = IndexedScore.get(lastBestIndex[0].node_k, newIndex, (NodeHypothesis)this);
-			if(nextBestCandidate != null && !candidatesPresentInQueue.contains(nextBestCandidate)){
-				candidatesPresentInQueue.add(nextBestCandidate);
+			if(nextBestCandidate != null && !nextBestChildQueue.contains(nextBestCandidate)){
 				nextBestChildQueue.offer(nextBestCandidate);
 			}
 		}
@@ -63,15 +62,6 @@ public class NodeHypothesis extends Hypothesis{
 			hasMoreHypothesis = false;
 			return null;
 		}
-		// Remove this candidate from the index to save memory.
-		// Since this candidate has been selected as the best based on the scores in the priority queue,
-		// that means all previous neighbors of this node has been selected, since they must have higher
-		// scores compared to this. This means we no longer need to keep track of this candidate, since
-		// this candidate will no longer be offered into the queue.
-		// Remember that the purpose of this candidate index is to prevent the same candidate being entered 
-		// into the priority queue multiple times.
-		// We maintain a separate Set object because a "contains" operation on PriorityQueue is O(n)
-		candidatesPresentInQueue.remove(nextBestIndex);
 		lastBestIndex[0] = nextBestIndex;
 		
 		// Cache this next best candidate in the list

@@ -72,8 +72,7 @@ public class EdgeHypothesis extends Hypothesis{
 				int[] newIndex = Arrays.copyOf(lastBestIndex[0].index, lastBestIndex[0].index.length);
 				newIndex[i] += 1;
 				IndexedScore nextBestChildCandidate = IndexedScore.get(nodeIndex, newIndex, (EdgeHypothesis)this);
-				if(nextBestChildCandidate != null && !candidatesPresentInQueue.contains(nextBestChildCandidate)){
-					candidatesPresentInQueue.add(nextBestChildCandidate);
+				if(nextBestChildCandidate != null && !nextBestChildQueue.contains(nextBestChildCandidate)){
 					nextBestChildQueue.offer(nextBestChildCandidate);
 				}
 			}
@@ -84,15 +83,6 @@ public class EdgeHypothesis extends Hypothesis{
 			hasMoreHypothesis = false;
 			return null;
 		}
-		// Remove this candidate from the index to save memory.
-		// Since this candidate has been selected as the best based on the scores in the priority queue,
-		// that means all previous neighbors of this node has been selected, since they must have higher
-		// scores compared to this. This means we no longer need to keep track of this candidate, since
-		// this candidate will no longer be offered into the queue.
-		// Remember that the purpose of this candidate index is to prevent the same candidate being entered 
-		// into the priority queue multiple times.
-		// We maintain a separate Set object because a "contains" operation on PriorityQueue is O(n)
-		candidatesPresentInQueue.remove(nextBestIndex);
 		lastBestIndex[0] = nextBestIndex;
 		
 		// Cache this next best candidate in the list

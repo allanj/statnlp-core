@@ -4,9 +4,6 @@
 package com.statnlp.hybridnetworks;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.PriorityQueue;
-import java.util.Set;
 
 /**
  * This class represents a (possibly partial) hypothesis of
@@ -43,13 +40,7 @@ public abstract class Hypothesis {
 	 * The priority queue storing the possible next best child.
 	 * Since this is a priority queue, the next best child is the one in front of the queue.
 	 */
-	protected PriorityQueue<IndexedScore> nextBestChildQueue;
-	/**
-	 * A set to contain the list of candidates present in the priority queue.
-	 * This is used to prevent the same candidate being entered into the queue
-	 * multiple times from different neighbors.
-	 */
-	protected Set<IndexedScore> candidatesPresentInQueue;
+	protected BoundedPrioritySet<IndexedScore> nextBestChildQueue;
 	/**
 	 * The cache to store the list of best children, which will contain the list of 
 	 * best children up to the highest k on which {@link #getKthBestHypothesis(int)} has been called.
@@ -57,10 +48,9 @@ public abstract class Hypothesis {
 	protected ArrayList<IndexedScore> bestChildrenList;
 
 	protected void init() {
-		nextBestChildQueue = new PriorityQueue<IndexedScore>();
+		nextBestChildQueue = new BoundedPrioritySet<IndexedScore>();
 		lastBestIndex = new IndexedScore[1];
 		bestChildrenList = new ArrayList<IndexedScore>();
-		candidatesPresentInQueue = new HashSet<IndexedScore>();
 		hasMoreHypothesis = true;
 	}
 	
@@ -127,20 +117,12 @@ public abstract class Hypothesis {
 		this.bestChildrenList = bestChildrenList;
 	}
 
-	public PriorityQueue<IndexedScore> nextBestChildQueue() {
+	public BoundedPrioritySet<IndexedScore> nextBestChildQueue() {
 		return nextBestChildQueue;
 	}
 
-	public void setNextBestChildQueue(PriorityQueue<IndexedScore> nextBestChildQueue) {
+	public void setNextBestChildQueue(BoundedPrioritySet<IndexedScore> nextBestChildQueue) {
 		this.nextBestChildQueue = nextBestChildQueue;
-	}
-
-	public Set<IndexedScore> candidatesPresentInQueue() {
-		return candidatesPresentInQueue;
-	}
-
-	public void setCandidatesPresentInQueue(Set<IndexedScore> candidatesPresentInQueue) {
-		this.candidatesPresentInQueue = candidatesPresentInQueue;
 	}
 
 }
