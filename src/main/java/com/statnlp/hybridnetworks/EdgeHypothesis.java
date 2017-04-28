@@ -5,6 +5,11 @@ import java.util.Arrays;
 /**
  * This class represents a (possibly partial) hypothesis of
  * an output structure at a specific edge.
+ * This holds the tuple <score, NodeHyperedge[]>, representing
+ * the local score of this edge.
+ * The path score from this edge down to the leaf node is stored as a top-k
+ * list in {@link #bestChildrenList()}, depending on the choice of the child nodes'
+ * k-th best path.
  */
 public class EdgeHypothesis extends Hypothesis{
 	
@@ -42,7 +47,7 @@ public class EdgeHypothesis extends Hypothesis{
 		return this.score;
 	}
 	
-	public IndexedScore getNextBestPath(){
+	public IndexedScore setAndReturnNextBestPath(){
 		if(!hasMoreHypothesis){
 			return null;
 		} else if(lastBestIndex[0] == null){
@@ -59,6 +64,7 @@ public class EdgeHypothesis extends Hypothesis{
 			
 			// Below, we consider the next best candidate for each child node in this hyperedge 
 			// and put them to the candidate priority queue.
+			// The for-loop below corresponds to line 14-18 of Algorithm 3 in Huang and Chiang (2005) paper.
 			for(int i=0; i<lastBestIndex[0].index.length; i++){
 				if(children()[i].nodeIndex < 0){
 					continue;
@@ -78,6 +84,20 @@ public class EdgeHypothesis extends Hypothesis{
 			hasMoreHypothesis = false;
 			return null;
 		}
+		// Remove this candidate from the index to save memory.
+		// Since this candidate has been selected as the best based on the scores in the priority queue,
+		// that means all previous neighbors of this node has been selected, since they must have higher
+		// scores compared to this. This means we no longer need to keep track of this candidate, since
+		// this candidate will no longer be offered into the queue.
+		// Remember that the purpose of this candidate index is to prevent the same candidate being entered 
+		// into the priority queue multiple times.
+		// We maintain a separate Set object because a "contains" operation on PriorityQueue is O(n)
+		candidatesPresentInQueue.remove(nextBestIndex);
+		lastBestIndex[0] = nextBestIndex;
+		
+		// Cache this next best candidate in the list
+		bestChildrenList.add(nextBestIndex);
+//		System.out.println("["+this+"] Generated the "+(k+1)+"-th best");
 		return nextBestIndex;
 	}
 	

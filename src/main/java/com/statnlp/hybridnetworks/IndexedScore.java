@@ -42,6 +42,7 @@ public class IndexedScore implements Comparable<IndexedScore>{
 			if(children[i].nodeIndex < 0){
 				continue;
 			}
+			// The following line corresponds to line 16 in Algorithm 3 in Huang and Chiang (2005) paper.
 			IndexedScore kthBestChildrenAtIthPos = children[i].getKthBestHypothesis(index[i]);
 			if(kthBestChildrenAtIthPos == null){
 				// If the request contains an invalid k-th best path for any child,

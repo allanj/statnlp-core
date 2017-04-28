@@ -911,15 +911,16 @@ public abstract class Network implements Serializable, HyperGraph{
 				for(int i=0; i<children.length; i++){
 					if(children_k[i] < 0){
 						children[i] = new NodeHypothesis(children_k[i]);
+					} else {
+						children[i] = this._hypotheses[children_k[i]];
 					}
-					children[i] = this._hypotheses[children_k[i]];
 				}
 				childrenOfThisNodeHypothesis[children_k_index] = new EdgeHypothesis(k, children, score);
 			}
 			this._hypotheses[k] = new NodeHypothesis(k, childrenOfThisNodeHypothesis);
 			IndexedScore bestPath = this._hypotheses[k].getKthBestHypothesis(0);
 //			System.out.println("Node: "+this._hypotheses[k]);
-//			System.out.println("Edges: "+Arrays.toString(parentOfThisNodeHypothesis));
+//			System.out.println("Edges: "+Arrays.toString(childrenOfThisNodeHypothesis));
 //			System.out.println(bestPath);
 			EdgeHypothesis edge = this._hypotheses[k].children()[bestPath.index[0]];
 			this._max_paths[k] = new int[edge.children.length];

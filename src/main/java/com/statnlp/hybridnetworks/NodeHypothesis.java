@@ -30,13 +30,15 @@ public class NodeHypothesis extends Hypothesis{
 		return (EdgeHypothesis[])children;
 	}
 	
-	public IndexedScore getNextBestPath(){
+	public IndexedScore setAndReturnNextBestPath(){
 		if(!hasMoreHypothesis){
 			return null;
 		} else if(lastBestIndex[0] == null){
 			// This case means this is the first time this method is called, means
 			// we are looking for the best path, so we compare the best path from all
 			// child hyperedges, and later we will take the best one.
+
+			// This corresponds to the GetCandidates(v, k') call of Algorithm 3 line 7 in Huang and Chiang (2005) paper.
 			for(int i=0; i<children.length; i++){
 				nextBestChildQueue.offer(IndexedScore.get(nodeIndex, new int[]{i, 0}, this));
 			}
@@ -47,6 +49,9 @@ public class NodeHypothesis extends Hypothesis{
 			
 			// Below, since we have "consumed" current edge, then we consider the next best one of that edge.
 			newIndex[1] += 1;
+			// The next line corresponds to the LazyNext(cand[v],e,j,k'), where cand[v] is represented by
+			// lastBestIndex[0].node_k and this NodeHypothesis, e is represented by this.children()[newIndex[0]],
+			// and j is represented by e.bestChildList.get(newIndex[1])
 			IndexedScore nextBestCandidate = IndexedScore.get(lastBestIndex[0].node_k, newIndex, (NodeHypothesis)this);
 			if(nextBestCandidate != null && !candidatesPresentInQueue.contains(nextBestCandidate)){
 				candidatesPresentInQueue.add(nextBestCandidate);
@@ -58,6 +63,20 @@ public class NodeHypothesis extends Hypothesis{
 			hasMoreHypothesis = false;
 			return null;
 		}
+		// Remove this candidate from the index to save memory.
+		// Since this candidate has been selected as the best based on the scores in the priority queue,
+		// that means all previous neighbors of this node has been selected, since they must have higher
+		// scores compared to this. This means we no longer need to keep track of this candidate, since
+		// this candidate will no longer be offered into the queue.
+		// Remember that the purpose of this candidate index is to prevent the same candidate being entered 
+		// into the priority queue multiple times.
+		// We maintain a separate Set object because a "contains" operation on PriorityQueue is O(n)
+		candidatesPresentInQueue.remove(nextBestIndex);
+		lastBestIndex[0] = nextBestIndex;
+		
+		// Cache this next best candidate in the list
+		bestChildrenList.add(nextBestIndex);
+//		System.out.println("["+this+"] Generated the "+(k+1)+"-th best");
 		return nextBestIndex;
 	}
 	

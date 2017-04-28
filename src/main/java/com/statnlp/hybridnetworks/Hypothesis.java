@@ -73,24 +73,10 @@ public abstract class Hypothesis {
 		// Assuming the k is 0-based. So k=0 will return the best prediction
 		// Below we fill the cache until we satisfy the number of top-k paths requested.
 		while(bestChildrenList.size() <= k){
-			IndexedScore nextBest = getNextBestPath();
+			IndexedScore nextBest = setAndReturnNextBestPath();
 			if(nextBest == null){
 				return null;
 			}
-			lastBestIndex[0] = nextBest;
-			
-			// Remove this candidate from the index to save memory.
-			// Since this candidate has been selected as the best based on the scores in the priority queue,
-			// that means all previous neighbors of this node has been selected, since they must have higher
-			// scores compared to this. This means we no longer need to keep track of this candidate, since
-			// this candidate will no longer be offered into the queue.
-			// Remember that the purpose of this candidate index is to prevent the same candidate being entered 
-			// into the priority queue multiple times.
-			candidatesPresentInQueue.remove(nextBest);
-			
-			// Cache this next best candidate in the list
-			bestChildrenList.add(nextBest);
-//			System.out.println("["+this+"] Generated the "+(k+1)+"-th best");
 		}
 		return bestChildrenList.get(k);
 	}
@@ -99,7 +85,7 @@ public abstract class Hypothesis {
 	 * Return the next best path, or return null if there is no next best path.
 	 * @return
 	 */
-	public abstract IndexedScore getNextBestPath();
+	public abstract IndexedScore setAndReturnNextBestPath();
 	
 	public int nodeIndex(){
 		return this.nodeIndex;
