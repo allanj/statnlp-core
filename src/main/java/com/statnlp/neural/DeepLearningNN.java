@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.deeplearning4j.nn.api.Layer;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -22,12 +21,15 @@ import org.nd4j.linalg.factory.Nd4j;
 /**
  * NN backend using DeepLearning4J
  */
-public class DeepLearningNN {
+public class DeepLearningNN extends AbstractNN {
 	private boolean DEBUG = false;
 	
 	private static final int SEED = 1337;
 	
 	private ComputationGraph model;
+	private ComputationGraph inputLayer;
+	private INDArray params;
+	private double[] _params;
 	
 	private Map<String,Integer> word2idx;
 	private int numInput;
@@ -56,6 +58,7 @@ public class DeepLearningNN {
 	public double[] initNetwork(List<Integer> numInputList, List<Integer> inputDimList, List<String> wordList,
 						   String lang, List<String> embeddingList, List<Integer> embSizeList,
 						   List<Integer> outputDimList, List<List<Integer>> vocab) {
+		System.err.println("Init DeepLearningNN");
 		this.x = prepareInput(vocab, numInputList, embSizeList);
 		this.word2idx.clear();
 		for (int i = 0; i < wordList.size(); i++) {
@@ -63,7 +66,18 @@ public class DeepLearningNN {
 		}
 		this.numInput = vocab.size();
 		
-		GraphBuilder confBuilder = new NeuralNetConfiguration.Builder()
+		boolean fixEmbedding = NeuralConfig.FIX_EMBEDDING;
+		GraphBuilder inputLayerBuilder = null;
+		if (fixEmbedding) {
+			inputLayerBuilder = new NeuralNetConfiguration.Builder()
+				.seed(SEED)
+				.weightInit(WeightInit.XAVIER)
+				.updater(Updater.NONE)
+				.learningRate(0.0)
+				.graphBuilder();
+		}
+		
+		GraphBuilder mlpBuilder = new NeuralNetConfiguration.Builder()
         	.seed(SEED)
         	.weightInit(WeightInit.XAVIER)
         	.updater(Updater.valueOf(NeuralConfig.OPTIMIZER.toUpperCase()))
@@ -77,8 +91,15 @@ public class DeepLearningNN {
 			inputs[i] = "inputs"+i;
 			inputLayers[i] = "I"+i;
 		}
-		confBuilder = confBuilder.addInputs(inputs);
 		
+		if (fixEmbedding) {
+			inputLayerBuilder = inputLayerBuilder.addInputs(inputs);
+			mlpBuilder = mlpBuilder.addInputs("merge");
+		} else {
+			mlpBuilder = mlpBuilder.addInputs(inputs);
+		}
+		
+		GraphBuilder whichBuilder = fixEmbedding ? inputLayerBuilder : mlpBuilder;
 		int totalDim = 0;
 		for (int i = 0; i < inputDimList.size(); i++) {
 			int inputDim = inputDimList.get(i);
@@ -86,7 +107,7 @@ public class DeepLearningNN {
 			if (embeddingSize == 0)
 				embeddingSize = wordList.size();
 			totalDim += numInputList.get(i) * embeddingSize;
-			confBuilder = confBuilder.addLayer(inputLayers[i],
+			whichBuilder = whichBuilder.addLayer(inputLayers[i],
 						new org.deeplearning4j.nn.conf.layers.EmbeddingLayer.Builder()
 							.nIn(inputDim)
 							.nOut(embeddingSize)
@@ -98,7 +119,7 @@ public class DeepLearningNN {
 		}
 
 		// merge input embeddings 
-		confBuilder = confBuilder.addVertex("merge", new MergeVertex(), inputLayers);
+		whichBuilder = whichBuilder.addVertex("merge", new MergeVertex(), inputLayers);
 		
 		int numNetworks = outputDimList.size();
 		int numLayer = NeuralConfig.NUM_LAYER;
@@ -121,7 +142,7 @@ public class DeepLearningNN {
 					denseInputSize = hiddenSize;
 					denseInputName = hiddenLayers[i-1];
 				}
-				confBuilder = confBuilder.addLayer(hiddenLayers[i],
+				mlpBuilder = mlpBuilder.addLayer(hiddenLayers[i],
 						new DenseLayer.Builder()
 							.nIn(denseInputSize)
 							.nOut(hiddenSize)
@@ -147,18 +168,24 @@ public class DeepLearningNN {
 			}
 			DenseLayer outputLayer = outputBuilder.build();
 			outputs[n] = "out"+n;
-			confBuilder = confBuilder.addLayer(outputs[n], outputLayer, hiddenLayers[numLayer-1]);
+			mlpBuilder = mlpBuilder.addLayer(outputs[n], outputLayer, hiddenLayers[numLayer-1]);
 		}
 		
-		ComputationGraphConfiguration conf = confBuilder.setOutputs(outputs)
+		ComputationGraphConfiguration mlpConf = mlpBuilder.setOutputs(outputs)
 											 .backprop(true).pretrain(false)
 											 .build();
-		ComputationGraph net = new ComputationGraph(conf);
+		this.model = new ComputationGraph(mlpConf);
+		
+		if (fixEmbedding) {
+			ComputationGraphConfiguration inputConf
+				= inputLayerBuilder.setOutputs("merge").build();
+			this.inputLayer = new ComputationGraph(inputConf);
+		}
 		
 		// TODO: initialize embedding layer
 		
-		net.init();
-		net.params();
+		this.model.init();
+		this.model.params();
 		
 		return null;
 		/*
@@ -342,16 +369,9 @@ public class DeepLearningNN {
 		}
 		*/
 	}
-	
-	public INDArray nonInputParams(ComputationGraph net, int numInput) {
-		List<INDArray> list = new ArrayList<INDArray>();
-		for(int i = numInput; i < net.getNumLayers(); i++) {
-			Layer l = net.getLayer(i);
-			INDArray layerParams = l.params();
-			if (layerParams != null) {
-				list.add(layerParams);
-			}
-        }
-        return Nd4j.toFlattened('f', list);
-    }
+
+	@Override
+	public void cleanUp() {
+		
+	}
 }

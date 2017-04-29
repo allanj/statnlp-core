@@ -15,7 +15,7 @@ import org.zeromq.ZMQ;
  * The class that serves as the interface to access the neural network backend.
  * This uses ZeroMQ (http://zeromq.org/) to transfer the data between the JVM and the NN backend.
  */
-public class RemoteNN {
+public class RemoteNN extends AbstractNN {
 	private boolean DEBUG = false;
 	
 	// Torch NN server information
@@ -23,27 +23,13 @@ public class RemoteNN {
 	private ZMQ.Socket requester;
 	private String serverAddress = NeuralConfig.NEURAL_SERVER_PREFIX + NeuralConfig.NEURAL_SERVER_ADDRESS+":" + NeuralConfig.NEURAL_SERVER_PORT;
 	
-	// Reference to controller instance for updating weights and getting gradients
-	private NNCRFInterface controller;
-	
-	// whether to use CRF's optimizer to optimize internal neural parameters
-	private boolean optimizeNeural;
-	
-	public RemoteNN() {
-		this(false);
-	}
-	
 	public RemoteNN(boolean optimizeNeural) {
+		super(optimizeNeural);
 		context = ZMQ.context(1);
 		requester = context.socket(ZMQ.REQ);
 		requester.connect(serverAddress);
-		this.optimizeNeural = optimizeNeural;
 	}
-	
-	public void setController(NNCRFInterface controller) {
-		this.controller = controller;
-	}
-	
+
 	private void packList(MessageBufferPacker packer, String key, List<?> arr){
 		try {
 			if(key!=null) packer.packString(key);

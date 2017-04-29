@@ -28,11 +28,13 @@ import java.util.List;
 import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
+import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
-import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.commons.types.Instance;
+import com.statnlp.neural.AbstractNN;
+import com.statnlp.neural.DeepLearningNN;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.neural.RemoteNN;
 
@@ -372,7 +374,13 @@ public class GlobalNetworkParam implements Serializable{
 		// initialize NN params and gradParams
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
 			_nnController = new NNCRFGlobalNetworkParam(this);
-			_nnController.setRemoteNN(new RemoteNN(NetworkConfig.OPTIMIZE_NEURAL));
+			AbstractNN backendNN;
+			if (NetworkConfig.NEURAL_BACKEND.equals("torch")) {
+				backendNN = new RemoteNN(NetworkConfig.OPTIMIZE_NEURAL);
+			} else {
+				backendNN = new DeepLearningNN(NetworkConfig.OPTIMIZE_NEURAL);
+			}
+			_nnController.setAbstractNN(backendNN);
 			_nnController.initializeInternalNeuralWeights();
 //			if(NeuralConfig.NUM_LAYER == 0 && NeuralConfig.EMBEDDING_SIZE.get(0)==0){
 //				_nnController.setInternalNeuralWeights(_weights);
