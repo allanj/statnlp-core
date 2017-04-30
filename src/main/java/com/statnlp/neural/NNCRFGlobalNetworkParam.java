@@ -209,7 +209,11 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 									wordList.add(elements[j]);
 								}
 							}
-							entry.add(fieldMap.get(elements[j])+1); // 1-indexing
+							int entryIdx = fieldMap.get(elements[j]);
+							if (NetworkConfig.NEURAL_BACKEND.equals("torch")) {
+								entryIdx++;
+							}
+							entry.add(entryIdx); // 1-indexing
 						}
 					}
 					if (!inputSet.contains(input)) {

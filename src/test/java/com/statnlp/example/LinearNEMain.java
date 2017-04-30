@@ -20,6 +20,7 @@ import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.neural.NeuralConfigReader;
 
 public class LinearNEMain {
+	public static boolean DEBUG_NEURAL = true;
 
 	public static int trainNumber = -100;
 	public static int testNumber = -100;
@@ -55,6 +56,12 @@ public class LinearNEMain {
 		NetworkConfig.NUM_THREADS = numThreads;
 		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
 		
+		if (DEBUG_NEURAL) {
+			NetworkConfig.RANDOM_INIT_WEIGHT = false;
+			NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
+			neural_config = "nn-crf-interface/neural_server/neural.debug.config";
+		}
+		
 		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory());
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
@@ -80,7 +87,7 @@ public class LinearNEMain {
 		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler();
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
 		ECRFInstance[] ecrfs = trainInstances.toArray(new ECRFInstance[trainInstances.size()]);
-		if(NetworkConfig.USE_NEURAL_FEATURES){
+		if(NetworkConfig.USE_NEURAL_FEATURES && !DEBUG_NEURAL){
 			model.train(all_instances, trainInstances.size(), numIteration);
 		}else{
 			model.train(ecrfs, numIteration);
@@ -105,14 +112,14 @@ public class LinearNEMain {
 					case "-iter": numIteration = Integer.valueOf(args[i+1]); break;   //default:100;
 					case "-thread": numThreads = Integer.valueOf(args[i+1]); break;   //default:5
 					case "-testFile": testFile = args[i+1]; break;        
-					case "-windows":EConfig.windows = true; break;            //default: false (is using windows system to run the evaluation script)
+					case "-windows":EConfig.windows = false; break;            //default: false (is using windows system to run the evaluation script)
 					case "-batch": NetworkConfig.USE_BATCH_TRAINING = true;
 									NetworkConfig.BATCH_SIZE = Integer.valueOf(args[i+1]); break;
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;
 					case "-neural": if(args[i+1].equals("true")){ 
 											NetworkConfig.USE_NEURAL_FEATURES = true; 
 											NetworkConfig.OPTIMIZE_NEURAL = true;  //false: optimize in neural network
-											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = true; //only used when using the senna embedding.
+											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
 										}
 									break;
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;

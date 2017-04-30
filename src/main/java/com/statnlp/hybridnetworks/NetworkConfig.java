@@ -184,6 +184,7 @@ public class NetworkConfig {
 	public static boolean USE_NEURAL_FEATURES = false;
 	/** Use Torch or DL4J */
 	public static String NEURAL_BACKEND = "DL4J";
+//	public static String NEURAL_BACKEND = "torch";
 	/** Regularized the neural features in CRF or not. set to false then can be done by dropout***/
 	public static boolean REGULARIZE_NEURAL_FEATURES = false;
 	/** If true: Optimized the neural net in CRF. optimizer in neural config must be set to none **/

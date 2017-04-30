@@ -1,37 +1,27 @@
 package com.statnlp.neural;
 
-import java.util.Arrays;
-
-import org.deeplearning4j.nn.layers.feedforward.embedding.EmbeddingLayer;
+import org.deeplearning4j.nn.layers.feedforward.dense.DenseLayer;
 import org.deeplearning4j.nn.params.DefaultParamInitializer;
-import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
 public class EmbeddingLayerInitializer {
 	public static enum Embedding {
-		ONEHOT, POLYGLOT
+		POLYGLOT, NONE
 	};
 	
-	public static void initializeEmbeddingLayer(EmbeddingLayer layer, String embeddingName, int vocabSize, int embeddingSize) {
-		Embedding embedding = Embedding.valueOf(embeddingName);
+	public static void initializeEmbeddingLayer(DenseLayer layer, String embeddingName, int vocabSize, int embeddingSize) {
+		Embedding embedding = Embedding.valueOf(embeddingName.toUpperCase());
+		/* TODO
 		switch (embedding) {
-		case ONEHOT:
-			oneHot(layer, vocabSize, embeddingSize); break;
+		case POLYGLOT:
+			polyglot(layer, vocabSize, embeddingSize); break;
 		}
+		*/
 		// default does nothing
 	}
 	
-	public static void oneHot(EmbeddingLayer layer, int vocabSize, int embeddingSize) {
-		double[][] initWeights = new double[vocabSize][vocabSize];
-		Arrays.fill(initWeights, 0.0);
-		for (int i = 0; i < vocabSize; i++) {
-			initWeights[i][i] = 1.0;
-		}
-		setWeights(layer, initWeights);
-	}
-	
-	private static void setWeights(EmbeddingLayer layer, double[][] initWeights) {
+	private static void setWeights(DenseLayer layer, double[][] initWeights) {
 		String key = DefaultParamInitializer.WEIGHT_KEY;
 		INDArray weights = layer.getParam(key);
 		// putting pre-trained weights into rows
