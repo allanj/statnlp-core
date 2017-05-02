@@ -25,12 +25,6 @@ public abstract class Hypothesis {
 	 */
 	protected Hypothesis[] children;
 	/**
-	 * A variable to store the last best index.
-	 * An array is used so that the reference to this member stays the same even though the 
-	 * actual best index changes each time we get the next best index. 
-	 */
-	protected IndexedScore[] lastBestIndex;
-	/**
 	 * Whether there are more hypothesis to be predicted.
 	 * Note that this is different from simply checking whether the queue is empty,
 	 * because the queue is populated only when necessary by looking at the last best index.
@@ -40,17 +34,16 @@ public abstract class Hypothesis {
 	 * The priority queue storing the possible next best child.
 	 * Since this is a priority queue, the next best child is the one in front of the queue.
 	 */
-	protected BoundedPrioritySet<IndexedScore> nextBestChildQueue;
+	protected BoundedPrioritySet<ScoredIndex> nextBestChildQueue;
 	/**
 	 * The cache to store the list of best children, which will contain the list of 
 	 * best children up to the highest k on which {@link #getKthBestHypothesis(int)} has been called.
 	 */
-	protected ArrayList<IndexedScore> bestChildrenList;
+	protected ArrayList<ScoredIndex> bestChildrenList;
 
 	protected void init() {
-		nextBestChildQueue = new BoundedPrioritySet<IndexedScore>();
-		lastBestIndex = new IndexedScore[1];
-		bestChildrenList = new ArrayList<IndexedScore>();
+		nextBestChildQueue = new BoundedPrioritySet<ScoredIndex>();
+		bestChildrenList = new ArrayList<ScoredIndex>();
 		hasMoreHypothesis = true;
 	}
 	
@@ -59,11 +52,11 @@ public abstract class Hypothesis {
 	 * @param k
 	 * @return
 	 */
-	public IndexedScore getKthBestHypothesis(int k){
+	public ScoredIndex getKthBestHypothesis(int k){
 		// Assuming the k is 0-based. So k=0 will return the best prediction
 		// Below we fill the cache until we satisfy the number of top-k paths requested.
 		while(bestChildrenList.size() <= k){
-			IndexedScore nextBest = setAndReturnNextBestPath();
+			ScoredIndex nextBest = setAndReturnNextBestPath();
 			if(nextBest == null){
 				return null;
 			}
@@ -75,7 +68,7 @@ public abstract class Hypothesis {
 	 * Return the next best path, or return null if there is no next best path.
 	 * @return
 	 */
-	public abstract IndexedScore setAndReturnNextBestPath();
+	public abstract ScoredIndex setAndReturnNextBestPath();
 	
 	public int nodeIndex(){
 		return this.nodeIndex;
@@ -105,23 +98,30 @@ public abstract class Hypothesis {
 		this.children = children;
 	}
 	
-	public void setLastBestIndex(IndexedScore[] lastBestIndex){
-		this.lastBestIndex = lastBestIndex;
+	/**
+	 * Returns the last best index calculated on this hypothesis.
+	 * @return
+	 */
+	public ScoredIndex getLastBestIndex(){
+		if(bestChildrenList.size() == 0){
+			return null;
+		}
+		return bestChildrenList.get(bestChildrenList.size()-1);
 	}
 
-	public ArrayList<IndexedScore> bestChildrenList() {
+	public ArrayList<ScoredIndex> bestChildrenList() {
 		return bestChildrenList;
 	}
 
-	public void setBestChildrenList(ArrayList<IndexedScore> bestChildrenList) {
+	public void setBestChildrenList(ArrayList<ScoredIndex> bestChildrenList) {
 		this.bestChildrenList = bestChildrenList;
 	}
 
-	public BoundedPrioritySet<IndexedScore> nextBestChildQueue() {
+	public BoundedPrioritySet<ScoredIndex> nextBestChildQueue() {
 		return nextBestChildQueue;
 	}
 
-	public void setNextBestChildQueue(BoundedPrioritySet<IndexedScore> nextBestChildQueue) {
+	public void setNextBestChildQueue(BoundedPrioritySet<ScoredIndex> nextBestChildQueue) {
 		this.nextBestChildQueue = nextBestChildQueue;
 	}
 

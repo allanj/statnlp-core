@@ -30,20 +30,21 @@ public class NodeHypothesis extends Hypothesis{
 		return (EdgeHypothesis[])children;
 	}
 	
-	public IndexedScore setAndReturnNextBestPath(){
+	public ScoredIndex setAndReturnNextBestPath(){
 		if(!hasMoreHypothesis){
 			return null;
-		} else if(lastBestIndex[0] == null){
+		} else if(getLastBestIndex() == null){
 			// This case means this is the first time this method is called, means
 			// we are looking for the best path, so we compare the best path from all
 			// child hyperedges, and later we will take the best one.
 
 			// This corresponds to the GetCandidates(v, k') call of Algorithm 3 line 7 in Huang and Chiang (2005) paper.
 			for(int i=0; i<children.length; i++){
-				nextBestChildQueue.offer(IndexedScore.get(nodeIndex, new int[]{i, 0}, this));
+				nextBestChildQueue.offer(ScoredIndex.get(nodeIndex, new int[]{i, 0}, this));
 			}
 		} else {
-			int[] newIndex = Arrays.copyOf(lastBestIndex[0].index, lastBestIndex[0].index.length);
+			ScoredIndex lastBestIndex = getLastBestIndex();
+			int[] newIndex = Arrays.copyOf(lastBestIndex.index, lastBestIndex.index.length);
 			// Remember that the IndexedScore in NodeHypothesis contains an index with only two elements.
 			// The first element represent the edge id, and the second element represent the k-th best candidate from that edge
 			
@@ -52,17 +53,16 @@ public class NodeHypothesis extends Hypothesis{
 			// The next line corresponds to the LazyNext(cand[v],e,j,k'), where cand[v] is represented by
 			// lastBestIndex[0].node_k and this NodeHypothesis, e is represented by this.children()[newIndex[0]],
 			// and j is represented by e.bestChildList.get(newIndex[1])
-			IndexedScore nextBestCandidate = IndexedScore.get(lastBestIndex[0].node_k, newIndex, (NodeHypothesis)this);
+			ScoredIndex nextBestCandidate = ScoredIndex.get(lastBestIndex.node_k, newIndex, (NodeHypothesis)this);
 			if(nextBestCandidate != null && !nextBestChildQueue.contains(nextBestCandidate)){
 				nextBestChildQueue.offer(nextBestCandidate);
 			}
 		}
-		IndexedScore nextBestIndex = nextBestChildQueue.poll();
+		ScoredIndex nextBestIndex = nextBestChildQueue.poll();
 		if(nextBestIndex == null){
 			hasMoreHypothesis = false;
 			return null;
 		}
-		lastBestIndex[0] = nextBestIndex;
 		
 		// Cache this next best candidate in the list
 		bestChildrenList.add(nextBestIndex);

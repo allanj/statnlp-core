@@ -154,7 +154,7 @@ public class LocalNetworkDecoderThread extends Thread{
 				topKPredictions.add(result.getPrediction());
 				NodeHypothesis rootHypothesis = network.getNodeHypothesis(network.getRootId());
 				for(int i=1; i<numPredictionsGenerated; i++){
-					IndexedScore kthPrediction = rootHypothesis.getKthBestHypothesis(i);
+					ScoredIndex kthPrediction = rootHypothesis.getKthBestHypothesis(i);
 					if(kthPrediction == null){
 						break;
 					}
@@ -178,11 +178,11 @@ public class LocalNetworkDecoderThread extends Thread{
 	 * @param kthPrediction
 	 * @param nodeHypothesis
 	 */
-	private void setMaxArrayForKthPrediction(Network network, IndexedScore kthPrediction, NodeHypothesis nodeHypothesis){
+	private void setMaxArrayForKthPrediction(Network network, ScoredIndex kthPrediction, NodeHypothesis nodeHypothesis){
 		int nodeIndex = nodeHypothesis.nodeIndex();
 		EdgeHypothesis edge = nodeHypothesis.children()[kthPrediction.index[0]];
-		IndexedScore score = edge.getKthBestHypothesis(kthPrediction.index[1]);
-		IndexedScore[] nextPath = new IndexedScore[edge.children.length];
+		ScoredIndex score = edge.getKthBestHypothesis(kthPrediction.index[1]);
+		ScoredIndex[] nextPath = new ScoredIndex[edge.children.length];
 		if(network._max_paths[nodeIndex].length != edge.children().length){
 			network._max_paths[nodeIndex] = new int[edge.children().length];
 		}

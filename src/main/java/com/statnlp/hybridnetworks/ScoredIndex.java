@@ -10,13 +10,13 @@ import java.util.Arrays;
  * This is the object being put in the priority queue during top-k decoding.<br> 
  * This behaves differently when used in NodeHypothesis or EdgeHypothesis.
  */
-public class IndexedScore implements Comparable<IndexedScore>{
+public class ScoredIndex implements Comparable<ScoredIndex>{
 	
 	public double score;
 	public int[] index;
 	public int node_k;
 
-	public IndexedScore(int node_k, double score, int[] index) {
+	public ScoredIndex(int node_k, double score, int[] index) {
 		this.score = score;
 		this.index = index;
 		this.node_k = node_k;
@@ -35,7 +35,7 @@ public class IndexedScore implements Comparable<IndexedScore>{
 	 * @return The path based on the configuration in index array. If the configuration is invalid,
 	 * 		   this will return null.
 	 */
-	public static IndexedScore get(int node_k, int[] index, EdgeHypothesis hypothesis){
+	public static ScoredIndex get(int node_k, int[] index, EdgeHypothesis hypothesis){
 		NodeHypothesis[] children = hypothesis.children();
 		double score = hypothesis.score();
 		for(int i=0; i<index.length; i++){
@@ -43,7 +43,7 @@ public class IndexedScore implements Comparable<IndexedScore>{
 				continue;
 			}
 			// The following line corresponds to line 16 in Algorithm 3 in Huang and Chiang (2005) paper.
-			IndexedScore kthBestChildrenAtIthPos = children[i].getKthBestHypothesis(index[i]);
+			ScoredIndex kthBestChildrenAtIthPos = children[i].getKthBestHypothesis(index[i]);
 			if(kthBestChildrenAtIthPos == null){
 				// If the request contains an invalid k-th best path for any child,
 				// then return null, to say that this configuration is invalid (there is no k-th best
@@ -52,7 +52,7 @@ public class IndexedScore implements Comparable<IndexedScore>{
 			}
 			score += kthBestChildrenAtIthPos.score;
 		}
-		return new IndexedScore(node_k, score, index);
+		return new ScoredIndex(node_k, score, index);
 	}
 	
 	/**
@@ -67,20 +67,20 @@ public class IndexedScore implements Comparable<IndexedScore>{
 	 * @return The path based on the configuration in index array. If the configuration is invalid,
 	 * 		   this will return null.
 	 */
-	public static IndexedScore get(int node_k, int[] index, NodeHypothesis hypothesis){
+	public static ScoredIndex get(int node_k, int[] index, NodeHypothesis hypothesis){
 		EdgeHypothesis[] children = hypothesis.children();
-		IndexedScore kthBestChildrenAtIthPos = children[index[0]].getKthBestHypothesis(index[1]);
+		ScoredIndex kthBestChildrenAtIthPos = children[index[0]].getKthBestHypothesis(index[1]);
 		if(kthBestChildrenAtIthPos == null){
 			return null;
 		}
 		double score = kthBestChildrenAtIthPos.score;
 //		System.out.println(String.format("Best of %s: %.3f", hypothesis, score));
-		return new IndexedScore(node_k, score, index);
+		return new ScoredIndex(node_k, score, index);
 	}
 	
 	public boolean equals(Object o){
-		if(o instanceof IndexedScore){
-			IndexedScore s = (IndexedScore)o;
+		if(o instanceof ScoredIndex){
+			ScoredIndex s = (ScoredIndex)o;
 			if(s.node_k != node_k){
 				return false;
 			}
@@ -90,7 +90,7 @@ public class IndexedScore implements Comparable<IndexedScore>{
 	}
 
 	@Override
-	public int compareTo(IndexedScore o) {
+	public int compareTo(ScoredIndex o) {
 		int result = Double.compare(o.score, this.score);
 		if(result != 0)	return result;
 		result = Integer.compare(node_k, o.node_k);

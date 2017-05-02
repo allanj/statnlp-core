@@ -330,11 +330,11 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * @return
 	 * @throws NoSuchElementException
 	 */
-	public IndexedScore[] getMaxPath(NodeHypothesis node, IndexedScore bestPath) throws NoSuchElementException {
+	public ScoredIndex[] getMaxPath(NodeHypothesis node, ScoredIndex bestPath) throws NoSuchElementException {
 		try{
 			EdgeHypothesis edge = node.children()[bestPath.index[0]];
-			IndexedScore score = edge.getKthBestHypothesis(bestPath.index[1]);
-			IndexedScore[] result = new IndexedScore[edge.children.length];
+			ScoredIndex score = edge.getKthBestHypothesis(bestPath.index[1]);
+			ScoredIndex[] result = new ScoredIndex[edge.children.length];
 			for(int i=0; i<edge.children.length; i++){
 				result[i] = edge.children()[i].getKthBestHypothesis(score.index[i]);
 			}
@@ -918,7 +918,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				childrenOfThisNodeHypothesis[children_k_index] = new EdgeHypothesis(k, children, score);
 			}
 			this._hypotheses[k] = new NodeHypothesis(k, childrenOfThisNodeHypothesis);
-			IndexedScore bestPath = this._hypotheses[k].getKthBestHypothesis(0);
+			ScoredIndex bestPath = this._hypotheses[k].getKthBestHypothesis(0);
 //			System.out.println("Node: "+this._hypotheses[k]);
 //			System.out.println("Edges: "+Arrays.toString(childrenOfThisNodeHypothesis));
 //			System.out.println(bestPath);

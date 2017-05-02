@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.hybridnetworks.IndexedScore;
+import com.statnlp.hybridnetworks.ScoredIndex;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
@@ -207,9 +207,9 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		long root = toNode_root(size);
 		int node_k = Arrays.binarySearch(_allNodes, root);
 		NodeHypothesis nodeHypothesis = lcrfNetwork.getNodeHypothesis(node_k);
-		IndexedScore bestPath = nodeHypothesis.getKthBestHypothesis(k);
+		ScoredIndex bestPath = nodeHypothesis.getKthBestHypothesis(k);
 
-		IndexedScore[] children_k;
+		ScoredIndex[] children_k;
 		for(int i=size-1; i>=0; i--){
 			try{
 				children_k = lcrfNetwork.getMaxPath(nodeHypothesis, bestPath);
