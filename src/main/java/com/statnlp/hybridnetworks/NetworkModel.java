@@ -424,14 +424,7 @@ public abstract class NetworkModel implements Serializable{
 			}
 		}
 		
-		Arrays.sort(results, new Comparator<Instance>(){
-			@Override
-			public int compare(Instance o1, Instance o2) {
-				if(o1.getInstanceId()<o2.getInstanceId())
-				return -1;
-				else return 1;
-			}
-		});
+		Arrays.sort(results, Comparator.comparing(Instance::getInstanceId));
 		
 		return results;
 	}

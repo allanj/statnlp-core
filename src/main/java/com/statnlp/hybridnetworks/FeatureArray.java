@@ -17,6 +17,7 @@
 package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -65,13 +66,13 @@ public class FeatureArray implements Serializable{
 		this._isLocal = false;
 	}
 
-	public FeatureArray(FeatureBox fia) {
-		this(fia, null);
+	public FeatureArray(FeatureBox fb) {
+		this(fb, null);
 		this._isLocal = false;
 	}
 
-	public FeatureArray(FeatureBox fia, FeatureArray next) {
-		this._fb = fia;
+	public FeatureArray(FeatureBox fb, FeatureArray next) {
+		this._fb = fb;
 		this._next = next;
 		this._isLocal = false;
 	}
@@ -181,10 +182,11 @@ public class FeatureArray implements Serializable{
 			double featureValue = 1.0;
 			if (fIdx2DstNode.containsKey(f_local)) {
 				int dstNode = fIdx2DstNode.get(f_local);
-				if (marginalMap.containsKey(dstNode))
+				if (marginalMap.containsKey(dstNode)){
 					featureValue = Math.exp(marginalMap.get(dstNode));
-				else
+				} else {
 					featureValue = 0.0;
+				}
 			}
 			param.addCount(f_local, featureValue * count);
 		}
@@ -272,10 +274,11 @@ public class FeatureArray implements Serializable{
 					double featureValue = 1.0;
 					if (fIdx2DstNode.containsKey(f)) {
 						int dstNode = fIdx2DstNode.get(f);
-						if (marginalMap.containsKey(dstNode))
+						if (marginalMap.containsKey(dstNode)){
 							featureValue = Math.exp(marginalMap.get(dstNode));
-						else
+						} else {
 							featureValue = 0.0;
+						}
 					}
 					this._fb._currScore += param.getWeight(f) * featureValue;
 				}
@@ -318,10 +321,7 @@ public class FeatureArray implements Serializable{
 
 	@Override
 	public int hashCode(){
-		int code = 0;
-		for(int i = 0; i<this._fb.length(); i++){
-			code ^= this._fb.get(i);
-		}
+		int code = Arrays.hashCode(_fb._fs);
 		if (this._next != null){
 			code = code ^ this._next.hashCode();
 		}

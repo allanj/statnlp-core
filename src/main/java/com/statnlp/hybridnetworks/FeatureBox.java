@@ -52,10 +52,10 @@ public class FeatureBox implements Serializable {
 			return fb;
 		}
 		if (param.fbMap == null) {
-			param.fbMap = new HashMap<>();
+			param.fbMap = new HashMap<FeatureBox, FeatureBox>();
 		}
 		if (param.fbMap.containsKey(fb)) {
-			return param.fbMap.get(param.fbMap.get(fb));
+			return param.fbMap.get(fb);
 		} else{
 			param.fbMap.put(fb, fb);
 			return fb;
@@ -69,8 +69,11 @@ public class FeatureBox implements Serializable {
 
 	@Override
 	public boolean equals(Object obj) {
-		FeatureBox other = (FeatureBox)obj;
-		return Arrays.equals(_fs, other._fs);
+		if(obj instanceof FeatureBox){
+			FeatureBox other = (FeatureBox)obj;
+			return Arrays.equals(_fs, other._fs);
+		}
+		return false;
 	}
 	
 }
