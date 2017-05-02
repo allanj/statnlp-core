@@ -124,6 +124,7 @@ public class LinearNEMain {
 									break;
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;
 					case "-lr": adagrad_learningRate = Double.valueOf(args[i+1]); break;
+					case "-backend": NetworkConfig.NEURAL_BACKEND = args[i+1]; break;
 					default: System.err.println("Invalid arguments, please check usage."); System.exit(0);
 				}
 			}

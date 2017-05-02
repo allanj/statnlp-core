@@ -10,7 +10,6 @@ import org.deeplearning4j.nn.conf.ComputationGraphConfiguration.GraphBuilder;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.Updater;
 import org.deeplearning4j.nn.conf.graph.MergeVertex;
-import org.deeplearning4j.nn.conf.graph.StackVertex;
 import org.deeplearning4j.nn.conf.graph.UnstackVertex;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.DenseLayer.Builder;
@@ -27,16 +26,17 @@ import com.statnlp.hybridnetworks.NetworkConfig;
  * NN backend using DeepLearning4J
  */
 public class DeepLearningNN extends AbstractNN {
-	private boolean DEBUG = true;
+	private boolean DEBUG = false;
 	
 	private ComputationGraph model;
 	private ComputationGraph inputLayer;
 	private INDArray[] grads;
 	
 	private Map<String,Integer> word2idx;
-	private int numInput;
+	private int vocabSize;
 	private INDArray[] x;
 	private List<Integer> outputDimList;
+	private int numInputType;
 	private int numOutput;
 	
 	// Reference to controller instance for updating weights and getting gradients
@@ -69,7 +69,8 @@ public class DeepLearningNN extends AbstractNN {
 		for (int i = 0; i < wordList.size(); i++) {
 			this.word2idx.put(wordList.get(i), i);
 		}
-		this.numInput = vocab.size();
+		this.vocabSize = vocab.size();
+		this.numInputType = numInputList.size();
 		this.outputDimList = outputDimList;
 		this.numOutput = outputDimList.size();
 		
@@ -94,10 +95,6 @@ public class DeepLearningNN extends AbstractNN {
 		
 		Updater updater = Updater.valueOf(NeuralConfig.OPTIMIZER.toUpperCase());
 		double learningRate = NeuralConfig.LEARNING_RATE;
-		if (updater == Updater.NONE) {
-			updater = Updater.SGD;
-			learningRate = 1.0;
-		}
 		
 		GraphBuilder mlpBuilder = new NeuralNetConfiguration.Builder()
         	.seed(seed)
@@ -141,7 +138,7 @@ public class DeepLearningNN extends AbstractNN {
 		for (int i = 0; i < numInputList.size(); i++) {
 			int embeddingSize = NeuralConfig.EMBEDDING_SIZE.get(i);
 			if (embeddingSize > 0) {
-				whichBuilder.addVertex(stacks[i], new StackVertex(), inputs[i]);
+				whichBuilder.addVertex(stacks[i], new CustomStackVertexConf(), inputs[i]);
 			}
 		}
 		
@@ -151,12 +148,11 @@ public class DeepLearningNN extends AbstractNN {
 			int embeddingSize = NeuralConfig.EMBEDDING_SIZE.get(i);
 			if (embeddingSize > 0) {
 				whichBuilder.addLayer(inputLayers[i],
-						new org.deeplearning4j.nn.conf.layers.DenseLayer.Builder()
+//						new org.deeplearning4j.nn.conf.layers.DenseLayer.Builder()
+						new org.deeplearning4j.nn.conf.layers.EmbeddingLayer.Builder()
 							.nIn(inputDim)
 							.nOut(embeddingSize)
 							.activation(Activation.IDENTITY)
-							.biasInit(0.0)
-							.biasLearningRate(0.0)
 							.build(),
 						stacks[i]);
 			} else {
@@ -228,9 +224,6 @@ public class DeepLearningNN extends AbstractNN {
 										.nIn(lastInputDim)
 										.nOut(outputDim)
 										.activation(Activation.IDENTITY);
-			if (! NeuralConfig.USE_OUTPUT_BIAS) {
-				outputBuilder.biasInit(0.0).biasLearningRate(0.0);
-			}
 			DenseLayer outputLayer = outputBuilder.build();
 			outputs[n] = "out"+n;
 			mlpBuilder.addLayer(outputs[n], outputLayer, lastLayer);
@@ -254,18 +247,17 @@ public class DeepLearningNN extends AbstractNN {
 			String embeddingName = NeuralConfig.EMBEDDING.get(i);
 			int embeddingSize = NeuralConfig.EMBEDDING_SIZE.get(i);
 			if (embeddingSize > 0) {
-				org.deeplearning4j.nn.layers.feedforward.dense.DenseLayer layer;
+				org.deeplearning4j.nn.layers.feedforward.embedding.EmbeddingLayer layer;
 				if (fixEmbedding) {
-					layer = (org.deeplearning4j.nn.layers.feedforward.dense.DenseLayer) this.inputLayer.getLayer(i);
+					layer = (org.deeplearning4j.nn.layers.feedforward.embedding.EmbeddingLayer) this.inputLayer.getLayer(i);
 				} else {
-					layer = (org.deeplearning4j.nn.layers.feedforward.dense.DenseLayer) this.model.getLayer(i);
+					layer = (org.deeplearning4j.nn.layers.feedforward.embedding.EmbeddingLayer) this.model.getLayer(i);
 				}
 				EmbeddingLayerInitializer.initializeEmbeddingLayer(layer, embeddingName, inputDim, embeddingSize);
 			}
 		}
 		
 		System.out.println("Init DeepLearningNN");
-		printParamsInfo();
 		
         if (optimizeNeural) {
 			return this.model.params().data().asDouble();
@@ -278,14 +270,27 @@ public class DeepLearningNN extends AbstractNN {
 		List<INDArray> result = new ArrayList<INDArray>();
 		int startIdx = 0;
 		for (int i = 0; i < numInputList.size(); i++) {
-//			result.add(Nd4j.createUninitialized(new int[]{vocab.size(), numInputList.get(i)}));
-			for (int k = 0; k < numInputList.get(i); k++) {
-				result.add(Nd4j.zeros(new int[]{vocab.size(), inputDimList.get(i)}));
-			}
-			for (int j = 0; j < vocab.size(); j++) {
+			int embeddingSize = NeuralConfig.EMBEDDING_SIZE.get(i);
+			if (embeddingSize > 0) {
 				for (int k = 0; k < numInputList.get(i); k++) {
-					// result[i][j][k] = vocab[j][startIdx+k]
-					result.get(startIdx+k).putScalar(new int[]{j,vocab.get(j).get(startIdx+k)}, 1.0);
+					result.add(Nd4j.zeros(new int[]{vocab.size(), 1}));
+				}
+				for (int j = 0; j < vocab.size(); j++) {
+					for (int k = 0; k < numInputList.get(i); k++) {
+						// result[i][j][k] = vocab[j][startIdx+k]
+						result.get(startIdx+k).putScalar(new int[]{j,0}, vocab.get(j).get(startIdx+k));
+					}
+				}
+			} else {
+	//			result.add(Nd4j.createUninitialized(new int[]{vocab.size(), numInputList.get(i)}));
+				for (int k = 0; k < numInputList.get(i); k++) {
+					result.add(Nd4j.zeros(new int[]{vocab.size(), inputDimList.get(i)}));
+				}
+				for (int j = 0; j < vocab.size(); j++) {
+					for (int k = 0; k < numInputList.get(i); k++) {
+						// result[i][j][k] = vocab[j][startIdx+k]
+						result.get(startIdx+k).putScalar(new int[]{j,vocab.get(j).get(startIdx+k)}, 1.0);
+					}
 				}
 			}
 			startIdx = startIdx + numInputList.get(i);
@@ -297,7 +302,13 @@ public class DeepLearningNN extends AbstractNN {
 	public void forwardNetwork(boolean training) {
 		if (optimizeNeural) {
 			double[] nnInternalWeights = controller.getInternalNeuralWeights();
-			this.model.params().assign(Nd4j.create(nnInternalWeights));
+			for (int i = 0; i < nnInternalWeights.length; i++) {
+				this.model.params().putScalar(i, nnInternalWeights[i]);
+			}
+//			setZeroBiasEmbedding(null);
+//			if (NeuralConfig.FIX_EMBEDDING) {
+//				setZeroBiasOutput(null);
+//			}
 		}
 
 		INDArray[] _x = this.x;
@@ -327,12 +338,12 @@ public class DeepLearningNN extends AbstractNN {
 		if (this.grads == null) {
 			this.grads = new INDArray[this.numOutput];
 			for (int i = 0; i < this.numOutput; i++) {
-				this.grads[i] = Nd4j.zeros(this.numInput, this.outputDimList.get(i));
+				this.grads[i] = Nd4j.zeros(this.vocabSize, this.outputDimList.get(i));
 			}
 		}
 		int ptr = 0;
 		for (int i = 0; i < this.numOutput; i++) {
-			for (int j = 0; j < this.numInput; j++) {
+			for (int j = 0; j < this.vocabSize; j++) {
 				for (int k = 0; k < this.outputDimList.get(i); k++) {
 					this.grads[i].putScalar(new int[]{j,k}, _grad[ptr++]);
 				}
@@ -340,6 +351,12 @@ public class DeepLearningNN extends AbstractNN {
 		}
 		
 		Gradient gradient = this.model.backpropGradient(this.grads);
+		
+//		setZeroBiasEmbedding(gradient);
+//		if (! NeuralConfig.USE_OUTPUT_BIAS) {
+//			setZeroBiasOutput(gradient);
+//		}
+		
 		this.model.getUpdater().update(this.model, gradient, 0, 1);
 		
 		INDArray updateVector = gradient.gradient();
@@ -407,7 +424,29 @@ public class DeepLearningNN extends AbstractNN {
 	        int nParams = model.getLayer(i).numParams();
 	        System.out.println("Number of parameters in layer " + i + ": " + nParams);
 	        totalNumParams += nParams;
+//	        System.out.println("WEIGHTS\n"+model.getLayer(i).getParam("W"));
+//	        System.out.println("BIAS\n"+model.getLayer(i).getParam("b"));
 	    }
 	    System.out.println("Total number of network parameters: " + totalNumParams);
+	}
+	
+	private void setZeroBiasEmbedding(Gradient gradient) {
+		for (int i = 0; i < this.numInputType; i++) {
+			String var = "I"+i+"_b";
+			model.getParam(var).assign(0.0);
+			if (gradient != null) {
+				gradient.getGradientFor(var).assign(0.0);
+			}
+		}
+	}
+	
+	private void setZeroBiasOutput(Gradient gradient) {
+		for (int i = 0; i < this.numOutput; i++) {
+			String var = "out"+i+"_b";
+			model.getParam(var).assign(0.0);
+			if (gradient != null) {
+				gradient.getGradientFor(var).assign(0.0);
+			}
+		}
 	}
 }

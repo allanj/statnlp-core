@@ -1,6 +1,6 @@
 package com.statnlp.neural;
 
-import org.deeplearning4j.nn.layers.feedforward.dense.DenseLayer;
+import org.deeplearning4j.nn.layers.feedforward.embedding.EmbeddingLayer;
 import org.deeplearning4j.nn.params.DefaultParamInitializer;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -10,7 +10,7 @@ public class EmbeddingLayerInitializer {
 		POLYGLOT, NONE
 	};
 	
-	public static void initializeEmbeddingLayer(DenseLayer layer, String embeddingName, int vocabSize, int embeddingSize) {
+	public static void initializeEmbeddingLayer(EmbeddingLayer layer, String embeddingName, int vocabSize, int embeddingSize) {
 		Embedding embedding = Embedding.valueOf(embeddingName.toUpperCase());
 		/* TODO
 		switch (embedding) {
@@ -21,7 +21,7 @@ public class EmbeddingLayerInitializer {
 		// default does nothing
 	}
 	
-	private static void setWeights(DenseLayer layer, double[][] initWeights) {
+	private static void setWeights(EmbeddingLayer layer, double[][] initWeights) {
 		String key = DefaultParamInitializer.WEIGHT_KEY;
 		INDArray weights = layer.getParam(key);
 		// putting pre-trained weights into rows
