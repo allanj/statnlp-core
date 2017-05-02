@@ -316,13 +316,17 @@ public abstract class FeatureManager implements Serializable{
 	protected abstract FeatureArray extract_helper(Network network, int parent_k, int[] children_k);
 	
 	/**
-	 * Creates a FeatureArray object based on the feature indices given.
+	 * Creates a FeatureArray object based on the feature indices given, caching the int[] array when possible.
 	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
 	 * @param featureIndices The feature indices for this FeatureArray object
 	 * @return
 	 */
 	protected FeatureArray createFeatureArray(Network network, int[] featureIndices){
-		return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, this.getParams_L()[network.getThreadId()]));
+		if(NetworkConfig.AVOID_DUPLICATE_FEATURES){
+			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, this.getParams_L()[network.getThreadId()]));
+		} else {
+			return new FeatureArray(featureIndices);
+		}
 	}
 	
 	/**
@@ -333,7 +337,11 @@ public abstract class FeatureManager implements Serializable{
 	 * @return
 	 */
 	protected FeatureArray createFeatureArray(Network network, int[] featureIndices, FeatureArray next){
-		return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, this.getParams_L()[network.getThreadId()]), next);
+		if(NetworkConfig.AVOID_DUPLICATE_FEATURES){
+			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, this.getParams_L()[network.getThreadId()]), next);
+		} else {
+			return new FeatureArray(featureIndices, next);
+		}
 	}
 	
 	private void writeObject(ObjectOutputStream oos) throws IOException{

@@ -430,6 +430,14 @@ public class GlobalNetworkParam implements Serializable{
 		return this._version;
 	}
 	
+	/**
+	 * 
+	 * @param type
+	 * @param output
+	 * @param input
+	 * @return
+	 * @deprecated Please use {@link #toFeature(Network, String, String, String)} instead.
+	 */
 	public int toFeature(String type , String output , String input){
 		return this.toFeature(null, type, output, input);
 	}

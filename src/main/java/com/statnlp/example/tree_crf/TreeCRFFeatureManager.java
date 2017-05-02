@@ -48,21 +48,21 @@ public class TreeCRFFeatureManager extends FeatureManager {
 		String startWord = normalize(words[start]);
 		String endWord = normalize(words[end]);
 		
-		int firstWordFeature = this._param_g.toFeature(FeatureType.FIRST_WORD.name(), String.valueOf(labelId), startWord);
+		int firstWordFeature = this._param_g.toFeature(network, FeatureType.FIRST_WORD.name(), String.valueOf(labelId), startWord);
 		int endWordLen = endWord.length();
-		int lastWordFeature = this._param_g.toFeature(FeatureType.LAST_WORD.name(), String.valueOf(labelId), endWord);
+		int lastWordFeature = this._param_g.toFeature(network, FeatureType.LAST_WORD.name(), String.valueOf(labelId), endWord);
 		String last1 = endWordLen >= 1 ? endWord.substring(endWordLen-1) : endWord;
 		String last2 = endWordLen >= 2 ? endWord.substring(endWordLen-2) : endWord;
 		String last3 = endWordLen >= 3 ? endWord.substring(endWordLen-3) : endWord;
-		int lastWordEnding1Feature = this._param_g.toFeature(FeatureType.LAST_WORD_ENDING_1.name(), String.valueOf(labelId), last1);
-		int lastWordEnding2Feature = this._param_g.toFeature(FeatureType.LAST_WORD_ENDING_2.name(), String.valueOf(labelId), last2);
-		int lastWordEnding3Feature = this._param_g.toFeature(FeatureType.LAST_WORD_ENDING_3.name(), String.valueOf(labelId), last3);
+		int lastWordEnding1Feature = this._param_g.toFeature(network, FeatureType.LAST_WORD_ENDING_1.name(), String.valueOf(labelId), last1);
+		int lastWordEnding2Feature = this._param_g.toFeature(network, FeatureType.LAST_WORD_ENDING_2.name(), String.valueOf(labelId), last2);
+		int lastWordEnding3Feature = this._param_g.toFeature(network, FeatureType.LAST_WORD_ENDING_3.name(), String.valueOf(labelId), last3);
 		boolean isFirstCapital = words[start].matches("[A-Z].*");
-		int firstCapitalFeature = this._param_g.toFeature(FeatureType.FIRST_CAPITAL.name(), String.valueOf(labelId), String.valueOf(isFirstCapital));
+		int firstCapitalFeature = this._param_g.toFeature(network, FeatureType.FIRST_CAPITAL.name(), String.valueOf(labelId), String.valueOf(isFirstCapital));
 //		int lowerFirstWordFeature = this._param_g.toFeature(FeatureType.LOWER_FIRST_WORD.name(), String.valueOf(labelId), words[start].toLowerCase());
 		
 		if(children_k.length == 1){ // Pre-Terminal nodes
-			return new FeatureArray(new int[]{
+			return createFeatureArray(network, new int[]{
 											firstWordFeature,
 											lastWordFeature,
 											lastWordEnding1Feature,
@@ -89,10 +89,10 @@ public class TreeCRFFeatureManager extends FeatureManager {
 		
 		String splitWord = normalize(words[rightStart]);
 
-		int splitWordFeature = this._param_g.toFeature(FeatureType.SPLIT_WORD.name(), String.valueOf(labelId), splitWord);
-		int leftRightFeature = this._param_g.toFeature(FeatureType.LEFT_RIGHT.name(), String.valueOf(labelId), leftLabelId+" "+rightLabelId);
+		int splitWordFeature = this._param_g.toFeature(network, FeatureType.SPLIT_WORD.name(), String.valueOf(labelId), splitWord);
+		int leftRightFeature = this._param_g.toFeature(network, FeatureType.LEFT_RIGHT.name(), String.valueOf(labelId), leftLabelId+" "+rightLabelId);
 		
-		FeatureArray fa = new FeatureArray(new int[]{
+		FeatureArray fa = createFeatureArray(network, new int[]{
 													leftRightFeature,
 													firstWordFeature,
 													splitWordFeature,
