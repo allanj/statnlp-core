@@ -5,5 +5,4 @@ bin
 target/
 experiments/*
 data/*
-.gitignore
 *.jar

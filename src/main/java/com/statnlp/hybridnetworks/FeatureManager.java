@@ -315,6 +315,27 @@ public abstract class FeatureManager implements Serializable{
 	 */
 	protected abstract FeatureArray extract_helper(Network network, int parent_k, int[] children_k);
 	
+	/**
+	 * Creates a FeatureArray object based on the feature indices given.
+	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
+	 * @param featureIndices The feature indices for this FeatureArray object
+	 * @return
+	 */
+	protected FeatureArray createFeatureArray(Network network, int[] featureIndices){
+		return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, this.getParams_L()[network.getThreadId()]));
+	}
+	
+	/**
+	 * Creates a FeatureArray object based on the feature indices given.
+	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
+	 * @param featureIndices The feature indices for this FeatureArray object
+	 * @param next Another FeatureArray object to be chained after the newly created FeatureArray object.
+	 * @return
+	 */
+	protected FeatureArray createFeatureArray(Network network, int[] featureIndices, FeatureArray next){
+		return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, this.getParams_L()[network.getThreadId()]), next);
+	}
+	
 	private void writeObject(ObjectOutputStream oos) throws IOException{
 		oos.writeObject(this._param_g);
 		oos.writeBoolean(this._cacheEnabled);

@@ -25,8 +25,8 @@ import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
+import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.neural.NeuralConfigReader;
 
 public class LinearCRFMain {
