@@ -430,6 +430,14 @@ public class GlobalNetworkParam implements Serializable{
 		return this._version;
 	}
 	
+	/**
+	 * 
+	 * @param type
+	 * @param output
+	 * @param input
+	 * @return
+	 * @deprecated Please use {@link #toFeature(Network, String, String, String)} instead.
+	 */
 	public int toFeature(String type , String output , String input){
 		return this.toFeature(null, type, output, input);
 	}
@@ -465,24 +473,17 @@ public class GlobalNetworkParam implements Serializable{
 		//if it is locked, then we might return a dummy feature
 		//if the feature does not appear to be present.
 		if(this.isLocked() || shouldNotCreateNewFeature){
-			if(!featureIntMap.containsKey(type)){
-				return -1;
-			}
-			HashMap<String, HashMap<String, Integer>> output2input = featureIntMap.get(type);
-			if(!output2input.containsKey(output)){
-				return -1;
-			}
-			HashMap<String, Integer> input2id = output2input.get(output);
-			if(!input2id.containsKey(input)){
-				return -1;
-			}
-			return input2id.get(input);
+			return getFeatureId(type, output, input, featureIntMap);
 		}
 		
-		Instance inst = network.getInstance();
-		int instId = inst.getInstanceId();
-		boolean isTestInst = instId > 0 && !inst.isLabeled() || !inst.getLabeledInstance().isLabeled();
-		if (NetworkConfig.USE_NEURAL_FEATURES && isTestInst && !type.startsWith(NetworkConfig.NEURAL_FEATURE_TYPE_PREFIX)) type = DUMP_TYPE;
+		if(NetworkConfig.USE_NEURAL_FEATURES){
+			Instance inst = network.getInstance();
+			int instId = inst.getInstanceId();
+			boolean isTestInst = instId > 0 && !inst.isLabeled() || !inst.getLabeledInstance().isLabeled();
+			if (isTestInst && !type.startsWith(NetworkConfig.NEURAL_FEATURE_TYPE_PREFIX)){
+				type = DUMP_TYPE;
+			}
+		}
 		
 		if(!featureIntMap.containsKey(type)){
 			featureIntMap.put(type, new HashMap<String, HashMap<String, Integer>>());
@@ -503,6 +504,43 @@ public class GlobalNetworkParam implements Serializable{
 		}
 
 		return inputToIdx.get(input);
+	}
+	
+	/**
+	 * Returns the feature ID of the specified feature from the global feature index.<br>
+	 * If the feature is not present in the feature index, return -1.
+	 * @param type The feature type
+	 * @param output The feature output type
+	 * @param input The feature input type
+	 * @return
+	 */
+	public int getFeatureId(String type, String output, String input){
+		return getFeatureId(type, output, input, this._featureIntMap);
+	}
+
+	/**
+	 * Returns the feature ID of the specified feature from the specified feature index.<br>
+	 * If the feature is not present in the feature index, return -1.
+	 * @param type The feature type
+	 * @param output The feature output type
+	 * @param input The feature input type
+	 * @param featureIntMap The feature index
+	 * @return
+	 */
+	public int getFeatureId(String type, String output, String input,
+			HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap) {
+		if(!featureIntMap.containsKey(type)){
+			return -1;
+		}
+		HashMap<String, HashMap<String, Integer>> output2input = featureIntMap.get(type);
+		if(!output2input.containsKey(output)){
+			return -1;
+		}
+		HashMap<String, Integer> input2id = output2input.get(output);
+		if(!input2id.containsKey(input)){
+			return -1;
+		}
+		return input2id.get(input);
 	}
 	
 	/**

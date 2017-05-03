@@ -19,6 +19,10 @@ public class LinearIENetwork extends TableLookupNetwork {
 	public LinearIENetwork(int networkId, Instance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes) {
 		super(networkId, inst, nodes, children, param);
 		this.numNodes = numNodes;
+		this.isVisible = new boolean[numNodes];
+		for(int i=0; i<isVisible.length; i++){
+			this.isVisible[i] = true;
+		}
 	}
 	
 	public int countNodes(){

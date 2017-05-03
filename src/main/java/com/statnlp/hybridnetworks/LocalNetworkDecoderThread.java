@@ -163,9 +163,35 @@ public class LocalNetworkDecoderThread extends Thread{
 					topKPredictions.add(tmp.getPrediction());
 				}
 				// Set the max to the true max again
-				setMaxArrayForKthPrediction(network, rootHypothesis.getKthBestHypothesis(0), rootHypothesis);
+				setMaxArrayForBestPrediction(network);
 				return result;
 			}
+		}
+	}
+
+	/**
+	 * This method is to restore the max array with the best prediction structure.<br>
+	 * This is used after {@link #setMaxArrayForKthPrediction(Network, ScoredIndex, NodeHypothesis)}
+	 * in order to restore the max and max_path arrays. Note that running {@link #setMaxArrayForKthPrediction(Network, ScoredIndex, NodeHypothesis)}
+	 * with the best path from root will not restore the max and max_path arrays for all nodes, since 
+	 * not all nodes will be visited in the best prediction, which might have been altered by other 
+	 * k-th best structures.
+	 * @param network
+	 */
+	private void setMaxArrayForBestPrediction(Network network){
+		for(int k=0; k<network.countNodes(); k++){
+			NodeHypothesis node = network._hypotheses[k];
+			ScoredIndex bestPath = node.getKthBestHypothesis(0);
+			EdgeHypothesis edge = node.children()[bestPath.index[0]];
+			ScoredIndex score = edge.getKthBestHypothesis(bestPath.index[1]);
+			int nodeIndex = node.nodeIndex;
+			if(network._max_paths[nodeIndex].length != edge.children().length){
+				network._max_paths[nodeIndex] = new int[edge.children().length];
+			}
+			for(int i=0; i<edge.children.length; i++){
+				network._max_paths[nodeIndex][i] = edge.children()[i].nodeIndex();
+			}
+			network._max[nodeIndex] = score.score;
 		}
 	}
 	

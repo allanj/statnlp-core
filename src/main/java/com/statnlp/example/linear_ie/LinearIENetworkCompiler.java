@@ -146,7 +146,7 @@ public class LinearIENetworkCompiler extends NetworkCompiler {
 		long root = toNode_A(0, size);
 		long[] allNodes = unlabeledNetwork.getAllNodes();
 		int[][][] allChildren = unlabeledNetwork.getAllChildren();
-		int root_k = Arrays.binarySearch(allNodes, root);
+		int root_k  = unlabeledNetwork.getNodeIndex(root);
 		int numNodes = root_k+1;
 		LinearIENetwork network = new LinearIENetwork(networkId, instance, allNodes, allChildren, param, numNodes);
 		return network;
