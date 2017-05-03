@@ -95,7 +95,7 @@ public class LinearIEMain {
 			model.train(trainInstances, numIterations);
 		}
 		
-		int mentionPenaltyFeatureIndex = fm.getParam_G().toFeature(FeatureType.MENTION_PENALTY.name(), "MP", "MP");
+		int mentionPenaltyFeatureIndex = fm.getParam_G().getFeatureId(FeatureType.MENTION_PENALTY.name(), "MP", "MP");
 		
 		for(double mentionPenalty = -0.2; mentionPenalty < 1.0; mentionPenalty += 0.2){
 			if(mentionPenalty >= 0.0){

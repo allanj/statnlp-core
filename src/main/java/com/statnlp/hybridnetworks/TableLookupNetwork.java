@@ -258,7 +258,7 @@ public abstract class TableLookupNetwork extends Network{
 	}
 	
 	/**
-	 * Check if the node k is removed from the network.
+	 * Make the node with index k visible again.
 	 */
 	public void recover(int k){
 		this.isVisible[k] = true;
