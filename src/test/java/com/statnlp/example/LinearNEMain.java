@@ -20,6 +20,8 @@ import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.neural.NeuralConfigReader;
 
 public class LinearNEMain {
+	
+	public static boolean DEBUG = true;
 
 	public static int trainNumber = -100;
 	public static int testNumber = -100;
@@ -34,7 +36,7 @@ public class LinearNEMain {
 //	public static String trainPath = "nn-crf-interface/nlp-from-scratch/debug/debug.train.txt";
 //	public static String testFile = "nn-crf-interface/nlp-from-scratch/debug/debug.train.txt";
 	public static String nerOut = "nn-crf-interface/nlp-from-scratch/me/output/ner_out.txt";
-	public static String neural_config = "nn-crf-interface/neural_server/neural.config";
+	public static String neural_config = "nn-crf-interface/neural_server/neural.debug.config";
 	
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
@@ -55,11 +57,15 @@ public class LinearNEMain {
 		NetworkConfig.NUM_THREADS = numThreads;
 		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
 		
+		if (DEBUG) {
+			NetworkConfig.RANDOM_INIT_WEIGHT = false;
+		}
+		
 		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory());
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 			NeuralConfigReader.readConfig(neural_config);
-			//gnp =  new GlobalNetworkParam(OptimizerFactory.);
+//			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
 		}
 		
 		System.err.println("[Info] "+Entity.Entities.size()+" entities: "+Entity.Entities.toString());
@@ -112,11 +118,13 @@ public class LinearNEMain {
 					case "-neural": if(args[i+1].equals("true")){ 
 											NetworkConfig.USE_NEURAL_FEATURES = true; 
 											NetworkConfig.OPTIMIZE_NEURAL = true;  //false: optimize in neural network
-											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = true; //only used when using the senna embedding.
+											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
+											NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 										}
 									break;
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;
 					case "-lr": adagrad_learningRate = Double.valueOf(args[i+1]); break;
+					case "-backend": NetworkConfig.NEURAL_BACKEND = args[i+1]; break;
 					default: System.err.println("Invalid arguments, please check usage."); System.exit(0);
 				}
 			}

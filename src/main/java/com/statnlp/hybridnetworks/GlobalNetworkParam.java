@@ -36,6 +36,7 @@ import com.statnlp.commons.types.Instance;
 import com.statnlp.neural.AbstractNN;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.neural.RemoteNN;
+import com.statnlp.neural.TorchNN;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
@@ -373,9 +374,11 @@ public class GlobalNetworkParam implements Serializable{
 		// initialize NN params and gradParams
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
 			_nnController = new NNCRFGlobalNetworkParam(this);
-			AbstractNN backendNN;
+			AbstractNN backendNN = null;
 			if (NetworkConfig.NEURAL_BACKEND.equals("torch")) {
 				backendNN = new RemoteNN(NetworkConfig.OPTIMIZE_NEURAL);
+			} else if (NetworkConfig.NEURAL_BACKEND.equals("torch-jni")) {
+				backendNN = new TorchNN(NetworkConfig.OPTIMIZE_NEURAL);
 			}
 			_nnController.setAbstractNN(backendNN);
 			_nnController.initializeInternalNeuralWeights();
