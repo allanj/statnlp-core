@@ -1,4 +1,4 @@
-package com.statnlp.example.linear_ie;
+package com.statnlp.example.mention_hypergraph;
 
 public class Span implements Comparable<Span>{
 	

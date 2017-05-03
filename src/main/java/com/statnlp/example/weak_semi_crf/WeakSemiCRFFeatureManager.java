@@ -1,14 +1,14 @@
-package com.statnlp.example.semi_crf;
+package com.statnlp.example.weak_semi_crf;
 
 import java.util.ArrayList;
 
-import com.statnlp.example.semi_crf.SemiCRFNetworkCompiler.NodeType;
+import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler.NodeType;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 
-public class SemiCRFFeatureManager extends FeatureManager {
+public class WeakSemiCRFFeatureManager extends FeatureManager {
 	
 	private static final long serialVersionUID = 6510131496948610905L;
 	
@@ -39,14 +39,14 @@ public class SemiCRFFeatureManager extends FeatureManager {
 	public int unigramWindowSize = 5;
 	public int substringWindowSize = 5;
 
-	public SemiCRFFeatureManager(GlobalNetworkParam param_g) {
+	public WeakSemiCRFFeatureManager(GlobalNetworkParam param_g) {
 		super(param_g);
 	}
 	
 	@Override
 	protected FeatureArray extract_helper(Network net, int parent_k, int[] children_k) {
-		SemiCRFNetwork network = (SemiCRFNetwork)net;
-		SemiCRFInstance instance = (SemiCRFInstance)network.getInstance();
+		WeakSemiCRFNetwork network = (WeakSemiCRFNetwork)net;
+		WeakSemiCRFInstance instance = (WeakSemiCRFInstance)network.getInstance();
 		
 		int[] parent_arr = network.getNodeArray(parent_k);
 		int parentPos = parent_arr[0];

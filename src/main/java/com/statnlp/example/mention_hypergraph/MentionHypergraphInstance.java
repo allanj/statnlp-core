@@ -1,13 +1,13 @@
-package com.statnlp.example.linear_ie;
+package com.statnlp.example.mention_hypergraph;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.statnlp.example.base.BaseInstance;
-import com.statnlp.example.linear_ie.LinearIEInstance.WordsAndTags;
+import com.statnlp.example.mention_hypergraph.MentionHypergraphInstance.WordsAndTags;
 
-public class LinearIEInstance extends BaseInstance<LinearIEInstance, WordsAndTags, List<Span>>{
+public class MentionHypergraphInstance extends BaseInstance<MentionHypergraphInstance, WordsAndTags, List<Span>>{
 	
 	public static class WordsAndTags implements Serializable{
 		private static final long serialVersionUID = -9022041107687594823L;
@@ -25,7 +25,7 @@ public class LinearIEInstance extends BaseInstance<LinearIEInstance, WordsAndTag
 	
 	private static final long serialVersionUID = -9133939568122739620L;
 	
-	public LinearIEInstance(int instanceId, double weight){
+	public MentionHypergraphInstance(int instanceId, double weight){
 		super(instanceId, weight);
 	}
 	
@@ -62,8 +62,8 @@ public class LinearIEInstance extends BaseInstance<LinearIEInstance, WordsAndTag
 		return builder.toString();
 	}
 
-	public LinearIEInstance duplicate(){
-		LinearIEInstance result = super.duplicate();
+	public MentionHypergraphInstance duplicate(){
+		MentionHypergraphInstance result = super.duplicate();
 //		result.words = result.input.words;
 //		result.posTags = result.input.posTags;
 		return result;

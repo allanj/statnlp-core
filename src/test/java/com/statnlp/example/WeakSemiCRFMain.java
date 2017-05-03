@@ -15,18 +15,18 @@ import java.util.Collections;
 import java.util.List;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.example.semi_crf.Label;
-import com.statnlp.example.semi_crf.SemiCRFFeatureManager;
-import com.statnlp.example.semi_crf.SemiCRFInstance;
-import com.statnlp.example.semi_crf.SemiCRFNetworkCompiler;
-import com.statnlp.example.semi_crf.Span;
+import com.statnlp.example.weak_semi_crf.Label;
+import com.statnlp.example.weak_semi_crf.WeakSemiCRFFeatureManager;
+import com.statnlp.example.weak_semi_crf.WeakSemiCRFInstance;
+import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler;
+import com.statnlp.example.weak_semi_crf.Span;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GenerativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkModel;
 
-public class SemiCRFMain {
+public class WeakSemiCRFMain {
 	
 	public static boolean COMBINE_OUTSIDE_CHARS = true;
 	public static boolean USE_SINGLE_OUTSIDE_TAG = false;
@@ -37,8 +37,8 @@ public class SemiCRFMain {
 		
 		String train_filename;
 		String test_filename;
-		SemiCRFInstance[] trainInstances; 
-		SemiCRFInstance[] testInstances;
+		WeakSemiCRFInstance[] trainInstances; 
+		WeakSemiCRFInstance[] testInstances;
 		
 		if(useCoNLLData){
 			train_filename = "data/SMSNP/SMSNP.conll.train.5";
@@ -54,13 +54,13 @@ public class SemiCRFMain {
 		
 		int maxSize = 0;
 		int maxSpan = 0;
-		for(SemiCRFInstance instance: trainInstances){
+		for(WeakSemiCRFInstance instance: trainInstances){
 			maxSize = Math.max(maxSize, instance.size());
 			for(Span span: instance.output){
 				maxSpan = Math.max(maxSpan, span.end-span.start);
 			}
 		}
-		for(SemiCRFInstance instance: testInstances){
+		for(WeakSemiCRFInstance instance: testInstances){
 			maxSize = Math.max(maxSize, instance.size());
 		}
 		
@@ -76,11 +76,11 @@ public class SemiCRFMain {
 		
 		System.err.println("Read.."+size+" instances.");
 		
-		SemiCRFFeatureManager fm = new SemiCRFFeatureManager(new GlobalNetworkParam());
+		WeakSemiCRFFeatureManager fm = new WeakSemiCRFFeatureManager(new GlobalNetworkParam());
 		
 		Label[] labels = Label.LABELS.values().toArray(new Label[Label.LABELS.size()]);
 		
-		SemiCRFNetworkCompiler compiler = new SemiCRFNetworkCompiler(labels, maxSize, maxSpan);
+		WeakSemiCRFNetworkCompiler compiler = new WeakSemiCRFNetworkCompiler(labels, maxSize, maxSpan);
 		
 		NetworkModel model = NetworkConfig.TRAIN_MODE_IS_GENERATIVE ? GenerativeNetworkModel.create(fm, compiler) : DiscriminativeNetworkModel.create(fm, compiler);
 		
@@ -94,7 +94,7 @@ public class SemiCRFMain {
 				ois.close();
 				Field _fm = NetworkModel.class.getDeclaredField("_fm");
 				_fm.setAccessible(true);
-				fm = (SemiCRFFeatureManager)_fm.get(model);
+				fm = (WeakSemiCRFFeatureManager)_fm.get(model);
 				long endTime = System.currentTimeMillis();
 				System.out.printf("Done in %.3fs\n", (endTime-startTime)/1000.0);
 			} else {
@@ -116,7 +116,7 @@ public class SemiCRFMain {
 		int totalGold = 0;
 		int totalPred = 0;
 		for(Instance inst: predictions){
-			SemiCRFInstance instance = (SemiCRFInstance)inst;
+			WeakSemiCRFInstance instance = (WeakSemiCRFInstance)inst;
 			System.out.println("Input:");
 			System.out.println(instance.input);
 			System.out.println("Gold:");
@@ -171,7 +171,7 @@ public class SemiCRFMain {
 		int[] totalGold = new int[size];
 		int[] totalPred = new int[size];
 		for(Instance inst: instances){
-			SemiCRFInstance instance = (SemiCRFInstance)inst;
+			WeakSemiCRFInstance instance = (WeakSemiCRFInstance)inst;
 			List<Span> predicted = duplicate(instance.getPrediction());
 			List<Span> actual = duplicate(instance.getOutput());
 			for(Span span: actual){
@@ -228,10 +228,10 @@ public class SemiCRFMain {
 	 * @return
 	 * @throws IOException
 	 */
-	private static SemiCRFInstance[] readData(String fileName, boolean isLabeled) throws IOException{
+	private static WeakSemiCRFInstance[] readData(String fileName, boolean isLabeled) throws IOException{
 		InputStreamReader isr = new InputStreamReader(new FileInputStream(fileName), "UTF-8");
 		BufferedReader br = new BufferedReader(isr);
-		ArrayList<SemiCRFInstance> result = new ArrayList<SemiCRFInstance>();
+		ArrayList<WeakSemiCRFInstance> result = new ArrayList<WeakSemiCRFInstance>();
 		String input = null;
 		List<Span> output = null;
 		int instanceId = 1;
@@ -266,7 +266,7 @@ public class SemiCRFMain {
 				output.add(new Span(start, end, label));
 			}
 			createOutsideSpans(input, output, prevEnd, length);
-			SemiCRFInstance instance = new SemiCRFInstance(instanceId, 1.0, input, output);
+			WeakSemiCRFInstance instance = new WeakSemiCRFInstance(instanceId, 1.0, input, output);
 			if(isLabeled){
 				instance.setLabeled();
 			} else {
@@ -277,7 +277,7 @@ public class SemiCRFMain {
 			br.readLine();
 		}
 		br.close();
-		return result.toArray(new SemiCRFInstance[result.size()]);
+		return result.toArray(new WeakSemiCRFInstance[result.size()]);
 	}
 	
 	/**
@@ -351,10 +351,10 @@ public class SemiCRFMain {
 	 * @return
 	 * @throws IOException
 	 */
-	private static SemiCRFInstance[] readCoNLLData(String fileName, boolean isLabeled) throws IOException{
+	private static WeakSemiCRFInstance[] readCoNLLData(String fileName, boolean isLabeled) throws IOException{
 		InputStreamReader isr = new InputStreamReader(new FileInputStream(fileName), "UTF-8");
 		BufferedReader br = new BufferedReader(isr);
-		ArrayList<SemiCRFInstance> result = new ArrayList<SemiCRFInstance>();
+		ArrayList<WeakSemiCRFInstance> result = new ArrayList<WeakSemiCRFInstance>();
 		String input = null;
 		List<Span> output = null;
 		int instanceId = 1;
@@ -376,7 +376,7 @@ public class SemiCRFMain {
 				if(start != -1){
 					createSpan(output, start, end, prevLabel);
 				}
-				SemiCRFInstance instance = new SemiCRFInstance(instanceId, 1);
+				WeakSemiCRFInstance instance = new WeakSemiCRFInstance(instanceId, 1);
 				instance.input = input;
 				instance.output = output;
 				if(isLabeled){
@@ -430,7 +430,7 @@ public class SemiCRFMain {
 			}
 		}
 		br.close();
-		return result.toArray(new SemiCRFInstance[result.size()]);
+		return result.toArray(new WeakSemiCRFInstance[result.size()]);
 	}
 	
 	private static void createSpan(List<Span> output, int start, int end, Label label){

@@ -1,4 +1,4 @@
-package com.statnlp.example.semi_crf;
+package com.statnlp.example.weak_semi_crf;
 
 import java.io.Serializable;
 import java.util.HashMap;

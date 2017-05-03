@@ -1,16 +1,16 @@
-package com.statnlp.example.linear_ie;
+package com.statnlp.example.mention_hypergraph;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.statnlp.example.linear_ie.LinearIENetworkCompiler.NodeType;
+import com.statnlp.example.mention_hypergraph.MentionHypergraphNetworkCompiler.NodeType;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 
-public class LinearIEFeatureManager extends FeatureManager {
+public class MentionHypergraphFeatureManager extends FeatureManager {
 
 	private static final long serialVersionUID = 1359679442997276807L;
 	
@@ -53,14 +53,14 @@ public class LinearIEFeatureManager extends FeatureManager {
 		MENTION_PENALTY,
 	}
 
-	public LinearIEFeatureManager(GlobalNetworkParam param_g) {
+	public MentionHypergraphFeatureManager(GlobalNetworkParam param_g) {
 		super(param_g);
 	}
 
 	@Override
 	protected FeatureArray extract_helper(Network net, int parent_k, int[] children_k) {
-		LinearIENetwork network = (LinearIENetwork)net;
-		LinearIEInstance instance = (LinearIEInstance)network.getInstance();
+		MentionHypergraphNetwork network = (MentionHypergraphNetwork)net;
+		MentionHypergraphInstance instance = (MentionHypergraphInstance)network.getInstance();
 		AttributedWord[] words = instance.input.words;
 		String[] posTags = instance.input.posTags;
 		int size = instance.size();
