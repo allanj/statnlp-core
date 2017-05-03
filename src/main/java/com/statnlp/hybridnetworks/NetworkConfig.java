@@ -212,7 +212,14 @@ public class NetworkConfig {
 	protected static boolean PRE_COMPILE_NETWORKS;
 	
 	/**
-	 * Enable to saving the memory or not
+	 * Enable to try to save memory by caching feature arrays to avoid duplicate feature arrays to be stored
+	 * in memory.<br>
+	 * Note that the amount of memory-saving depends on how the FeatureArrays are defined.<br>
+	 * If there are lots of repeating feature arrays with the exact same sequence of feature indices,
+	 * then enabling this might be beneficial, but otherwise, it will actually increase memory usage and time.<br>
+	 * If you are using this, it's best to split feature arrays into multiple arrays, and then
+	 * chain them together using the "next" mechanism in FeatureArray.<br>
+	 * See {@link FeatureArray#FeatureArray(int[], FeatureArray)} for more information.
 	 */
 	public static boolean AVOID_DUPLICATE_FEATURES = false;
 }

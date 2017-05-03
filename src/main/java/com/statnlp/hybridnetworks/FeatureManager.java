@@ -21,6 +21,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -314,9 +315,42 @@ public abstract class FeatureManager implements Serializable{
 	 * @return
 	 */
 	protected abstract FeatureArray extract_helper(Network network, int parent_k, int[] children_k);
+
+	/**
+	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate
+	 * FeatureArray objects are created with the exact same sequence of featureIndices.<br>
+	 * The caching can be enabled by setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.<br>
+	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
+	 * @param featureIndices The feature indices for this FeatureArray object
+	 * @return
+	 */
+	protected FeatureArray createFeatureArray(Network network, Collection<Integer> featureIndices){
+		return createFeatureArray(network, featureIndices, null);
+	}
 	
 	/**
-	 * Creates a FeatureArray object based on the feature indices given, caching the int[] array when possible.
+	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate
+	 * FeatureArray objects are created with the exact same sequence of featureIndices.<br>
+	 * The caching can be enabled by setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.<br>
+	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
+	 * @param featureIndices The feature indices for this FeatureArray object
+	 * @param next Another FeatureArray object to be chained after the newly created FeatureArray object.
+	 * @return
+	 */
+	protected FeatureArray createFeatureArray(Network network, Collection<Integer> featureIndices, FeatureArray next){
+		int[] features = new int[featureIndices.size()];
+		int i = 0;
+		for(Iterator<Integer> iter = featureIndices.iterator(); iter.hasNext();){
+			features[i] = iter.next();
+			i += 1;
+		}
+		return createFeatureArray(network, features, next);
+	}
+	
+	/**
+	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate
+	 * FeatureArray objects are created with the exact same sequence of featureIndices.<br>
+	 * The caching can be enabled by setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.<br>
 	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
 	 * @param featureIndices The feature indices for this FeatureArray object
 	 * @return
@@ -330,7 +364,9 @@ public abstract class FeatureManager implements Serializable{
 	}
 	
 	/**
-	 * Creates a FeatureArray object based on the feature indices given.
+	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate
+	 * FeatureArray objects are created with the exact same sequence of featureIndices.<br>
+	 * The caching can be enabled by setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.<br>
 	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
 	 * @param featureIndices The feature indices for this FeatureArray object
 	 * @param next Another FeatureArray object to be chained after the newly created FeatureArray object.

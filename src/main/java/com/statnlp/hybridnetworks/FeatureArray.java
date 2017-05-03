@@ -47,7 +47,9 @@ public class FeatureArray implements Serializable{
 	private FeatureArray _next;
 
 	/**
-	 * Merges the features in <code>fs</code> and in <code>next</code>
+	 * Merges the features in <code>fs</code> and in <code>next</code><br>
+	 * <strong>IMPORTANT NOTE:</strong> to use caching, please use {@link FeatureManager#createFeatureArray(Network, int[], FeatureArray)} instead,
+	 * combined with setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.
 	 * @param fs
 	 * @param next
 	 */
@@ -57,7 +59,9 @@ public class FeatureArray implements Serializable{
 	}
 
 	/**
-	 * Construct a feature array containing the features identified by their indices
+	 * Construct a feature array containing the features identified by their indices<br>
+	 * <strong>IMPORTANT NOTE:</strong> to use caching, please use {@link FeatureManager#createFeatureArray(Network, int[])} instead,
+	 * combined with setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.
 	 * @param fs
 	 */
 	public FeatureArray(int[] fs) {
@@ -66,11 +70,26 @@ public class FeatureArray implements Serializable{
 		this._isLocal = false;
 	}
 
+	/**
+	 * Creates a new FeatureArray based on the feature indices in the given FeatureBox object.<br>
+	 * If you do not have FeatureBox object, perhaps you might want to check {@link #FeatureArray(int[])}.
+	 * @param fb
+	 * @see #FeatureArray(int[])
+	 * @see #FeatureArray(int[], FeatureArray)
+	 */
 	public FeatureArray(FeatureBox fb) {
 		this(fb, null);
 		this._isLocal = false;
 	}
 
+	/**
+	 * Creates a new FeatureArray based on the feature indices in the given FeatureBox object.<br>
+	 * If you do not have FeatureBox object, perhaps you might want to check {@link #FeatureArray(int[])}.
+	 * @param fb
+	 * @param next
+	 * @see #FeatureArray(int[])
+	 * @see #FeatureArray(int[], FeatureArray)
+	 */
 	public FeatureArray(FeatureBox fb, FeatureArray next) {
 		this._fb = fb;
 		this._next = next;
