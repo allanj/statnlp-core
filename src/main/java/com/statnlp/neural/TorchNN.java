@@ -31,7 +31,6 @@ public class TorchNN extends AbstractNN {
 	private DoubleTensor params, gradParams;
 	private int numNetworks, totalOutputDim, vocabSize;
 	private List<Integer> outputDimList;
-	private double[][][] grad2DBuffer;
 	private DoubleTensor[] outputTensorBuffer;
 	private DoubleTensor[] gradTensorBuffer;
 
@@ -95,12 +94,10 @@ public class TorchNN extends AbstractNN {
         }
         
         // 2D buffer array to be used by backward()
-//        this.grad2DBuffer = new double[this.numNetworks][][];
         this.outputTensorBuffer = new DoubleTensor[this.numNetworks];
         this.gradTensorBuffer = new DoubleTensor[this.numNetworks];
         for (int i = 0; i < this.gradTensorBuffer.length; i++) {
         	int outputDim = outputDimList.get(i);
-//        	this.grad2DBuffer[i] = new double[this.vocabSize][outputDim];
         	this.outputTensorBuffer[i] = new DoubleTensor(this.vocabSize, outputDim);
         	this.gradTensorBuffer[i] = new DoubleTensor(this.vocabSize, outputDim);
         }
@@ -114,7 +111,6 @@ public class TorchNN extends AbstractNN {
         		args[i+1] = this.gradTensorBuffer[i-this.numNetworks];
         	}
         }
-//        Object[] args = new Object[]{config};
         Class<?>[] retTypes;
         if (optimizeNeural) {
         	retTypes = new Class[]{DoubleTensor.class,DoubleTensor.class};
@@ -145,11 +141,7 @@ public class TorchNN extends AbstractNN {
 		}
 		
 		Object[] args = new Object[]{training};
-//        Class<?>[] retTypes = new Class[this.numNetworks];
 		Class<?>[] retTypes = new Class[0];
-//    	for (int i = 0; i < this.numNetworks; i++) {
-//    		retTypes[i] = DoubleTensor.class;
-//    	}
 		LuaFunctionHelper.execLuaFunction(this.L, "fwd_MLP", args, retTypes);
 		
 		// copy forward result
@@ -157,14 +149,8 @@ public class TorchNN extends AbstractNN {
 		int cnt = 0;
 		for (int i = 0; i < this.numNetworks; i++) {
 			int len = this.vocabSize*this.outputDimList.get(i);
-//			DoubleTensor t = (DoubleTensor) outputs[i];
 			DoubleTensor t = outputTensorBuffer[i];
 			double[] tmp = t.storage().getRawData().getDoubleArray(0, len);
-//    		Iterator<Object> iter = ((DoubleTensor) outputs[i]).iterator();
-//    		int cnt = 0;
-//    		while (iter.hasNext()) {
-//    			nnExternalWeights[cnt++] = (double) iter.next();
-//    		}
 			System.arraycopy(tmp, 0, nnExternalWeights, cnt, len);
 			cnt += len;
 		}
@@ -174,7 +160,6 @@ public class TorchNN extends AbstractNN {
 	public void backwardNetwork() {
 		double[] grad = controller.getExternalNeuralGradients();
 		
-//		Object[] args = new Object[this.numNetworks];
 		Object[] args = new Object[0];
 		int cnt = 0;
 		for (int i = 0; i < this.numNetworks; i++) {
@@ -182,25 +167,11 @@ public class TorchNN extends AbstractNN {
 			int len = this.vocabSize*outputDim;
 			double[] tmp = Arrays.copyOfRange(grad, cnt, cnt+len);
 			gradTensorBuffer[i].storage().copy(tmp);
-//			double[][] grad2D = grad2DBuffer[i];
-//			for (int j = 0; j < this.vocabSize; j++) { // from flat array to 2D
-//				for (int k = 0; k < outputDim; k++) {
-//					grad2D[j][k] = grad[cnt++];
-//				}
-//			}
-//    		args[i] = grad2D;
-//			args[i] = gradTensorBuffer[i];
 		}
 		Class<?>[] retTypes = new Class[0];
 		LuaFunctionHelper.execLuaFunction(this.L, "bwd_MLP", args, retTypes);
 		
 		if(optimizeNeural) { // copy gradParams computed by Torch
-//			double[] counts = new double[(int) this.gradParams.nElement()];
-//    		Iterator<Object> iter = this.gradParams.iterator();
-//    		cnt = 0;
-//    		while (iter.hasNext()) {
-//    			counts[cnt++] = (double) iter.next();
-//    		}
 			controller.setInternalNeuralGradients(this.gradParams.storage().getRawData().getDoubleArray(0, (int) this.gradParams.nElement()));
 		}
 	}
