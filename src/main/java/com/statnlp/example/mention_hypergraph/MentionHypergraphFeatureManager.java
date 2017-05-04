@@ -82,7 +82,7 @@ public class MentionHypergraphFeatureManager extends FeatureManager {
 			NodeType childNodeType = NodeType.values()[network.getNodeArray(child_k)[1]];
 			
 			if(nodeType == NodeType.T_NODE && childNodeType == NodeType.I_NODE){
-				features.add(param_g.toFeature(FeatureType.MENTION_PENALTY.name(), "MP", "MP"));
+				features.add(param_g.toFeature(network, FeatureType.MENTION_PENALTY.name(), "MP", "MP"));
 			}
 			
 			String indicator = nodeType+" "+childNodeType;
@@ -92,14 +92,14 @@ public class MentionHypergraphFeatureManager extends FeatureManager {
 				if(idx >= 0 && idx < size){
 					word = words[idx].form;
 				}
-				features.add(param_g.toFeature(indicator+FeatureType.WORD.name()+(idx-pos), labelId, word));
+				features.add(param_g.toFeature(network, indicator+FeatureType.WORD.name()+(idx-pos), labelId, word));
 			}
 			for(int idx=pos-postagHalfWindowSize; idx<=pos+postagHalfWindowSize; idx++){
 				String postag = "";
 				if(idx >= 0 && idx < size){
 					postag = posTags[idx];
 				}
-				features.add(param_g.toFeature(indicator+FeatureType.POS_TAG.name()+(idx-pos), labelId, postag));
+				features.add(param_g.toFeature(network, indicator+FeatureType.POS_TAG.name()+(idx-pos), labelId, postag));
 			}
 			for(int ngramSize=wordNgramMinSize; ngramSize<=wordNgramMaxSize; ngramSize++){
 				for(int relPos=0; relPos<ngramSize; relPos++){
@@ -110,7 +110,7 @@ public class MentionHypergraphFeatureManager extends FeatureManager {
 							ngram += words[idx];
 						}
 					}
-					features.add(param_g.toFeature(indicator+FeatureType.WORD_NGRAM+" "+ngramSize+" "+relPos, labelId, ngram));
+					features.add(param_g.toFeature(network, indicator+FeatureType.WORD_NGRAM+" "+ngramSize+" "+relPos, labelId, ngram));
 				}
 			}
 			for(int ngramSize=postagNgramMinSize; ngramSize<=postagNgramMaxSize; ngramSize++){
@@ -122,7 +122,7 @@ public class MentionHypergraphFeatureManager extends FeatureManager {
 							ngram += posTags[idx];
 						}
 					}
-					features.add(param_g.toFeature(indicator+FeatureType.POS_TAG_NGRAM+" "+ngramSize+" "+relPos, labelId, ngram));
+					features.add(param_g.toFeature(network, indicator+FeatureType.POS_TAG_NGRAM+" "+ngramSize+" "+relPos, labelId, ngram));
 				}
 			}
 			List<String> bowList = new ArrayList<String>();
@@ -137,7 +137,7 @@ public class MentionHypergraphFeatureManager extends FeatureManager {
 				if(bow.length() > 0) bow += " ";
 				bow += word;
 			}
-			features.add(param_g.toFeature(indicator+FeatureType.BOW.name(), labelId, bow));
+			features.add(param_g.toFeature(network, indicator+FeatureType.BOW.name(), labelId, bow));
 			
 			for(FeatureType featureType: FeatureType.values()){
 				switch(featureType){
@@ -154,7 +154,7 @@ public class MentionHypergraphFeatureManager extends FeatureManager {
 				case ROMAN_NUMBER:
 				case SINGLE_CHARACTER:
 				case URL:
-					features.add(param_g.toFeature(indicator+featureType.name(), labelId, curWord.getAttribute(featureType.name())));
+					features.add(param_g.toFeature(network, indicator+featureType.name(), labelId, curWord.getAttribute(featureType.name())));
 				default:
 					break;
 				}
