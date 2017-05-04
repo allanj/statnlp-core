@@ -1,22 +1,22 @@
-package com.statnlp.example.linear_ie;
+package com.statnlp.example.mention_hypergraph;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.TableLookupNetwork;
 
-public class LinearIENetwork extends TableLookupNetwork {
+public class MentionHypergraphNetwork extends TableLookupNetwork {
 
 	private static final long serialVersionUID = 7173683038115335356L;
 	
 	public int numNodes = -1;
 
-	public LinearIENetwork() {}
+	public MentionHypergraphNetwork() {}
 
-	public LinearIENetwork(int networkId, Instance inst, LocalNetworkParam param) {
+	public MentionHypergraphNetwork(int networkId, Instance inst, LocalNetworkParam param) {
 		super(networkId, inst, param);
 	}
 
-	public LinearIENetwork(int networkId, Instance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes) {
+	public MentionHypergraphNetwork(int networkId, Instance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes) {
 		super(networkId, inst, nodes, children, param);
 		this.numNodes = numNodes;
 		this.isVisible = new boolean[numNodes];

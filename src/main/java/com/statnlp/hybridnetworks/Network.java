@@ -59,12 +59,6 @@ public abstract class Network implements Serializable, HyperGraph{
 	 * This is done to avoid reallocating a new array for each network
 	 */
 	protected static int[][][] maxPathsSharedArrays = new int[NetworkConfig.NUM_THREADS][][];
-	/** The working array for each thread for calculating max k  scores */
-	protected static double[][][] maxKSharedArray = new double[NetworkConfig.NUM_THREADS][][];
-	/** The working array for each thread for storing max k  paths (for backtracking) */
-	protected static int[][][][] maxKPathsSharedArrays = new int[NetworkConfig.NUM_THREADS][][][];
-	/** The working array for each thread for storing max k  paths (for backtracking) */
-	protected static int[][][][] maxKPathsListBestSharedArrays = new int[NetworkConfig.NUM_THREADS][][][];
 
 	protected static NodeHypothesis[][] hypothesisSharedArray = new NodeHypothesis[NetworkConfig.NUM_THREADS][];
 	
@@ -173,24 +167,6 @@ public abstract class Network implements Serializable, HyperGraph{
 		return maxPathsSharedArrays[this._threadId];
 	}
 	
-	protected int[][][] getMaxKPathSharedArray(){
-		if(maxKPathsSharedArrays[this._threadId] == null || this.countNodes() > maxKPathsSharedArrays[this._threadId].length)
-			maxKPathsSharedArrays[this._threadId] = new int[this.countNodes()][][];
-		return maxKPathsSharedArrays[this._threadId];
-	}
-	
-	protected double[][] getMaxKSharedArray(){
-		if(maxKSharedArray[this._threadId] == null || this.countNodes() > maxKSharedArray[this._threadId].length)
-			maxKSharedArray[this._threadId] = new double[this.countNodes()][];
-		return maxKSharedArray[this._threadId];
-	}
-	
-	protected int[][][] getMaxKPathListBestSharedArray(){
-		if(maxKPathsListBestSharedArrays[this._threadId] == null || this.countNodes() > maxKPathsListBestSharedArrays[this._threadId].length)
-			maxKPathsListBestSharedArrays[this._threadId] = new int[this.countNodes()][][];
-		return maxKPathsListBestSharedArrays[this._threadId];
-	}
-		
 	protected NodeHypothesis[] getHypothesisSharedArray(){
 		if(hypothesisSharedArray[this._threadId] == null || this.countNodes() > hypothesisSharedArray[this._threadId].length){
 			hypothesisSharedArray[this._threadId] = new NodeHypothesis[this.countNodes()];
@@ -441,10 +417,6 @@ public abstract class Network implements Serializable, HyperGraph{
 		for(int k=this.countNodes()-1; k>=0; k--){
 			this.outside(k);
 		}
-	}
-	
-	public void updateGradient(double[] gradientArray){
-		
 	}
 	
 	/**

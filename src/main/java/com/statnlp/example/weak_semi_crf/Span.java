@@ -1,18 +1,17 @@
-package com.statnlp.example.linear_ie;
+package com.statnlp.example.weak_semi_crf;
 
-public class Span implements Comparable<Span>{
+import java.io.Serializable;
+
+public class Span implements Comparable<Span>, Serializable{
 	
+	private static final long serialVersionUID = 1849557517361796614L;
 	public Label label;
 	public int start;
 	public int end;
-	public int headStart;
-	public int headEnd;
 
-	public Span(int start, int end, int headStart, int headEnd, Label label) {
+	public Span(int start, int end, Label label) {
 		this.start = start;
 		this.end = end;
-		this.headStart = headStart;
-		this.headEnd = headEnd;
 		this.label = label;
 	}
 	
@@ -21,8 +20,6 @@ public class Span implements Comparable<Span>{
 			Span s = (Span)o;
 			if(start != s.start) return false;
 			if(end != s.end) return false;
-//			if(headStart != s.headStart) return false;
-//			if(headEnd != s.headEnd) return false;
 			return label.equals(s.label);
 		}
 		return false;
@@ -38,7 +35,7 @@ public class Span implements Comparable<Span>{
 	}
 	
 	public String toString(){
-		return String.format("%d,%d,%d,%d %s", start, end, headStart, headEnd, label);
+		return String.format("%d,%d %s", start, end, label);
 	}
 
 }

@@ -13,21 +13,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.example.linear_ie.AttributedWord;
-import com.statnlp.example.linear_ie.Label;
-import com.statnlp.example.linear_ie.LinearIEFeatureManager;
-import com.statnlp.example.linear_ie.LinearIEInstance;
-import com.statnlp.example.linear_ie.LinearIENetworkCompiler;
-import com.statnlp.example.linear_ie.Span;
-import com.statnlp.example.linear_ie.LinearIEFeatureManager.FeatureType;
-import com.statnlp.example.linear_ie.LinearIEInstance.WordsAndTags;
+import com.statnlp.example.mention_hypergraph.AttributedWord;
+import com.statnlp.example.mention_hypergraph.Label;
+import com.statnlp.example.mention_hypergraph.MentionHypergraphFeatureManager;
+import com.statnlp.example.mention_hypergraph.MentionHypergraphInstance;
+import com.statnlp.example.mention_hypergraph.MentionHypergraphNetworkCompiler;
+import com.statnlp.example.mention_hypergraph.Span;
+import com.statnlp.example.mention_hypergraph.MentionHypergraphFeatureManager.FeatureType;
+import com.statnlp.example.mention_hypergraph.MentionHypergraphInstance.WordsAndTags;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GenerativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkModel;
 
-public class LinearIEMain {
+public class MentionHypergraphMain {
 	
 	public static ArrayList<Label> labels;
 	
@@ -37,16 +37,16 @@ public class LinearIEMain {
 		String train_filename = "data/ACE2004/data/English/mention-standard/FINE_TYPE/train.data.500";
 		String test_filename = "data/ACE2004/data/English/mention-standard/FINE_TYPE/test.data";
 		
-		LinearIEInstance[] trainInstances = readData(train_filename, true, true);
-		LinearIEInstance[] testInstances = readData(test_filename, true, false);
+		MentionHypergraphInstance[] trainInstances = readData(train_filename, true, true);
+		MentionHypergraphInstance[] testInstances = readData(test_filename, true, false);
 		
 		labels = new ArrayList<Label>();
 		labels.addAll(Label.LABELS.values());
 		int maxSize = 0;
-		for(LinearIEInstance instance: trainInstances){
+		for(MentionHypergraphInstance instance: trainInstances){
 			maxSize = Math.max(maxSize, instance.size());
 		}
-		for(LinearIEInstance instance: testInstances){
+		for(MentionHypergraphInstance instance: testInstances){
 			maxSize = Math.max(maxSize, instance.size());
 		}
 		
@@ -62,9 +62,9 @@ public class LinearIEMain {
 		
 		System.err.println("Read.."+size+" instances.");
 		
-		LinearIEFeatureManager fm = new LinearIEFeatureManager(new GlobalNetworkParam());
+		MentionHypergraphFeatureManager fm = new MentionHypergraphFeatureManager(new GlobalNetworkParam());
 		
-		LinearIENetworkCompiler compiler = new LinearIENetworkCompiler(labels.toArray(new Label[labels.size()]), maxSize);
+		MentionHypergraphNetworkCompiler compiler = new MentionHypergraphNetworkCompiler(labels.toArray(new Label[labels.size()]), maxSize);
 		
 		NetworkModel model = NetworkConfig.TRAIN_MODE_IS_GENERATIVE ? GenerativeNetworkModel.create(fm, compiler) : DiscriminativeNetworkModel.create(fm, compiler);
 		
@@ -78,7 +78,7 @@ public class LinearIEMain {
 				ois.close();
 				Field _fm = NetworkModel.class.getDeclaredField("_fm");
 				_fm.setAccessible(true);
-				fm = (LinearIEFeatureManager)_fm.get(model);
+				fm = (MentionHypergraphFeatureManager)_fm.get(model);
 				long endTime = System.currentTimeMillis();
 				System.out.printf("Done in %.3fs\n", (endTime-startTime)/1000.0);
 			} else {
@@ -107,7 +107,7 @@ public class LinearIEMain {
 			int totalGold = 0;
 			int totalPred = 0;
 			for(Instance inst: predictions){
-				LinearIEInstance instance = (LinearIEInstance)inst;
+				MentionHypergraphInstance instance = (MentionHypergraphInstance)inst;
 				System.out.println("Words:");
 				System.out.println(toString(instance.input.words));
 				System.out.println("Gold:");
@@ -196,14 +196,14 @@ public class LinearIEMain {
 	 * @return
 	 * @throws IOException
 	 */
-	private static LinearIEInstance[] readData(String fileName, boolean withLabels, boolean isLabeled) throws IOException{
+	private static MentionHypergraphInstance[] readData(String fileName, boolean withLabels, boolean isLabeled) throws IOException{
 		InputStreamReader isr = new InputStreamReader(new FileInputStream(fileName), "UTF-8");
 		BufferedReader br = new BufferedReader(isr);
-		ArrayList<LinearIEInstance> result = new ArrayList<LinearIEInstance>();
+		ArrayList<MentionHypergraphInstance> result = new ArrayList<MentionHypergraphInstance>();
 		int instanceId = 1;
 		while(br.ready()){
 			String words = br.readLine();
-			LinearIEInstance instance = new LinearIEInstance(instanceId++, 1.0);
+			MentionHypergraphInstance instance = new MentionHypergraphInstance(instanceId++, 1.0);
 //			instance.words = markWords(words.trim().split(" "));
 			String posTags = br.readLine();
 //			instance.posTags = posTags.trim().split(" ");
@@ -233,7 +233,7 @@ public class LinearIEMain {
 			result.add(instance);
 		}
 		br.close();
-		return result.toArray(new LinearIEInstance[result.size()]);
+		return result.toArray(new MentionHypergraphInstance[result.size()]);
 	}
 	
 	private static AttributedWord[] markWords(String[] words){
