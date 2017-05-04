@@ -54,12 +54,12 @@ public class SemiCRFMain {
 		}
 		if(limitNumInstances){
 			int limit = 100;
-			WeakSemiCRFInstance[] tmp = new WeakSemiCRFInstance[limit];
+			SemiCRFInstance[] tmp = new SemiCRFInstance[limit];
 			for(int i=0; i<limit; i++){
 				tmp[i] = trainInstances[i];
 			}
 			trainInstances = tmp;
-			tmp = new WeakSemiCRFInstance[limit];
+			tmp = new SemiCRFInstance[limit];
 			for(int i=0; i<limit; i++){
 				tmp[i] = testInstances[i];
 			}

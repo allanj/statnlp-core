@@ -187,4 +187,50 @@ public class SemiCRFNetworkCompiler extends NetworkCompiler {
 		return result;
 	}
 
+	@Override
+	public SemiCRFInstance decompile(Network net, int k) {
+		SemiCRFNetwork network = (SemiCRFNetwork)net;
+		SemiCRFInstance result = (SemiCRFInstance)network.getInstance().duplicate();
+		List<List<Span>> topKPredictions = new ArrayList<List<Span>>();
+		for(int kth=0; kth<k; kth++){
+			List<Span> prediction = new ArrayList<Span>();
+			int node_k = network.countNodes()-1;
+			int the_kth = kth;
+			while(node_k > 0){
+				int[] children_k = network.getMaxTopKPath(node_k, the_kth);
+				try{
+					the_kth = network.getMaxTopKBestListPath(node_k, the_kth)[0];
+				} catch (NullPointerException e){
+					kth = k;
+					break;
+				}
+				int[] child_arr = network.getNodeArray(children_k[0]);
+				int end = child_arr[0];
+				NodeType nodeType = NodeType.values()[child_arr[1]];
+				if(nodeType == NodeType.LEAF){
+					break;
+				} else {
+					assert nodeType == NodeType.END;
+				}
+				int labelId = child_arr[2];
+				children_k = network.getMaxTopKPath(children_k[0], the_kth);
+				try{
+					the_kth = network.getMaxTopKBestListPath(children_k[0], the_kth)[0];
+				} catch (NullPointerException e){
+					kth = k;
+					break;
+				}
+				child_arr = network.getNodeArray(children_k[0]);
+				int start = child_arr[0];
+				prediction.add(new Span(start, end+1, Label.get(labelId)));
+				node_k = children_k[0];
+			}
+			Collections.sort(prediction);
+			topKPredictions.add(prediction);
+		}
+		result.setPrediction(topKPredictions.get(0));
+		result.setTopKPredictions(topKPredictions);
+		return result;
+	}
+
 }
