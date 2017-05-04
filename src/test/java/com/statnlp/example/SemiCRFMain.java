@@ -29,11 +29,12 @@ import com.statnlp.hybridnetworks.NetworkModel;
 public class SemiCRFMain {
 	
 	public static boolean COMBINE_OUTSIDE_CHARS = true;
-	public static boolean USE_SINGLE_OUTSIDE_TAG = false;
+	public static boolean USE_SINGLE_OUTSIDE_TAG = true;
 	
 	public static void main(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException, NoSuchFieldException, SecurityException, InterruptedException, IllegalArgumentException, IllegalAccessException{
 		boolean serializeModel = true;
 		boolean useCoNLLData = false;
+		boolean limitNumInstances = true;
 		
 		String train_filename;
 		String test_filename;
@@ -41,8 +42,8 @@ public class SemiCRFMain {
 		SemiCRFInstance[] testInstances;
 		
 		if(useCoNLLData){
-			train_filename = "data/SMSNP/SMSNP.conll.train.5";
-			test_filename = "data/SMSNP/SMSNP.conll.train.5";
+			train_filename = "data/SMSNP/SMSNP.conll.train";
+			test_filename = "data/SMSNP/SMSNP.conll.test";
 			trainInstances = readCoNLLData(train_filename, true);
 			testInstances = readCoNLLData(test_filename, false);
 		} else {
@@ -50,6 +51,19 @@ public class SemiCRFMain {
 			test_filename = "data/SMSNP/SMSNP.test";
 			trainInstances = readData(train_filename, true);
 			testInstances = readData(test_filename, false);
+		}
+		if(limitNumInstances){
+			int limit = 100;
+			WeakSemiCRFInstance[] tmp = new WeakSemiCRFInstance[limit];
+			for(int i=0; i<limit; i++){
+				tmp[i] = trainInstances[i];
+			}
+			trainInstances = tmp;
+			tmp = new WeakSemiCRFInstance[limit];
+			for(int i=0; i<limit; i++){
+				tmp[i] = testInstances[i];
+			}
+			testInstances = tmp;
 		}
 		
 		int maxSize = 0;
@@ -69,6 +83,7 @@ public class SemiCRFMain {
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
 		NetworkConfig.OBJTOL = 1e-2;
 		NetworkConfig.NUM_THREADS = 4;
+		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
 		
 		int numIterations = 5000;
 		
@@ -111,7 +126,8 @@ public class SemiCRFMain {
 			model.train(trainInstances, numIterations);
 		}
 		
-		Instance[] predictions = model.decode(testInstances);
+		int k = 200;
+		Instance[] predictions = model.decode(testInstances, k);
 		int corr = 0;
 		int totalGold = 0;
 		int totalPred = 0;

@@ -63,7 +63,7 @@ public class SemiCRFFeatureManager extends FeatureManager {
 		int childLabelId = child_arr[2];
 
 		GlobalNetworkParam param_g = this._param_g;
-		int bigramFeature = param_g.toFeature(FeatureType.BIGRAM.name(), parentLabelId+"", parentLabelId+" "+childLabelId);
+		int bigramFeature = param_g.toFeature(network, FeatureType.BIGRAM.name(), parentLabelId+"", parentLabelId+" "+childLabelId);
 		if(parentType == NodeType.ROOT || childType == NodeType.LEAF){
 			return new FeatureArray(new int[]{
 					bigramFeature,
@@ -72,21 +72,21 @@ public class SemiCRFFeatureManager extends FeatureManager {
 		
 		if(CHEAT){
 			int instanceId = Math.abs(instance.getInstanceId());
-			int cheatFeature = param_g.toFeature(FeatureType.CHEAT.name(), parentLabelId+"", instanceId+" "+parentPos+" "+childPos+" "+parentLabelId+" "+childLabelId);
+			int cheatFeature = param_g.toFeature(network, FeatureType.CHEAT.name(), parentLabelId+"", instanceId+" "+parentPos+" "+childPos+" "+parentLabelId+" "+childLabelId);
 			return new FeatureArray(new int[]{cheatFeature});
 		}
 		
 		String input = instance.input;
 		String[] inputArr = instance.getInputAsArray();
 		int length = input.length();
-		int isSpaceFeature = param_g.toFeature(FeatureType.ENDS_WITH_SPACE.name(), parentLabelId+"", (inputArr[parentPos].equals(" "))+"");
-		int startCharFeature = param_g.toFeature(FeatureType.START_CHAR.name(), parentLabelId+"", inputArr[childPos]);
-		int endCharFeature = param_g.toFeature(FeatureType.END_CHAR.name(), parentLabelId+"", inputArr[parentPos]);
-		int segmentFeature = param_g.toFeature(FeatureType.SEGMENT.name(), parentLabelId+"", input.substring(childPos, parentPos));
+		int isSpaceFeature = param_g.toFeature(network, FeatureType.ENDS_WITH_SPACE.name(), parentLabelId+"", (inputArr[parentPos].equals(" "))+"");
+		int startCharFeature = param_g.toFeature(network, FeatureType.START_CHAR.name(), parentLabelId+"", inputArr[childPos]);
+		int endCharFeature = param_g.toFeature(network, FeatureType.END_CHAR.name(), parentLabelId+"", inputArr[parentPos]);
+		int segmentFeature = param_g.toFeature(network, FeatureType.SEGMENT.name(), parentLabelId+"", input.substring(childPos, parentPos));
 		
 		String[] words = input.split(" ");
 		int numSpaces = words.length-1;
-		int numSpacesFeature = param_g.toFeature(FeatureType.NUM_SPACES.name(), parentLabelId+"", numSpaces+"");
+		int numSpacesFeature = param_g.toFeature(network, FeatureType.NUM_SPACES.name(), parentLabelId+"", numSpaces+"");
 		
 		int prevSpaceIdx = input.lastIndexOf(' ', childPos-1);
 		if(prevSpaceIdx == -1){
@@ -96,8 +96,8 @@ public class SemiCRFFeatureManager extends FeatureManager {
 		if(firstSpaceIdx == -1){
 			firstSpaceIdx = prevSpaceIdx;
 		}
-		int prevWordFeature = param_g.toFeature(FeatureType.PREV_WORD.name(), parentLabelId+"", input.substring(prevSpaceIdx, childPos));
-		int startBoundaryWordFeature = param_g.toFeature(FeatureType.START_BOUNDARY_WORD.name(), parentLabelId+"", input.substring(prevSpaceIdx, firstSpaceIdx));
+		int prevWordFeature = param_g.toFeature(network, FeatureType.PREV_WORD.name(), parentLabelId+"", input.substring(prevSpaceIdx, childPos));
+		int startBoundaryWordFeature = param_g.toFeature(network, FeatureType.START_BOUNDARY_WORD.name(), parentLabelId+"", input.substring(prevSpaceIdx, firstSpaceIdx));
 		
 		int nextSpaceIdx = input.indexOf(' ', parentPos+1);
 		if(nextSpaceIdx == -1){
@@ -107,8 +107,8 @@ public class SemiCRFFeatureManager extends FeatureManager {
 		if(lastSpaceIdx == -1){
 			lastSpaceIdx = nextSpaceIdx;
 		}
-		int nextWordFeature = param_g.toFeature(FeatureType.NEXT_WORD.name(), parentLabelId+"", input.substring(parentPos+1, nextSpaceIdx));
-		int endBoundaryWordFeature = param_g.toFeature(FeatureType.END_BOUNDARY_WORD.name(), parentLabelId+"", input.substring(lastSpaceIdx, nextSpaceIdx));
+		int nextWordFeature = param_g.toFeature(network, FeatureType.NEXT_WORD.name(), parentLabelId+"", input.substring(parentPos+1, nextSpaceIdx));
+		int endBoundaryWordFeature = param_g.toFeature(network, FeatureType.END_BOUNDARY_WORD.name(), parentLabelId+"", input.substring(lastSpaceIdx, nextSpaceIdx));
 		
 		ArrayList<Integer> features = new ArrayList<Integer>();
 		features.add(bigramFeature);
@@ -124,8 +124,8 @@ public class SemiCRFFeatureManager extends FeatureManager {
 		
 		int[] wordFeatures = new int[2*words.length];
 		for(int i=0; i<words.length; i++){
-			wordFeatures[i] = param_g.toFeature(FeatureType.WORDS.name()+i, parentLabelId+"", words[i]);
-			wordFeatures[2*words.length-i-1] = param_g.toFeature(FeatureType.WORDS.name()+"-"+i, parentLabelId+"", words[i]);
+			wordFeatures[i] = param_g.toFeature(network, FeatureType.WORDS.name()+i, parentLabelId+"", words[i]);
+			wordFeatures[2*words.length-i-1] = param_g.toFeature(network, FeatureType.WORDS.name()+"-"+i, parentLabelId+"", words[i]);
 		}
 		for(int feature: wordFeatures){
 			features.add(feature);
@@ -138,12 +138,12 @@ public class SemiCRFFeatureManager extends FeatureManager {
 			if(parentPos+i+1 < length){
 				curInput = inputArr[parentPos+i+1];
 			}
-			unigramFeatures[i] = param_g.toFeature(FeatureType.UNIGRAM+":"+i, parentLabelId+"", curInput);
+			unigramFeatures[i] = param_g.toFeature(network, FeatureType.UNIGRAM+":"+i, parentLabelId+"", curInput);
 			curInput = "";
 			if(childPos-i-1 >= 0){
 				curInput = inputArr[childPos-i-1];
 			}
-			unigramFeatures[unigramFeatureSize-i-1] = param_g.toFeature(FeatureType.UNIGRAM+":-"+i, parentLabelId+"", curInput);
+			unigramFeatures[unigramFeatureSize-i-1] = param_g.toFeature(network, FeatureType.UNIGRAM+":-"+i, parentLabelId+"", curInput);
 		}
 		for(int feature: unigramFeatures){
 			features.add(feature);
@@ -156,12 +156,12 @@ public class SemiCRFFeatureManager extends FeatureManager {
 			if(parentPos+i+1< length){
 				curInput = input.substring(parentPos, parentPos+i+1);
 			}
-			substringFeatures[i] = param_g.toFeature(FeatureType.SUBSTRING+":"+i, parentLabelId+"", curInput);
+			substringFeatures[i] = param_g.toFeature(network, FeatureType.SUBSTRING+":"+i, parentLabelId+"", curInput);
 			curInput = "";
 			if(childPos-i-1 >= 0){
 				curInput = input.substring(childPos-i-1, childPos);
 			}
-			substringFeatures[unigramFeatureSize-i-1] = param_g.toFeature(FeatureType.SUBSTRING+":-"+i, parentLabelId+"", curInput);
+			substringFeatures[unigramFeatureSize-i-1] = param_g.toFeature(network, FeatureType.SUBSTRING+":-"+i, parentLabelId+"", curInput);
 		}
 		for(int feature: substringFeatures){
 			features.add(feature);
