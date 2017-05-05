@@ -1,6 +1,5 @@
 package com.statnlp.example.linear_crf;
 
-import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
@@ -43,21 +42,6 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 		//WIDTH = instance.Length * span_width;
 	}
 	
-	
-	protected void initTypeColorMapping()
-	{	
-		colorMap[0] = Color.WHITE;
-		colorMap[1] = Color.MAGENTA;
-		colorMap[2] = Color.PINK;
-//		colorMap[3] = Color.YELLOW;
-//		colorMap[4] = Color.GREEN;
-//		colorMap[5] = Color.LIGHT_GRAY;
-//		colorMap[6] = Color.CYAN;
-//		colorMap[7] = Color.WHITE;
-//		colorMap[8] = Color.ORANGE;
-		
-	}
-
 	@Override
 	protected String label_mapping(VNode node) {
 		int[] ids = node.ids;
