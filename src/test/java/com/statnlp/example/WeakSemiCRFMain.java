@@ -16,10 +16,11 @@ import java.util.List;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.example.weak_semi_crf.Label;
+import com.statnlp.example.weak_semi_crf.Span;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFFeatureManager;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFInstance;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler;
-import com.statnlp.example.weak_semi_crf.Span;
+import com.statnlp.example.weak_semi_crf.WeakSemiCRFViewer;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GenerativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
@@ -32,9 +33,10 @@ public class WeakSemiCRFMain {
 	public static boolean USE_SINGLE_OUTSIDE_TAG = true;
 	
 	public static void main(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException, NoSuchFieldException, SecurityException, InterruptedException, IllegalArgumentException, IllegalAccessException{
-		boolean serializeModel = true;
+		boolean serializeModel = false;
 		boolean useCoNLLData = false;
 		boolean limitNumInstances = true;
+		boolean visualize = true;
 		
 		String train_filename;
 		String test_filename;
@@ -98,6 +100,9 @@ public class WeakSemiCRFMain {
 		WeakSemiCRFNetworkCompiler compiler = new WeakSemiCRFNetworkCompiler(labels, maxSize, maxSpan);
 		
 		NetworkModel model = NetworkConfig.TRAIN_MODE_IS_GENERATIVE ? GenerativeNetworkModel.create(fm, compiler) : DiscriminativeNetworkModel.create(fm, compiler);
+		if(visualize){
+			model.visualize(WeakSemiCRFViewer.class, trainInstances);
+		}
 		
 		if(serializeModel){
 			String modelPath = "experiments/SMSNP/SMSNP.allFeatures.alldata.model";

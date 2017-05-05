@@ -33,6 +33,8 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 	static {
 		NetworkIDMapper.setCapacity(new int[]{10000, 10, 100});
 	}
+	
+	public transient WeakSemiCRFViewer viewer;
 
 	public WeakSemiCRFNetworkCompiler(Label[] labels, int maxSize, int maxSegmentLength) {
 		this.labels = labels;
@@ -41,6 +43,11 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		System.out.println(String.format("Max size: %s, Max segment length: %s", maxSize, maxSegmentLength));
 		System.out.println(Arrays.asList(labels));
 		buildUnlabeled();
+		init_visualization();
+	}
+	
+	private void init_visualization(){
+		viewer = new WeakSemiCRFViewer(this, null);
 	}
 
 	@Override
@@ -60,28 +67,48 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 	private WeakSemiCRFNetwork compileLabeled(int networkId, WeakSemiCRFInstance instance, LocalNetworkParam param){
 		WeakSemiCRFNetwork network = new WeakSemiCRFNetwork(networkId, instance, param);
 		
-		int size = instance.size();
 		List<Span> output = instance.getOutput();
 		Collections.sort(output);
+		int size = instance.size();
 		
+		// Add leaf
 		long leaf = toNode_leaf();
 		network.addNode(leaf);
+		
 		long prevNode = leaf;
+		
 		for(Span span: output){
 			int labelId = span.label.id;
 			long begin = toNode_begin(span.start, labelId);
 			long end = toNode_end(span.end-1, labelId);
+			
 			network.addNode(begin);
 			network.addNode(end);
+			for(int i=span.start; i<span.end; i++){
+				for(int j=0; j<Label.LABELS.size(); j++){
+					try{
+						network.addNode(toNode_begin(i, j));
+					} catch (Exception e){}
+					try{
+						network.addNode(toNode_end(i, j));
+					} catch (Exception e){}
+				}
+			}
+			
 			network.addEdge(begin, new long[]{prevNode});
 			network.addEdge(end, new long[]{begin});
+			
 			prevNode = end;
 		}
+		
+		// Add root
 		long root = toNode_root(size-1);
 		network.addNode(root);
 		network.addEdge(root, new long[]{prevNode});
 		
 		network.finalizeNetwork();
+		
+//		viewer.visualizeNetwork(network, null, "Labeled network for network "+networkId);
 		
 		if(DEBUG){
 			System.out.println(network);

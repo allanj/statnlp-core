@@ -22,6 +22,7 @@ import com.statnlp.example.linear_crf.Label;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
 import com.statnlp.example.linear_crf.LinearCRFInstance;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
+import com.statnlp.example.linear_crf.LinearCRFViewer;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
@@ -219,6 +220,7 @@ public class LinearCRFMain {
 		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(new GlobalNetworkParam(optimizerFactory), argsToFeatureManager);
 		
 		NetworkModel model = DiscriminativeNetworkModel.create(fm, compiler, outstream);
+		model.visualize(LinearCRFViewer.class, trainInstances);
 		
 		model.train(trainInstances, numIterations);
 		
@@ -255,7 +257,7 @@ public class LinearCRFMain {
 			}
 			modelTextWriter.close();
 		}
-
+		
 		LinearCRFInstance[] testInstances = readCoNLLData(testPath, true, false);
 //		testInstances = Arrays.copyOf(testInstances, 1);
 		int k = 8;
