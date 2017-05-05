@@ -8,7 +8,7 @@ import java.util.Arrays;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.ui.visualize.type.VisualizeGraph.Itemtype;
 
-public class VNode{
+public class VNode {
 	public static int nodeCount = 0;
 	
 	public static int UNDEFINED = -1;
@@ -56,77 +56,58 @@ public class VNode{
 		return new VNode();
 	}
 	
-	public void setParent(VNode node)
-	{
+	public void setParent(VNode node){
 		this.parent = node;
-		if (this.type == Itemtype.T)
-		{
+		if (this.type == Itemtype.T){
 			this.parent.tag_length++;
 			this.tag_ID = this.parent.tag_length;
 		}
 		
-		if (this.type == Itemtype.I)
-		{
+		if (this.type == Itemtype.I){
 			this.tag_ID = this.parent.tag_ID;
 		}
 	}
 	
 	
-	public void update_bIndex_downwards()
-	{
-		for(HyperLink hyperlink : this.hyperlinks)
-		{
-			for(VLink link : hyperlink.links)
-			{
+	public void update_bIndex_downwards(){
+		for(HyperLink hyperlink : this.hyperlinks){
+			for(VLink link : hyperlink.links){
 				VNode child = link.Dest;
-				if (child.type != Itemtype.X && this.isTypeParentOf(child))
-				{
+				if (child.type != Itemtype.X && this.isTypeParentOf(child)){
 					child.bIndex = this.bIndex;
 					child.update_bIndex_downwards();
 				}
 			}
 		}
 	}
-	/*
-	public void update_tag_length()
-	{
-		if (this.type == Itemtype.E)
-		{
+	
+	public void update_tag_length(){
+		if (this.type == Itemtype.E){
 			update_tag_length_upwards();
 			update_tag_length_downwards();
 		}
-	}*/
+	}
 	
-	public void update_tag_length_upwards()
-	{
-		if (this.parent != null)
-		{
+	public void update_tag_length_upwards(){
+		if (this.parent != null){
 			this.parent.tag_length = this.tag_length;
 			this.parent.update_tag_length_upwards();
 		}
 	}
 	
-	public void update_tag_length_downwards()
-	{
-		for(HyperLink hyperlink : this.hyperlinks)
-		{
-			for(VLink link : hyperlink.links)
-			{
+	public void update_tag_length_downwards(){
+		for(HyperLink hyperlink : this.hyperlinks){
+			for(VLink link : hyperlink.links){
 				VNode child = link.Dest;
-				if (child.type != Itemtype.X && this.isTypeParentOf(child))
-				{
+				if (child.type != Itemtype.X && this.isTypeParentOf(child)){
 					child.tag_length = this.tag_length;
 					child.update_tag_length_downwards();
 				}
 			}
 		}
-		
 	}
 	
-	
-	
-	public VNode getParent()
-	{
+	public VNode getParent(){
 		return this.parent;
 	}
 
@@ -136,8 +117,7 @@ public class VNode{
 
 	public void setType(int typeID) {
 		type = Itemtype.getType(typeID);
-		if (type == Itemtype.X)
-		{
+		if (type == Itemtype.X){
 			this.id = 0;
 			this.bIndex = 0;
 		}
@@ -147,15 +127,12 @@ public class VNode{
 		return type;
 	}
 	
-	public void setbIndex(int bIndex)
-	{
+	public void setbIndex(int bIndex){
 		this.bIndex = bIndex;
 	}
 	
-	public HyperLink getHyperLinkInLinearMode()
-	{
-		if (hyperlinks.isEmpty())
-		{
+	public HyperLink getHyperLinkInLinearMode(){
+		if (hyperlinks.isEmpty()){
 			HyperLink hyperlink = new HyperLink(this);
 			hyperlinks.add(hyperlink);
 		}
@@ -163,48 +140,41 @@ public class VNode{
 		return hyperlinks.get(0);
 	}
 	
-	public int getChildrenCount()
-	{
+	public int getChildrenCount(){
 		int count = 0;
-		for(HyperLink hyperlink : this.hyperlinks)
-		{
+		for(HyperLink hyperlink : this.hyperlinks){
 			count += hyperlink.getLinkCount();
 		}
 		
 		return count;
 	}
 	
-	public void setNodeID(long id)
-	{
+	public void setNodeID(long id){
 		this.id = id;
 	}
 	
-	public void setNodeID(int[] nodeID_arr)
-	{
-		if (nodeID_arr == null)
+	public void setNodeID(int[] nodeID_arr){
+		if (nodeID_arr == null){
 			this.id = UNDEFINED;
-		else
+		} else {
 			this.id = NetworkIDMapper.toHybridNodeID(nodeID_arr);
+		}
 	}
 	
 
 	
-	public boolean isTypeParentOf(VNode node)
-	{
+	public boolean isTypeParentOf(VNode node){
 		return this.type.isTypeParentOf(node.type);
 	}
 	
 	
-	public int[] getNodeIDArray()
-	{
+	public int[] getNodeIDArray(){
 		int srcHeight = this.bIndex;
 		int srcWidth = 255;
 		int tgtHeight = srcHeight;
 		int tgtWidth = UNDEFINED;
-		if (this.tag_length != UNDEFINED)
-		{
-			switch (type)
-			{
+		if (this.tag_length != UNDEFINED){
+			switch (type){
 			case ROOT:
 				tgtWidth = this.tag_length + 4;
 				break;
@@ -225,23 +195,19 @@ public class VNode{
 		}
 		int hybridType = type.ordinal();
 		
-		
 		return new int[]{srcHeight, srcWidth, tgtHeight, tgtWidth, hybridType};
 	}
 	
-	public void updateNodeIDfromNodeIDArray()
-	{
+	public void updateNodeIDfromNodeIDArray(){
 		int[] nodeIDArray = this.getNodeIDArray();
 		this.setNodeID(nodeIDArray);
 		this.label = this.getContentString() + Arrays.toString(nodeIDArray);
 	}
 	
-	public void setContent(String content)
-	{
+	public void setContent(String content){
 		String nodeIDArray = Arrays.toString(this.getNodeIDArray());
 		
-		switch (type)
-		{
+		switch (type){
 		case ROOT:
 		case A:
 		case E:
@@ -261,23 +227,19 @@ public class VNode{
 			break;
 		}
 		
-		
 		this.label = content + " " + nodeIDArray;
 		
 	}
 	
-	public Object getContent()
-	{
+	public Object getContent(){
 		return this.content;
 	}
 	
-	public String getContentString()
-	{
+	public String getContentString(){
 		if (content == null)
 			return "";
 		
-		switch (type)
-		{
+		switch (type){
 		case ROOT:
 		case A:
 		case E:
@@ -300,8 +262,7 @@ public class VNode{
 	}
 	
 	
-	public Color getColor()
-	{
+	public Color getColor(){
 		if (picked)
 			return Color.PINK;
 		
@@ -325,26 +286,19 @@ public class VNode{
 		}
 
 		return Color.WHITE;
-		
 	}
 	
-	public void Pick(boolean picked)
-	{
+	public void Pick(boolean picked){
 		this.picked = picked;
 	}
 	
-	public void beRemoved()
-	{
-		if (this.type == Itemtype.T)
-		{
-			if (this.parent != null)
-			{
+	public void beRemoved(){
+		if (this.type == Itemtype.T){
+			if (this.parent != null){
 				this.parent.tag_length--;
 				this.parent.update_tag_length_downwards();
 				this.parent.update_tag_length_upwards();
 			}
-			
 		}
 	}
-
 }

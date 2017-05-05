@@ -2,9 +2,10 @@ package com.statnlp.ui.visualize.type;
 
 import java.util.ArrayList;
 
-
-public class HyperLink
-{
+/**
+ * Represents a hyperedge in the visualization graph
+ */
+public class HyperLink {
 	public static int hyperEdgeCount = 0;
 	
 	public ArrayList<VLink> links = new ArrayList<VLink>();
@@ -15,22 +16,19 @@ public class HyperLink
 	
 	public int hyperid;
 	
-	public HyperLink(VNode parent, ArrayList<VNode> children)
-	{
+	public HyperLink(VNode parent, ArrayList<VNode> children){
 		this.id = hyperEdgeCount++;
 		this.parent = parent;
 		this.hyperid = parent.hyperlinks.size();
 		parent.hyperlinks.add(this);
 		
-		for(int i = 0; i < children.size(); i++)
-		{
+		for(int i = 0; i < children.size(); i++){
 			links.add(new VLink(this.hyperid, children.get(i), this));
 		}
 		
 	}
 	
-	public HyperLink(VNode parent)
-	{
+	public HyperLink(VNode parent){
 		this.id = hyperEdgeCount++;
 		this.parent = parent;
 		this.hyperid = parent.hyperlinks.size();
@@ -38,46 +36,34 @@ public class HyperLink
 		
 	}
 	
-	public void addLink(VLink link)
-	{
+	public void addLink(VLink link){
 		links.add(link);
 	}
 	
-	public String toString()
-	{
+	public String toString(){
 		StringBuffer sb = new StringBuffer();
 		sb.append("[" + hyperid + "|" + parent.index + "]\n");
-		for(VLink link : links)
-		{
+		for(VLink link : links){
 			sb.append("\t" + link);
 		}
 		
 		return sb.toString();
-		
-		
 	}
 	
-	public int getLinkCount()
-	{
+	public int getLinkCount(){
 		return this.links.size();
 	}
 	
-	public boolean removeLink(VLink link)
-	{
-		if (links.contains(link))
-		{
+	public boolean removeLink(VLink link){
+		if (links.contains(link)){
 			links.remove(link);
-			
 			return true;
 		}
-		
 		return false;
 	}
 	
-	public ArrayList<VLink> getLinks()
-	{
+	public ArrayList<VLink> getLinks(){
 		return this.links;
 	}
-	
 	
 }

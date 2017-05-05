@@ -69,7 +69,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	}
 	
 	private void init_visualization(){
-		viewer = new LinearCRFViewer(this, null, 9);
+		viewer = new LinearCRFViewer(this, null);
 	}
 	
 	@Override

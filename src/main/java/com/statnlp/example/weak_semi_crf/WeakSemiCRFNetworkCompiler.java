@@ -34,7 +34,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		NetworkIDMapper.setCapacity(new int[]{10000, 10, 100});
 	}
 	
-	private transient WeakSemiCRFViewer viewer;
+	public transient WeakSemiCRFViewer viewer;
 
 	public WeakSemiCRFNetworkCompiler(Label[] labels, int maxSize, int maxSegmentLength) {
 		this.labels = labels;
@@ -47,7 +47,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 	}
 	
 	private void init_visualization(){
-		viewer = new WeakSemiCRFViewer(this, null, 3);
+		viewer = new WeakSemiCRFViewer(this, null);
 	}
 
 	@Override
@@ -108,7 +108,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		
 		network.finalizeNetwork();
 		
-		viewer.visualizeNetwork(network, null, "Labeled network for network "+networkId);
+//		viewer.visualizeNetwork(network, null, "Labeled network for network "+networkId);
 		
 		if(DEBUG){
 			System.out.println(network);

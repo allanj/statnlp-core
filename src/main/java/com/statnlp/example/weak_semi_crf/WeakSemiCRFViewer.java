@@ -1,8 +1,8 @@
 package com.statnlp.example.weak_semi_crf;
 
-import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.List;
 
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler.NodeType;
 import com.statnlp.hybridnetworks.FeatureManager;
@@ -29,12 +29,8 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 	
 	protected ArrayList<Span> outputs;
 	
-	public static String[] Aspects;
-
-	public WeakSemiCRFViewer(NetworkCompiler compiler, FeatureManager fm,
-			int TypeLength) {
-		super(compiler, fm, TypeLength);
-
+	public WeakSemiCRFViewer(NetworkCompiler compiler, FeatureManager fm) {
+		super(compiler, fm);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -46,25 +42,11 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 		//WIDTH = instance.Length * span_width;
 	}
 	
-	
-	protected void initTypeColorMapping()
-	{	
-		colorMap[0] = Color.WHITE;
-		colorMap[1] = Color.MAGENTA;
-		colorMap[2] = Color.PINK;
-//		colorMap[3] = Color.YELLOW;
-//		colorMap[4] = Color.GREEN;
-//		colorMap[5] = Color.LIGHT_GRAY;
-//		colorMap[6] = Color.CYAN;
-//		colorMap[7] = Color.WHITE;
-//		colorMap[8] = Color.ORANGE;
-		
-	}
-
 	@Override
-	protected String label_mapping(int[] ids) {
+	protected String label_mapping(VNode node) {
+		int[] ids = node.ids;
 //		int size = instance.size();
-		int pos = ids[0]; // position
+//		int pos = ids[0]; // position
 		int nodeId = ids[2];
 		int nodeType = ids[1];
 		if(nodeType == NodeType.LEAF.ordinal()){
@@ -74,9 +56,9 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 		}
 //		ids[1]; // tag_id
 //		ids[4]; // node type
-		if(Label.get(nodeId).form.equals("O")){
-			return inputs[pos];
-		}
+//		if(Label.get(nodeId).form.equals("O")){
+//			return inputs[pos];
+//		}
 		return Label.get(nodeId).toString();
 	}
 	
@@ -103,6 +85,7 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 	
 	protected void initNodeCoordinate(VisualizeGraph vg)
 	{
+		List<VNode> newNodes = new ArrayList<VNode>();
 		for(VNode node : vg.getNodes())
 		{
 			int[] ids = node.ids;
@@ -110,6 +93,11 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 			int pos = ids[0];
 			int labelId = ids[2];
 			int nodeType = ids[1];
+			if(nodeType == NodeType.BEGIN.ordinal()){
+				VNode newNode = new VNode(node.id*10+1, node.index*10+1);
+				newNode.ids = new int[]{pos, -1, -1};
+				newNodes.add(newNode);
+			}
 			
 			double x = pos * span_width * 2;
 			if(nodeType == NodeType.END.ordinal()){
@@ -134,6 +122,17 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 			layout.setLocation(node, node.point);
 			layout.lock(node, true);
 		}
+		
+		for(VNode node: newNodes){
+			vg.addNode(node);
+			int pos = node.ids[0];
+			double x = pos * span_width * 2;
+			double y = 2 * span_height + offset_height;
+			node.point = new Point2D.Double(x,y);
+			layout.setLocation(node, node.point);
+			layout.lock(node, true);
+		}
+		
 	}
 
 }

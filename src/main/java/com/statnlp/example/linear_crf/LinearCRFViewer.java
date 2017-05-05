@@ -29,11 +29,8 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 	
 	protected ArrayList<Label> outputs;
 	
-	public static String[] Aspects;
-
-	public LinearCRFViewer(NetworkCompiler compiler, FeatureManager fm,
-			int TypeLength) {
-		super(compiler, fm, TypeLength);
+	public LinearCRFViewer(NetworkCompiler compiler, FeatureManager fm) {
+		super(compiler, fm);
 
 	}
 	
@@ -52,17 +49,18 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 		colorMap[0] = Color.WHITE;
 		colorMap[1] = Color.MAGENTA;
 		colorMap[2] = Color.PINK;
-		colorMap[3] = Color.YELLOW;
-		colorMap[4] = Color.GREEN;
-		colorMap[5] = Color.LIGHT_GRAY;
-		colorMap[6] = Color.CYAN;
-		colorMap[7] = Color.WHITE;
-		colorMap[8] = Color.ORANGE;
+//		colorMap[3] = Color.YELLOW;
+//		colorMap[4] = Color.GREEN;
+//		colorMap[5] = Color.LIGHT_GRAY;
+//		colorMap[6] = Color.CYAN;
+//		colorMap[7] = Color.WHITE;
+//		colorMap[8] = Color.ORANGE;
 		
 	}
 
 	@Override
-	protected String label_mapping(int[] ids) {
+	protected String label_mapping(VNode node) {
+		int[] ids = node.ids;
 //		int size = instance.size();
 		int pos = ids[0]-1; // position
 		int nodeId = ids[1];

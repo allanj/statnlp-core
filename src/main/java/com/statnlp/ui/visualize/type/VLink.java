@@ -11,8 +11,6 @@ public class VLink {
 	
 	public static Color[] commoncolor = new Color[]{Color.CYAN, Color.YELLOW, Color.ORANGE, Color.PINK, Color.MAGENTA};
 	
-
-    
     int id;
     int hyperid = -1;
     public VNode Dest = null;
