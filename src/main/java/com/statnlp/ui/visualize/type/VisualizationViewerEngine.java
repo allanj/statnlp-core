@@ -124,7 +124,6 @@ public class VisualizationViewerEngine {
 			node.typeID = node.ids[4];
 			node.color = colorMap[node.typeID];
 		}
-		
 	}
 	
 	protected double x_mapping(double x){
@@ -136,21 +135,17 @@ public class VisualizationViewerEngine {
 	}
 	
 	protected void initNodeCoordinate(VisualizeGraph vg){
-		
 		for(VNode node : vg.getNodes()){
 			int[] ids = node.ids;
 			node.point = new Point2D.Double(x_mapping(ids[0]) * span_width + offset_width, y_mapping(ids[1]) * span_height + offset_height);
-
 			layout.setLocation(node, node.point);
 			layout.lock(node, true);
-
 		}
 	}
 	
 	protected String label_mapping(VNode node){
 		return Arrays.toString(node.ids);
 	}
-	
 	
 	protected void initNodeLabel(VisualizeGraph vg){
 		for(VNode node : vg.getNodes()){
@@ -188,7 +183,6 @@ public class VisualizationViewerEngine {
 		initNodeCoordinate(vg);
 	}
 	
-	
 	public VisualizationViewer<VNode, VLink> initVisualizationViewer(TableLookupNetwork network, JFrame frame, String title){
 		this.network = network;
 		long[] nodes_arr = Arrays.copyOfRange(network.getAllNodes(), 0, network.countNodes());
@@ -219,18 +213,15 @@ public class VisualizationViewerEngine {
 
 	protected void setSize(int layout_width, int layout_height, int margin_width, int margin_height){
 		layout.setSize(new Dimension(layout_width, layout_height)); // sets the initial size of the layout space
-		
 		vv.setPreferredSize(new Dimension(layout_width - margin_width, layout_height - margin_height)); // Sets the viewing area size
 	}
 	
 	protected Layout<VNode, VLink> getLayout(String layout_type){
 		if (layout_type.equals("FR")){
 			return new FRLayout<VNode, VLink>(vg.g);
-		}
-		else if (layout_type.equals("Spring")){
+		} else if (layout_type.equals("Spring")){
 			return new SpringLayout<VNode, VLink>(vg.g);
-		}
-		else{
+		} else {
 			return new StaticLayout<VNode, VLink>(vg.g);
 		}
 	}
