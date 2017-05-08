@@ -166,6 +166,18 @@ public class NetworkConfig {
 	public static final boolean _BUILD_FEATURES_FROM_LABELED_ONLY = false;
 	
 	/**
+	 * Enable to try to save memory by caching feature arrays to avoid duplicate feature arrays to be stored
+	 * in memory.<br>
+	 * Note that the amount of memory-saving depends on how the FeatureArrays are defined.<br>
+	 * If there are lots of repeating feature arrays with the exact same sequence of feature indices,
+	 * then enabling this might be beneficial, but otherwise, it will actually increase memory usage and time.<br>
+	 * If you are using this, it's best to split feature arrays into multiple arrays, and then
+	 * chain them together using the "next" mechanism in FeatureArray.<br>
+	 * See {@link FeatureArray#FeatureArray(int[], FeatureArray)} for more information.
+	 */
+	public static boolean AVOID_DUPLICATE_FEATURES = false;
+	
+	/**
 	 * The number of threads to be used for parallel execution
 	 */
 	public static int NUM_THREADS = 4;
@@ -175,9 +187,18 @@ public class NetworkConfig {
 	/** Decoding the max-marginal for each node as well. if set to true */
 	public static boolean MAX_MARGINAL_DECODING = false;
 	
-	public static int _topKValue = 1;
+	public static enum InferenceType {
+		MEAN_FIELD,
+		FORWARD_BACKWARD;
+		private InferenceType(){
+			
+		}
+	}
+	
+	public static InferenceType INFERENCE = InferenceType.FORWARD_BACKWARD;
 	
 	/***
+	 * Neural network related flags.
 	 * Please read carefully about the README.txt to install the NN server and also the communication package for Neural CRF
 	 */
 	/** If enable the neural CRF model, set it true.  */
@@ -190,31 +211,18 @@ public class NetworkConfig {
 	public static boolean OPTIMIZE_NEURAL = false;   //false means not update the neural network parameters in CRF. false is faster
 	/** false: the feature is the word itself. true: word is the indexed word **/
 	public static boolean IS_INDEXED_NEURAL_FEATURES = false;
-	/** Randomly choose the batch at every iteration. (false may give better result)**/
+	/** Randomly choose the batch at every iteration. (false may give better result) */
 	public static boolean RANDOM_BATCH = false;
 	
 	public static String NEURAL_FEATURE_TYPE_PREFIX = "neural";
 	
-	
-	
-	public static enum InferenceType {
-		MEAN_FIELD,
-		FORWARD_BACKWARD;
-		private InferenceType(){
-			
-		}
-	}
-	
-	public static InferenceType INFERENCE = InferenceType.FORWARD_BACKWARD;
-	
-	/**For mean-field inference..***/
-	public static int MAX_MF_UPDATES = 0;
-	public static int NUM_STRUCTS = 2;
-	/**Currently only used by Mean-field inference. That's why protected. true if mean-field, false otherwise**/
-	protected static boolean PRE_COMPILE_NETWORKS;
-	
-	/**
-	 * Enable to saving the memory or not
+	/***
+	 * Mean field-related flags.
 	 */
-	public static boolean AVOID_DUPLICATE_FEATURES = false;
+	/** The number of internal mean-field updates to be done in between each normal iterations. */
+	public static int MAX_MF_UPDATES = 0;
+	/** The number of distinct structures in mean-field model. */
+	public static int NUM_STRUCTS = 2;
+	/** Currently only used by Mean-field inference. That's why protected. true if mean-field, false otherwise */
+	protected static boolean PRE_COMPILE_NETWORKS;
 }

@@ -17,6 +17,7 @@
 package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -46,7 +47,9 @@ public class FeatureArray implements Serializable{
 	private FeatureArray _next;
 
 	/**
-	 * Merges the features in <code>fs</code> and in <code>next</code>
+	 * Merges the features in <code>fs</code> and in <code>next</code><br>
+	 * <strong>IMPORTANT NOTE:</strong> to use caching, please use {@link FeatureManager#createFeatureArray(Network, int[], FeatureArray)} instead,
+	 * combined with setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.
 	 * @param fs
 	 * @param next
 	 */
@@ -56,7 +59,9 @@ public class FeatureArray implements Serializable{
 	}
 
 	/**
-	 * Construct a feature array containing the features identified by their indices
+	 * Construct a feature array containing the features identified by their indices<br>
+	 * <strong>IMPORTANT NOTE:</strong> to use caching, please use {@link FeatureManager#createFeatureArray(Network, int[])} instead,
+	 * combined with setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.
 	 * @param fs
 	 */
 	public FeatureArray(int[] fs) {
@@ -65,13 +70,28 @@ public class FeatureArray implements Serializable{
 		this._isLocal = false;
 	}
 
-	public FeatureArray(FeatureBox fia) {
-		this(fia, null);
+	/**
+	 * Creates a new FeatureArray based on the feature indices in the given FeatureBox object.<br>
+	 * If you do not have FeatureBox object, perhaps you might want to check {@link #FeatureArray(int[])}.
+	 * @param fb
+	 * @see #FeatureArray(int[])
+	 * @see #FeatureArray(int[], FeatureArray)
+	 */
+	public FeatureArray(FeatureBox fb) {
+		this(fb, null);
 		this._isLocal = false;
 	}
 
-	public FeatureArray(FeatureBox fia, FeatureArray next) {
-		this._fb = fia;
+	/**
+	 * Creates a new FeatureArray based on the feature indices in the given FeatureBox object.<br>
+	 * If you do not have FeatureBox object, perhaps you might want to check {@link #FeatureArray(int[])}.
+	 * @param fb
+	 * @param next
+	 * @see #FeatureArray(int[])
+	 * @see #FeatureArray(int[], FeatureArray)
+	 */
+	public FeatureArray(FeatureBox fb, FeatureArray next) {
+		this._fb = fb;
 		this._next = next;
 		this._isLocal = false;
 	}
@@ -181,10 +201,11 @@ public class FeatureArray implements Serializable{
 			double featureValue = 1.0;
 			if (fIdx2DstNode.containsKey(f_local)) {
 				int dstNode = fIdx2DstNode.get(f_local);
-				if (marginalMap.containsKey(dstNode))
+				if (marginalMap.containsKey(dstNode)){
 					featureValue = Math.exp(marginalMap.get(dstNode));
-				else
+				} else {
 					featureValue = 0.0;
+				}
 			}
 			param.addCount(f_local, featureValue * count);
 		}
@@ -272,10 +293,11 @@ public class FeatureArray implements Serializable{
 					double featureValue = 1.0;
 					if (fIdx2DstNode.containsKey(f)) {
 						int dstNode = fIdx2DstNode.get(f);
-						if (marginalMap.containsKey(dstNode))
+						if (marginalMap.containsKey(dstNode)){
 							featureValue = Math.exp(marginalMap.get(dstNode));
-						else
+						} else {
 							featureValue = 0.0;
+						}
 					}
 					this._fb._currScore += param.getWeight(f) * featureValue;
 				}
@@ -318,10 +340,7 @@ public class FeatureArray implements Serializable{
 
 	@Override
 	public int hashCode(){
-		int code = 0;
-		for(int i = 0; i<this._fb.length(); i++){
-			code ^= this._fb.get(i);
-		}
+		int code = Arrays.hashCode(_fb._fs);
 		if (this._next != null){
 			code = code ^ this._next.hashCode();
 		}

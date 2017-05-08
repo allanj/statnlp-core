@@ -22,11 +22,12 @@ import com.statnlp.example.linear_crf.Label;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
 import com.statnlp.example.linear_crf.LinearCRFInstance;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
+import com.statnlp.example.linear_crf.LinearCRFViewer;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
+import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.neural.NeuralConfigReader;
 
 public class LinearCRFMain {
@@ -60,6 +61,7 @@ public class LinearCRFMain {
 		NetworkConfig.USE_NEURAL_FEATURES = false;
 		NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 		NetworkConfig.OPTIMIZE_NEURAL = false;
+		NetworkConfig.AVOID_DUPLICATE_FEATURES = false;
 		String weightInitFile = null;
 		
 		int numIterations = Integer.parseInt(System.getProperty("numIter", "1000"));
@@ -105,6 +107,10 @@ public class LinearCRFMain {
 				break;
 			case "noCacheFeatures":
 				NetworkConfig.CACHE_FEATURES_DURING_TRAINING = false;
+				argIndex += 1;
+				break;
+			case "trySaveMemory":
+				NetworkConfig.AVOID_DUPLICATE_FEATURES = true;
 				argIndex += 1;
 				break;
 			case "l2":
@@ -213,9 +219,8 @@ public class LinearCRFMain {
 		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler();
 		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(new GlobalNetworkParam(optimizerFactory), argsToFeatureManager);
 		
-		
-		
 		NetworkModel model = DiscriminativeNetworkModel.create(fm, compiler, outstream);
+		model.visualize(LinearCRFViewer.class, trainInstances);
 		
 		model.train(trainInstances, numIterations);
 		
@@ -252,7 +257,7 @@ public class LinearCRFMain {
 			}
 			modelTextWriter.close();
 		}
-
+		
 		LinearCRFInstance[] testInstances = readCoNLLData(testPath, true, false);
 //		testInstances = Arrays.copyOf(testInstances, 1);
 		int k = 8;
@@ -346,16 +351,69 @@ public class LinearCRFMain {
 		System.out.println("Options:\n"
 				+ "-modelPath <modelPath>\n"
 				+ "\tSerialize model to <modelPath>\n"
+				
 				+ "-writeModelText\n"
 				+ "\tAlso write the model in text version for debugging purpose\n"
+				
 				+ "-trainPath <trainPath>\n"
 				+ "\tTake training file from <trainPath>. If not specified, no training will be performed\n"
+				
 				+ "-testPath <testPath>\n"
 				+ "\tTake test file from <testPath>. If not specified, no testing will be performed\n"
+				
 				+ "-logPath <logPath>\n"
 				+ "\tPrint log information to the specified file\n"
+				
 				+ "-resultPath <resultPath>\n"
 				+ "\tPrint the result to <resultPath>\n"
+
+				+ "-parallelTouch\n"
+				+ "\tWhether the feature extraction process should be parallel.\n"
+				
+				+ "-featuresFromLabeledOnly\n"
+				+ "\tWhether to define features only from those appearing in training data.\n"
+				
+				+ "-noCacheFeatures\n"
+				+ "\tWhether to disable feature caching. It is recommended to keep caching enabled,\n"
+				+ "\tsince training will be quite slow otherwise."
+				
+				+ "-trySaveMemory\n"
+				+ "\tWhether an attempt to reduce memory usage should be done.\n"
+				+ "\tThe amount of saving depends on how the feature arrays were created.\n"
+				
+				+ "-l2 <l2_value>\n"
+				+ "\tThe l2 regularization parameter.\n"
+				
+				+ "-numThreads <n>\n"
+				+ "\tThe number of threads to train and test the model.\n"
+				
+				+ "-modelType (STRUCTURED_PERCEPTRON|CRF|SSVM|SOFTMAX_MARGIN)\n"
+				+ "\tThe training algorithm, must be one of these:\n"
+				+ "\t- Structured perceptron: mistake-driven, best combined with batch training.\n"
+				+ "\t- CRF: Standard log-likelihood training.\n"
+				+ "\t- SSVM: Max-margin based training.\n"
+				+ "\t- Softmax Margin: A cost-augmented log-likelihood training.\n"
+				
+				+ "-useBatchSGD\n"
+				+ "\tWhether to use batch training.\n"
+				
+				+ "-batchSize <n>\n"
+				+ "\tThe batch size to be used if -useBatchSGD is used.\n"
+				
+				+ "-margin <value>\n"
+				+ "\tThe margin hyperparameter if SSVM or Softmax-Margin training algorithm is used.\n"
+				+ "\tThe default value is 1.0.\n"
+				
+				+ "-weightInit <path_to_weights>\n"
+				+ "\tWhether to initialize the weights based on a file.\n"
+				+ "\tThe file should specify the feature weights in the following format:\n"
+				+ "\t-Lines with no prefix: Defines the feature types for the subsequent lines.\n"
+				+ "\t-Lines with '\t' (tab) prefix: Defines the output feature for the subsequent lines.\n"
+				+ "\t-Lines with '\t\t' (double tab) prefix: Defines the input feature and the feature weight.\n"
+				
+				+ "-numIter <n>\n"
+				+ "\tDefines the maximum number of iteration the training algorithm should run.\n"
+				+ "\tThe training might finish earlier than this number, but it will never exceed it.\n"
 				);
 	}
 }

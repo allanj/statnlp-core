@@ -46,7 +46,8 @@ public class TreeCRFMain {
 			testInstances = readPTB(test_filename, true, false);
 		} else {
 			trainInstances = readPTB(train_filename, true, true);
-			testInstances = getToyData(false);
+			testInstances = readPTB(test_filename, true, false);
+//			testInstances = getToyData(false);
 		}
 		
 		labels = new ArrayList<Label>();
@@ -60,6 +61,7 @@ public class TreeCRFMain {
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
 		NetworkConfig.OBJTOL = 1e-9;
 		NetworkConfig.NUM_THREADS = 4;
+		NetworkConfig.AVOID_DUPLICATE_FEATURES = true;
 		
 		int numIterations = 500;
 		
@@ -94,16 +96,22 @@ public class TreeCRFMain {
 			}
 		}
 		
-		Instance[] predictions = model.decode(testInstances);
+		System.out.println("Number of rules: "+rules.size());
+		int k = 256;
+		Instance[] predictions = model.decode(testInstances, k);
 		int corr = 0;
 		int totalGold = 0;
 		int totalPred = 0;
 		for(Instance inst: predictions){
 			TreeCRFInstance instance = (TreeCRFInstance)inst;
+			List<BinaryTree> topKPreds = instance.getTopKPredictions();
 			System.out.println("Gold:");
 			System.out.println(instance.output);
 			System.out.println("Prediction:");
 			System.out.println(instance.prediction);
+			System.out.println("Size: "+topKPreds.size());
+			System.out.println("K-th prediction:");
+			System.out.println(topKPreds.get(topKPreds.size()-1));
 			System.out.println();
 			List<String> goldConstituents = instance.output.getConstituents();
 			List<String> predConstituents = instance.prediction.getConstituents();
@@ -193,6 +201,8 @@ public class TreeCRFMain {
 		trees.add(BinaryTree.parse("(ROOT (NP (DT The)(NNS cats))(VP (VBP duck)(RB hastily)))"));
 		trees.add(BinaryTree.parse("(ROOT (NN I)(VP (VBP eat)(NP (NN spaghetti)(PP (IN with)(NN fish)))))"));
 		trees.add(BinaryTree.parse("(ROOT (NN I)(VP (VP (VBP eat)(NN spaghetti))(PP (IN with)(NN fork))))"));
+		trees.add(BinaryTree.parse("(S (NN I)(VBP duck))"));
+		trees.add(BinaryTree.parse("(S (NN I)(VP (VBP duck)(RB there)))"));
 		int instanceId = 1;
 		for(BinaryTree tree: trees){
 			TreeCRFInstance instance = new TreeCRFInstance(instanceId, 1);

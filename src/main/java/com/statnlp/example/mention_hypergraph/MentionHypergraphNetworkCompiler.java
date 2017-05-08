@@ -1,4 +1,4 @@
-package com.statnlp.example.linear_ie;
+package com.statnlp.example.mention_hypergraph;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,14 +15,14 @@ import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkException;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 
-public class LinearIENetworkCompiler extends NetworkCompiler {
+public class MentionHypergraphNetworkCompiler extends NetworkCompiler {
 
 	private static final long serialVersionUID = -4353692924395630953L;
 	public static final boolean DEBUG = false;
 	
 	public Label[] labels;
 	public int maxSize = 200;
-	public LinearIENetwork unlabeledNetwork;
+	public MentionHypergraphNetwork unlabeledNetwork;
 	
 	public enum NodeType{
 		X_NODE,
@@ -32,15 +32,15 @@ public class LinearIENetworkCompiler extends NetworkCompiler {
 		A_NODE,
 	}
 
-	public LinearIENetworkCompiler(Label[] labels, int maxSize) {
+	public MentionHypergraphNetworkCompiler(Label[] labels, int maxSize) {
 		this.labels = labels;
 		this.maxSize = Math.max(maxSize, this.maxSize);
 		buildUnlabeled();
 	}
 
 	@Override
-	public LinearIENetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
-		LinearIEInstance instance = (LinearIEInstance)inst;
+	public MentionHypergraphNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
+		MentionHypergraphInstance instance = (MentionHypergraphInstance)inst;
 		if(instance.isLabeled()){
 			return compileLabeled(networkId, instance, param);
 		} else {
@@ -48,8 +48,8 @@ public class LinearIENetworkCompiler extends NetworkCompiler {
 		}
 	}
 	
-	private LinearIENetwork compileLabeled(int networkId, LinearIEInstance instance, LocalNetworkParam param){
-		LinearIENetwork network = new LinearIENetwork(networkId, instance, param);
+	private MentionHypergraphNetwork compileLabeled(int networkId, MentionHypergraphInstance instance, LocalNetworkParam param){
+		MentionHypergraphNetwork network = new MentionHypergraphNetwork(networkId, instance, param);
 		int size = instance.size();
 		
 		long xNode = toNode_X();
@@ -124,7 +124,7 @@ public class LinearIENetworkCompiler extends NetworkCompiler {
 		network.finalizeNetwork();
 		
 		if(DEBUG){
-			LinearIENetwork unlabeled = compileUnlabeled(networkId, instance, param);
+			MentionHypergraphNetwork unlabeled = compileUnlabeled(networkId, instance, param);
 			System.out.println("Contained: "+unlabeled.contains(network));
 		}
 		return network;
@@ -141,21 +141,21 @@ public class LinearIENetworkCompiler extends NetworkCompiler {
 //		System.out.println(builder.toString());
 //	}
 
-	private LinearIENetwork compileUnlabeled(int networkId, LinearIEInstance instance, LocalNetworkParam param){
+	private MentionHypergraphNetwork compileUnlabeled(int networkId, MentionHypergraphInstance instance, LocalNetworkParam param){
 		int size = instance.size();
 		long root = toNode_A(0, size);
 		long[] allNodes = unlabeledNetwork.getAllNodes();
 		int[][][] allChildren = unlabeledNetwork.getAllChildren();
-		int root_k = Arrays.binarySearch(allNodes, root);
+		int root_k  = unlabeledNetwork.getNodeIndex(root);
 		int numNodes = root_k+1;
-		LinearIENetwork network = new LinearIENetwork(networkId, instance, allNodes, allChildren, param, numNodes);
+		MentionHypergraphNetwork network = new MentionHypergraphNetwork(networkId, instance, allNodes, allChildren, param, numNodes);
 		return network;
 	}
 	
 	private void buildUnlabeled(){
 		System.err.print("Building generic unlabeled tree up to size "+maxSize+"...");
 		long startTime = System.currentTimeMillis();
-		LinearIENetwork network = new LinearIENetwork();
+		MentionHypergraphNetwork network = new MentionHypergraphNetwork();
 		int size = maxSize;
 		
 		long xNode = toNode_X();
@@ -225,9 +225,9 @@ public class LinearIENetworkCompiler extends NetworkCompiler {
 	}
 
 	@Override
-	public LinearIEInstance decompile(Network net) {
-		LinearIENetwork network = (LinearIENetwork)net;
-		LinearIEInstance result = (LinearIEInstance)network.getInstance().duplicate();
+	public MentionHypergraphInstance decompile(Network net) {
+		MentionHypergraphNetwork network = (MentionHypergraphNetwork)net;
+		MentionHypergraphInstance result = (MentionHypergraphInstance)network.getInstance().duplicate();
 		int size = result.size();
 		
 		List<Span> prediction = new ArrayList<Span>();

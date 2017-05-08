@@ -266,7 +266,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		for(int i=0; i<featureArray.length; i++){
 			featureArray[i] = features.get(i);
 		}
-		return new FeatureArray(featureArray);
+		return createFeatureArray(network, featureArray);
 	}
 
 }

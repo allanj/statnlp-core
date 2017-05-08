@@ -1,4 +1,4 @@
-package com.statnlp.example.semi_crf;
+package com.statnlp.example.mention_hypergraph;
 
 import java.io.Serializable;
 import java.util.HashMap;

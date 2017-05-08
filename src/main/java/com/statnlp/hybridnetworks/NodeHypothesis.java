@@ -40,6 +40,9 @@ public class NodeHypothesis extends Hypothesis{
 
 			// This corresponds to the GetCandidates(v, k') call of Algorithm 3 line 7 in Huang and Chiang (2005) paper.
 			for(int i=0; i<children.length; i++){
+				if(children[i] == null){
+					continue;
+				}
 				nextBestChildQueue.offer(ScoredIndex.get(nodeIndex, new int[]{i, 0}, this));
 			}
 		} else {

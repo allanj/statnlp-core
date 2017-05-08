@@ -1,23 +1,23 @@
-package com.statnlp.example.semi_crf;
+package com.statnlp.example.weak_semi_crf;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import com.statnlp.example.base.BaseInstance;
 
-public class SemiCRFInstance extends BaseInstance<SemiCRFInstance, String, List<Span>> {
+public class WeakSemiCRFInstance extends BaseInstance<WeakSemiCRFInstance, String, List<Span>> {
 	
 	private static final long serialVersionUID = -5338701879189642344L;
 	
-	public SemiCRFInstance(int instanceId, String input, List<Span> output){
+	public WeakSemiCRFInstance(int instanceId, String input, List<Span> output){
 		this(instanceId, 1.0, input, output);
 	}
 	
-	public SemiCRFInstance(int instanceId, double weight) {
+	public WeakSemiCRFInstance(int instanceId, double weight) {
 		this(instanceId, weight, null, null);
 	}
 	
-	public SemiCRFInstance(int instanceId, double weight, String input, List<Span> output){
+	public WeakSemiCRFInstance(int instanceId, double weight, String input, List<Span> output){
 		super(instanceId, weight);
 		this.input = input;
 		this.output = output;

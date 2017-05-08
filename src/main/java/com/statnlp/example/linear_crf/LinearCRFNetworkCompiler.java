@@ -42,7 +42,11 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	private static final long serialVersionUID = -3829680998638818730L;
 	
 	public List<Label> _labels;
-	public enum NODE_TYPES {LEAF, NODE, ROOT};
+	public enum NODE_TYPES {
+		LEAF,
+		NODE,
+		ROOT
+		};
 	private static int MAX_LENGTH = 300;
 	
 	private long[] _allNodes;
@@ -50,6 +54,8 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 
 	public static HashMap<Long, HashMap<Long, Integer>> edge2idx;
 	private int edgeId;
+	
+	protected LinearCRFViewer viewer;
 	
 	public LinearCRFNetworkCompiler(){
 		this._labels = new ArrayList<Label>();
@@ -59,6 +65,11 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		edge2idx = new HashMap<Long, HashMap<Long, Integer>>();
 		edgeId = 0;
 		this.compile_unlabled_generic();
+		this.init_visualization();
+	}
+	
+	private void init_visualization(){
+		viewer = new LinearCRFViewer(this, null);
 	}
 	
 	@Override
@@ -73,6 +84,45 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	}
 	
 	
+	private LinearCRFNetwork compile_labeled(int networkId, LinearCRFInstance inst, LocalNetworkParam param){
+		LinearCRFNetwork network = new LinearCRFNetwork(networkId, inst, param, this);
+		
+		ArrayList<Label> outputs = inst.getOutput();
+		int size = outputs.size();
+		
+		// Add leaf
+		long leaf = toNode_leaf();
+		network.addNode(leaf);
+		
+		long prevNode = leaf;
+		
+		for(int i=0; i<size; i++){
+			Label label = outputs.get(i);
+			long node = toNode(i, label.getId());
+			
+			network.addNode(toNode(i, label.getId()));
+			
+//			for(Label alllabel: Label.LABELS.values()){
+//				network.addNode(toNode(i, alllabel.getId()));
+//			}
+			
+			network.addEdge(node, new long[]{prevNode});
+			
+			prevNode = node;
+		}
+		
+		// Add root
+		long root = toNode_root(outputs.size());
+		network.addNode(root);
+		network.addEdge(root, new long[]{prevNode});
+		
+		network.finalizeNetwork();
+
+//		viewer.visualizeNetwork(network, null, "Labeled network for network "+networkId);
+		
+		return network;
+	}
+
 	private LinearCRFNetwork compile_unlabeled(int networkId, LinearCRFInstance inst, LocalNetworkParam param){
 		int size = inst.size();
 		long root = this.toNode_root(size);
@@ -81,8 +131,11 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		int numNodes = pos+1; // Num nodes should equals to (instanceSize * (numLabels+1)) + 1
 //		System.out.println(String.format("Instance size: %d, Labels size: %d, numNodes: %d", size, _labels.size(), numNodes));
 		
-		return new LinearCRFNetwork(networkId, inst, this._allNodes, this._allChildren, param, numNodes, this);
+		LinearCRFNetwork result = new LinearCRFNetwork(networkId, inst, this._allNodes, this._allChildren, param, numNodes, this);
 		
+//		viewer.visualizeNetwork(result, null, "Unlabeled network for network "+networkId);
+		
+		return result;
 	}
 	
 	private void compile_unlabled_generic(){
@@ -145,34 +198,6 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		return NetworkIDMapper.toHybridNodeID(arr);
 	}
 
-	
-	private LinearCRFNetwork compile_labeled(int networkId, LinearCRFInstance inst, LocalNetworkParam param){
-		LinearCRFNetwork network = new LinearCRFNetwork(networkId, inst, param, this);
-		ArrayList<Label> outputs = inst.getOutput();
-		
-		// Add leaf
-		long leaf = toNode_leaf();
-		network.addNode(leaf);
-		
-		long prevNode = leaf;
-		
-		for(int i=0; i<outputs.size(); i++){
-			Label label = outputs.get(i);
-			long node = toNode(i, label.getId());
-			network.addNode(node);
-			network.addEdge(node, new long[]{prevNode});
-			prevNode = node;
-		}
-		
-		// Add root
-		long root = toNode_root(outputs.size());
-		network.addNode(root);
-		network.addEdge(root, new long[]{prevNode});
-		
-		network.finalizeNetwork();
-		
-		return network;
-	}
 	
 	@Override
 	public LinearCRFInstance decompile(Network network) {

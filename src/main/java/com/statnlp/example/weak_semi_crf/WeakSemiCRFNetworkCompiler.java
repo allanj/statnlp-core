@@ -1,4 +1,4 @@
-package com.statnlp.example.semi_crf;
+package com.statnlp.example.weak_semi_crf;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,7 +12,7 @@ import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkException;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 
-public class SemiCRFNetworkCompiler extends NetworkCompiler {
+public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 	
 	private final static boolean DEBUG = false;
 	
@@ -33,23 +33,30 @@ public class SemiCRFNetworkCompiler extends NetworkCompiler {
 	static {
 		NetworkIDMapper.setCapacity(new int[]{10000, 10, 100});
 	}
+	
+	public transient WeakSemiCRFViewer viewer;
 
-	public SemiCRFNetworkCompiler(Label[] labels, int maxSize, int maxSegmentLength) {
+	public WeakSemiCRFNetworkCompiler(Label[] labels, int maxSize, int maxSegmentLength) {
 		this.labels = labels;
 		this.maxSize = Math.max(maxSize, this.maxSize);
 		this.maxSegmentLength = Math.max(maxSegmentLength, this.maxSegmentLength);
 		System.out.println(String.format("Max size: %s, Max segment length: %s", maxSize, maxSegmentLength));
 		System.out.println(Arrays.asList(labels));
 		buildUnlabeled();
+		init_visualization();
+	}
+	
+	private void init_visualization(){
+		viewer = new WeakSemiCRFViewer(this, null);
 	}
 
 	@Override
-	public SemiCRFNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
+	public WeakSemiCRFNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
 		try{
 			if(inst.isLabeled()){
-				return compileLabeled(networkId, (SemiCRFInstance)inst, param);
+				return compileLabeled(networkId, (WeakSemiCRFInstance)inst, param);
 			} else {
-				return compileUnlabeled(networkId, (SemiCRFInstance)inst, param);
+				return compileUnlabeled(networkId, (WeakSemiCRFInstance)inst, param);
 			}
 		} catch (NetworkException e){
 			System.out.println(inst);
@@ -57,50 +64,70 @@ public class SemiCRFNetworkCompiler extends NetworkCompiler {
 		}
 	}
 	
-	private SemiCRFNetwork compileLabeled(int networkId, SemiCRFInstance instance, LocalNetworkParam param){
-		SemiCRFNetwork network = new SemiCRFNetwork(networkId, instance, param);
+	private WeakSemiCRFNetwork compileLabeled(int networkId, WeakSemiCRFInstance instance, LocalNetworkParam param){
+		WeakSemiCRFNetwork network = new WeakSemiCRFNetwork(networkId, instance, param);
 		
-		int size = instance.size();
 		List<Span> output = instance.getOutput();
 		Collections.sort(output);
+		int size = instance.size();
 		
+		// Add leaf
 		long leaf = toNode_leaf();
 		network.addNode(leaf);
+		
 		long prevNode = leaf;
+		
 		for(Span span: output){
 			int labelId = span.label.id;
 			long begin = toNode_begin(span.start, labelId);
 			long end = toNode_end(span.end-1, labelId);
+			
 			network.addNode(begin);
 			network.addNode(end);
+			for(int i=span.start; i<span.end; i++){
+				for(int j=0; j<Label.LABELS.size(); j++){
+					try{
+						network.addNode(toNode_begin(i, j));
+					} catch (Exception e){}
+					try{
+						network.addNode(toNode_end(i, j));
+					} catch (Exception e){}
+				}
+			}
+			
 			network.addEdge(begin, new long[]{prevNode});
 			network.addEdge(end, new long[]{begin});
+			
 			prevNode = end;
 		}
+		
+		// Add root
 		long root = toNode_root(size-1);
 		network.addNode(root);
 		network.addEdge(root, new long[]{prevNode});
 		
 		network.finalizeNetwork();
 		
+//		viewer.visualizeNetwork(network, null, "Labeled network for network "+networkId);
+		
 		if(DEBUG){
 			System.out.println(network);
-			SemiCRFNetwork unlabeled = compileUnlabeled(networkId, instance, param);
+			WeakSemiCRFNetwork unlabeled = compileUnlabeled(networkId, instance, param);
 			System.out.println("Contained: "+unlabeled.contains(network));
 		}
 		return network;
 	}
 	
-	private SemiCRFNetwork compileUnlabeled(int networkId, SemiCRFInstance instance, LocalNetworkParam param){
+	private WeakSemiCRFNetwork compileUnlabeled(int networkId, WeakSemiCRFInstance instance, LocalNetworkParam param){
 		int size = instance.size();
 		long root = toNode_root(size-1);
 		int root_k = Arrays.binarySearch(allNodes, root);
 		int numNodes = root_k + 1;
-		return new SemiCRFNetwork(networkId, instance, allNodes, allChildren, param, numNodes);
+		return new WeakSemiCRFNetwork(networkId, instance, allNodes, allChildren, param, numNodes);
 	}
 	
 	private void buildUnlabeled(){
-		SemiCRFNetwork network = new SemiCRFNetwork();
+		WeakSemiCRFNetwork network = new WeakSemiCRFNetwork();
 		
 		long leaf = toNode_leaf();
 		network.addNode(leaf);
@@ -160,9 +187,9 @@ public class SemiCRFNetworkCompiler extends NetworkCompiler {
 	}
 
 	@Override
-	public SemiCRFInstance decompile(Network net) {
-		SemiCRFNetwork network = (SemiCRFNetwork)net;
-		SemiCRFInstance result = (SemiCRFInstance)network.getInstance().duplicate();
+	public WeakSemiCRFInstance decompile(Network net) {
+		WeakSemiCRFNetwork network = (WeakSemiCRFNetwork)net;
+		WeakSemiCRFInstance result = (WeakSemiCRFInstance)network.getInstance().duplicate();
 		List<Span> prediction = new ArrayList<Span>();
 		int node_k = network.countNodes()-1;
 		while(node_k > 0){

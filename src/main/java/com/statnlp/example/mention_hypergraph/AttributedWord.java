@@ -1,9 +1,9 @@
-package com.statnlp.example.linear_ie;
+package com.statnlp.example.mention_hypergraph;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import com.statnlp.example.linear_ie.LinearIEFeatureManager.FeatureType;
+import com.statnlp.example.mention_hypergraph.MentionHypergraphFeatureManager.FeatureType;
 
 public class AttributedWord {
 	public Map<String, String> attributes;

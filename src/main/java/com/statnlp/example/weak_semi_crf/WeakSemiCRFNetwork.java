@@ -1,21 +1,21 @@
-package com.statnlp.example.semi_crf;
+package com.statnlp.example.weak_semi_crf;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.TableLookupNetwork;
 
-public class SemiCRFNetwork extends TableLookupNetwork {
+public class WeakSemiCRFNetwork extends TableLookupNetwork {
 	
 	private static final long serialVersionUID = -8384557055081197941L;
 	public int numNodes = -1;
 
-	public SemiCRFNetwork() {}
+	public WeakSemiCRFNetwork() {}
 
-	public SemiCRFNetwork(int networkId, Instance inst, LocalNetworkParam param) {
+	public WeakSemiCRFNetwork(int networkId, Instance inst, LocalNetworkParam param) {
 		super(networkId, inst, param);
 	}
 
-	public SemiCRFNetwork(int networkId, Instance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes) {
+	public WeakSemiCRFNetwork(int networkId, Instance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes) {
 		super(networkId, inst, nodes, children, param);
 		this.numNodes = numNodes;
 	}
