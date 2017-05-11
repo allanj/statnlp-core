@@ -53,6 +53,11 @@ public class FeatureArray implements Serializable{
 	 * @param fs
 	 * @param next
 	 */
+	public FeatureArray(int[] fs, double[] fv, FeatureArray next) {
+		this._fb = new FeatureBox(fs, fv);
+		this._next = next;
+	}
+	
 	public FeatureArray(int[] fs, FeatureArray next) {
 		this._fb = new FeatureBox(fs);
 		this._next = next;
@@ -64,6 +69,12 @@ public class FeatureArray implements Serializable{
 	 * combined with setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.
 	 * @param fs
 	 */
+	public FeatureArray(int[] fs, double[] fv) {
+		this._fb = new FeatureBox(fs, fv);
+		this._next = null;
+		this._isLocal = false;
+	}
+	
 	public FeatureArray(int[] fs) {
 		this._fb = new FeatureBox(fs);
 		this._next = null;
@@ -99,7 +110,7 @@ public class FeatureArray implements Serializable{
 	private FeatureArray(double score) {
 		this._totalScore = score;
 	}
-
+	
 	public void setAlwaysChange(boolean alwaysChange){
 		this._fb._alwaysChange = alwaysChange;
 	}
@@ -122,7 +133,12 @@ public class FeatureArray implements Serializable{
 		}
 
 		int[] fs_local = new int[length];
+		double[] fv_local = null;
 		int localIdx = 0;
+		boolean hasFeatureValue = this._fb.getValue() != null;
+		if (hasFeatureValue) {
+			fv_local = new double[length];
+		}
 		for(int k = 0; k<this._fb.length(); k++, localIdx++){
 			if(this._fb.get(k) == -1 && NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY){
 				localIdx--;
@@ -133,6 +149,11 @@ public class FeatureArray implements Serializable{
 			} else {
 				fs_local[localIdx] = this._fb.get(k);
 			}
+			
+			if (hasFeatureValue) {
+				fv_local[localIdx] = this._fb.getValue(k);
+			}
+			
 			if(fs_local[localIdx]==-1){
 				throw new RuntimeException("The local feature got an id of -1 for " + this._fb.get(k));
 			}
@@ -140,9 +161,9 @@ public class FeatureArray implements Serializable{
 
 		FeatureArray fa;
 		if (this._next != null){
-			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, param), this._next.toLocal(param)); //saving memory
+			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, fv_local, param), this._next.toLocal(param)); //saving memory
 		} else {
-			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, param)); //saving memory
+			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, fv_local, param)); //saving memory
 		}
 		fa._isLocal = true;
 		fa._fb._alwaysChange = this._fb._alwaysChange;
@@ -257,9 +278,14 @@ public class FeatureArray implements Serializable{
 		}
 
 		double score = 0.0;
+		int pos = 0;
 		for(int f : fs){
 			if(f!=-1){
-				score += param.getWeight(f);
+				if (param.isNeural(f)) {
+					score += param.getWeight(f) * this._fb.getValue(pos++);
+				} else {
+					score += param.getWeight(f);
+				}
 			}
 		}
 		return score;

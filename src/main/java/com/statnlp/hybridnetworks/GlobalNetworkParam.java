@@ -23,6 +23,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -106,7 +107,10 @@ public class GlobalNetworkParam implements Serializable{
 	/** The weights that some of them will be replaced by neural net if NNCRF is enabled. */
 	private transient double[] concatWeights, concatCounts;
 	
-	private final String DUMP_TYPE = "test";  
+	private final String DUMP_TYPE = "test";
+	
+	/** The set of neural feature indices */
+	private HashSet<Integer> _neuralFs;
 	
 	public GlobalNetworkParam(){
 		this(OptimizerFactory.getLBFGSFactory());
@@ -512,6 +516,15 @@ public class GlobalNetworkParam implements Serializable{
 		}
 
 		return inputToIdx.get(input);
+	}
+	
+	public int[] toNeuralFeature(Network network, String output, int nDim, int neuralNodeID) {
+		// TODO
+		return null;
+	}
+	
+	public boolean isNeural(int featureID) {
+		return this._neuralFs.contains(featureID);
 	}
 	
 	/**

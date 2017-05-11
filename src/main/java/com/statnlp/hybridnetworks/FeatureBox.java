@@ -18,6 +18,8 @@ public class FeatureBox implements Serializable {
 	protected int[] _fs;
 	/** The total score (weights*values) of the feature in the current _fs. */
 	protected double _currScore;
+	/** Feature value array **/
+	private double[] _fv;
 	
 	/** The time-saving mechanism, by not recomputing the score if the version is up-to-date. */
 	protected int _version;
@@ -26,6 +28,12 @@ public class FeatureBox implements Serializable {
 	
 	public FeatureBox(int[] fs) {
 		this._fs = fs;
+		this._version = -1; //the score is not calculated yet.
+	}
+	
+	public FeatureBox(int[] fs, double[] fv) {
+		this._fs = fs;
+		this._fv = fv;
 		this._version = -1; //the score is not calculated yet.
 	}
 	
@@ -40,6 +48,14 @@ public class FeatureBox implements Serializable {
 	public int get(int pos) {
 		return this._fs[pos];
 	}
+	
+	public double[] getValue() {
+		return this._fv;
+	}
+	
+	public double getValue(int pos) {
+		return this._fv[pos];
+	}
 
 	/**
 	 * Use the map to cache the feature index array to save the memory.
@@ -47,6 +63,22 @@ public class FeatureBox implements Serializable {
 	 * @param param
 	 * @return
 	 */
+	public static FeatureBox getFeatureBox(int[] fs, double[] fv, LocalNetworkParam param){
+		FeatureBox fb = new FeatureBox(fs, fv);
+		if (!NetworkConfig.AVOID_DUPLICATE_FEATURES) {
+			return fb;
+		}
+		if (param.fbMap == null) {
+			param.fbMap = new HashMap<FeatureBox, FeatureBox>();
+		}
+		if (param.fbMap.containsKey(fb)) {
+			return param.fbMap.get(fb);
+		} else{
+			param.fbMap.put(fb, fb);
+			return fb;
+		}
+	}
+	
 	public static FeatureBox getFeatureBox(int[] fs, LocalNetworkParam param){
 		FeatureBox fb = new FeatureBox(fs);
 		if (!NetworkConfig.AVOID_DUPLICATE_FEATURES) {
@@ -65,16 +97,28 @@ public class FeatureBox implements Serializable {
 	
 	@Override
 	public int hashCode() {
-		return Arrays.hashCode(_fs);
+		int hash = 1;
+		int a = Arrays.hashCode(_fs);
+		hash = hash * 17 + a;
+		if (_fv != null) {
+			int b = Arrays.hashCode(_fv);
+			hash = hash * 31 + b;
+		}
+		return hash;
 	}
 
 	@Override
 	public boolean equals(Object obj) {
 		if(obj instanceof FeatureBox){
 			FeatureBox other = (FeatureBox)obj;
-			return Arrays.equals(_fs, other._fs);
+			boolean isEqual = Arrays.equals(_fs, other._fs);
+			if (_fv != null) {
+				isEqual = isEqual && Arrays.equals(_fv, other._fv);
+			} else {
+				isEqual = isEqual && other._fv == null;
+			}
+			return isEqual;
 		}
 		return false;
 	}
-	
 }
