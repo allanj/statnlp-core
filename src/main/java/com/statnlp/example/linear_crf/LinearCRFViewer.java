@@ -3,6 +3,7 @@ package com.statnlp.example.linear_crf;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
+import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.NetworkCompiler;
@@ -22,7 +23,7 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 	
 	static double offset_height = 100;
 	
-	protected LinearCRFInstance instance;
+	protected LinearInstance<String> instance;
 	
 	protected ArrayList<String[]> inputs;
 	
@@ -36,7 +37,7 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 	@SuppressWarnings("unchecked")
 	protected void initData()
 	{
-		this.instance = (LinearCRFInstance)super.instance;
+		this.instance = (LinearInstance<String>)super.instance;
 		this.inputs = (ArrayList<String[]>)super.inputs;
 		this.outputs = (ArrayList<Label>)super.outputs;
 		//WIDTH = instance.Length * span_width;

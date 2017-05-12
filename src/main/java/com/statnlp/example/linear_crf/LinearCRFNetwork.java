@@ -19,6 +19,7 @@
  */
 package com.statnlp.example.linear_crf;
 
+import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.TableLookupNetwork;
@@ -37,11 +38,11 @@ public class LinearCRFNetwork extends TableLookupNetwork{
 		
 	}
 	
-	public LinearCRFNetwork(int networkId, LinearCRFInstance inst, LocalNetworkParam param, NetworkCompiler compiler){
+	public LinearCRFNetwork(int networkId, LinearInstance<String> inst, LocalNetworkParam param, NetworkCompiler compiler){
 		super(networkId, inst, param, compiler);
 	}
 
-	public LinearCRFNetwork(int networkId, LinearCRFInstance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes, NetworkCompiler compiler){
+	public LinearCRFNetwork(int networkId, LinearInstance<String> inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes, NetworkCompiler compiler){
 		super(networkId, inst, nodes, children, param, compiler);
 		this._numNodes = numNodes;
 	}

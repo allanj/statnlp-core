@@ -17,8 +17,6 @@
 package com.statnlp.commons.types;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
@@ -49,8 +47,6 @@ public abstract class Instance implements Serializable{
 	private Instance _labeledInstance;
 	/** The unlabeled version of this instance, if exists, null otherwise */
 	private Instance _unlabeledInstance;
-	/** The top-K predictions of this instance */
-	protected List<?> _topKPredictions;
 	
 	/**
 	 * Create an instance.
@@ -174,23 +170,12 @@ public abstract class Instance implements Serializable{
 	public abstract Object getInput();
 	public abstract Object getOutput();
 	public abstract Object getPrediction();
-	
-	@SuppressWarnings("unchecked")
-	public <T> List<T> getTopKPredictions(){
-		if(this._topKPredictions != null){
-			return (List<T>)this._topKPredictions;
-		}
-		List<T> result = (List<T>)new ArrayList<Object>();
-		result.add((T)getPrediction());
-		return result;
-	}
+	public abstract Object getTopKPredictions();
 	
 	public abstract boolean hasOutput();
 	public abstract boolean hasPrediction();
 	
 	public abstract void setPrediction(Object o);
-	public void setTopKPredictions(List<?> topKPredictions){
-		this._topKPredictions = topKPredictions;
-	}
+	public abstract void setTopKPredictions(Object topKPredictions);
 	
 }

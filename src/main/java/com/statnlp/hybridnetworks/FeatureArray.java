@@ -260,6 +260,8 @@ public class FeatureArray implements Serializable{
 		for(int f : fs){
 			if(f!=-1){
 				score += param.getWeight(f);
+			} else {
+				
 			}
 		}
 		return score;

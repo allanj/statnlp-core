@@ -2,12 +2,11 @@ package com.statnlp.example.fcrf;
 
 import java.util.ArrayList;
 
-import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Sentence;
+import com.statnlp.example.base.BaseInstance;
 
 
-public class FCRFInstance extends Instance {
-
+public class FCRFInstance extends BaseInstance<FCRFInstance, Sentence, ArrayList<String>> {
 
 	private static final long serialVersionUID = 1851514046050983662L;
 	protected Sentence sentence;
@@ -54,35 +53,8 @@ public class FCRFInstance extends Instance {
 	}
 
 	@Override
-	public Sentence getInput() {
-		return this.sentence;
-	}
-
-	@Override
-	public ArrayList<String> getOutput() {
-		return this.chunks;
-	}
-
-	@Override
-	public ArrayList<String> getPrediction() {
-		return this.predictons;
-	}
-
-	@Override
-	public boolean hasOutput() {
-		if(chunks!=null) return true;
-		else return false;
-	}
-
-	@Override
 	public boolean hasPrediction() {
 		return false;
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public void setPrediction(Object o) {
-		this.predictons = (ArrayList<String>)o;
 	}
 
 	public ArrayList<String> getChunkPredictons() {

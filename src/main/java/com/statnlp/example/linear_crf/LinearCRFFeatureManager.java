@@ -21,6 +21,7 @@ package com.statnlp.example.linear_crf;
 
 import java.util.ArrayList;
 
+import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
@@ -29,6 +30,7 @@ import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.neural.NeuralConfig;
+import com.statnlp.util.Pipeline;
 
 /**
  * @author wei_lu
@@ -111,13 +113,18 @@ public class LinearCRFFeatureManager extends FeatureManager{
 			}
 		}
 	}
+	
+	public LinearCRFFeatureManager(Pipeline pipeline){
+		this(pipeline.param);
+	}
 
 	@Override
 	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k) {
 		
 		LinearCRFNetwork net = (LinearCRFNetwork)network;
 		
-		LinearCRFInstance instance = (LinearCRFInstance)net.getInstance();
+		@SuppressWarnings("unchecked")
+		LinearInstance<String> instance = (LinearInstance<String>)net.getInstance();
 		int size = instance.size();
 		
 		ArrayList<String[]> input = instance.getInput();

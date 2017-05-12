@@ -94,6 +94,14 @@ public abstract class NetworkModel implements Serializable{
 		return _allInstances;
 	}
 	
+	public FeatureManager getFeatureManager(){
+		return _fm;
+	}
+	
+	public NetworkCompiler getNetworkCompiler(){
+		return _compiler;
+	}
+	
 	protected abstract Instance[][] splitInstancesForTrain();
 	
 	public Instance[][] splitInstancesForTest() {

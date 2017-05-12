@@ -19,9 +19,9 @@ import java.util.Scanner;
 import java.util.Set;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.linear_crf.Label;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
-import com.statnlp.example.linear_crf.LinearCRFInstance;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.FeatureArray;
@@ -29,8 +29,8 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
+import com.statnlp.hybridnetworks.NetworkModel;
 
 /**
  * The main class to run CRF++ with the same pipeline as other models<br>
@@ -108,8 +108,8 @@ public class SVMStruct {
 		ProcessBuilder processBuilder;
 		PrintStream outstream = null;
 		
-		LinearCRFInstance[] trainInstances = null;
-		LinearCRFInstance[] testInstances = null;
+		LinearInstance<Label>[] trainInstances = null;
+		LinearInstance<Label>[] testInstances = null;
 		if(trainFilename != null){
 			trainInstances = readCoNLLData(new BufferedReader(new FileReader(trainFilename)), true, true, -1);
 		}
@@ -142,7 +142,7 @@ public class SVMStruct {
 			long start = System.currentTimeMillis();
 			print("Converting training file into SVM Struct format", outstreams);
 			outstream = new PrintStream(trainData);
-			for(LinearCRFInstance instance: trainInstances){
+			for(LinearInstance<Label> instance: trainInstances){
 				outstream.print(toSVMStructFormat(instance, fm, compiler));
 			}
 			outstream.close();
@@ -191,7 +191,7 @@ public class SVMStruct {
 			long start = System.currentTimeMillis();
 			System.out.print("Converting test file into SVM Struct format");
 			outstream = new PrintStream(testData);
-			for(LinearCRFInstance instance: testInstances){
+			for(LinearInstance<Label> instance: testInstances){
 				outstream.print(toSVMStructFormat(instance, fm, compiler));
 			}
 			outstream.close();
@@ -222,11 +222,12 @@ public class SVMStruct {
 			outputThread.join();
 			errorThread.join();
 			
-			LinearCRFInstance[] predictions = new LinearCRFInstance[testInstances.length];
+			@SuppressWarnings("unchecked")
+			LinearInstance<Label>[] predictions = new LinearInstance[testInstances.length];
 			BufferedReader outputReader = new BufferedReader(new FileReader(resultFilename));
 			for(int i=0; i<predictions.length; i++){
-				LinearCRFInstance testInstance = testInstances[i];
-				LinearCRFInstance predInstance = testInstance.duplicate();
+				LinearInstance<Label> testInstance = testInstances[i];
+				LinearInstance<Label> predInstance = testInstance.duplicate();
 				predInstance.input = testInstance.input;
 				predInstance.output = testInstance.output;
 				ArrayList<Label> prediction = new ArrayList<Label>();
@@ -246,7 +247,8 @@ public class SVMStruct {
 			int total = 0;
 			int count = 0;
 			for(Instance ins: predictions){
-				LinearCRFInstance instance = (LinearCRFInstance)ins;
+				@SuppressWarnings("unchecked")
+				LinearInstance<Label> instance = (LinearInstance<Label>)ins;
 				ArrayList<Label> goldLabel = instance.getOutput();
 				ArrayList<Label> actualLabel = instance.getPrediction();
 				ArrayList<String[]> words = instance.getInput();
@@ -274,8 +276,9 @@ public class SVMStruct {
 		}
 	}
 	
-	private static LinearCRFInstance[] readCoNLLData(BufferedReader br, boolean withLabels, boolean isLabeled, int number) throws IOException{
-		ArrayList<LinearCRFInstance> result = new ArrayList<LinearCRFInstance>();
+	@SuppressWarnings("unchecked")
+	private static LinearInstance<Label>[] readCoNLLData(BufferedReader br, boolean withLabels, boolean isLabeled, int number) throws IOException{
+		ArrayList<LinearInstance<Label>> result = new ArrayList<LinearInstance<Label>>();
 		ArrayList<String[]> words = null;
 		ArrayList<Label> labels = null;
 		int instanceId = 1;
@@ -288,7 +291,7 @@ public class SVMStruct {
 			}
 			String line = br.readLine().trim();
 			if(line.length() == 0){
-				LinearCRFInstance instance = new LinearCRFInstance(instanceId, 1, words, labels);
+				LinearInstance<Label> instance = new LinearInstance<Label>(instanceId, 1, words, labels);
 				if(isLabeled){
 					instance.setLabeled(); // Important!
 				} else {
@@ -310,10 +313,10 @@ public class SVMStruct {
 			}
 		}
 		br.close();
-		return result.toArray(new LinearCRFInstance[result.size()]);
+		return result.toArray(new LinearInstance[result.size()]);
 	}
 	
-	private static String toSVMStructFormat(LinearCRFInstance instance, LinearCRFFeatureManager fm, LinearCRFNetworkCompiler compiler){
+	private static String toSVMStructFormat(LinearInstance<Label> instance, LinearCRFFeatureManager fm, LinearCRFNetworkCompiler compiler){
 		StringBuilder result = new StringBuilder();
 		int len = instance.size();
 		if(INPUT_LEN > 0){
