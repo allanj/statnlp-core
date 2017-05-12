@@ -3,6 +3,10 @@ package com.statnlp.hybridnetworks;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
+
+import com.statnlp.commons.types.Instance;
+import com.statnlp.neural.AbstractTensor;
 
 /**
  * The class used by {@link FeatureArray} to store the list of feature indices and 
@@ -18,7 +22,7 @@ public class FeatureBox implements Serializable {
 	protected int[] _fs;
 	/** The total score (weights*values) of the feature in the current _fs. */
 	protected double _currScore;
-	/** Feature value array **/
+	/** Feature value array */
 	private double[] _fv;
 	
 	/** The time-saving mechanism, by not recomputing the score if the version is up-to-date. */
@@ -35,6 +39,26 @@ public class FeatureBox implements Serializable {
 		this._fs = fs;
 		this._fv = fv;
 		this._version = -1; //the score is not calculated yet.
+	}
+	
+	public void setFeatureValues(Instance instance, LocalNetworkParam param) {
+		if (this._fv != null) {
+			System.err.println("Feature values are already initialized.");
+			return;
+		}
+		List<AbstractTensor> tensorList = instance.getTensorList();
+		this._fv = new double[this._fs.length];
+		for (int i = 0; i < this._fv.length; i++) {
+			double val;
+			int f = this._fs[i];
+			if (param.isNeural(f)) {
+				int[] pos = param.getNeuralLocation(f);
+				val = tensorList.get(pos[0]).get(pos[1]); 
+			} else {
+				val = 1.0;
+			}
+			this._fv[i] = val;
+		}
 	}
 	
 	public int length() {

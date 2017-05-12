@@ -22,6 +22,7 @@ import java.util.List;
 
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
+import com.statnlp.neural.AbstractTensor;
 
 /**
  * A base class representing an instance, to hold the surface form (e.g., the words of a sentence) of a 
@@ -51,6 +52,8 @@ public abstract class Instance implements Serializable{
 	private Instance _unlabeledInstance;
 	/** The top-K predictions of this instance */
 	protected List<?> _topKPredictions;
+	/** The tensor list corresponding to output nodes in the neural network */
+	private List<AbstractTensor> _tensorList;
 	
 	/**
 	 * Create an instance.
@@ -191,6 +194,10 @@ public abstract class Instance implements Serializable{
 	public abstract void setPrediction(Object o);
 	public void setTopKPredictions(List<?> topKPredictions){
 		this._topKPredictions = topKPredictions;
+	}
+	
+	public List<AbstractTensor> getTensorList() {
+		return this._tensorList;
 	}
 	
 }

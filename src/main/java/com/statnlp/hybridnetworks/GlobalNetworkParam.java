@@ -527,6 +527,11 @@ public class GlobalNetworkParam implements Serializable{
 		return this._neuralFs.contains(featureID);
 	}
 	
+	public int[] getNeuralLocation(int featureID) {
+		// TODO
+		return null;
+	}
+	
 	/**
 	 * Returns the feature ID of the specified feature from the global feature index.<br>
 	 * If the feature is not present in the feature index, return -1.

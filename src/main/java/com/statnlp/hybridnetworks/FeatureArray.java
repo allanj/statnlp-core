@@ -20,6 +20,8 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 
+import com.statnlp.commons.types.Instance;
+
 /**
  * The class storing a list of features by their indices.<br>
  * The instances of this class may be chained together to form a sequence of feature arrays.<br>
@@ -240,7 +242,7 @@ public class FeatureArray implements Serializable{
 	 * @param param
 	 * @return
 	 */
-	public double getScore(LocalNetworkParam param, int version){
+	public double getScore(LocalNetworkParam param, Instance instance, int version){
 		if(this == NEGATIVE_INFINITY){
 			return this._totalScore;
 		}
@@ -256,12 +258,12 @@ public class FeatureArray implements Serializable{
 		}
 		this._totalScore = 0.0;
 		if (this._fb._version != version){
-			this._fb._currScore = this.computeScore(param, this.getCurrent());
+			this._fb._currScore = this.computeScore(param, instance, this.getCurrent());
 			this._fb._version = version;
 		}
 		this._totalScore += this._fb._currScore;
 		if (this._next != null){
-			this._totalScore += this._next.getScore(param, version);
+			this._totalScore += this._next.getScore(param, instance, version);
 		}
 		return this._totalScore;
 	}
@@ -269,13 +271,16 @@ public class FeatureArray implements Serializable{
 	/**
 	 * Compute the score using the parameter and the feature array
 	 * @param param
+	 * @param instance 
 	 * @param fs
 	 * @return
 	 */
-	private double computeScore(LocalNetworkParam param, int[] fs){
+	private double computeScore(LocalNetworkParam param, Instance instance, int[] fs){
 		if(!this._isLocal != param.isGlobalMode()) {
 			throw new RuntimeException("This FeatureArray is local? "+this._isLocal+"; The param is "+param.isGlobalMode());
 		}
+		
+		this._fb.setFeatureValues(instance, param);
 
 		double score = 0.0;
 		int pos = 0;
