@@ -34,6 +34,7 @@ public abstract class BaseInstance<SELF extends BaseInstance<SELF, IN, OUT>, IN,
 		result.input = duplicateInput();
 		result.output = duplicateOutput();
 		result.prediction = duplicatePrediction();
+		result._topKPredictions = duplicateTopKPredictions();
 		return result;
 	}
 	
@@ -104,6 +105,21 @@ public abstract class BaseInstance<SELF extends BaseInstance<SELF, IN, OUT>, IN,
 	public OUT duplicatePrediction(){
 		try {
 			return this.prediction == null ? null : (OUT)getMatchingAvailableConstructor(this.prediction.getClass(), this.prediction.getClass()).newInstance(this.prediction);
+		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
+				| NoSuchMethodException | SecurityException e) {
+			throw new RuntimeException("Cannot duplicate prediction automatically, please override duplicatePrediction method.");
+		}
+	}
+	
+	/**
+	 * Duplicate the top-k prediction list.<br>
+	 * Note that generally it is expected that the returned object is not the same object
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public List<OUT> duplicateTopKPredictions(){
+		try {
+			return this._topKPredictions == null ? null : (List<OUT>)getMatchingAvailableConstructor(this._topKPredictions.getClass(), this._topKPredictions.getClass()).newInstance(this._topKPredictions);
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e) {
 			throw new RuntimeException("Cannot duplicate prediction automatically, please override duplicatePrediction method.");

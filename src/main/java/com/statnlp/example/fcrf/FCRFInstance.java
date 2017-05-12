@@ -53,8 +53,35 @@ public class FCRFInstance extends BaseInstance<FCRFInstance, Sentence, ArrayList
 	}
 
 	@Override
+	public Sentence getInput() {
+		return this.sentence;
+	}
+
+	@Override
+	public ArrayList<String> getOutput() {
+		return this.chunks;
+	}
+
+	@Override
+	public ArrayList<String> getPrediction() {
+		return this.predictons;
+	}
+
+	@Override
+	public boolean hasOutput() {
+		if(chunks!=null) return true;
+		else return false;
+	}
+
+	@Override
 	public boolean hasPrediction() {
 		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void setPrediction(Object o) {
+		this.predictons = (ArrayList<String>)o;
 	}
 
 	public ArrayList<String> getChunkPredictons() {

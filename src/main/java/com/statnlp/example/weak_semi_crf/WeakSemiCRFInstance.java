@@ -1,6 +1,5 @@
 package com.statnlp.example.weak_semi_crf;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import com.statnlp.example.base.BaseInstance;
@@ -33,18 +32,6 @@ public class WeakSemiCRFInstance extends BaseInstance<WeakSemiCRFInstance, Strin
 			}
 		}
 		return inputArray;
-	}
-	
-	public String duplicateInput(){
-		return input == null ? null : new String(input);
-	}
-	
-	public List<Span> duplicateOutput(){
-		return output == null ? null : new ArrayList<Span>(output);
-	}
-
-	public List<Span> duplicatePrediction(){
-		return prediction == null ? null : new ArrayList<Span>(prediction);
 	}
 
 	@Override
