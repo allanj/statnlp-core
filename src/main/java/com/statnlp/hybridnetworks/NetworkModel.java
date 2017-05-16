@@ -94,6 +94,14 @@ public abstract class NetworkModel implements Serializable{
 		return _allInstances;
 	}
 	
+	public FeatureManager getFeatureManager(){
+		return _fm;
+	}
+	
+	public NetworkCompiler getNetworkCompiler(){
+		return _compiler;
+	}
+	
 	protected abstract Instance[][] splitInstancesForTrain();
 	
 	public Instance[][] splitInstancesForTest() {
@@ -189,10 +197,10 @@ public abstract class NetworkModel implements Serializable{
 			System.err.printf("Done in %.3fs\n", (end-start)/1.0e9);
 		}
 		try {
-			new VisualizerFrame(this, clazz.getConstructor(NetworkCompiler.class, FeatureManager.class).newInstance(_compiler, _fm));
+			new VisualizerFrame(this, clazz.getConstructor(GlobalNetworkParam.class).newInstance(_fm.getParam_G()));
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e) {
-			throw new IllegalArgumentException("The viewer class "+clazz.getName()+" must implement the constructor with signature (NetworkCompiler, FeatureManager)");
+			throw new IllegalArgumentException("The viewer class "+clazz.getName()+" must implement the constructor with signature (GlobalNetworkParam)");
 		}
 	}
 	

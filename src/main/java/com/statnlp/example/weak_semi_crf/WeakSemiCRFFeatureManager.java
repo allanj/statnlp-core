@@ -7,6 +7,7 @@ import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
+import com.statnlp.util.Pipeline;
 
 public class WeakSemiCRFFeatureManager extends FeatureManager {
 	
@@ -41,6 +42,10 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 
 	public WeakSemiCRFFeatureManager(GlobalNetworkParam param_g) {
 		super(param_g);
+	}
+	
+	public WeakSemiCRFFeatureManager(Pipeline pipeline){
+		this(pipeline.param);
 	}
 	
 	@Override

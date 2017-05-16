@@ -2,12 +2,11 @@ package com.statnlp.example.fcrf;
 
 import java.util.ArrayList;
 
-import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Sentence;
+import com.statnlp.example.base.BaseInstance;
 
 
-public class FCRFInstance extends Instance {
-
+public class FCRFInstance extends BaseInstance<FCRFInstance, Sentence, ArrayList<String>> {
 
 	private static final long serialVersionUID = 1851514046050983662L;
 	protected Sentence sentence;

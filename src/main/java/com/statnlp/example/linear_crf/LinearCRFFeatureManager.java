@@ -19,8 +19,12 @@
  */
 package com.statnlp.example.linear_crf;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 
+import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
@@ -29,6 +33,7 @@ import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.neural.NeuralConfig;
+import com.statnlp.util.Pipeline;
 
 /**
  * @author wei_lu
@@ -52,9 +57,9 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		WORD_BIGRAM(false),
 		TAG(false),
 		TAG_BIGRAM(false),
-		TRANSITION,
-		LABEL,
-		neural,
+		TRANSITION(true),
+		LABEL(false),
+		neural(false),
 		;
 		
 		private boolean isEnabled;
@@ -82,6 +87,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		public boolean disabled(){
 			return !isEnabled;
 		}
+		
 	}
 	
 	/**
@@ -111,13 +117,19 @@ public class LinearCRFFeatureManager extends FeatureManager{
 			}
 		}
 	}
+	
+	public LinearCRFFeatureManager(Pipeline pipeline){
+		this(pipeline.param);
+	}
 
 	@Override
 	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k) {
+		GlobalNetworkParam param_g = this._param_g;
 		
 		LinearCRFNetwork net = (LinearCRFNetwork)network;
 		
-		LinearCRFInstance instance = (LinearCRFInstance)net.getInstance();
+		@SuppressWarnings("unchecked")
+		LinearInstance<String> instance = (LinearInstance<String>)net.getInstance();
 		int size = instance.size();
 		
 		ArrayList<String[]> input = instance.getInput();
@@ -140,13 +152,11 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		int child_tag_id = network.getNodeArray(children_k[0])[1];
 		int childNodeType = network.getNodeArray(children_k[0])[4];
 		
-		int labelSize = Label.LABELS.size();
+		int labelSize = this._param_g.LABELS.size();
 
 		if(childNodeType == NODE_TYPES.LEAF.ordinal()){
 			child_tag_id = labelSize;
 		}
-		
-		GlobalNetworkParam param_g = this._param_g;
 		
 		if(CHEAT){
 			return new FeatureArray(new int[]{param_g.toFeature(net, "CHEAT", tag_id+"", Math.abs(instance.getInstanceId())+" "+pos+" "+child_tag_id)});
@@ -168,28 +178,23 @@ public class LinearCRFFeatureManager extends FeatureManager{
 			String postag = input.get(pos)[1];
 //			features.add(param_g.toFeature(network, FeatureType.neural.name(), tag_id+"",input.get(pos)[0]));
 			features.add(param_g.toFeature(network, FeatureType.neural.name(), tag_id+"", prevWord+IN_SEP+input.get(pos)[0]+IN_SEP+nextWord+OUT_SEP+prevPos+IN_SEP+postag));
-		}else{
-			features.add(param_g.toFeature(network, FeatureType.WORD.name(), tag_id+"",input.get(pos)[0]));
-//			features.add(param_g.toFeature(network, FeatureType.WORD.name(), tag_id+"", prevWord+IN_SEP+input.get(pos)[0]+IN_SEP+nextWord));
-			//features.add(param_g.toFeature(network, FeatureType.WORD.name(), tag_id+"", input.get(pos)[0]));
-		}
-		
-		
-		// Word window features
-		if(FeatureType.WORD.enabled() && tag_id != labelSize){
-			int wordWindowSize = wordHalfWindowSize*2+1;
-			if(wordWindowSize < 0){
-				wordWindowSize = 0;
-			}
-			for(int i=0; i<wordWindowSize; i++){
-				String word = "***";
-				int relIdx = i-wordHalfWindowSize;
-				int idx = pos + relIdx;
-				if(idx >= 0 && idx < size){
-					word = input.get(idx)[0];
+		} else {
+			// Word window features
+			if(FeatureType.WORD.enabled() && tag_id != labelSize){
+				int wordWindowSize = wordHalfWindowSize*2+1;
+				if(wordWindowSize < 0){
+					wordWindowSize = 0;
 				}
-				if(idx > pos) continue; // Only consider the left window
-				features.add(param_g.toFeature(network, FeatureType.WORD+":"+relIdx, tag_id+"", word));
+				for(int i=0; i<wordWindowSize; i++){
+					String word = "***";
+					int relIdx = i-wordHalfWindowSize;
+					int idx = pos + relIdx;
+					if(idx >= 0 && idx < size){
+						word = input.get(idx)[0];
+					}
+					if(idx > pos) continue; // Only consider the left window
+					features.add(param_g.toFeature(network, FeatureType.WORD+":"+relIdx, tag_id+"", word));
+				}
 			}
 		}
 		
@@ -267,6 +272,34 @@ public class LinearCRFFeatureManager extends FeatureManager{
 			featureArray[i] = features.get(i);
 		}
 		return createFeatureArray(network, featureArray);
+	}
+	
+
+	
+	private void writeObject(ObjectOutputStream oos) throws IOException{
+		oos.writeInt(wordHalfWindowSize);
+		oos.writeInt(posHalfWindowSize);
+		oos.writeBoolean(productWithOutput);
+		oos.writeObject(OUT_SEP);
+		oos.writeObject(IN_SEP);
+		oos.writeInt(FeatureType.values().length);
+		for(FeatureType featureType: FeatureType.values()){
+			oos.writeObject(featureType.name());
+			oos.writeBoolean(featureType.isEnabled);
+		}
+	}
+	
+	private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException{
+		wordHalfWindowSize = ois.readInt();
+		posHalfWindowSize = ois.readInt();
+		productWithOutput = ois.readBoolean();
+		OUT_SEP = (String)ois.readObject();
+		IN_SEP = (String)ois.readObject();
+		int numFeatureTypes = ois.readInt();
+		for(int i=0; i<numFeatureTypes; i++){
+			FeatureType featureType = FeatureType.valueOf((String)ois.readObject());
+			featureType.isEnabled = ois.readBoolean();
+		}
 	}
 
 }

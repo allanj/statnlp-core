@@ -2,11 +2,11 @@ package com.statnlp.example.linear_ne;
 
 import java.util.ArrayList;
 
-import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Sentence;
+import com.statnlp.example.base.BaseInstance;
 
 
-public class ECRFInstance extends Instance {
+public class ECRFInstance extends BaseInstance<ECRFInstance, Sentence, ArrayList<String>> {
 
 
 	private static final long serialVersionUID = 1851514046050983662L;
@@ -25,7 +25,6 @@ public class ECRFInstance extends Instance {
 
 	@Override
 	public int size() {
-		// TODO Auto-generated method stub
 		return this.sentence.length();
 	}
 
@@ -33,25 +32,25 @@ public class ECRFInstance extends Instance {
 	@Override
 	public ECRFInstance duplicate() {
 		ECRFInstance inst = new ECRFInstance(this._instanceId, this._weight,this.sentence);
-		if(entities!=null)
+		if(entities!=null){
 			inst.entities = (ArrayList<String>)entities.clone();
-		else inst.entities = null;
-		if(predictons!=null)
+		} else {
+			inst.entities = null;
+		}
+		if(predictons!=null){
 			inst.predictons =(ArrayList<String>)predictons.clone();
-		else inst.predictons = null;
+		} else {
+			inst.predictons = null;
+		}
 		return inst;
 	}
 
 	@Override
 	public void removeOutput() {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void removePrediction() {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
@@ -61,20 +60,18 @@ public class ECRFInstance extends Instance {
 
 	@Override
 	public ArrayList<String> getOutput() {
-		// TODO Auto-generated method stub
 		return this.entities;
 	}
 
 	@Override
 	public ArrayList<String> getPrediction() {
-		// TODO Auto-generated method stub
 		return this.predictons;
 	}
 
 	@Override
 	public boolean hasOutput() {
 		if(entities!=null) return true;
-		else return false;
+		return false;
 	}
 
 	@Override
@@ -88,8 +85,12 @@ public class ECRFInstance extends Instance {
 		this.predictons = (ArrayList<String>)o;
 	}
 	
-
-	public void setPredictionScore(double score){this.predictionScore = score;}
-	public double getPredictionScore(){return this.predictionScore;}
+	public void setPredictionScore(double score){
+		this.predictionScore = score;
+	}
+	
+	public double getPredictionScore(){
+		return this.predictionScore;
+	}
 	
 }

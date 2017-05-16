@@ -246,6 +246,7 @@ public class GradientDescentOptimizer implements Optimizer{
 				adadeltaEps /= 2;
 				System.err.println("[AdaDelta]Reset from obj = "+this._obj+", new eps = "+adadeltaEps);
 			} else if(adaptiveStrategy == AdaptiveStrategy.ADADELTA_THEN_STOP || adaptiveStrategy == AdaptiveStrategy.ADAM_THEN_STOP){
+				System.out.println("Taking the best parameters from iteration "+this.bestIterNum);
 				copyBest();
 				return true;
 			} else if (adaptiveStrategy == AdaptiveStrategy.ADAGRAD_DECAYING){

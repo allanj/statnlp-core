@@ -2,6 +2,8 @@ package com.statnlp.example.weak_semi_crf;
 
 import java.io.Serializable;
 
+import com.statnlp.commons.types.Label;
+
 public class Span implements Comparable<Span>, Serializable{
 	
 	private static final long serialVersionUID = 1849557517361796614L;

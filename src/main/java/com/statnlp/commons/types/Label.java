@@ -17,11 +17,9 @@
 /**
  * 
  */
-package com.statnlp.example.linear_crf;
+package com.statnlp.commons.types;
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author wei_lu
@@ -31,27 +29,6 @@ public class Label implements Serializable, Comparable<Label>{
 	
 	private static final long serialVersionUID = -5006849791095171763L;
 	
-	public static final Map<String, Label> LABELS = new HashMap<String, Label>();
-	public static final Map<Integer, Label> LABELS_INDEX = new HashMap<Integer, Label>();
-	
-	public static Label get(String form){
-		if(!LABELS.containsKey(form)){
-			Label label = new Label(form, LABELS.size());
-			LABELS.put(form, label);
-			LABELS_INDEX.put(label._id, label);
-		}
-		return LABELS.get(form);
-	}
-	
-	public static Label get(int id){
-		return LABELS_INDEX.get(id);
-	}
-	
-	public static void reset(){
-		LABELS.clear();
-		LABELS_INDEX.clear();
-	}
-	
 	private String _form;
 	private int _id;
 	
@@ -60,7 +37,7 @@ public class Label implements Serializable, Comparable<Label>{
 		this._id = lbl._id;
 	}
 	
-	private Label(String form, int id){
+	public Label(String form, int id){
 		this._form = form;
 		this._id = id;
 	}

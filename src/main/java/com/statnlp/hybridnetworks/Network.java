@@ -1058,6 +1058,13 @@ public abstract class Network implements Serializable, HyperGraph{
 			return true;
 		return false;
 	}
+	
+	public int getPosForNode(int[] nodeArray){
+		return getCompiler().getPosForNode(nodeArray);
+	}
+	
+	public Object getOutputForNode(int[] nodeArray){
+		return getCompiler().getOutputForNode(nodeArray);
+	}
+	
 }
-
-

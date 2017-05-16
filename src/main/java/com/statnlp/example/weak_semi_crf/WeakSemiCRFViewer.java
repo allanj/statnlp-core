@@ -5,8 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler.NodeType;
-import com.statnlp.hybridnetworks.FeatureManager;
-import com.statnlp.hybridnetworks.NetworkCompiler;
+import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.ui.visualize.type.VNode;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.ui.visualize.type.VisualizeGraph;
@@ -29,8 +28,8 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 	
 	protected ArrayList<Span> outputs;
 	
-	public WeakSemiCRFViewer(NetworkCompiler compiler, FeatureManager fm) {
-		super(compiler, fm);
+	public WeakSemiCRFViewer(GlobalNetworkParam param) {
+		super(param);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -59,7 +58,7 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 //		if(Label.get(nodeId).form.equals("O")){
 //			return inputs[pos];
 //		}
-		return Label.get(nodeId).toString();
+		return param.getLabel(nodeId).toString();
 	}
 	
 	protected void initNodeColor(VisualizeGraph vg)

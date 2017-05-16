@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.example.weak_semi_crf.Label;
+import com.statnlp.commons.types.Label;
 import com.statnlp.example.weak_semi_crf.Span;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFFeatureManager;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFInstance;
@@ -31,6 +31,8 @@ public class WeakSemiCRFMain {
 	
 	public static boolean COMBINE_OUTSIDE_CHARS = true;
 	public static boolean USE_SINGLE_OUTSIDE_TAG = true;
+	
+	private static GlobalNetworkParam param;
 	
 	public static void main(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException, NoSuchFieldException, SecurityException, InterruptedException, IllegalArgumentException, IllegalAccessException{
 		boolean serializeModel = false;
@@ -93,9 +95,11 @@ public class WeakSemiCRFMain {
 		
 		System.err.println("Read.."+size+" instances.");
 		
-		WeakSemiCRFFeatureManager fm = new WeakSemiCRFFeatureManager(new GlobalNetworkParam());
+		param = new GlobalNetworkParam();
 		
-		Label[] labels = Label.LABELS.values().toArray(new Label[Label.LABELS.size()]);
+		WeakSemiCRFFeatureManager fm = new WeakSemiCRFFeatureManager(param);
+		
+		Label[] labels = param.LABELS.values().toArray(new Label[param.LABELS.size()]);
 		
 		WeakSemiCRFNetworkCompiler compiler = new WeakSemiCRFNetworkCompiler(labels, maxSize, maxSpan);
 		
@@ -187,7 +191,7 @@ public class WeakSemiCRFMain {
 	}
 	
 	private static void printScore(Instance[] instances){
-		int size = Label.LABELS.size();
+		int size = param.LABELS.size();
 		int[] corrects = new int[size];
 		int[] totalGold = new int[size];
 		int[] totalPred = new int[size];
@@ -199,13 +203,13 @@ public class WeakSemiCRFMain {
 				if(predicted.contains(span)){
 					predicted.remove(span);
 					Label label = span.label;
-					corrects[label.id] += 1;
-					totalPred[label.id] += 1;
+					corrects[label.getId()] += 1;
+					totalPred[label.getId()] += 1;
 				}
-				totalGold[span.label.id] += 1;
+				totalGold[span.label.getId()] += 1;
 			}
 			for(Span span: predicted){
-				totalPred[span.label.id] += 1;
+				totalPred[span.label.getId()] += 1;
 			}
 		}
 		double avgF1 = 0;
@@ -214,7 +218,7 @@ public class WeakSemiCRFMain {
 			double recall = (totalGold[i] == 0) ? 0.0 : 1.0*corrects[i]/totalGold[i];
 			double f1 = (precision == 0.0 || recall == 0.0) ? 0.0 : 2/((1/precision)+(1/recall));
 			avgF1 += f1;
-			System.out.println(String.format("%6s: #Corr:%2$3d, #Pred:%3$3d, #Gold:%4$3d, Pr=%5$#5.2f%% Rc=%6$#5.2f%% F1=%7$#5.2f%%", Label.get(i).form, corrects[i], totalPred[i], totalGold[i], precision*100, recall*100, f1*100));
+			System.out.println(String.format("%6s: #Corr:%2$3d, #Pred:%3$3d, #Gold:%4$3d, Pr=%5$#5.2f%% Rc=%6$#5.2f%% F1=%7$#5.2f%%", param.getLabel(i).getForm(), corrects[i], totalPred[i], totalGold[i], precision*100, recall*100, f1*100));
 		}
 		System.out.printf("Macro average F1: %.2f%%", 100*avgF1/size);
 	}
@@ -267,7 +271,7 @@ public class WeakSemiCRFMain {
 					continue;
 				}
 				String[] startend_label = span.split(" ");
-				Label label = Label.get(startend_label[1]);
+				Label label = param.getLabel(startend_label[1]);
 				String[] start_end = startend_label[0].split(",");
 				int start = Integer.parseInt(start_end[0]);
 				int end = Integer.parseInt(start_end[1]);
@@ -315,7 +319,7 @@ public class WeakSemiCRFMain {
 			int curEnd = input.indexOf(' ', curStart);
 			Label outsideLabel = null;
 			if(USE_SINGLE_OUTSIDE_TAG){
-				outsideLabel = Label.get("O");
+				outsideLabel = param.getLabel("O");
 				if(curEnd == -1 || curEnd > end){
 					curEnd = end;
 				} else if(curStart == curEnd){
@@ -327,36 +331,36 @@ public class WeakSemiCRFMain {
 					if(curStart == start){ // Start directly after previous tag: this is between tags
 						if(curStart == 0){ // Unless this is the start of the string
 							if(curEnd == length){
-								outsideLabel = Label.get("O"); // Case |<cur>|
+								outsideLabel = param.getLabel("O"); // Case |<cur>|
 							} else {
-								outsideLabel = Label.get("O-B"); // Case |<cur>###
+								outsideLabel = param.getLabel("O-B"); // Case |<cur>###
 							}
 						} else {
 							if(curEnd == length){
-								outsideLabel = Label.get("O-A"); // Case ###<cur>|
+								outsideLabel = param.getLabel("O-A"); // Case ###<cur>|
 							} else {
-								outsideLabel = Label.get("O-I"); // Case ###<cur>###
+								outsideLabel = param.getLabel("O-I"); // Case ###<cur>###
 							}
 						}
 					} else { // Start not immediately: this is before tags (found space before)
 						if(curEnd == length){
-							outsideLabel = Label.get("O"); // Case ### <cur>|
+							outsideLabel = param.getLabel("O"); // Case ### <cur>|
 						} else {
-							outsideLabel = Label.get("O-B"); // Case ### <cur>###
+							outsideLabel = param.getLabel("O-B"); // Case ### <cur>###
 						}
 					}
 				} else if(curStart == curEnd){ // It is immediately a space
 					curEnd += 1;
-					outsideLabel = Label.get("O"); // Tag space as a single outside token
+					outsideLabel = param.getLabel("O"); // Tag space as a single outside token
 				} else if(curStart < curEnd){ // Found a non-immediate space
 					if(curStart == start){ // Start immediately after previous tag: this is after tag
 						if(curStart == 0){
-							outsideLabel = Label.get("O"); // Case |<cur> ###
+							outsideLabel = param.getLabel("O"); // Case |<cur> ###
 						} else {
-							outsideLabel = Label.get("O-A"); // Case ###<cur> ###
+							outsideLabel = param.getLabel("O-A"); // Case ###<cur> ###
 						}
 					} else { // Start not immediately: this is a separate outside token
-						outsideLabel = Label.get("O"); // Case ### <cur> ###
+						outsideLabel = param.getLabel("O"); // Case ### <cur> ###
 					}
 				}
 			}
@@ -418,33 +422,33 @@ public class WeakSemiCRFMain {
 					if(start != -1){
 						createSpan(output, start, end, prevLabel);
 					}
-					if(prevLabel != null && !prevLabel.form.matches("O-[BI]")){
+					if(prevLabel != null && !prevLabel.getForm().matches("O-[BI]")){
 						// Assumption: consecutive non-outside tags are separated by a space
 						input += " ";
-						createSpan(output, end, end+1, Label.get("O"));
+						createSpan(output, end, end+1, param.getLabel("O"));
 						end += 1;
 					}
 					start = end;
 					input += word;
-					label = Label.get(form.substring(form.indexOf("-")+1));
+					label = param.getLabel(form.substring(form.indexOf("-")+1));
 				} else if(form.startsWith("I")){
 					input += " "+word;
-					label = Label.get(form.substring(form.indexOf("-")+1));
+					label = param.getLabel(form.substring(form.indexOf("-")+1));
 				} else if(form.startsWith("O")){
 					if(start != -1){
 						createSpan(output, start, end, prevLabel);
 					}
 					if(prevLabel != null && form.matches("O(-B)?")){
 						input += " ";
-						createSpan(output, end, end+1, Label.get("O"));
+						createSpan(output, end, end+1, param.getLabel("O"));
 						end += 1;
 					}
 					start = end;
 					input += word;
 					if(USE_SINGLE_OUTSIDE_TAG){
-						label = Label.get("O");
+						label = param.getLabel("O");
 					} else {
-						label = Label.get(form);
+						label = param.getLabel(form);
 					}
 				}
 				prevLabel = label;
@@ -455,7 +459,7 @@ public class WeakSemiCRFMain {
 	}
 	
 	private static void createSpan(List<Span> output, int start, int end, Label label){
-		if(label.form.startsWith("O")){
+		if(label.getForm().startsWith("O")){
 			if(COMBINE_OUTSIDE_CHARS){
 				output.add(new Span(start, end, label));
 			} else {

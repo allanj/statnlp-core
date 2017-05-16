@@ -1,4 +1,4 @@
-package com.statnlp.example;
+package com.statnlp.maxmargin;
 
 import static com.statnlp.commons.Utils.print;
 
@@ -225,7 +225,6 @@ public class LinearCRFMain {
 		
 		model.train(trainInstances, numIterations);
 		
-		writeModelText = true;
 		if(writeModelText){
 			PrintStream modelTextWriter = new PrintStream(modelPath+".txt");
 			modelTextWriter.println("Model path: "+modelPath);

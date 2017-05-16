@@ -21,17 +21,21 @@ package com.statnlp.example.linear_crf;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.hybridnetworks.ScoredIndex;
+import com.statnlp.commons.types.Label;
+import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.hybridnetworks.NodeHypothesis;
+import com.statnlp.hybridnetworks.ScoredIndex;
+import com.statnlp.util.Pipeline;
 
 /**
  * @author wei_lu
@@ -41,7 +45,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	
 	private static final long serialVersionUID = -3829680998638818730L;
 	
-	public List<Label> _labels;
+	public Map<Integer, Label> _labels;
 	public enum NODE_TYPES {
 		LEAF,
 		NODE,
@@ -55,26 +59,30 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	public static HashMap<Long, HashMap<Long, Integer>> edge2idx;
 	private int edgeId;
 	
-	protected LinearCRFViewer viewer;
-	
-	public LinearCRFNetworkCompiler(){
-		this._labels = new ArrayList<Label>();
-		for(Label label: Label.LABELS.values()){
-			this._labels.add(new Label(label));
+	public LinearCRFNetworkCompiler(Collection<Label> labels){
+		this._labels = new HashMap<Integer, Label>();
+		for(Label label: labels){
+			this._labels.put(label.getId(), new Label(label));
 		}
 		edge2idx = new HashMap<Long, HashMap<Long, Integer>>();
 		edgeId = 0;
 		this.compile_unlabled_generic();
-		this.init_visualization();
 	}
 	
-	private void init_visualization(){
-		viewer = new LinearCRFViewer(this, null);
+	public LinearCRFNetworkCompiler(Pipeline pipeline){
+		this._labels = new HashMap<Integer, Label>();
+		for(Label label: pipeline.param.LABELS.values()){
+			this._labels.put(label.getId(), new Label(label));
+		}
+		edge2idx = new HashMap<Long, HashMap<Long, Integer>>();
+		edgeId = 0;
+		this.compile_unlabled_generic();
 	}
 	
 	@Override
 	public LinearCRFNetwork compile(int networkId, Instance instance, LocalNetworkParam param) {
-		LinearCRFInstance inst = (LinearCRFInstance) instance;
+		@SuppressWarnings("unchecked")
+		LinearInstance<Label> inst = (LinearInstance<Label>) instance;
 		if(inst.isLabeled()){
 			return this.compile_labeled(networkId, inst, param);
 		} else {
@@ -84,7 +92,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	}
 	
 	
-	private LinearCRFNetwork compile_labeled(int networkId, LinearCRFInstance inst, LocalNetworkParam param){
+	private LinearCRFNetwork compile_labeled(int networkId, LinearInstance<Label> inst, LocalNetworkParam param){
 		LinearCRFNetwork network = new LinearCRFNetwork(networkId, inst, param, this);
 		
 		ArrayList<Label> outputs = inst.getOutput();
@@ -123,7 +131,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		return network;
 	}
 
-	private LinearCRFNetwork compile_unlabeled(int networkId, LinearCRFInstance inst, LocalNetworkParam param){
+	private LinearCRFNetwork compile_unlabeled(int networkId, LinearInstance<Label> inst, LocalNetworkParam param){
 		int size = inst.size();
 		long root = this.toNode_root(size);
 		
@@ -200,14 +208,15 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 
 	
 	@Override
-	public LinearCRFInstance decompile(Network network) {
+	public LinearInstance<Label> decompile(Network network) {
 		return decompile(network, 1);
 	}
 	
-	public LinearCRFInstance decompile(Network network, int numPredictionsGenerated){
+	public LinearInstance<Label> decompile(Network network, int numPredictionsGenerated){
 
 		LinearCRFNetwork lcrfNetwork = (LinearCRFNetwork)network;
-		LinearCRFInstance instance = (LinearCRFInstance)lcrfNetwork.getInstance();
+		@SuppressWarnings("unchecked")
+		LinearInstance<Label> instance = (LinearInstance<Label>)lcrfNetwork.getInstance();
 		
 		ArrayList<ArrayList<Label>> topKPredictions = new ArrayList<ArrayList<Label>>();
 		for(int k=0; k<numPredictionsGenerated; k++){
@@ -218,7 +227,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 			}
 		}
 		
-		LinearCRFInstance result = instance.duplicate();
+		LinearInstance<Label> result = instance.duplicate();
 		
 		result.setPrediction(topKPredictions.get(0));
 		result.setTopKPredictions(topKPredictions);
@@ -226,7 +235,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		return result;
 	}
 	
-	private ArrayList<Label> getKthBestPrediction(LinearCRFInstance instance, LinearCRFNetwork lcrfNetwork, int k){
+	private ArrayList<Label> getKthBestPrediction(LinearInstance<Label> instance, LinearCRFNetwork lcrfNetwork, int k){
 		int size = instance.size();
 		ArrayList<Label> predictions = new ArrayList<Label>();
 		long root = toNode_root(size);
@@ -253,7 +262,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 			if(pos != i){
 				System.err.println("Position encoded in the node array not the same as the interpretation!");
 			}
-			predictions.add(0, Label.get(tag_id));
+			predictions.add(0, _labels.get(tag_id));
 //			node_k = child_k;
 			bestPath = children_k[0];
 		}
@@ -262,6 +271,25 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	
 	public double costAt(Network network, int parent_k, int[] child_k){
 		return super.costAt(network, parent_k, child_k);
+	}
+
+	/**
+	 * Returns the position in the input represented by the given node.
+	 * @return
+	 */
+	public int getPosForNode(int[] nodeArray){
+		return nodeArray[0]-1;
+	}
+	
+	public Integer getOutputForNode(int[] nodeArray){
+		Label label =_labels.get(nodeArray[1]);
+		if(label == null){
+			return null;
+		}
+		if(nodeArray[4] == NODE_TYPES.LEAF.ordinal()){
+			return null;
+		}
+		return nodeArray[1];
 	}
 
 }

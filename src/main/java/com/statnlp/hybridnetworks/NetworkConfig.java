@@ -16,6 +16,7 @@
  */
 package com.statnlp.hybridnetworks;
 
+import java.lang.reflect.Field;
 
 public class NetworkConfig {
 	
@@ -223,4 +224,20 @@ public class NetworkConfig {
 	public static int NUM_STRUCTS = 2;
 	/** Currently only used by Mean-field inference. That's why protected. true if mean-field, false otherwise */
 	protected static boolean PRE_COMPILE_NETWORKS;
+	
+	/**
+	 * Returns the value of all the configurations
+	 * @return
+	 */
+	public static String getConfig(){
+		StringBuilder builder = new StringBuilder();
+		for(Field field: NetworkConfig.class.getDeclaredFields()){
+			try {
+				builder.append(field.getName()+"="+field.get(null)+"\n");
+			} catch (IllegalArgumentException | IllegalAccessException e) {
+				return null;
+			}
+		}
+		return builder.toString();
+	}
 }
