@@ -81,7 +81,7 @@ This package also comes with visualization GUI to see how the graphical models
 represent the input. Simply execute "visualize" task to the above, as follows:
 
     java -jar target/statnlp-core-2017.1-SNAPSHOT.jar \
-        --linearModelClass com.statnlp.example.linear_crf.LinearCRF
+        --linearModelClass com.statnlp.example.linear_crf.LinearCRF \
         --trainPath data/train.data \
         visualize
 
