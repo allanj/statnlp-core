@@ -125,11 +125,10 @@ public abstract class Pipeline {
 		}
 	}
 	
-	@SuppressWarnings("unchecked")
 	private static String[] argsAsArray(Object value){
 		String[] args;
 		if(value instanceof List){
-			args = ((List<String>)value).toArray(new String[0]);
+			args = ((List<?>)value).toArray(new String[0]);
 		} else {
 			args = (String[])value;
 		}
@@ -191,8 +190,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						String[] args = argsAsArray(value);
-						NetworkConfig.MODEL_TYPE = ModelType.valueOf(args[0].toUpperCase());
+						NetworkConfig.MODEL_TYPE = ModelType.valueOf(((String)value).toUpperCase());
 					}
 
 					@Override
@@ -214,8 +212,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						String[] args = argsAsArray(value);
-						NetworkConfig.OBJTOL = Double.parseDouble(args[0]);
+						NetworkConfig.OBJTOL = (Double)value;
 					}
 
 					@Override
@@ -236,8 +233,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						String[] args = argsAsArray(value);
-						NetworkConfig.MARGIN = Double.parseDouble(args[0]);
+						NetworkConfig.MARGIN = (Double)value;
 					}
 
 					@Override
@@ -258,8 +254,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						String[] args = argsAsArray(value);
-						NetworkConfig.NODE_COST = Double.parseDouble(args[0]);
+						NetworkConfig.NODE_COST = (Double)value;
 					}
 
 					@Override
@@ -280,8 +275,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						String[] args = argsAsArray(value);
-						NetworkConfig.EDGE_COST = Double.parseDouble(args[0]);
+						NetworkConfig.EDGE_COST = (Double)value;
 					}
 
 					@Override
@@ -404,8 +398,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						String[] args = argsAsArray(value);
-						NetworkConfig.BATCH_SIZE = Integer.parseInt(args[0]);
+						NetworkConfig.BATCH_SIZE = (Integer)value;
 					}
 
 					@Override
@@ -426,8 +419,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						String[] args = argsAsArray(value);
-						NetworkConfig.L2_REGULARIZATION_CONSTANT = Double.parseDouble(args[0]);
+						NetworkConfig.L2_REGULARIZATION_CONSTANT = (Double)value;
 					}
 
 					@Override
@@ -450,8 +442,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						String[] args = argsAsArray(value);
-						NetworkConfig.NUM_THREADS = Integer.parseInt(args[0]);
+						NetworkConfig.NUM_THREADS = (Integer)value;
 					}
 
 					@Override
