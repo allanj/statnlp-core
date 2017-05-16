@@ -75,6 +75,21 @@ Linear-chain CRF:
         --modelPath data/test.model \
         train test evaluate
 
+The last line above defines the tasks to be executed, in that order.
+
+This package also comes with visualization GUI to see how the graphical models
+represent the input. Simply execute "visualize" task to the above, as follows:
+
+    java -jar target/statnlp-core-2017.1-SNAPSHOT.jar \
+        --linearModelClass com.statnlp.example.linear_crf.LinearCRF
+        --trainPath data/train.data \
+        visualize
+
+In the visualization, you can drag the canvas to move around, and you can 
+scroll to zoom in/zoom out.
+Also the arrow keys (left and right) can be used to show the previous and next
+instances.
+
 ===================
 Building New Models
 ===================
