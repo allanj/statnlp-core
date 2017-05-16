@@ -26,8 +26,7 @@ import org.freehep.graphics2d.VectorGraphics;
 import org.freehep.graphicsio.pdf.PDFGraphics2D;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.hybridnetworks.FeatureManager;
-import com.statnlp.hybridnetworks.NetworkCompiler;
+import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.TableLookupNetwork;
 
 import edu.uci.ics.jung.algorithms.layout.FRLayout;
@@ -83,9 +82,7 @@ public class VisualizationViewerEngine {
 	//node_id to coordinate
 	protected HashMap<Long, Point2D> coordinateMap = new HashMap<Long, Point2D>();
 	
-	protected NetworkCompiler compiler;
-	
-	protected FeatureManager fm;
+	protected GlobalNetworkParam param;
 	
 	protected TableLookupNetwork network;
 	
@@ -95,13 +92,8 @@ public class VisualizationViewerEngine {
 	
 	protected Object outputs;
 	
-	public VisualizationViewerEngine(){
-		this(null, null);
-	}
-
-	public VisualizationViewerEngine(NetworkCompiler compiler, FeatureManager fm) {
-		this.compiler = compiler;
-		this.fm = fm;
+	public VisualizationViewerEngine(GlobalNetworkParam param) {
+		this.param =  param;
 		initTypeColorMapping();
 	}
 	

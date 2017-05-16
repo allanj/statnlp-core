@@ -84,6 +84,7 @@ public class LinearInstance<T> extends BaseInstance<LinearInstance<T>, ArrayList
 			result.append(prediction.get(i));
 			result.append("\t");
 			result.append(output.get(i));
+			result.append("\n");
 		}
 		return result.toString();
 	}

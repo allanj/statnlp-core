@@ -250,6 +250,50 @@ public abstract class Pipeline {
 					
 				})
 				.help("The margin for margin-based methods (SSVM and SOFTMAX_MARGIN)."));
+		argParserObjects.put("--nodeMismatchCost", argParser.addArgument("--nodeMismatchCost")
+				.type(Double.class)
+				.setDefault(NetworkConfig.NODE_COST)
+				.action(new ArgumentAction(){
+
+					@Override
+					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+							Object value) throws ArgumentParserException {
+						String[] args = argsAsArray(value);
+						NetworkConfig.NODE_COST = Double.parseDouble(args[0]);
+					}
+
+					@Override
+					public void onAttach(Argument arg) {}
+
+					@Override
+					public boolean consumeArgument() {
+						return true;
+					}
+					
+				})
+				.help("The cost for a node mismatch in cost-augmented models (SSVM and SOFTMAX_MARGIN)."));
+		argParserObjects.put("--edgeMismatchCost", argParser.addArgument("--edgeMismatchCost")
+				.type(Double.class)
+				.setDefault(NetworkConfig.EDGE_COST)
+				.action(new ArgumentAction(){
+
+					@Override
+					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+							Object value) throws ArgumentParserException {
+						String[] args = argsAsArray(value);
+						NetworkConfig.EDGE_COST = Double.parseDouble(args[0]);
+					}
+
+					@Override
+					public void onAttach(Argument arg) {}
+
+					@Override
+					public boolean consumeArgument() {
+						return true;
+					}
+					
+				})
+				.help("The cost for a edge mismatch in cost-augmented models (SSVM and SOFTMAX_MARGIN)."));
 		argParserObjects.put("--weightInit", argParser.addArgument("--weightInit")
 				.type(String.class)
 				.setDefault(new String[]{"0.0"})
@@ -683,12 +727,13 @@ public abstract class Pipeline {
 		//defined by user
 		initTraining();
 		
+		initGlobalNetworkParam();
+		
 		//defined by user
 		initAndSetInstanceParser();
 		
 		Instance[] trainInstances = getInstancesForTraining();
 		
-		initGlobalNetworkParam();
 		initAndSetNetworkCompiler();
 		initAndSetFeatureManager();
 		
@@ -822,7 +867,59 @@ public abstract class Pipeline {
 			System.exit(1);
 		}
 		unprocessedArgs = unknownArgs.toArray(new String[unknownArgs.size()]);
+		parseUnknownArgs(unprocessedArgs);
 		return this;
+	}
+	
+	public void parseUnknownArgs(String[] args){
+		int argIdx = 0;
+		while(argIdx < args.length){
+			String flag = args[argIdx];
+			argIdx += 1;
+			if(flag.startsWith("--")){
+				flag = flag.substring(2);
+			} else if (flag.startsWith("-")){
+				if(isDouble(flag)){
+					LOGGER.warn("Ignoring number in argument: %s", flag);
+					continue;
+				} else {
+					flag = flag.substring(1);
+				}
+			}
+			String[] tokens = flag.split("=");
+			if(tokens.length == 1){
+				LOGGER.info("Setting unknown argument %s to true", tokens[0]);
+				setParameter(tokens[0], true);
+			} else if(tokens.length == 2){
+				LOGGER.info("Setting unknown argument %s to %s", tokens[0], tokens[1]);
+				setParameter(tokens[0], tokens[1]);
+			}
+//			// Consume arguments
+//			List<Object> arguments = new ArrayList<Object>();
+//			while(argIdx < args.length){
+//				String nextFlag = args[argIdx];
+//				if(nextFlag.startsWith("-")){
+//					if(isDouble(nextFlag)){
+//						arguments.add(Double.parseDouble(nextFlag));
+//					} else {
+//						break;
+//					}
+//				} else {
+//					arguments.add(nextFlag);
+//					argIdx += 1;
+//				}
+//			}
+//			if(arguments.size() == 0){
+//				LOGGER.info("Setting unknown argument %s to true", flag);
+//				setParameter(flag, true);
+//			} else if(arguments.size() == 1){
+//				LOGGER.info("Setting unknown argument %s to %s", flag, arguments.get(0));
+//				setParameter(flag, arguments.get(0));
+//			} else {
+//				LOGGER.info("Setting unknown argument %s to %s", flag, arguments);
+//				setParameter(flag, arguments);
+//			}
+		}
 	}
 	
 	protected void setCurrentTask(String task){
@@ -873,7 +970,7 @@ public abstract class Pipeline {
 	}
 	
 	public boolean hasParameter(String key){
-		return this.parameters.getAttrs().containsKey(key);
+		return this.parameters.getAttrs().containsKey(key) && this.parameters.get(key)!=null;
 	}
 	
 	public <T> T getParameter(String key){
@@ -882,6 +979,14 @@ public abstract class Pipeline {
 	
 	public void setParameter(String key, Object value){
 		this.parameters.getAttrs().put(key, value);
+	}
+	
+	public boolean deleteParameter(String key){
+		if(!hasParameter(key)){
+			return false;
+		}
+		this.parameters.getAttrs().remove(key);
+		return true;
 	}
 	
 }

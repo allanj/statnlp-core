@@ -19,8 +19,8 @@ import java.util.Scanner;
 import java.util.Set;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
-import com.statnlp.example.linear_crf.Label;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
@@ -48,7 +48,7 @@ public class SVMStruct {
 		String resultFilename = "experiments/test/svmstruct.result";
 		String logFilename = "experiments/test/svmstruct.log";
 		String svmStructDir = "/Users/aldrian_muis/Documents/tools/SVM_hmm";
-		double c = 4.0;
+		double c = 77;
 		
 		int argIndex = 0;
 		boolean shouldStop = false;
@@ -99,22 +99,24 @@ public class SVMStruct {
 			argsToFeatureManager[i-argIndex] = args[i];
 		}
 		
-		runSVMStruct(trainFilename, testFilename, modelFilename, resultFilename, logFilename, svmStructDir, c, argsToFeatureManager);
+		runSVMStruct(trainFilename, testFilename, modelFilename, resultFilename, logFilename, svmStructDir, c);
 	}
 
 	private static void runSVMStruct(String trainFilename, String testFilename, String modelFilename,
-			String resultFilename, String logFilename, String svmStructDir, double c, String[] argsToFeatureManager)
+			String resultFilename, String logFilename, String svmStructDir, double c)
 					throws IOException, FileNotFoundException, InterruptedException, NumberFormatException {
 		ProcessBuilder processBuilder;
 		PrintStream outstream = null;
 		
+		GlobalNetworkParam param = new GlobalNetworkParam();
+		
 		LinearInstance<Label>[] trainInstances = null;
 		LinearInstance<Label>[] testInstances = null;
 		if(trainFilename != null){
-			trainInstances = readCoNLLData(new BufferedReader(new FileReader(trainFilename)), true, true, -1);
+			trainInstances = readCoNLLData(param, new BufferedReader(new FileReader(trainFilename)), true, true, -1);
 		}
 		if(testFilename != null){
-			testInstances = readCoNLLData(new BufferedReader(new FileReader(testFilename)), true, false, -1);
+			testInstances = readCoNLLData(param, new BufferedReader(new FileReader(testFilename)), true, false, -1);
 		}
 
 		NetworkConfig.NUM_THREADS = 4;
@@ -124,9 +126,9 @@ public class SVMStruct {
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.MODEL_TYPE = ModelType.CRF;
 		
-		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(new GlobalNetworkParam(), argsToFeatureManager);
+		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(param, new String[]{"-features", "tag", "-forSVMStructTest"});
 		
-		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler();
+		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler(new ArrayList<Label>(param.LABELS.values()).subList(0, 14));
 		NetworkModel model = DiscriminativeNetworkModel.create(fm, compiler);
 		
 		PrintStream logStream = new PrintStream(logFilename);
@@ -236,7 +238,7 @@ public class SVMStruct {
 					len = INPUT_LEN;
 				}
 				for(int wordIdx=0; wordIdx < len; wordIdx++){
-					prediction.add(Label.get(Integer.parseInt(outputReader.readLine())-1));
+					prediction.add(param.getLabel(Integer.parseInt(outputReader.readLine())-1));
 				}
 				predInstance.setPrediction(prediction);
 				predictions[i] = predInstance;
@@ -277,7 +279,7 @@ public class SVMStruct {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private static LinearInstance<Label>[] readCoNLLData(BufferedReader br, boolean withLabels, boolean isLabeled, int number) throws IOException{
+	private static LinearInstance<Label>[] readCoNLLData(GlobalNetworkParam param, BufferedReader br, boolean withLabels, boolean isLabeled, int number) throws IOException{
 		ArrayList<LinearInstance<Label>> result = new ArrayList<LinearInstance<Label>>();
 		ArrayList<String[]> words = null;
 		ArrayList<Label> labels = null;
@@ -307,7 +309,7 @@ public class SVMStruct {
 				String[] features = line.substring(0, lastSpace).split(" ");
 				words.add(features);
 				if(withLabels){
-					Label label = Label.get(line.substring(lastSpace+1));
+					Label label = param.getLabel(line.substring(lastSpace+1));
 					labels.add(label);
 				}
 			}
@@ -359,11 +361,14 @@ public class SVMStruct {
 		modelReader.nextLine(); // kernel parameter -s
 		modelReader.nextLine(); // kernel parameter -r
 		modelReader.nextLine(); // kernel parameter -u
-//		int maxFeatureIndex = modelReader.nextInt();
+		int maxFeatureIndex = modelReader.nextInt();
+		System.out.println(maxFeatureIndex);
 		modelReader.nextLine(); // highest feature index
 		int numEmissions = modelReader.nextInt();
+		System.out.println(numEmissions);
 		modelReader.nextLine(); // number of emission features
 		int numClasses = modelReader.nextInt();
+		System.out.println(numClasses);
 		modelReader.nextLine(); // number of classes
 		int orderTransition = modelReader.nextInt();
 		modelReader.nextLine(); // HMM order of transitions
@@ -380,6 +385,7 @@ public class SVMStruct {
 			int featId = Integer.parseInt(tokens[0]);
 			double featWeight = Double.parseDouble(tokens[1]);
 			weights.put(featId, featWeight);
+			System.out.println(featId);
 		}
 		modelReader.close();
 		int emissionBaseFeatId = 1;
@@ -392,7 +398,7 @@ public class SVMStruct {
 		for(String featureType: sorted(featureIntMap.keySet())){
 			modelTextWriter.println(featureType);
 			HashMap<String, HashMap<String, Integer>> outputInputMap = featureIntMap.get(featureType);
-			for(int labelId: Label.LABELS_INDEX.keySet()){
+			for(int labelId=0; labelId<numClasses; labelId++){
 				modelTextWriter.println("\t"+labelId);
 				HashMap<String, Integer> inputMap = outputInputMap.get("-1");
 				for(String input: sorted(inputMap.keySet())){
@@ -403,8 +409,8 @@ public class SVMStruct {
 			}
 		}
 		modelTextWriter.println("TRANSITION");
-		for(int labelId: Label.LABELS_INDEX.keySet()){
-			for(int nextLabelId: Label.LABELS_INDEX.keySet()){
+		for(int labelId=0; labelId<numClasses; labelId++){
+			for(int nextLabelId=0; nextLabelId<numClasses; nextLabelId++){
 				int featureId = (labelId+1)*numClasses + (nextLabelId+1);
 				modelTextWriter.println("\t"+labelId+" "+nextLabelId);
 				modelTextWriter.println("\t\t"+String.format("%.16f", weights.getOrDefault(featureId, 0.0)));

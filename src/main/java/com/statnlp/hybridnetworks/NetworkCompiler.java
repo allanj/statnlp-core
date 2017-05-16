@@ -195,5 +195,17 @@ public abstract class NetworkCompiler implements Serializable{
 			return edgeCost;
 		}
 	}
+
+	/**
+	 * Returns the position in the input represented by the given node.
+	 * @return
+	 */
+	public int getPosForNode(int[] nodeArray){
+		return nodeArray[0];
+	}
+	
+	public Object getOutputForNode(int[] nodeArray){
+		return nodeArray[1];
+	}
 	
 }

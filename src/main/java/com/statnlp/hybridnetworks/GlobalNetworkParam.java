@@ -20,19 +20,22 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
+import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
-import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.commons.types.Instance;
+import com.statnlp.commons.types.Label;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.neural.RemoteNN;
 
@@ -46,6 +49,27 @@ import com.statnlp.neural.RemoteNN;
 public class GlobalNetworkParam implements Serializable{
 	
 	private static final long serialVersionUID = -1216927656396018976L;
+	
+	public final Map<String, Label> LABELS = new HashMap<String, Label>();
+	public final Map<Integer, Label> LABELS_INDEX = new HashMap<Integer, Label>();
+	
+	public Label getLabel(String form){
+		if(!LABELS.containsKey(form)){
+			Label label = new Label(form, LABELS.size());
+			LABELS.put(form, label);
+			LABELS_INDEX.put(label.getId(), label);
+		}
+		return LABELS.get(form);
+	}
+	
+	public Label getLabel(int id){
+		return LABELS_INDEX.get(id);
+	}
+	
+	public void reset(){
+		LABELS.clear();
+		LABELS_INDEX.clear();
+	}
 	
 	//these parameters are used for discriminative training using LBFGS.
 	/** The L2 regularization parameter weight */
@@ -812,26 +836,75 @@ public class GlobalNetworkParam implements Serializable{
 	}
 	
 	private void writeObject(ObjectOutputStream out) throws IOException{
+		out.writeObject("Version 1");
+		
+		out.writeObject("_featureIntMap");
 		out.writeObject(this._featureIntMap);
+		
+		out.writeObject("_feature2rep");
 		out.writeObject(this._feature2rep);
+		
+		out.writeObject("_weights");
 		out.writeObject(this._weights);
-		out.writeInt(this._size);
-		out.writeInt(this._fixedFeaturesSize);
-		out.writeBoolean(this._locked);
+		
+		out.writeObject("_size");
+		out.writeObject(this._size);
+		
+		out.writeObject("_fixedFeaturesSize");
+		out.writeObject(this._fixedFeaturesSize);
+		
+		out.writeObject("_locked");
+		out.writeObject(this._locked);
+		
+		out.writeObject("_nnController");
 		out.writeObject(this._nnController);
+		
+		out.writeObject("LABELS");
+		out.writeObject(this.LABELS);
+		
+		out.writeObject("LABELS_INDEX");
+		out.writeObject(this.LABELS_INDEX);
 	}
 	
 	@SuppressWarnings("unchecked")
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
-		this._featureIntMap = (HashMap<String, HashMap<String, HashMap<String, Integer>>>)in.readObject();
-		this._feature2rep = (String[][])in.readObject();
-		this._weights = (double[])in.readObject();
-		this._size = in.readInt();
-		this._fixedFeaturesSize = in.readInt();
-		this._locked = in.readBoolean();
-		if(in.available() > 0)
-			this._nnController = (NNCRFGlobalNetworkParam)in.readObject();
-		//this._nnController.setRemoteNN(new RemoteNN());
+		Object obj = in.readObject();
+		String version = null;
+		try{
+			version = (String)obj;
+		} catch (Exception e){
+			this._featureIntMap = (HashMap<String, HashMap<String, HashMap<String, Integer>>>)obj;
+		}
+		if(version == null){
+			this._feature2rep = (String[][])in.readObject();
+			this._weights = (double[])in.readObject();
+			this._size = in.readInt();
+			this._fixedFeaturesSize = in.readInt();
+			this._locked = in.readBoolean();
+			if(in.available() > 0)
+				this._nnController = (NNCRFGlobalNetworkParam)in.readObject();
+		} else {
+			if(version.equals("Version 1")){
+				while(true){
+					try{
+						String varName;
+						try{
+							varName = (String)in.readObject();
+						} catch (IOException e){
+							break;
+						}
+						obj = in.readObject();
+						Field field = this.getClass().getDeclaredField(varName);
+						field.setAccessible(true);
+						field.set(this, obj);
+					} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
+						throw new RuntimeException(e);
+					}
+				}
+			} else {
+				throw new IllegalArgumentException("The model version string: "+version+" is not recognized.");
+			}
+		}
 	}
 	
 }

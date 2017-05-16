@@ -17,6 +17,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 
+import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.TableLookupNetwork;
 
@@ -32,8 +33,8 @@ public class VisualizerFrame extends JFrame{
 	private int instanceId;
 	private boolean showLabeledNetwork;
 
-	public VisualizerFrame(NetworkModel model) {
-		this(model, new VisualizationViewerEngine());
+	public VisualizerFrame(GlobalNetworkParam param, NetworkModel model) {
+		this(model, new VisualizationViewerEngine(param));
 	}
 	
 	public VisualizerFrame(NetworkModel model, VisualizationViewerEngine viewer){

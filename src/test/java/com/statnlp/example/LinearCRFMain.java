@@ -18,8 +18,8 @@ import java.util.Set;
 import com.statnlp.InitWeightOptimizerFactory;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
+import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
-import com.statnlp.example.linear_crf.Label;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
 import com.statnlp.example.linear_crf.LinearCRFViewer;
@@ -167,12 +167,6 @@ public class LinearCRFMain {
 		}
 		
 		PrintStream outstream = new PrintStream(logPath);
-
-		int numTrain = -1;
-		Label.reset();
-		LinearInstance<Label>[] trainInstances = readCoNLLData(trainPath, true, true, numTrain);
-		int size = trainInstances.length;
-		System.err.println("Read.."+size+" instances from "+trainPath);
 		
 		OptimizerFactory optimizerFactory;
 		if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX && !(NetworkConfig.USE_NEURAL_FEATURES && !NetworkConfig.OPTIMIZE_NEURAL)){
@@ -216,14 +210,22 @@ public class LinearCRFMain {
 		for(int i=argIndex; i<args.length; i++){
 			argsToFeatureManager[i-argIndex] = args[i];
 		}
-		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler();
-		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(new GlobalNetworkParam(optimizerFactory), argsToFeatureManager);
+		GlobalNetworkParam param = new GlobalNetworkParam(optimizerFactory);
+
+		int numTrain = -1;
+		LinearInstance<Label>[] trainInstances = readCoNLLData(param, trainPath, true, true, numTrain);
+		int size = trainInstances.length;
+		System.err.println("Read.."+size+" instances from "+trainPath);
+		
+		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler(param.LABELS.values());
+		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(param, argsToFeatureManager);
 		
 		NetworkModel model = DiscriminativeNetworkModel.create(fm, compiler, outstream);
 		model.visualize(LinearCRFViewer.class, trainInstances);
 		
 		model.train(trainInstances, numIterations);
 		
+		writeModelText = true;
 		if(writeModelText){
 			PrintStream modelTextWriter = new PrintStream(modelPath+".txt");
 			modelTextWriter.println("Model path: "+modelPath);
@@ -236,7 +238,7 @@ public class LinearCRFMain {
 			modelTextWriter.println("Max iter: "+numIterations);
 			modelTextWriter.println();
 			modelTextWriter.println("Labels:");
-			List<Label> labelsUsed = new ArrayList<Label>(compiler._labels);
+			List<Label> labelsUsed = new ArrayList<Label>(compiler._labels.values());
 			Collections.sort(labelsUsed);
 			modelTextWriter.println(labelsUsed);
 			GlobalNetworkParam paramG = fm.getParam_G();
@@ -258,7 +260,7 @@ public class LinearCRFMain {
 			modelTextWriter.close();
 		}
 		
-		LinearInstance<Label>[] testInstances = readCoNLLData(testPath, true, false);
+		LinearInstance<Label>[] testInstances = readCoNLLData(param, testPath, true, false);
 //		testInstances = Arrays.copyOf(testInstances, 1);
 		int k = 8;
 		Instance[] predictions = model.decode(testInstances, k);
@@ -298,7 +300,7 @@ public class LinearCRFMain {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private static LinearInstance<Label>[] readCoNLLData(String fileName, boolean withLabels, boolean isLabeled, int number) throws IOException{
+	private static LinearInstance<Label>[] readCoNLLData(GlobalNetworkParam param, String fileName, boolean withLabels, boolean isLabeled, int number) throws IOException{
 		InputStreamReader isr = new InputStreamReader(new FileInputStream(fileName), "UTF-8");
 		BufferedReader br = new BufferedReader(isr);
 		ArrayList<LinearInstance<Label>> result = new ArrayList<LinearInstance<Label>>();
@@ -330,7 +332,7 @@ public class LinearCRFMain {
 				String[] features = line.substring(0, lastSpace).split(" ");
 				words.add(features);
 				if(withLabels){
-					Label label = Label.get(line.substring(lastSpace+1));
+					Label label = param.getLabel(line.substring(lastSpace+1));
 					labels.add(label);
 				}
 			}
@@ -339,8 +341,8 @@ public class LinearCRFMain {
 		return result.toArray(new LinearInstance[result.size()]);
 	}
 	
-	private static LinearInstance<Label>[]  readCoNLLData(String fileName, boolean withLabels, boolean isLabeled) throws IOException{
-		return readCoNLLData(fileName, withLabels, isLabeled, -1);
+	private static LinearInstance<Label>[]  readCoNLLData(GlobalNetworkParam param, String fileName, boolean withLabels, boolean isLabeled) throws IOException{
+		return readCoNLLData(param, fileName, withLabels, isLabeled, -1);
 	}
 	
 	private static List<String> sorted(Set<String> coll){

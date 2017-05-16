@@ -3,21 +3,25 @@ package com.statnlp.example.weak_semi_crf;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.commons.types.Label;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkException;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
+import com.statnlp.util.Pipeline;
 
 public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 	
 	private final static boolean DEBUG = false;
 	
 	private static final long serialVersionUID = 6585870230920484539L;
-	public Label[] labels;
+	public Map<Integer, Label> labels;
 	public int maxSize = 500;
 	public int maxSegmentLength = 20;
 	public long[] allNodes;
@@ -34,20 +38,32 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		NetworkIDMapper.setCapacity(new int[]{10000, 10, 100});
 	}
 	
-	public transient WeakSemiCRFViewer viewer;
-
 	public WeakSemiCRFNetworkCompiler(Label[] labels, int maxSize, int maxSegmentLength) {
-		this.labels = labels;
+		this.labels = new HashMap<Integer, Label>();
+		for(Label label: labels){
+			this.labels.put(label.getId(), label);
+		}
 		this.maxSize = Math.max(maxSize, this.maxSize);
 		this.maxSegmentLength = Math.max(maxSegmentLength, this.maxSegmentLength);
 		System.out.println(String.format("Max size: %s, Max segment length: %s", maxSize, maxSegmentLength));
 		System.out.println(Arrays.asList(labels));
 		buildUnlabeled();
-		init_visualization();
 	}
 	
-	private void init_visualization(){
-		viewer = new WeakSemiCRFViewer(this, null);
+	public WeakSemiCRFNetworkCompiler(Pipeline pipeline) {
+		this.labels = new HashMap<Integer, Label>();
+		for(Label label: pipeline.param.LABELS.values()){
+			this.labels.put(label.getId(), label);
+		}
+		try{
+			this.maxSize = Math.max(Integer.parseInt(pipeline.getParameter("maxSize")), this.maxSize);
+		} catch (NullPointerException e){}
+		try{
+			this.maxSegmentLength = Math.max(Integer.parseInt(pipeline.getParameter("maxSegmentLength")), this.maxSegmentLength);
+		} catch (NullPointerException e){}
+		System.out.println(String.format("Max size: %s, Max segment length: %s", maxSize, maxSegmentLength));
+		System.out.println(Arrays.asList(labels));
+		buildUnlabeled();
 	}
 
 	@Override
@@ -78,14 +94,14 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		long prevNode = leaf;
 		
 		for(Span span: output){
-			int labelId = span.label.id;
+			int labelId = span.label.getId();
 			long begin = toNode_begin(span.start, labelId);
 			long end = toNode_end(span.end-1, labelId);
 			
 			network.addNode(begin);
 			network.addNode(end);
 			for(int i=span.start; i<span.end; i++){
-				for(int j=0; j<Label.LABELS.size(); j++){
+				for(int j=0; j<labels.size(); j++){
 					try{
 						network.addNode(toNode_begin(i, j));
 					} catch (Exception e){}
@@ -135,7 +151,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		List<Long> currNodes = new ArrayList<Long>();
 		prevNodes.add(leaf);
 		for(int pos=0; pos<maxSize; pos++){
-			for(int labelId=0; labelId<labels.length; labelId++){
+			for(int labelId=0; labelId<labels.size(); labelId++){
 				long beginNode = toNode_begin(pos, labelId);
 				long endNode = toNode_end(pos, labelId);
 				
@@ -179,7 +195,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 	}
 	
 	private long toNode_root(int pos){
-		return toNode(pos, labels.length, NodeType.ROOT);
+		return toNode(pos, labels.size(), NodeType.ROOT);
 	}
 	
 	private long toNode(int pos, int labelId, NodeType type){
@@ -206,7 +222,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 			children_k = network.getMaxPath(children_k[0]);
 			child_arr = network.getNodeArray(children_k[0]);
 			int start = child_arr[0];
-			prediction.add(new Span(start, end+1, Label.get(labelId)));
+			prediction.add(new Span(start, end+1, labels.get(labelId)));
 			node_k = children_k[0];
 		}
 		Collections.sort(prediction);

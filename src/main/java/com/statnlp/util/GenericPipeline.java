@@ -32,11 +32,13 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.hybridnetworks.TemplateBasedFeatureManager;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 import com.statnlp.util.instance_parser.InstanceParser;
@@ -58,6 +60,13 @@ public class GenericPipeline extends Pipeline{
 				.setDefault("com.statnlp.example.linear_crf.LinearCRF")
 				.help("The class name of the model to be loaded (e.g., LinearCRF).\n"
 						+ "Note that this generic pipeline assumes linear instances."));
+		argParserObjects.put("--useFeatureTemplate", argParser.addArgument("--useFeatureTemplate")
+				.type(Boolean.class)
+				.action(Arguments.storeTrue())
+				.help("Whether to use feature template when extracting features."));
+		argParserObjects.put("--featureTemplatePath", argParser.addArgument("--featureTemplatePath")
+				.type(String.class)
+				.help("The path to feature template file."));
 		argParserObjects.put("--trainPath", argParser.addArgument("--trainPath")
 				.type(String.class)
 				.help("The path to training data."));
@@ -145,6 +154,9 @@ public class GenericPipeline extends Pipeline{
 	 */
 	@Override
 	protected NetworkCompiler initNetworkCompiler() {
+		if(compiler != null){
+			return compiler;
+		}
 		String currentTask = getCurrentTask();
 		if(currentTask.equals(TASK_TRAIN) || currentTask.equals(TASK_VISUALIZE)){
 			String linearModelClassName = getParameter("linearModelClass");
@@ -171,8 +183,18 @@ public class GenericPipeline extends Pipeline{
 	 */
 	@Override
 	protected FeatureManager initFeatureManager() {
+		if(fm != null){
+			return fm;
+		}
 		String currentTask = getCurrentTask();
 		if(currentTask.equals(TASK_TRAIN) || currentTask.equals(TASK_VISUALIZE)){
+			if(hasParameter("useFeatureTemplate") && (boolean)getParameter("useFeatureTemplate")){
+				if(hasParameter("featureTemplatePath")){
+					return new TemplateBasedFeatureManager(param, (String)getParameter("featureTemplatePath"));	
+				} else {
+					return new TemplateBasedFeatureManager(param);
+				}
+			}
 			String linearModelClassName = getParameter("linearModelClass");
 			String featureManagerClassName = linearModelClassName+"FeatureManager";
 			try {
@@ -199,7 +221,7 @@ public class GenericPipeline extends Pipeline{
 	protected void saveModel() throws IOException {
 		String modelPath = getParameter("modelPath");
 		if(modelPath == null){
-			throw LOGGER.throwing(Level.ERROR, new RuntimeException("Saving model requires --modelPath to be set."));
+			throw LOGGER.throwing(Level.ERROR, new RuntimeException("["+getCurrentTask()+"]Saving model requires --modelPath to be set."));
 		}
 		LOGGER.info("Writing model into %s...", modelPath);
 		long startTime = System.currentTimeMillis();
@@ -231,7 +253,7 @@ public class GenericPipeline extends Pipeline{
 		} else {
 			String modelPath = getParameter("modelPath");
 			if(modelPath == null){
-				throw LOGGER.throwing(Level.ERROR, new RuntimeException("Loading model requires --modelPath to be set."));
+				throw LOGGER.throwing(Level.ERROR, new RuntimeException("["+getCurrentTask()+"]Loading model requires --modelPath to be set."));
 			}
 			LOGGER.info("Reading model from %s...", modelPath);
 			ObjectInputStream ois = new ObjectInputStream(new FileInputStream(modelPath));
@@ -255,7 +277,7 @@ public class GenericPipeline extends Pipeline{
 	 */
 	@Override
 	protected void handleLoadModelError(Exception e) {
-		LOGGER.error("Cannot load model from %s", (String)getParameter("modelPath"));
+		LOGGER.error("["+getCurrentTask()+"]Cannot load model from %s", (String)getParameter("modelPath"));
 		throw new RuntimeException(LOGGER.throwing(Level.ERROR, e));
 	}
 
@@ -300,15 +322,29 @@ public class GenericPipeline extends Pipeline{
 	 */
 	@Override
 	protected void initVisualization() {
-		//defined by user
-		initTraining();
+		if(instanceParser == null){
+			if(hasParameter("trainPath")){
+				initTraining();
+			} else if(hasParameter("devPath")){
+				initTuning();
+			} else if(hasParameter("testPath")){
+				initTesting();
+			} else {
+				throw LOGGER.throwing(Level.ERROR, new RuntimeException("Visualization requires one of --trainPath, --devPath, or --testPath to be specified."));
+			}
+		}
+		initGlobalNetworkParam();
 		
-		//defined by user
 		initAndSetInstanceParser();
 		
-		getInstancesForTraining();
+		if(hasParameter("trainPath")){
+			getInstancesForTraining();
+		} else if(hasParameter("devPath")){
+			getInstancesForTuning();
+		} else if(hasParameter("testPath")){
+			getInstancesForTesting();
+		}
 		
-		initGlobalNetworkParam();
 		initAndSetNetworkCompiler();
 		initAndSetFeatureManager();
 		
@@ -320,8 +356,8 @@ public class GenericPipeline extends Pipeline{
 		if(hasParameter("trainInstances")){
 			return getParameter("trainInstances");
 		}
-		if(!hasParameter("trainPath") || getParameter("trainPath") == null){
-			throw LOGGER.throwing(Level.ERROR, new RuntimeException(String.format("The task %s requires --trainPath to be specified.", TASK_TRAIN)));
+		if(!hasParameter("trainPath")){
+			throw LOGGER.throwing(Level.ERROR, new RuntimeException(String.format("["+getCurrentTask()+"]The task %s requires --trainPath to be specified.", getCurrentTask())));
 		}
 		try {
 			Instance[] trainInstances = instanceParser.buildInstances((String)getParameter("trainPath"));
@@ -336,8 +372,8 @@ public class GenericPipeline extends Pipeline{
 		if(hasParameter("devInstances")){
 			return getParameter("devInstances");
 		}
-		if(!hasParameter("trainPath") || getParameter("devPath") == null){
-			throw LOGGER.throwing(Level.ERROR, new RuntimeException(String.format("The task %s requires --devPath to be specified.", TASK_TUNE)));
+		if(!hasParameter("devPath")){
+			throw LOGGER.throwing(Level.ERROR, new RuntimeException(String.format("["+getCurrentTask()+"]The task %s requires --devPath to be specified.", getCurrentTask())));
 		}
 		try {
 			Instance[] devInstances = instanceParser.buildInstances((String)getParameter("devPath"));
@@ -352,8 +388,8 @@ public class GenericPipeline extends Pipeline{
 		if(hasParameter("testInstances")){
 			return getParameter("testInstances");
 		}
-		if(!hasParameter("trainPath") || getParameter("testPath") == null){
-			throw LOGGER.throwing(Level.ERROR, new RuntimeException(String.format("The task %s requires --testPath to be specified.", TASK_TEST)));
+		if(!hasParameter("testPath")){
+			throw LOGGER.throwing(Level.ERROR, new RuntimeException(String.format("["+getCurrentTask()+"]The task %s requires --testPath to be specified.", getCurrentTask())));
 		}
 		try {
 			Instance[] testInstances = instanceParser.buildInstances((String)getParameter("testPath"));
@@ -377,7 +413,18 @@ public class GenericPipeline extends Pipeline{
 	 */
 	@Override
 	protected Instance[] getInstancesForVisualization() {
-		return getParameter("trainInstances");
+		Instance[] result = getParameter("trainInstances");
+		if(result == null){
+			result = getParameter("devInstances");
+		}
+		if(result == null){
+			result = getParameter("testInstances");
+		}
+		if(result == null){
+			throw LOGGER.throwing(new RuntimeException("Cannot find instances to be visualized. "
+					+ "Please specify them through --trainPath, --devPath, or --testPath."));
+		}
+		return result;
 	}
 
 	/* (non-Javadoc)
@@ -392,14 +439,14 @@ public class GenericPipeline extends Pipeline{
 			time = System.nanoTime() - time;
 			this.timer = time;
 		} catch (InterruptedException e) {
-			e.printStackTrace();
+			throw LOGGER.throwing(new RuntimeException(e));
 		}
-		LOGGER.info("Total training time: %.3fs\n", this.timer/1.0e9);
+		LOGGER.info("["+getCurrentTask()+"]Total training time: %.3fs\n", this.timer/1.0e9);
 		if((boolean)getParameter("writeModelAsText")){
 			String modelPath = getParameter("modelPath");
 			String modelTextPath = modelPath+".txt";
 			try{
-				LOGGER.info("Writing model text into %s.txt...", modelTextPath);
+				LOGGER.info("["+getCurrentTask()+"]Writing model text into %s...", modelTextPath);
 				PrintStream modelTextWriter = new PrintStream(modelTextPath);
 				modelTextWriter.println(NetworkConfig.getConfig());
 //				modelTextWriter.println("Model path: "+modelPath);
@@ -412,7 +459,7 @@ public class GenericPipeline extends Pipeline{
 //				modelTextWriter.println("Max iter: "+numIterations);
 //				modelTextWriter.println();
 				modelTextWriter.println("Labels:");
-				List<String> labelsUsed = new ArrayList<String>(((DelimiterBasedInstanceParser)instanceParser).labels);
+				List<Label> labelsUsed = new ArrayList<Label>(param.LABELS.values());
 				Collections.sort(labelsUsed);
 				modelTextWriter.println(labelsUsed);
 				modelTextWriter.println("Num features: "+param.countFeatures());
@@ -432,7 +479,7 @@ public class GenericPipeline extends Pipeline{
 				}
 				modelTextWriter.close();
 			} catch (IOException e){
-				LOGGER.warn("Cannot write model text into %s.", modelTextPath);
+				LOGGER.warn("["+getCurrentTask()+"]Cannot write model text into %s.", modelTextPath);
 				LOGGER.throwing(Level.WARN, e);
 			}
 		}
@@ -461,7 +508,7 @@ public class GenericPipeline extends Pipeline{
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		LOGGER.info("Total testing time: %.3fs\n", this.timer/1.0e9);		
+		LOGGER.info("["+getCurrentTask()+"]Total testing time: %.3fs\n", this.timer/1.0e9);		
 	}
 
 	/* (non-Javadoc)
@@ -477,8 +524,8 @@ public class GenericPipeline extends Pipeline{
 			corr += linInstance.countNumCorrectlyPredicted();
 			total += linInstance.size();
 		}
-		LOGGER.info("Correct/Total: %d/%d", corr, total);
-		LOGGER.info("Accuracy: %.2f%%", 100.0*corr/total);
+		LOGGER.info("["+getCurrentTask()+"]Correct/Total: %d/%d", corr, total);
+		LOGGER.info("["+getCurrentTask()+"]Accuracy: %.2f%%", 100.0*corr/total);
 	}
 
 	/* (non-Javadoc)
@@ -492,10 +539,10 @@ public class GenericPipeline extends Pipeline{
 			Class<VisualizationViewerEngine> visualizerModelClass = (Class<VisualizationViewerEngine>)Class.forName(visualizerModelName);
 			networkModel.visualize(visualizerModelClass, instances);
 		} catch (ClassNotFoundException e) {
-			LOGGER.warn("Cannot automatically find viewer class for model name %s", (String)getParameter("linearModelClass"));
+			LOGGER.warn("["+getCurrentTask()+"]Cannot automatically find viewer class for model name %s", (String)getParameter("linearModelClass"));
 			LOGGER.throwing(Level.WARN, e);
 		} catch (InterruptedException e) {
-			LOGGER.info("Visualizer was interrupted.");
+			LOGGER.info("["+getCurrentTask()+"]Visualizer was interrupted.");
 		}     
 	}
 
@@ -505,19 +552,19 @@ public class GenericPipeline extends Pipeline{
 	@Override
 	protected void savePredictions() {
 		if(!hasParameter("resultPath")){
-			LOGGER.warn("Task savePredictions requires --resultPath to be specified.");
+			LOGGER.warn("["+getCurrentTask()+"]Task savePredictions requires --resultPath to be specified.");
 			return;
 		}
 		String resultPath = getParameter("resultPath");
 		try{
 			PrintWriter printer = new PrintWriter(new File(resultPath));
-			LinearInstance<String>[] instances = getParameter("testInstances");
-			for(LinearInstance<String> instance: instances){
+			Instance[] instances = getParameter("testInstances");
+			for(Instance instance: instances){
 				printer.println(instance.toString());
 			}
 			printer.close();
 		} catch (FileNotFoundException e){
-			LOGGER.warn("Cannot find file %s for storing prediction results.", resultPath);
+			LOGGER.warn("["+getCurrentTask()+"]Cannot find file %s for storing prediction results.", resultPath);
 		}
 	}
 
@@ -536,6 +583,10 @@ public class GenericPipeline extends Pipeline{
 	protected void writeFeatures(Instance[] instances) {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	public static void main(String[] args){
+		new GenericPipeline().parseArgs(args).execute();
 	}
 
 }

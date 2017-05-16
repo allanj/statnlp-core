@@ -3,10 +3,10 @@ package com.statnlp.example.linear_crf;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
+import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
-import com.statnlp.hybridnetworks.FeatureManager;
-import com.statnlp.hybridnetworks.NetworkCompiler;
+import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.ui.visualize.type.VNode;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.ui.visualize.type.VisualizeGraph;
@@ -23,21 +23,20 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 	
 	static double offset_height = 100;
 	
-	protected LinearInstance<String> instance;
+	protected LinearInstance<Label> instance;
 	
 	protected ArrayList<String[]> inputs;
 	
 	protected ArrayList<Label> outputs;
 	
-	public LinearCRFViewer(NetworkCompiler compiler, FeatureManager fm) {
-		super(compiler, fm);
-
+	public LinearCRFViewer(GlobalNetworkParam param) {
+		super(param);
 	}
 	
 	@SuppressWarnings("unchecked")
 	protected void initData()
 	{
-		this.instance = (LinearInstance<String>)super.instance;
+		this.instance = (LinearInstance<Label>)super.instance;
 		this.inputs = (ArrayList<String[]>)super.inputs;
 		this.outputs = (ArrayList<Label>)super.outputs;
 		//WIDTH = instance.Length * span_width;
@@ -57,10 +56,10 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 		}
 //		ids[1]; // tag_id
 //		ids[4]; // node type
-		if(Label.get(nodeId).getForm().equals("O")){
+		if(param.getLabel(nodeId).getForm().equals("O")){
 			return inputs.get(pos)[0];
 		}
-		return Label.get(nodeId).toString();
+		return param.getLabel(nodeId).toString();
 	}
 	
 	protected void initNodeColor(VisualizeGraph vg)
