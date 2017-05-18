@@ -1,4 +1,4 @@
-package com.statnlp.example.nndcrf;
+package com.statnlp.example.fcrf;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,8 +11,6 @@ import java.util.Set;
 import com.statnlp.commons.io.RAWF;
 import com.statnlp.commons.types.Sentence;
 import com.statnlp.commons.types.WordToken;
-import com.statnlp.example.nndcrf.factorialCRFs.FCRFEval;
-import com.statnlp.example.nndcrf.factorialCRFs.FCRFInstance;
 
 public class Utils {
 

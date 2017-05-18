@@ -1,12 +1,12 @@
-package com.statnlp.example.nndcrf.factorialCRFs;
+package com.statnlp.example.fcrf;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 
 import com.statnlp.commons.types.Sentence;
-import com.statnlp.example.nndcrf.factorialCRFs.FCRFConfig.TASK;
-import com.statnlp.example.nndcrf.factorialCRFs.FCRFNetworkCompiler.NODE_TYPES;
+import com.statnlp.example.fcrf.FCRFConfig.TASK;
+import com.statnlp.example.fcrf.FCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureBox;
 import com.statnlp.hybridnetworks.FeatureManager;
@@ -61,7 +61,7 @@ public class FCRFFeatureManager extends FeatureManager {
 		joint3,
 		joint4,
 		joint5,
-		neural_1
+		neural
 		};
 	
 		
@@ -203,17 +203,17 @@ public class FCRFFeatureManager extends FeatureManager {
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES && !removeChunkNeural){
 			if(windowSize == 5)
-				neuralList.add(this._param_g.toFeature(network, FEATYPE.neural_1.name(), currEn, llw.toLowerCase()+IN_SEP+
+				neuralList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw.toLowerCase()+IN_SEP+
 																						lw.toLowerCase()+IN_SEP+
 																						currWord.toLowerCase()+IN_SEP+
 																						rw.toLowerCase()+IN_SEP+
 																						rrw.toLowerCase()));
 			else if(windowSize == 3)
-				neuralList.add(this._param_g.toFeature(network, FEATYPE.neural_1.name(), currEn, lw.toLowerCase()+IN_SEP+
+				neuralList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, lw.toLowerCase()+IN_SEP+
 						currWord.toLowerCase()+IN_SEP+
 						rw.toLowerCase()));
 			else if(windowSize == 1)
-				neuralList.add(this._param_g.toFeature(network, FEATYPE.neural_1.name(), currEn, currWord.toLowerCase()));
+				neuralList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, currWord.toLowerCase()));
 			else throw new RuntimeException("Unknown window size: "+windowSize);
 		}
 	}
@@ -258,12 +258,12 @@ public class FCRFFeatureManager extends FeatureManager {
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES && !removePOSNeural){
 			if(windowSize==1)
-				neuralList.add(this._param_g.toFeature(network,FEATYPE.neural_1.name(), currTag,  w.toLowerCase()));
+				neuralList.add(this._param_g.toFeature(network,FEATYPE.neural.name(), currTag,  w.toLowerCase()));
 			else if(windowSize==3)
-				neuralList.add(this._param_g.toFeature(network,FEATYPE.neural_1.name(), currTag,  lw.toLowerCase()+IN_SEP+w.toLowerCase()
+				neuralList.add(this._param_g.toFeature(network,FEATYPE.neural.name(), currTag,  lw.toLowerCase()+IN_SEP+w.toLowerCase()
 																							+IN_SEP+rw.toLowerCase()));
 			else if(windowSize==5)
-				neuralList.add(this._param_g.toFeature(network,FEATYPE.neural_1.name(), currTag,  llw.toLowerCase()+IN_SEP+
+				neuralList.add(this._param_g.toFeature(network,FEATYPE.neural.name(), currTag,  llw.toLowerCase()+IN_SEP+
 																							lw.toLowerCase()+IN_SEP+w.toLowerCase()
 																							+IN_SEP+rw.toLowerCase()+IN_SEP+
 																							rrw.toLowerCase()));
@@ -339,12 +339,12 @@ public class FCRFFeatureManager extends FeatureManager {
 					if(NetworkConfig.USE_NEURAL_FEATURES && !removeJointNeural){
 						int njf = -1;
 						if(windowSize==1) 
-							njf = this._param_g.toFeature(network,FEATYPE.neural_1.name(), currLabel + "&" + tag,  w.toLowerCase());
+							njf = this._param_g.toFeature(network,FEATYPE.neural.name(), currLabel + "&" + tag,  w.toLowerCase());
 						else if(windowSize==3)
-							njf =  this._param_g.toFeature(network,FEATYPE.neural_1.name(), currLabel + "&" + tag,  lw.toLowerCase()+IN_SEP+w.toLowerCase()
+							njf =  this._param_g.toFeature(network,FEATYPE.neural.name(), currLabel + "&" + tag,  lw.toLowerCase()+IN_SEP+w.toLowerCase()
 																										+IN_SEP+rw.toLowerCase());
 						else if(windowSize==5)
-							njf = this._param_g.toFeature(network,FEATYPE.neural_1.name(), currLabel + "&" + tag,  llw.toLowerCase()+IN_SEP+
+							njf = this._param_g.toFeature(network,FEATYPE.neural.name(), currLabel + "&" + tag,  llw.toLowerCase()+IN_SEP+
 																										lw.toLowerCase()+IN_SEP+w.toLowerCase()
 																										+IN_SEP+rw.toLowerCase()+IN_SEP+
 																										rrw.toLowerCase());
@@ -403,12 +403,12 @@ public class FCRFFeatureManager extends FeatureManager {
 					if(NetworkConfig.USE_NEURAL_FEATURES && !removeJointNeural){
 						int njf = -1;
 						if(windowSize==1) 
-							njf = this._param_g.toFeature(network,FEATYPE.neural_1.name(), chunk + "&" + currLabel,  w.toLowerCase());
+							njf = this._param_g.toFeature(network,FEATYPE.neural.name(), chunk + "&" + currLabel,  w.toLowerCase());
 						else if(windowSize==3)
-							njf =  this._param_g.toFeature(network,FEATYPE.neural_1.name(), chunk + "&" + currLabel,  lw.toLowerCase()+IN_SEP+w.toLowerCase()
+							njf =  this._param_g.toFeature(network,FEATYPE.neural.name(), chunk + "&" + currLabel,  lw.toLowerCase()+IN_SEP+w.toLowerCase()
 																										+IN_SEP+rw.toLowerCase());
 						else if(windowSize==5)
-							njf = this._param_g.toFeature(network,FEATYPE.neural_1.name(), chunk + "&" + currLabel,  llw.toLowerCase()+IN_SEP+
+							njf = this._param_g.toFeature(network,FEATYPE.neural.name(), chunk + "&" + currLabel,  llw.toLowerCase()+IN_SEP+
 																										lw.toLowerCase()+IN_SEP+w.toLowerCase()
 																										+IN_SEP+rw.toLowerCase()+IN_SEP+
 																										rrw.toLowerCase());

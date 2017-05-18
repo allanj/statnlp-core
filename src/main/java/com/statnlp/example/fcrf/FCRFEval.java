@@ -1,4 +1,4 @@
-package com.statnlp.example.nndcrf.factorialCRFs;
+package com.statnlp.example.fcrf;
 
 import java.io.File;
 import java.io.IOException;
