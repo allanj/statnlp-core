@@ -15,7 +15,6 @@ opt = cmd:parse(arg)
 portNumber = opt.port
 print("listening on port " .. opt.port)
 
-local json = require ("dkjson")
 local zmq = require "lzmq"
 local context = zmq.init(1)
 
@@ -53,7 +52,7 @@ local params, gradParams -- mlp's params
 local x, fixEmbedding -- input to nn, which is fixed
 local wordList, word2idx
 local numInput
-local outputDim
+local outputDimList
 local doOptimization, optimizer, optimState
 
 local glove
@@ -83,13 +82,35 @@ function loadGlove(wordList, dim)
     return ltw
 end
 
+local bansal
+function loadBansal(wordList)
+    if bansal == nil then
+        bansal = require 'syntacticEmbeddings/bansal'
+    end
+    bansal:load()
+    ltw = nn.LookupTable(#wordList, 100)
+    for i=1,#wordList do
+        local emb = torch.Tensor(100)
+        local p_emb = bansal:word2vec(wordList[i])
+        if p_emb == nil then
+            p_emb = bansal:word2vec('*UNKNOWN*')
+        end
+        for j=1,100 do
+            emb[j] = p_emb[j]
+        end
+        ltw.weight[i] = emb
+    end
+
+    return ltw
+end
+
 local senna
 function loadSenna(lt)
     -- http://www-personal.umich.edu/~rahuljha/files/nlp_from_scratch/ner_embeddings.lua
     ltw = nn.LookupTable(130000, 50)
 
     -- initialize lookup table with embeddings
-    embeddingsFile = torch.DiskFile('../nlp-from-scratch/senna-torch/senna/embeddings/embeddings.txt');
+    embeddingsFile = torch.DiskFile('./senna/embeddings.txt');
     embedding = torch.DoubleStorage(50)
 
     embeddingsFile:readDouble(embedding);
@@ -160,6 +181,8 @@ function init_MLP(data)
                     lt = loadGlove(data.wordList, data.embSizeList[i])
                 elseif data.embedding[i] == 'polyglot' then
                     lt = loadPolyglot(data.wordList, data.lang)
+                elseif data.embedding[i] == 'bansal' then
+                    lt = loadBansal(data.wordList)
                 else -- unknown/no embedding, defaults to random init
                     lt = nn.LookupTable(inputDim, data.embSizeList[i])
                 end
@@ -175,82 +198,100 @@ function init_MLP(data)
         totalInput = totalInput + data.numInputList[i]
     end
 
-    local jt = nn.JoinTable(2,numInput)
-    local rs = nn.Reshape(totalDim)
+    local jt = nn.JoinTable(2)
 
     mlp = nn.Sequential()
     if data.fixEmbedding then
         inputLayer = nn.Sequential()
         inputLayer:add(pt)
         inputLayer:add(jt)
-        inputLayer:add(rs)
     else
         mlp:add(pt)
         mlp:add(jt)
-        mlp:add(rs)
     end
+   
+    outputDimList = data.outputDimList
+    ct = nn.ConcatTable()
+    numNetworks = #outputDimList
+    for n=1,numNetworks do
+        middleLayers = nn.Sequential()
+        -- hidden layer
+        for i=1,data.numLayer do
+            if data.dropout ~= nil and data.dropout > 0 then
+                middleLayers:add(nn.Dropout(data.dropout))
+            end
 
-    -- hidden layer
-    for i=1,data.numLayer do
+            local ll
+            if i == 1 then
+                ll = nn.Linear(totalDim, data.hiddenSize)
+            else
+                ll = nn.Linear(data.hiddenSize, data.hiddenSize)
+            end
+            middleLayers:add(ll)
+
+            local act
+            if data.activation == nil or data.activation == "relu" then
+                act = nn.ReLU()
+            elseif data.activation == "tanh" then
+                act = nn.Tanh()
+            elseif data.activation == "hardtanh" then
+                act = nn.HardTanh()
+            elseif data.activation == "identity" then
+                -- do nothing
+            else
+                error("activation " .. activation .. " not supported")
+            end
+            if act ~= nil then
+                middleLayers:add(act)
+            end
+        end
+
         if data.dropout ~= nil and data.dropout > 0 then
-            mlp:add(nn.Dropout(data.dropout))
+            middleLayers:add(nn.Dropout(data.dropout))
         end
 
-        local ll
-        if i == 1 then
-            ll = nn.Linear(totalDim, data.hiddenSize)
+        -- output layer (passed to CRF)
+        local outputDim = data.outputDimList[n]
+        local lastInputDim
+        if data.numLayer == 0 then
+            lastInputDim = totalDim
         else
-            ll = nn.Linear(data.hiddenSize, data.hiddenSize)
+            lastInputDim = data.hiddenSize
         end
-        mlp:add(ll)
-
-        local act
-        if data.activation == nil or data.activation == "relu" then
-            act = nn.ReLU()
-        elseif data.activation == "tanh" then
-            act = nn.Tanh()
-        elseif data.activation == "hardtanh" then
-            act = nn.HardTanh()
-        elseif data.activation == "identity" then
-            -- do nothing
+        if data.useOutputBias then
+            middleLayers:add(nn.Linear(lastInputDim, outputDim))
         else
-            error("activation " .. activation .. " not supported")
+            middleLayers:add(nn.Linear(lastInputDim, outputDim):noBias())
         end
-        if act ~= nil then
-            mlp:add(act)
-        end
+        ct:add(middleLayers)
     end
+    mlp:add(ct)
 
-    if data.dropout ~= nil and data.dropout > 0 then
-        mlp:add(nn.Dropout(data.dropout))
-    end
-
-    -- output layer (passed to CRF)
-    outputDim = data.outputDim
-    local lastInputDim
-    if data.numLayer == 0 then
-        lastInputDim = totalDim
-    else
-        lastInputDim = data.hiddenSize
-    end
-    -- mlp:add(nn.Linear(lastInputDim, outputDim):noBias()) -- no bias
-    mlp:add(nn.Linear(lastInputDim, outputDim))
     if gpuid >= 0 then
         if data.fixEmbedding then inputLayer:cuda() end
         mlp:cuda()
     end
 
     -- set optimizer. If nil, optimization is done by caller.
+    print(string.format("Optimizer: %s", data.optimizer))
     doOptimization = data.optimizer ~= nil and data.optimizer ~= 'none'
-    if data.optimizer == 'sgd' then
-        optimizer = optim.sgd
-        optimState = {learningRate=data.learningRate}
-    elseif data.optimizer == 'adagrad' then
-        optimizer = optim.adagrad
-        optimState = {learningRate=data.learningRate}
-    elseif data.optimizer == 'adam' then
-        optimizer = optim.adam
-        optimState = {learningRate=data.learningRate}
+    if doOptimization == true then
+        if data.optimizer == 'sgd' then
+            optimizer = optim.sgd
+            optimState = {learningRate=data.learningRate}
+        elseif data.optimizer == 'adagrad' then
+            optimizer = optim.adagrad
+            optimState = {learningRate=data.learningRate}
+        elseif data.optimizer == 'adam' then
+            optimizer = optim.adam
+            optimState = {learningRate=data.learningRate}
+        elseif data.optimizer == 'adadelta' then
+            optimizer = optim.adadelta
+            optimState = {learningRate=data.learningRate}
+        elseif data.optimizer == 'lbfgs' then
+            optimizer = optim.lbfgs
+            optimState = {tolFun=10e-10, tolX=10e-16}
+        end
     end
 
     params, gradParams = mlp:getParameters()
@@ -268,12 +309,12 @@ function fwd_MLP(mlp, x, newParams, training)
     end
 
     local input_x = x
-
+    
     if fixEmbedding then
         input_x = inputLayer:forward(x)
     end
-
-    return mlp:forward(input_x)
+    local output = mlp:forward(input_x)
+    return output
 end
 
 function feval(params) -- for optim
@@ -304,6 +345,18 @@ function serialize(data)
     return ret
 end
 
+function serialize2(data)
+    local timer = torch.Timer()
+    local ret = data[1]:view(-1)
+    for i=2,#data do
+        ret = torch.cat(ret, data[i]:view(-1))
+    end
+    ret = ret:totable()
+    local time = timer:time().real
+    print(string.format("Serializing took %.4fs", time))
+    return ret
+end
+
 function deserialize(data, row, col)
     local timer = torch.Timer()
     local ret
@@ -313,6 +366,21 @@ function deserialize(data, row, col)
         ret = torch.Tensor(data):view(row, col)
     end
     if gpuid >= 0 then ret = ret:cuda() end
+    local time = timer:time().real
+    print(string.format("Deserializing took %.4fs", time))
+    return ret
+end
+
+function deserialize2(data, row, cols)
+    local timer = torch.Timer()
+    local ret = {}
+    local data_t = torch.Tensor(data)
+    if gpuid >= 0 then data_t = data_t:cuda() end
+    local currSize = 0
+    for i=1,#cols do
+        table.insert(ret, data_t[{{currSize+1, row*cols[i]+currSize}}]:view(row,cols[i]))
+        currSize = currSize + row*cols[i]
+    end
     local time = timer:time().real
     print(string.format("Deserializing took %.4fs", time))
     return ret
@@ -366,7 +434,6 @@ while true do
     -- print("Received Hello [" .. request .. "]")
     -- print(request)
     if request ~= nil then
-        -- request = json.decode(request, 1, nil)
         request = mp.unpack(request)
         if request.cmd == "init" then
             timer = torch.Timer()
@@ -387,12 +454,12 @@ while true do
                 newParams = deserialize(request.weights, 1, -1)
             end
             local fwd_out = fwd_MLP(mlp, x, newParams, request.training)
-            ret = serialize(fwd_out)
+            ret = serialize2(fwd_out)
             time = timer:time().real
             print(string.format("Forward took %.4fs", time))
         elseif request.cmd == "bwd" then
             local timer = torch.Timer()
-            local gradOut = deserialize(request.grad, numInput, outputDim)
+            local gradOut = deserialize2(request.grad, numInput, outputDimList)
             bwd_MLP(mlp, x, gradOut)
             if doOptimization then
                 ret = 1
@@ -414,7 +481,6 @@ while true do
             print(string.format("Loading model took %.4fs", time))
             ret = 1
         end
-        -- ret = json.encode (ret, { indent = true })
         ret = mp.pack(ret)
         socket:send(ret)
     end

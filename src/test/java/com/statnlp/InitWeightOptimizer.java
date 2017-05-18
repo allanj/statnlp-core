@@ -3,8 +3,8 @@
  */
 package com.statnlp;
 
-import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.commons.ml.opt.Optimizer;
+import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 
 /**
  * An optimizer that first initialize the weight according to specified value,

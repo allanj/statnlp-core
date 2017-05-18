@@ -1,3 +1,4 @@
+
 /** Statistical Natural Language Processing System
     Copyright (C) 2014-2016  Lu, Wei
 
@@ -60,7 +61,11 @@ public abstract class TableLookupNetwork extends Network{
 	private long[] toNodes(int[] ks){
 		long[] nodes = new long[ks.length];
 		for(int i = 0; i<nodes.length; i++){
-			nodes[i] = this.getNode(ks[i]);
+			if(ks[i] < 0){
+				nodes[i] = ks[i];
+			} else {
+				nodes[i] = this.getNode(ks[i]);
+			}
 		}
 		return nodes;
 	}
@@ -255,7 +260,7 @@ public abstract class TableLookupNetwork extends Network{
 	}
 	
 	/**
-	 * Check if the node k is removed from the network.
+	 * Make the node with index k visible again.
 	 */
 	public void recover(int k){
 		this.isVisible[k] = true;
@@ -377,9 +382,8 @@ public abstract class TableLookupNetwork extends Network{
 			this.structArr = new int[this._nodes.length];
 		}
 		
-//		this._nodes_tmp = null;
 		this._children = new int[this._nodes.length][][];
-		
+
 		Iterator<Long> parents = this._children_tmp.keySet().iterator();
 		while(parents.hasNext()){
 			long parent = parents.next();
@@ -393,12 +397,20 @@ public abstract class TableLookupNetwork extends Network{
 					long[] children = childrens.get(k);
 					int[] children_index = new int[children.length];
 					for(int m = 0; m<children.length; m++){
-						children_index[m] = nodesValue2IdMap.get(children[m]);
+						if(children[m] < 0){
+							children_index[m] = (int)children[m];
+						} else {
+							children_index[m] = nodesValue2IdMap.get(children[m]);
+						}
 					}
 					this._children[parent_index][k] = children_index;
 				}
 			}
 		}
+		// If any node has no child edge, assume there is one edge with no child node
+		// This is done so that every node is visited in the feature extraction step
+		// This is consistent with what's written in http://portal.acm.org/citation.cfm?doid=1654494.1654500
+		// See Definition 3 on "source vertex"
 		for(int k = 0 ; k<this._children.length; k++){
 			if(this._children[k]==null){
 				this._children[k] = new int[1][0];
@@ -410,6 +422,10 @@ public abstract class TableLookupNetwork extends Network{
 	private void checkLinkValidity(long parent, long[] children){
 		/**/
 		for(long child : children){
+			if(child < 0){
+				// A negative child_k is not a reference to a node, it's just a number associated with this edge
+				continue;
+			}
 			if(child >= parent){
 				System.err.println(Arrays.toString(NetworkIDMapper.toHybridNodeArray(parent)));
 				System.err.println(Arrays.toString(NetworkIDMapper.toHybridNodeArray(children[0])));
@@ -421,6 +437,10 @@ public abstract class TableLookupNetwork extends Network{
 		
 		this.checkNodeValidity(parent);
 		for(long child : children){
+			if(child < 0){
+				// A negative child_k is not a reference to a node, it's just a number associated with this edge
+				continue;
+			}
 			this.checkNodeValidity(child);
 		}
 	}
@@ -506,6 +526,9 @@ public abstract class TableLookupNetwork extends Network{
 				sb.append('(');
 				int[] children = childrenList[i];
 				for(int j = 0; j<children.length; j++){
+					if(children[j] < 0){
+						continue;
+					}
 					sb.append('\n');
 					sb.append('\t'+Arrays.toString(NetworkIDMapper.toHybridNodeArray(this._nodes[children[j]])));
 				}

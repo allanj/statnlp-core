@@ -6,3 +6,5 @@ nn-crf-interface/nlp-from-scratch/me
 nn-crf-interface/neural_server/*.config
 data/*
 .gitignore
+data/*
+*.jar

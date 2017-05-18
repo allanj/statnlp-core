@@ -89,7 +89,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	 * @param fm The feature manager
 	 * @param instances The instances
 	 * @param builder The network compiler
-	 * @param it Starting iteration numbe
+	 * @param it Starting iteration number
 	 */
 	public LocalNetworkLearnerThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler builder, int it){
 		this._threadId = threadId;
@@ -112,7 +112,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
     @Override
     public void run () {
     	if(precompile){
-    		this.preCompileNetwork();
+    		this.preCompileNetworks();
     		return;
     	}
     	if(!isTouching){
@@ -159,7 +159,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 		this.isTouching = false;
 	}
 	
-	public void preCompileNetwork(){
+	public void preCompileNetworks(){
 		for(int networkId = 0; networkId< this._instances.length; networkId++){
 			Network network = this.getNetwork(networkId);
 			network.initStructArr();

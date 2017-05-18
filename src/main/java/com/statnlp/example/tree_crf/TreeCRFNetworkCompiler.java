@@ -228,6 +228,14 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		return NetworkIDMapper.toHybridNodeID(arr);
 	}
 
+	/**
+	 * Convert a network into an instance, the surface form.<br>
+	 * This process is also called the decoding part (e.g., to get the
+	 * sequence with maximum probability in an HMM)<br>
+	 * It is possible that the BinaryTree object contained in the Instance
+	 * object returned by this method to be null, in which case it means
+	 * it is referring to an impossible label as the root.
+	 */
 	@Override
 	public TreeCRFInstance decompile(Network net) {
 		TreeCRFNetwork network = (TreeCRFNetwork)net;
@@ -249,8 +257,8 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		int labelId = parent_arr[2];
 		int nodeType = parent_arr[4];
 		if(children_k.length == 0){
-			System.err.println("Trying to evaluate a node without child. This case should not happen.");
-			System.err.println(network);
+			// Trying to evaluate a node without child. This case happens when
+			// there is a node in the unlabeled network which has no applicable rules.
 			return null;
 		} else if(children_k.length == 1){ // Either the network root node or leaf node
 			int child_k = children_k[0];

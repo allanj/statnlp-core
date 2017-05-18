@@ -30,14 +30,13 @@ import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
  * <li>RMSProp (http://cs231n.github.io/neural-networks-3/#anneal)</li>
  * <li>AdaM (http://cs231n.github.io/neural-networks-3/#anneal)</li>
  * </ol>
- * @author Aldrian Obaja <aldrianobaja.m@gmail.com>
+ * @author Aldrian Obaja (aldrianobaja.m@gmail.com)
  *
  */
 public class GradientDescentOptimizer implements Optimizer{
 	
 	public static final int DEFAULT_MAX_STAGNANT_ITER_COUNT = 40;
 	
-	private double learningRate;
 	private double[] _x;
 	private double[] _g;
 	private double _obj;
@@ -68,6 +67,7 @@ public class GradientDescentOptimizer implements Optimizer{
 	public static enum AdaptiveStrategy {
 		NONE,
 		ADAGRAD,
+		ADAGRAD_DECAYING,
 		ADADELTA,
 		ADADELTA_DECAYING,
 		ADADELTA_THEN_ADAGRAD,
@@ -75,6 +75,7 @@ public class GradientDescentOptimizer implements Optimizer{
 		ADADELTA_THEN_STOP,
 		RMSPROP,
 		ADAM,
+		ADAM_THEN_STOP,
 	}
 	
 	/**
@@ -93,6 +94,9 @@ public class GradientDescentOptimizer implements Optimizer{
 	
 	private AdaptiveStrategy adaptiveStrategy;
 	private AdaptiveMethod currentAdaptiveMethod;
+	private double learningRate;
+	private double learningRateDecay;
+	
 	private double adadeltaPhi;
 	private double adadeltaEps;
 	private double adadeltaGradDecay;
@@ -106,7 +110,7 @@ public class GradientDescentOptimizer implements Optimizer{
 	
 	private int iterNum;
 	
-	public GradientDescentOptimizer(AdaptiveStrategy adaptiveStrategy, double learningRate, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps, int weightLength){
+	public GradientDescentOptimizer(AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps, int weightLength){
 		this.prevGradients = new double[weightLength];
 		this.prevSqGradients = new double[weightLength];
 		this.prevDelta = new double[weightLength];
@@ -114,6 +118,7 @@ public class GradientDescentOptimizer implements Optimizer{
 		this.adaptiveStrategy = adaptiveStrategy;
 		
 		this.learningRate = learningRate;
+		this.learningRateDecay = learningRateDecay;
 		
 		this.adadeltaPhi = adadeltaPhi;
 		this.adadeltaEps = adadeltaEps;
@@ -133,6 +138,7 @@ public class GradientDescentOptimizer implements Optimizer{
 			currentAdaptiveMethod = AdaptiveMethod.NONE;
 			break;
 		case ADAGRAD:
+		case ADAGRAD_DECAYING:
 			currentAdaptiveMethod = AdaptiveMethod.ADAGRAD;
 			break;
 		case ADADELTA:
@@ -146,6 +152,7 @@ public class GradientDescentOptimizer implements Optimizer{
 			currentAdaptiveMethod = AdaptiveMethod.RMSPROP;
 			break;
 		case ADAM:
+		case ADAM_THEN_STOP:
 			currentAdaptiveMethod = AdaptiveMethod.ADAM;
 			break;
 		}
@@ -238,9 +245,15 @@ public class GradientDescentOptimizer implements Optimizer{
 				
 				adadeltaEps /= 2;
 				System.err.println("[AdaDelta]Reset from obj = "+this._obj+", new eps = "+adadeltaEps);
-			} else if(adaptiveStrategy == AdaptiveStrategy.ADADELTA_THEN_STOP){
+			} else if(adaptiveStrategy == AdaptiveStrategy.ADADELTA_THEN_STOP || adaptiveStrategy == AdaptiveStrategy.ADAM_THEN_STOP){
+				System.out.println("Taking the best parameters from iteration "+this.bestIterNum);
 				copyBest();
 				return true;
+			} else if (adaptiveStrategy == AdaptiveStrategy.ADAGRAD_DECAYING){
+				copyBest();
+				
+				learningRate *= learningRateDecay;
+				System.err.println("[AdaGrad]Reset from obj = "+this._obj+", new learning rate = "+learningRate);
 			}
 		}
 //		clipGradients();
@@ -270,7 +283,12 @@ public class GradientDescentOptimizer implements Optimizer{
 			} else if (currentAdaptiveMethod == AdaptiveMethod.ADAM){ // based on http://cs231n.github.io/neural-networks-3/#anneal
 				prevGradients[k] = adamBeta1 * prevGradients[k] + (1-adamBeta1)*this._g[k];
 				prevSqGradients[k] = adamBeta2 * prevSqGradients[k] + (1-adamBeta2) * Math.pow(this._g[k], 2);
-				this._x[k] -= (this.learningRate / (Math.sqrt(prevSqGradients[k]) + adamEps)) * prevGradients[k];
+				// bias correction
+				double biasCorrection1 = 1 - Math.pow(adamBeta1, this.iterNum+1);
+				double biasCorrection2 = 1 - Math.pow(adamBeta2, this.iterNum+1);
+				double correctedLearningRate = this.learningRate*Math.sqrt(biasCorrection2)/biasCorrection1;
+				this._x[k] -= (correctedLearningRate / (Math.sqrt(prevSqGradients[k]) + adamEps)) * prevGradients[k];
+
 			}
 		}
 		this.iterNum += 1; 

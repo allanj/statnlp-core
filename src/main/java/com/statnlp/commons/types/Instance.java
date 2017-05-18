@@ -18,6 +18,9 @@ package com.statnlp.commons.types;
 
 import java.io.Serializable;
 
+import com.statnlp.hybridnetworks.Network;
+import com.statnlp.hybridnetworks.NetworkCompiler;
+
 /**
  * A base class representing an instance, to hold the surface form (e.g., the words of a sentence) of a 
  * training or test instance.<br>
@@ -167,10 +170,12 @@ public abstract class Instance implements Serializable{
 	public abstract Object getInput();
 	public abstract Object getOutput();
 	public abstract Object getPrediction();
+	public abstract Object getTopKPredictions();
 	
 	public abstract boolean hasOutput();
 	public abstract boolean hasPrediction();
 	
 	public abstract void setPrediction(Object o);
+	public abstract void setTopKPredictions(Object topKPredictions);
 	
 }

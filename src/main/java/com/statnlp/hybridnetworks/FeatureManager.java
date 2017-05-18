@@ -21,6 +21,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -88,11 +89,12 @@ public abstract class FeatureManager implements Serializable{
 	 * and then update the weights to be evaluated next, unless justUpdateObjectiveAndGradient is <tt>true</tt>,
 	 * in which case no new weights are estimated.
 	 * @param justUpdateObjectiveAndGradient No weight estimation is done
-	 * @return
+	 * @return A boolean, telling whether the optimization process is done. Will always return false if
+	 * 		   justUpdateObjectiveAndGradient is true.
 	 */
 	public synchronized boolean update(boolean justUpdateObjectiveAndGradient){
 		//if the number of thread is 1, then your local param fetches information directly from the global param.
-		if(NetworkConfig.NUM_THREADS!=1){
+		if(NetworkConfig.NUM_THREADS != 1){
 			this._param_g.resetCountsAndObj();
 			
 			for(LocalNetworkParam param_l : this._params_l){
@@ -159,9 +161,9 @@ public abstract class FeatureManager implements Serializable{
 	}
 	
 	/**
-	 * Starts the routine to copy all local feature index into global feature index<br>
+	 * Starts the routine to copy all local feature index into global feature index.
 	 */
-	public void mergeSubFeaturesToGlobalFeatures(){
+	protected void mergeSubFeaturesToGlobalFeatures(){
 		HashMap<String, HashMap<String, HashMap<String, Integer>>> globalFeature2IntMap = this._param_g.getFeatureIntMap();
 
 		this._param_g._size = 0;
@@ -217,7 +219,7 @@ public abstract class FeatureManager implements Serializable{
 	 * if the features are not already present in the local feature index.
 	 * @param globalFeaturesToLocalFeatures The mapping from global feature indices into local feature indices
 	 */
-	public void addIntoLocalFeatures(HashMap<Integer, Integer> globalFeaturesToLocalFeatures){
+	protected void addIntoLocalFeatures(HashMap<Integer, Integer> globalFeaturesToLocalFeatures){
 		HashMap<String, HashMap<String, HashMap<String, Integer>>> globalMap = this._param_g.getFeatureIntMap();
 		for(String type: globalMap.keySet()){
 			HashMap<String, HashMap<String, Integer>> outputToInputToIndex = globalMap.get(type);
@@ -234,9 +236,9 @@ public abstract class FeatureManager implements Serializable{
 
 	/**
 	 * Used during generative training, this method completes the cross product between the type features and 
-	 * the input features
+	 * the input features.
 	 */
-	public void completeType2Int(){
+	protected void completeType2Int(){
 		HashMap<String, HashMap<String, HashMap<String, Integer>>> globalMap = this._param_g._featureIntMap;
 		HashMap<String, ArrayList<String>> type2Input = this._param_g._type2inputMap;
 		Iterator<String> iterType = globalMap.keySet().iterator();
@@ -315,6 +317,70 @@ public abstract class FeatureManager implements Serializable{
 	 * @return
 	 */
 	protected abstract FeatureArray extract_helper(Network network, int parent_k, int[] children_k);
+
+	/**
+	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate
+	 * FeatureArray objects are created with the exact same sequence of featureIndices.<br>
+	 * The caching can be enabled by setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.<br>
+	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
+	 * @param featureIndices The feature indices for this FeatureArray object
+	 * @return
+	 */
+	public FeatureArray createFeatureArray(Network network, Collection<Integer> featureIndices){
+		return createFeatureArray(network, featureIndices, null);
+	}
+	
+	/**
+	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate
+	 * FeatureArray objects are created with the exact same sequence of featureIndices.<br>
+	 * The caching can be enabled by setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.<br>
+	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
+	 * @param featureIndices The feature indices for this FeatureArray object
+	 * @param next Another FeatureArray object to be chained after the newly created FeatureArray object.
+	 * @return
+	 */
+	public FeatureArray createFeatureArray(Network network, Collection<Integer> featureIndices, FeatureArray next){
+		int[] features = new int[featureIndices.size()];
+		int i = 0;
+		for(Iterator<Integer> iter = featureIndices.iterator(); iter.hasNext();){
+			features[i] = iter.next();
+			i += 1;
+		}
+		return createFeatureArray(network, features, next);
+	}
+	
+	/**
+	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate
+	 * FeatureArray objects are created with the exact same sequence of featureIndices.<br>
+	 * The caching can be enabled by setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.<br>
+	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
+	 * @param featureIndices The feature indices for this FeatureArray object
+	 * @return
+	 */
+	public FeatureArray createFeatureArray(Network network, int[] featureIndices){
+		if(NetworkConfig.AVOID_DUPLICATE_FEATURES){
+			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, this.getParams_L()[network.getThreadId()]));
+		} else {
+			return new FeatureArray(featureIndices);
+		}
+	}
+	
+	/**
+	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate
+	 * FeatureArray objects are created with the exact same sequence of featureIndices.<br>
+	 * The caching can be enabled by setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.<br>
+	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
+	 * @param featureIndices The feature indices for this FeatureArray object
+	 * @param next Another FeatureArray object to be chained after the newly created FeatureArray object.
+	 * @return
+	 */
+	public FeatureArray createFeatureArray(Network network, int[] featureIndices, FeatureArray next){
+		if(NetworkConfig.AVOID_DUPLICATE_FEATURES){
+			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, this.getParams_L()[network.getThreadId()]), next);
+		} else {
+			return new FeatureArray(featureIndices, next);
+		}
+	}
 	
 	private void writeObject(ObjectOutputStream oos) throws IOException{
 		oos.writeObject(this._param_g);

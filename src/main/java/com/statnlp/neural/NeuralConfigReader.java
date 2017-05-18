@@ -43,7 +43,9 @@ public class NeuralConfigReader {
 			} else if(info[0].equals("learningRate")) {
 				NeuralConfig.LEARNING_RATE = Double.parseDouble(info[1]);
 			} else if(info[0].equals("fixEmbedding")) {
-				NeuralConfig.FIX_EMBEDDING = true;
+				NeuralConfig.FIX_EMBEDDING = Boolean.parseBoolean(info[1]);
+			} else if(info[0].equals("useOutputBias")) {
+				NeuralConfig.USE_OUTPUT_BIAS = Boolean.parseBoolean(info[1]);
 			} else {
 				System.err.println("Unrecognized option: " + line);
 			}
