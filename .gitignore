@@ -7,4 +7,3 @@ nn-crf-interface/neural_server/*.config
 data/*
 .gitignore
 data/*
-*.jar

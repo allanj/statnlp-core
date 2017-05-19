@@ -9,15 +9,14 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
-import com.statnlp.neural.NeuralConfig;
 
 public class ECRFFeatureManager extends FeatureManager {
 
 	private static final long serialVersionUID = 376931974939202432L;
 
 	public enum FEATYPE {local,entity, neural};
-	private String OUT_SEP = NeuralConfig.OUT_SEP; 
-	private String IN_SEP = NeuralConfig.IN_SEP;
+	//private String OUT_SEP = NeuralConfig.OUT_SEP; 
+	//private String IN_SEP = NeuralConfig.IN_SEP;
 	
 	public ECRFFeatureManager(GlobalNetworkParam param_g) {
 		super(param_g);
@@ -50,13 +49,13 @@ public class ECRFFeatureManager extends FeatureManager {
 //		int childPos = child[0]-1;
 		
 		String lw = pos>0? sent.get(pos-1).getName():"unk";
-		String llw = pos==0? "unk": pos==1? "unk":sent.get(pos-2).getName();
-		String llt = pos==0? "unk": pos==1? "unk":sent.get(pos-2).getTag();
+//		String llw = pos==0? "unk": pos==1? "unk":sent.get(pos-2).getName();
+//		String llt = pos==0? "unk": pos==1? "unk":sent.get(pos-2).getTag();
 		String lt = pos>0? sent.get(pos-1).getTag():"unk";
 		String rw = pos<sent.length()-1? sent.get(pos+1).getName():"unk";
 		String rt = pos<sent.length()-1? sent.get(pos+1).getTag():"unk";
-		String rrw = pos==sent.length()-1? "unk": pos==sent.length()-2? "unk":sent.get(pos+2).getName();
-		String rrt = pos==sent.length()-1? "unk": pos==sent.length()-2? "unk":sent.get(pos+2).getTag();
+//		String rrw = pos==sent.length()-1? "unk": pos==sent.length()-2? "unk":sent.get(pos+2).getName();
+//		String rrt = pos==sent.length()-1? "unk": pos==sent.length()-2? "unk":sent.get(pos+2).getTag();
 		
 		String currWord = inst.getInput().get(pos).getName();
 		String currTag = inst.getInput().get(pos).getTag();
@@ -73,12 +72,12 @@ public class ECRFFeatureManager extends FeatureManager {
 //			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw));
 		}
 		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), currEn,  	currWord));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ET",	currEn+":"+currTag));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELW",	currEn+":"+lw));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELT",	currEn+":"+lt));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ERW",	currEn+":"+rw));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ERT",	currEn+":"+rt));
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELT-T",	currEn+":"+lt+","+currTag));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ET",	currEn+":"+currTag));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELW",	currEn+":"+lw));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELT",	currEn+":"+lt));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ERW",	currEn+":"+rw));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ERT",	currEn+":"+rt));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELT-T",	currEn+":"+lt+","+currTag));
 //		/****Add some prefix features******/
 //		for(int plen = 1;plen<=6;plen++){
 //			if(currWord.length()>=plen){

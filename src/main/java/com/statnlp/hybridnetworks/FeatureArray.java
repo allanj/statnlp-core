@@ -18,7 +18,6 @@ package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.HashMap;
 
 /**
  * The class storing a list of features by their indices.<br>

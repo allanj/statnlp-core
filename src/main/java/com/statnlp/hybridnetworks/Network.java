@@ -3,7 +3,6 @@ package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.NoSuchElementException;
 
 import com.statnlp.commons.types.Instance;
