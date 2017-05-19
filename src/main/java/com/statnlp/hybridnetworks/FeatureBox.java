@@ -43,7 +43,7 @@ public class FeatureBox implements Serializable {
 	
 	public void setFeatureValues(Instance instance, LocalNetworkParam param) {
 		if (this._fv != null) {
-			System.err.println("Feature values are already initialized.");
+			//System.err.println("Feature values are already initialized.");
 			return;
 		}
 		List<AbstractTensor> tensorList = instance.getTensorList();
@@ -51,7 +51,7 @@ public class FeatureBox implements Serializable {
 		for (int i = 0; i < this._fv.length; i++) {
 			double val;
 			int f = this._fs[i];
-			if (param.isNeural(f)) {
+			if (NetworkConfig.USE_NEURAL_FEATURES && param.isNeural(f)) {
 				int[] pos = param.getNeuralLocation(f);
 				val = tensorList.get(pos[0]).get(pos[1]); 
 			} else {

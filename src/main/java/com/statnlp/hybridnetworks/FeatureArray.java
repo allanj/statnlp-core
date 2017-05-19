@@ -286,7 +286,7 @@ public class FeatureArray implements Serializable{
 		int pos = 0;
 		for(int f : fs){
 			if(f!=-1){
-				if (param.isNeural(f)) {
+				if (NetworkConfig.USE_NEURAL_FEATURES && param.isNeural(f)) {
 					score += param.getWeight(f) * this._fb.getValue(pos++);
 				} else {
 					score += param.getWeight(f);
