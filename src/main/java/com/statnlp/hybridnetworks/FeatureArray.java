@@ -18,7 +18,6 @@ package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.HashMap;
 
 /**
  * The class storing a list of features by their indices.<br>
@@ -45,7 +44,8 @@ public class FeatureArray implements Serializable{
 	public static final FeatureArray NEGATIVE_INFINITY = new FeatureArray(Double.NEGATIVE_INFINITY);
 
 	private FeatureArray _next;
-
+	protected int[] dstNodes;
+	
 	/**
 	 * Merges the features in <code>fs</code> and in <code>next</code><br>
 	 * <strong>IMPORTANT NOTE:</strong> to use caching, please use {@link FeatureManager#createFeatureArray(Network, int[], FeatureArray)} instead,
@@ -103,7 +103,11 @@ public class FeatureArray implements Serializable{
 	public void setAlwaysChange(boolean alwaysChange){
 		this._fb._alwaysChange = alwaysChange;
 	}
-
+	
+	public void setDstNodes(int[] dstNodes) {
+		this.dstNodes = dstNodes;
+	}
+	
 	public FeatureArray toLocal(LocalNetworkParam param){
 		if(this==NEGATIVE_INFINITY){
 			return this;
@@ -146,6 +150,7 @@ public class FeatureArray implements Serializable{
 		}
 		fa._isLocal = true;
 		fa._fb._alwaysChange = this._fb._alwaysChange;
+		fa.dstNodes = this.dstNodes;
 		return fa;
 	}
 
@@ -189,28 +194,24 @@ public class FeatureArray implements Serializable{
 			this._next.update(param, count);
 		}
 	}
-
-
-	public void update_MF_Version(LocalNetworkParam param, double count, HashMap<Integer, Integer> fIdx2DstNode, HashMap<Integer, Double> marginalMap){
+	
+	
+	public void update_MF_Version(LocalNetworkParam param, double count, double[] marginal){
 		if(this == NEGATIVE_INFINITY){
 			return;
 		}
 
 		int[] fs_local = this.getCurrent();
-		for (int f_local : fs_local) {
+		for (int idx = 0; idx < fs_local.length; idx++) {
+			int f_local = fs_local[idx];
 			double featureValue = 1.0;
-			if (fIdx2DstNode.containsKey(f_local)) {
-				int dstNode = fIdx2DstNode.get(f_local);
-				if (marginalMap.containsKey(dstNode)){
-					featureValue = Math.exp(marginalMap.get(dstNode));
-				} else {
-					featureValue = 0.0;
-				}
+			if (this.dstNodes != null) {
+				featureValue = marginal[dstNodes[idx]];
 			}
 			param.addCount(f_local, featureValue * count);
 		}
 		if(this._next != null){
-			this._next.update_MF_Version(param, count, fIdx2DstNode, marginalMap);
+			this._next.update_MF_Version(param, count, marginal);
 		}
 	}
 
@@ -274,7 +275,7 @@ public class FeatureArray implements Serializable{
 	 * @param marginals score array, serve as being the feature value. 
 	 * @return
 	 */
-	public double getScore_MF_Version(LocalNetworkParam param, HashMap<Integer, Integer> fIdx2DstNode, HashMap<Integer, Double> marginalMap, int version){
+	public double getScore_MF_Version(LocalNetworkParam param, double[] marginal, int version){
 		if(this == NEGATIVE_INFINITY){
 			return this._totalScore;
 		}
@@ -288,18 +289,16 @@ public class FeatureArray implements Serializable{
 		this._totalScore = 0.0;
 		if (this._fb._version != version || this._fb._alwaysChange){
 			this._fb._currScore = 0.0;
-			for(int f : this.getCurrent()){
+			int[] curr = this.getCurrent();
+			for (int idx = 0; idx < curr.length; idx++) {
+				int f = curr[idx];
+			//for(int f : this.getCurrent()){
 				if(f!=-1){
 					//note that in training, f is the local feature index.
 					//in testing, f is the global feature index
 					double featureValue = 1.0;
-					if (fIdx2DstNode.containsKey(f)) {
-						int dstNode = fIdx2DstNode.get(f);
-						if (marginalMap.containsKey(dstNode)){
-							featureValue = Math.exp(marginalMap.get(dstNode));
-						} else {
-							featureValue = 0.0;
-						}
+					if (this.dstNodes != null) {
+						featureValue = marginal[dstNodes[idx]];
 					}
 					this._fb._currScore += param.getWeight(f) * featureValue;
 				}
@@ -309,7 +308,7 @@ public class FeatureArray implements Serializable{
 		this._totalScore += this._fb._currScore;
 
 		if (this._next != null){
-			this._totalScore += this._next.getScore_MF_Version(param, fIdx2DstNode, marginalMap, version);
+			this._totalScore += this._next.getScore_MF_Version(param, marginal, version);
 		}
 		return this._totalScore;
 	}
