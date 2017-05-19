@@ -135,6 +135,7 @@ public class LocalNetworkDecoderThread extends Thread{
 			return inst;
 		}else if(NetworkConfig.MAX_MARGINAL_DECODING){
 			network.marginal();
+			network.renewCurrentMarginalMap();
 		}else{
 			network.max();
 		}
