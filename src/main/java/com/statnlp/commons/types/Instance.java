@@ -22,6 +22,7 @@ import java.util.List;
 
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
+import com.statnlp.neural.AbstractInput;
 import com.statnlp.neural.AbstractTensor;
 
 /**
@@ -52,6 +53,8 @@ public abstract class Instance implements Serializable{
 	private Instance _unlabeledInstance;
 	/** The top-K predictions of this instance */
 	protected List<?> _topKPredictions;
+	/** The input list for the neural network */
+	private List<AbstractInput> _inputList;
 	/** The tensor list corresponding to output nodes in the neural network */
 	private List<AbstractTensor> _tensorList;
 	
@@ -194,6 +197,13 @@ public abstract class Instance implements Serializable{
 	public abstract void setPrediction(Object o);
 	public void setTopKPredictions(List<?> topKPredictions){
 		this._topKPredictions = topKPredictions;
+	}
+	
+	public void addInput(AbstractInput input) {
+		if (this._inputList == null) {
+			this._inputList = new ArrayList<AbstractInput>();
+		}
+		this._inputList.add(input);
 	}
 	
 	public List<AbstractTensor> getTensorList() {
