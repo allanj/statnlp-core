@@ -37,10 +37,10 @@ public class FCRFEval {
 	
 	private static void evalFscore(String outputFile) throws IOException{
 		try{
-			System.err.println("perl data/semeval10t1/conlleval.pl < "+outputFile);
+			System.err.println("perl eval/conlleval.pl < "+outputFile);
 			ProcessBuilder pb = null;
 			if(FCRFConfig.windows){
-				pb = new ProcessBuilder("D:/Perl64/bin/perl","E:/Framework/data/semeval10t1/conlleval.pl"); 
+				pb = new ProcessBuilder("D:/Perl64/bin/perl","eval/conlleval.pl"); 
 			}else{
 				pb = new ProcessBuilder("eval/conlleval.pl"); 
 			}

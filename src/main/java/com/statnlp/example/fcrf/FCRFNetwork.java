@@ -4,6 +4,8 @@ import java.util.Arrays;
 
 import com.statnlp.example.fcrf.FCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
+import com.statnlp.hybridnetworks.NetworkConfig;
+import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
 import com.statnlp.hybridnetworks.TableLookupNetwork;
 
 public class FCRFNetwork extends TableLookupNetwork{
@@ -26,6 +28,8 @@ public class FCRFNetwork extends TableLookupNetwork{
 		super(networkId, inst,nodes, children, param);
 		this._numNodes = numNodes;
 		this.isVisible = new boolean[nodes.length];
+		if (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD)
+			this.structArr = new int[nodes.length];
 		Arrays.fill(isVisible, true);
 	}
 	
@@ -53,6 +57,16 @@ public class FCRFNetwork extends TableLookupNetwork{
 		this.isVisible[k] = true;
 	}
 	
+	public void initStructArr() {
+		for (int i = 0; i < this.countNodes(); i++) {
+			int[] node_k = this.getNodeArray(i);
+			if (node_k[2] == NODE_TYPES.LEAF.ordinal()) this.structArr[i] = 0;
+			else if (node_k[2] == NODE_TYPES.ENODE.ordinal()) this.structArr[i] = 1;
+			else if (node_k[2] == NODE_TYPES.TNODE.ordinal()) this.structArr[i] = 2;
+			else if (node_k[2] == NODE_TYPES.ROOT.ordinal()) this.structArr[i] = 3;
+			else throw new RuntimeException("unknown node type");
+		}
+	}
 	
 	/**
 	 * 0 is the entity chain
@@ -62,18 +76,16 @@ public class FCRFNetwork extends TableLookupNetwork{
 		if (kthStructure == 0) {
 			// enable the chunking structure
 			for (int i = 0; i < this.countNodes(); i++) {
-				int[] node_k = this.getNodeArray(i);
-				if (node_k[1] == NODE_TYPES.ENODE.ordinal() || node_k[1] == NODE_TYPES.LEAF.ordinal()
-						|| node_k[1] == NODE_TYPES.ROOT.ordinal())
+				if (this.structArr[i] == 1 || this.structArr[i] == 0
+						|| this.structArr[i] == 3)
 					recover(i);
 				else remove(i);
 			}
 		} else if (kthStructure == 1) {
 			// enable POS tagging structure
 			for (int i = 0; i < this.countNodes(); i++) {
-				int[] node_k = this.getNodeArray(i);
-				if (node_k[1] == NODE_TYPES.TNODE.ordinal() || node_k[1] == NODE_TYPES.LEAF.ordinal()
-						|| node_k[1] == NODE_TYPES.ROOT.ordinal())
+				if (this.structArr[i] == 2 || this.structArr[i] == 0
+						|| this.structArr[i] == 3)
 					recover(i);
 				else remove(i);
 			}

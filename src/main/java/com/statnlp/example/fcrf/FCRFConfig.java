@@ -2,16 +2,19 @@ package com.statnlp.example.fcrf;
 
 public class FCRFConfig {
 
-	public static String CONLL_train = "data/conll2000/train.txt";
-	public static String CONLL_test = "data/conll2000/test.txt";
-	public static String CONLL_dev = "data/conll2000/dev.txt";
+	public String train = "data/conll2000/train.txt";
+	public String test = "data/conll2000/test.txt";
+	public String dev = "data/conll2000/dev.txt";
 	
-	public static String nerOut = "data/conll2000/output/nerOut.txt";
-	public static String posOut = "data/conll2000/output/posOut.txt";
+	public String nerOut = "data/conll2000/output/nerOut.txt";
+	public String posOut = "data/conll2000/output/posOut.txt";
 	
-	public static String dataType = "conll";
+	public String nerPipeOut = "data/conll2000/output/nerPipeOut.txt";
+	public String posPipeOut = "data/conll2000/output/posPipeOut.txt";
 	
-	public static double l2val = 0.01;
+	public String dataset = "conll2000";
+	
+	public double l2val = 0.01;
 	
 	public static boolean windows = false;
 	
@@ -19,5 +22,19 @@ public class FCRFConfig {
 		CHUNKING,
 		TAGGING,
 		JOINT;
+	}
+	
+	public FCRFConfig (String dataset, double l2, boolean isWindows) {
+		this.dataset = dataset;
+		this.train = "data/"+dataset+"/train.txt";
+		this.dev = "data/"+dataset+"/dev.txt";
+		this.test = "data/"+dataset+"/test.txt";
+		this.nerOut = "data/"+dataset+"/output/nerOut.txt";
+		this.posOut = "data/"+dataset+"/output/posOut.txt";
+		this.nerPipeOut = "data/"+dataset+"/output/nerPipeOut.txt";
+		this.posPipeOut ="data/"+dataset+"/output/posPipeOut.txt";
+		this.l2val = l2;
+		FCRFConfig.windows = isWindows;
+		
 	}
 }

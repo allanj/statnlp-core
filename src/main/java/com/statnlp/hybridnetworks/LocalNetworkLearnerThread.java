@@ -162,12 +162,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	public void preCompileNetworks(){
 		for(int networkId = 0; networkId< this._instances.length; networkId++){
 			Network network = this.getNetwork(networkId);
-			if(NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD){
-				if(!network.getInstance().isLabeled()){
-					network.clearMarginalMap(); //initialize the marginal map for the unlabeled network
-				}
-				network.initJointFeatureMap();
-			}
+			network.initStructArr();
 		}
 	}
 	
@@ -191,20 +186,11 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 				if (!network.getInstance().isLabeled()){
 					network.clearMarginalMap();
 					boolean prevDone = false;
-					for (int mf = 0; mf < NetworkConfig.MAX_MF_UPDATES; mf++) {
-//						double unlabeledObj = 0;
-//						double labeledObj = 0;
+					for (int smallIt = 0; smallIt < NetworkConfig.MAX_MF_UPDATES; smallIt++) {
 						for (int curr = 0; curr < NetworkConfig.NUM_STRUCTS; curr++) {
 							network.enableKthStructure(curr);
 							network.inference(true);
-//							unlabeledObj += network.getInside() * network._weight;
 						}
-//						for (int curr = 0; curr < NetworkConfig.NUM_STRUCTS; curr++) {
-//							network.getLabeledNetwork().enableKthStructure(curr);
-//							network.getLabeledNetwork().inference(false);
-//							labeledObj += network.getLabeledNetwork().getInside() * network.getLabeledNetwork()._weight;
-//						}
-//						System.out.println("SmallIteration " + smallIt + " label : " + labeledObj + " unlabeled: " + unlabeledObj  + " obj: "+ (labeledObj+unlabeledObj));
 						boolean done = network.compareMarginalMap();
 						if (prevDone && done){
 							network.renewCurrentMarginalMap();
@@ -222,7 +208,6 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 			}else{
 				network.train();
 			}
-			
 		}
 	}
 	
