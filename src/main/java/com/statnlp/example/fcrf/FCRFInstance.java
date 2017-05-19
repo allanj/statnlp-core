@@ -2,11 +2,12 @@ package com.statnlp.example.fcrf;
 
 import java.util.ArrayList;
 
+import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Sentence;
-import com.statnlp.example.base.BaseInstance;
 
 
-public class FCRFInstance extends BaseInstance<FCRFInstance, Sentence, ArrayList<String>> {
+public class FCRFInstance extends Instance {
+
 
 	private static final long serialVersionUID = 1851514046050983662L;
 	protected Sentence sentence;
@@ -102,6 +103,18 @@ public class FCRFInstance extends BaseInstance<FCRFInstance, Sentence, ArrayList
 	
 	public void setChunks(ArrayList<String> entities) {
 		this.chunks = entities;
+	}
+
+	@Override
+	public Object getTopKPredictions() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void setTopKPredictions(Object topKPredictions) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 

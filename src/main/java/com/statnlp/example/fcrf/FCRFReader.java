@@ -24,6 +24,7 @@ public class FCRFReader {
 		int index = 1;
 		ArrayList<WordToken> words = new ArrayList<WordToken>();
 		ArrayList<String> es = new ArrayList<String>();
+		int maxSize = -1;
 		while((line = br.readLine())!=null){
 			if(line.equals("")){
 				WordToken[] wordsArr = new WordToken[words.size()];
@@ -38,6 +39,7 @@ public class FCRFReader {
 				es = new ArrayList<String>();
 				if(setLabel) inst.setLabeled(); else inst.setUnlabeled();
 				insts.add(inst);
+				maxSize = Math.max(maxSize, inst.size());
 				
 				if(number!=-1 && insts.size()==number) break;
 				continue;
@@ -72,6 +74,7 @@ public class FCRFReader {
 		List<FCRFInstance> myInsts = insts;
 		String type = setLabel? "Training":"Testing";
 		System.err.println(type+" instance, total:"+ myInsts.size()+" Instance. ");
+		System.err.println("max sentence length: " + maxSize);
 		return myInsts;
 	}
 	

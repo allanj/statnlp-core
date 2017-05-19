@@ -25,7 +25,7 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
 import com.statnlp.hybridnetworks.NetworkModel;
-import com.statnlp.neural.NeuralConfigReader;
+import com.statnlp.neural.NeuralConfig;
 
 public class FCRFExampleMain {
 
@@ -41,7 +41,7 @@ public class FCRFExampleMain {
 	public static String posOut;
 	public static String neural_config = "config/fcrfneural.config";
 	public static OptimizerFactory optimizer = OptimizerFactory.getLBFGSFactory();
-	public static boolean useJointFeatures = true;
+	public static boolean useJointFeatures = false;
 	public static TASK task = TASK.JOINT;
 	public static boolean IOBESencoding = true;
 	public static boolean npchunking = true;
@@ -53,6 +53,15 @@ public class FCRFExampleMain {
 	public static boolean saveModel = false;
 	/** The option to use existing model **/
 	public static boolean useExistingModel = false;
+	public static int randomSeed = 1234;
+	public static boolean removeChunkNeural = false;
+	public static boolean removePOSNeural = false;
+	public static boolean removeJointNeural = false;
+	public static boolean parallelFeatureExtraction = true;
+	public static String dataset = "conll2000";
+	public static double l2val = 0.01;
+	public static boolean isWndowsOS = false;
+	public static String optionalOutputSuffix = "";
 	
 	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException{
 		
@@ -60,38 +69,58 @@ public class FCRFExampleMain {
 		testNumber = 2;
 		numThreads = 5;
 		numIteration = 200;
-		trainFile = FCRFConfig.CONLL_train;
-		testFile = FCRFConfig.CONLL_test;
-		nerOut = FCRFConfig.nerOut;
-		posOut = FCRFConfig.posOut;
+		
+		
 		
 		processArgs(args);
+		
+		FCRFConfig config = new FCRFConfig(dataset, l2val, isWndowsOS);
+		trainFile = config.train;
+		testFile = config.test;
+		nerOut = config.nerOut+optionalOutputSuffix;
+		posOut = config.posOut+optionalOutputSuffix;
 		
 		List<FCRFInstance> trainInstances = null;
 		List<FCRFInstance> testInstances = null;
 		/***********DEBUG*****************/
-		trainFile = "data/conll2000/train.txt";
-		trainNumber = 2000;
-		testFile = "data/conll2000/test.txt";;
-		testNumber = -1;
-//		numIteration = 500;   
+		trainFile = "data/"+dataset+"/train.txt";
+//		trainNumber = 2;
+		testFile = "data/"+dataset+"/test.txt";;
+//		testNumber = 2;
+//		numIteration = 1000;   
 //		testFile = trainFile;
-//		NetworkConfig.MAX_MF_UPDATES = 2;
+//		NetworkConfig.MAX_MF_UPDATES = 6;
 //		useJointFeatures = true;
-		task = TASK.JOINT;
+//		task = TASK.JOINT;
 		IOBESencoding = true;
-		saveModel = false;
-		modelFile = "data/conll2000/model";
-		useExistingModel = false;
-		npchunking = false;
-		FCRFConfig.l2val = 0.01;
+		if (dataset.equals("conll2003") || dataset.equals("semeval10t1"))
+			IOBESencoding = false;
+//		saveModel = false;
+		//modelFile = "data/conll2000/model";
+//		useExistingModel = false;
+		npchunking = true;
+		if (dataset.equals("conll2003") || dataset.equals("semeval10t1"))
+			npchunking = false;
+		config.l2val = 0.01;
 		NetworkConfig.AVOID_DUPLICATE_FEATURES = true;
+		NetworkConfig.RANDOM_INIT_FEATURE_SEED = randomSeed;
 //		cascade = true;
 //		testFile = "data/conll2000/NP_chunk_final_prediction.txt";
 //		npchunking = true;
 //		testFile = "data/conll2000/POS_final_prediction.txt";
 //		optimizer = OptimizerFactory.getGradientDescentFactoryUsingAdaM(0.0001, 0.9, 0.999, 10e-8);
 		/***************************/
+		
+		if (cascade) {
+			if (task == TASK.TAGGING) {
+				testFile = config.nerOut;
+				posOut = config.posPipeOut;
+			}
+			else if (task == TASK.CHUNKING) {
+				testFile = config.posOut;
+				nerOut = config.nerPipeOut;
+			}
+		}
 		
 		System.err.println("[Info] trainingFile: "+trainFile);
 		System.err.println("[Info] testFile: "+testFile);
@@ -107,6 +136,7 @@ public class FCRFExampleMain {
 //		trainInstances = FCRFReader.readGRMMData("data/conll2000/conll2000.train1k.txt", true, -1);
 //		testInstances = FCRFReader.readGRMMData("data/conll2000/conll2000.test1k.txt", false, -1);
 		
+		
 		Chunk.lock();
 		Tag.lock();
 		
@@ -117,20 +147,16 @@ public class FCRFExampleMain {
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
-		NetworkConfig.L2_REGULARIZATION_CONSTANT = FCRFConfig.l2val;
+		NetworkConfig.L2_REGULARIZATION_CONSTANT = config.l2val;
 		NetworkConfig.NUM_THREADS = numThreads;
-		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
+		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = parallelFeatureExtraction;
 		NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = false;
 		NetworkConfig.NUM_STRUCTS = 2;
 		NetworkConfig.INFERENCE = task == TASK.JOINT ? InferenceType.MEAN_FIELD : InferenceType.FORWARD_BACKWARD;
 		
 		/***Neural network Configuration**/
-		NetworkConfig.USE_NEURAL_FEATURES = false; 
-		if(NetworkConfig.USE_NEURAL_FEATURES)
-			NeuralConfigReader.readConfig(neural_config);
-		NetworkConfig.OPTIMIZE_NEURAL = false;  //false: optimize in neural network
-		NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
-		NetworkConfig.REGULARIZE_NEURAL_FEATURES = false; //true means regularize in the crf part
+//		NetworkConfig.USE_NEURAL_FEATURES = false; 
+//		NeuralConfig.HIDDEN_SIZE = 200;
 		/****/
 		
 		GlobalNetworkParam param_g = null; 
@@ -143,8 +169,8 @@ public class FCRFExampleMain {
 		}
 		
 		FeatureManager fa = null;
-		param_g = new GlobalNetworkParam(optimizer);
-		fa = new FCRFFeatureManager(param_g, useJointFeatures, cascade, task, windowSize, IOBESencoding);
+		fa = new FCRFFeatureManager(param_g, useJointFeatures, cascade, task, windowSize, IOBESencoding,
+									removeChunkNeural, removePOSNeural, removeJointNeural);
 //		fa = new GRMMFeatureManager(param_g, useJointFeatures);
 		FCRFNetworkCompiler compiler = new FCRFNetworkCompiler(task, IOBESencoding);
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
@@ -173,6 +199,7 @@ public class FCRFExampleMain {
 		if(saveModel){
 			ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(modelFile));
 			out.writeObject(param_g);
+			//out.writeObject(param_g.getNNCRFController());
 			out.close();
 		}
 		
@@ -206,16 +233,17 @@ public class FCRFExampleMain {
 					case "-testNum": testNumber = Integer.valueOf(args[i+1]); break;
 					case "-iter": numIteration = Integer.valueOf(args[i+1]); break;
 					case "-thread": numThreads = Integer.valueOf(args[i+1]); break;
+					case "-seed": randomSeed = Integer.valueOf(args[i+1]); break;
 					case "-testFile": testFile = args[i+1]; break;
-					case "-reg": FCRFConfig.l2val = Double.valueOf(args[i+1]); break;
-					case "-windows":FCRFConfig.windows = args[i+1].equals("true")? true:false; break;
+					case "-reg": l2val = Double.valueOf(args[i+1]); break;
+					case "-windows": isWndowsOS = args[i+1].equals("true")? true:false; break;
 					case "-mfround":NetworkConfig.MAX_MF_UPDATES = Integer.valueOf(args[i+1]);
 									useJointFeatures = true;
 									if(NetworkConfig.MAX_MF_UPDATES == 0) useJointFeatures = false;
 									break;
 					case "-task": 
-						if(args[i+1].equals("ner"))  task = TASK.CHUNKING;
-						else if (args[i+1].equals("tagging")) task  = TASK.TAGGING;
+						if(args[i+1].equals("chunk"))  task = TASK.CHUNKING;
+						else if (args[i+1].equals("tag")) task  = TASK.TAGGING;
 						else if (args[i+1].equals("joint"))  task  = TASK.JOINT;
 						else throw new RuntimeException("Unknown task:"+args[i+1]+"?"); break;
 					case "-iobes": 		IOBESencoding = args[i+1].equals("true")? true:false; break;
@@ -259,6 +287,20 @@ public class FCRFExampleMain {
 									}
 									i = i + 1;
 								break;
+					case "-neural": if(args[i+1].equals("true")){ 
+						NetworkConfig.USE_NEURAL_FEATURES = true;
+						NetworkConfig.OPTIMIZE_NEURAL = true;  //false: optimize in neural network
+						NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
+						NetworkConfig.REGULARIZE_NEURAL_FEATURES = true; //true means regularize in the crf part
+					}
+					break;
+					case "-rmchunk" : removeChunkNeural = args[i+1].equals("true")? true:false; break;
+					case "-rmpos" : removePOSNeural = args[i+1].equals("true")? true:false; break;
+					case "-rmjoint" : removeJointNeural = args[i+1].equals("true")? true:false; break;
+					case "-multitouch": parallelFeatureExtraction = args[i+1].equals("true")? true:false; break;
+					case "-dataset": dataset = args[i+1]; break;
+					case "-optsuffix" : optionalOutputSuffix = args[i+1]; break;
+					case "-hidden": NeuralConfig.HIDDEN_SIZE = Integer.valueOf(args[i+1]); break;
 					default: System.err.println("Invalid arguments :"+args[i]+", please check usage."); System.exit(0);
 				}
 			}
@@ -266,7 +308,7 @@ public class FCRFExampleMain {
 			System.err.println("[Info] testNum: "+testNumber);
 			System.err.println("[Info] numIter: "+numIteration);
 			System.err.println("[Info] numThreads: "+numThreads);
-			System.err.println("[Info] Regularization Parameter: "+FCRFConfig.l2val);	
+			System.err.println("[Info] Regularization Parameter: "+ l2val);	
 		}
 	}
 	
