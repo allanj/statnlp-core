@@ -51,8 +51,8 @@ public class TorchNN extends AbstractNN {
 	}
 	
 	private void configure() {
-		System.setProperty("jna.library.path","/home/allan/torch/install/lib");
-		System.setProperty("java.library.path", "/home/allan/torch/install/lib:" + System.getProperty("java.library.path"));
+//		System.setProperty("jna.library.path","./nativeLib");
+//		System.setProperty("java.library.path", "./nativeLib:" + System.getProperty("java.library.path"));
 		Field fieldSysPath = null;
 		try {
 			fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
@@ -62,7 +62,10 @@ public class TorchNN extends AbstractNN {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		Native.loadLibrary("libjnlua5.1.so", Library.class);
+		//System.err.println(System.getProperty("java.library.path"));
+		//System.loadLibrary("libjnlua5.1.so");
+		System.load("/home/allan/projects/framework-test/nativeLib/libjnlua5.1.so");
+		//Native.loadLibrary("libjnlua5.1.so", Library.class);
 	}
 	
 	public double[] initNetwork(List<Integer> numInputList, List<Integer> inputDimList, List<String> wordList,

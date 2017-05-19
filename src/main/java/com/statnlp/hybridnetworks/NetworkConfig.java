@@ -204,7 +204,7 @@ public class NetworkConfig {
 	/** If enable the neural CRF model, set it true.  */
 	public static boolean USE_NEURAL_FEATURES = false;
 	/** "torch" (socket) or "torch-jni" (TH4J + JNLua) */
-	public static String NEURAL_BACKEND = "torch";
+	public static String NEURAL_BACKEND = "torch-jni";
 	/** Regularized the neural features in CRF or not. set to false then can be done by dropout***/
 	public static boolean REGULARIZE_NEURAL_FEATURES = false;
 	/** If true: Optimized the neural net in CRF. optimizer in neural config must be set to none **/
