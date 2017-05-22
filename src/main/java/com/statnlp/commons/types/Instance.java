@@ -199,11 +199,14 @@ public abstract class Instance implements Serializable{
 		this._topKPredictions = topKPredictions;
 	}
 	
-	public void addInput(AbstractInput input) {
+	public void setInput(int idx, AbstractInput input) {
 		if (this._inputList == null) {
 			this._inputList = new ArrayList<AbstractInput>();
 		}
-		this._inputList.add(input);
+		while (idx >= this._inputList.size()) {
+			this._inputList.add(null);
+		}
+		this._inputList.set(idx, input);
 	}
 	
 	public List<AbstractTensor> getTensorList() {

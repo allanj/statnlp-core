@@ -1,6 +1,6 @@
-local AbstractServer = torch.class('AbstractServer')
+local AbstractNetwork = torch.class('AbstractNetwork')
 
-function AbstractServer:__init(doOptimization)
+function AbstractNetwork:__init(doOptimization)
     self.outputPtr = {}
     self.gradOutputPtr = {}
     self.net = nil
@@ -17,7 +17,7 @@ function AbstractServer:__init(doOptimization)
     -- You may initialize other member attributes here
 end
 
-function AbstractServer:initialize(data, ...)
+function AbstractNetwork:initialize(data, ...)
     -- Define the network here according to supplied data
     local outputAndGradOutputPtr = {... }
     -- In practice, this should point to the Tensor in the Java program
@@ -35,12 +35,12 @@ function AbstractServer:initialize(data, ...)
     end
 end
 
-function AbstractServer:prepare_input()
+function AbstractNetwork:prepare_input()
     -- Set the batch input ``x'' accordingly
     self.x = torch.Tensor()
 end
 
-function AbstractServer:forward(isTraining)
+function AbstractNetwork:forward(isTraining)
     -- Implement forward computation.
     self.isTraining = isTraining
     local output = self.net:forward(self.x)
@@ -48,7 +48,7 @@ function AbstractServer:forward(isTraining)
     self.outputPtr:copy(output)
 end
 
-function AbstractServer:backward()
+function AbstractNetwork:backward()
     -- Implement backward computation.
     -- gradOutput is assumed to be set externally in the Java program
     self.gradParams:zero()
@@ -58,10 +58,10 @@ function AbstractServer:backward()
     end
 end
 
-function AbstractServer:save_model(path)
+function AbstractNetwork:save_model(path)
     torch.save(path,self.net)
 end
 
-function AbstractServer:load_model(path)
+function AbstractNetwork:load_model(path)
     self.net = torch.load(path)
 end

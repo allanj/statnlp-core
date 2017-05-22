@@ -42,10 +42,6 @@ public class FeatureBox implements Serializable {
 	}
 	
 	public void setFeatureValues(Instance instance, LocalNetworkParam param) {
-		if (this._fv != null) {
-			System.err.println("Feature values are already initialized.");
-			return;
-		}
 		List<AbstractTensor> tensorList = instance.getTensorList();
 		this._fv = new double[this._fs.length];
 		for (int i = 0; i < this._fv.length; i++) {

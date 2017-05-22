@@ -6,7 +6,7 @@ import com.statnlp.commons.types.Instance;
 
 public abstract class AbstractNetwork {
 	// Reference to controller instance for updating weights and getting gradients
-	protected NNCRFInterface controller;
+//	protected NNCRFInterface controller;
 	
 	// whether to use CRF's optimizer to optimize internal neural parameters
 	protected boolean optimizeNeural;
@@ -19,25 +19,30 @@ public abstract class AbstractNetwork {
 		this.optimizeNeural = optimizeNeural;
 	}
 	
-	public void setController(NNCRFInterface controller) {
-		this.controller = controller;
-	}
+//	public void setController(NNCRFInterface controller) {
+//		this.controller = controller;
+//	}
 	
 	public abstract double[] initNetwork(List<Integer> numInputList, List<Integer> inputDimList, List<String> wordList,
 			   String lang, List<String> embeddingList, List<Integer> embSizeList,
 			   List<Integer> outputDimList, List<List<Integer>> vocab);
 	
-	public abstract void forwardNetwork(boolean training);
+	public abstract void setInput(Instance[] instances);
 	
-	public abstract void backwardNetwork();
+	public abstract void forward(boolean training);
 	
-	public abstract void saveNetwork(String prefix);
+	public void forward(boolean training, Instance[] instances) {
+		this.setInput(instances);
+		this.forward(training);
+	}
 	
-	public abstract void loadNetwork(String prefix);
+	public abstract void backward();
+	
+	public abstract void save(String prefix);
+	
+	public abstract void load(String prefix);
 	
 	public abstract void cleanUp();
-
-	public abstract void setInput(Instance[] instances);
 
 	public abstract int getParamSize();
 

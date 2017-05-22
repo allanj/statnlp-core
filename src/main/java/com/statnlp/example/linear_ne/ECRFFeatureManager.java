@@ -10,6 +10,7 @@ import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.neural.AbstractInput;
+import com.statnlp.neural.MultiLayerPerceptron;
 import com.statnlp.neural.NeuralConfig;
 import com.statnlp.neural.NgramInput;
 
@@ -73,12 +74,13 @@ public class ECRFFeatureManager extends FeatureManager {
 //			featureList.add(this._param_g.toFeature(network,FEATYPE.neural.name(), currEn,  currWord));
 //			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+
 //										llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt));
-			String type = NetworkConfig.createNeuralFeatureType("MultiLayerPerceptron", 0);
-			int[] neuralFeatureIDs = this._param_g.toNeuralFeature(network, type, currEn, NeuralConfig.HIDDEN_SIZE, pos);
+			String type = FeatureManager.createNeuralFeatureType(MultiLayerPerceptron.class, ""+0);
+			int neuralNodeID = pos;
+			int[] neuralFeatureIDs = this._param_g.toNeuralFeature(network, type, currEn, NeuralConfig.HIDDEN_SIZE, neuralNodeID);
 			NgramInput ngram = new NgramInput(2);
 			ngram.addNgram(0, llw, lw, currWord, rw, rrw);
 			ngram.addNgram(1, llt, lt, currTag, rt, rrt);
-			network.getInstance().addInput(ngram);
+			network.getInstance().setInput(neuralNodeID, ngram);
 			for (int nf : neuralFeatureIDs) {
 				featureList.add(nf);
 			}

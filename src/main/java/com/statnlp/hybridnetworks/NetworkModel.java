@@ -360,8 +360,7 @@ public abstract class NetworkModel implements Serializable{
 	
 	private void forward() {
 		for (AbstractNetwork nn : this._fm.getParam_G().getNeuralNets()) {
-			nn.setInput(this._allInstances);
-			nn.forwardNetwork(false);
+			nn.forward(false, this._allInstances);
 		}
 	}
 

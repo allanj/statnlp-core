@@ -214,14 +214,6 @@ public class NetworkConfig {
 	/** Randomly choose the batch at every iteration. (false may give better result) */
 	public static boolean RANDOM_BATCH = false;
 	
-	public static String NEURAL_FEATURE_TYPE_PREFIX = "neural";
-	public static String NEURAL_FEATURE_TYPE_SEPARATOR = "_";
-	public static String createNeuralFeatureType(String neuralClassName, int idx) {
-		return NEURAL_FEATURE_TYPE_PREFIX
-				+ NEURAL_FEATURE_TYPE_SEPARATOR + neuralClassName
-				+ NEURAL_FEATURE_TYPE_SEPARATOR + idx;
-	}
-	
 	/***
 	 * Mean field-related flags.
 	 */

@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import com.statnlp.neural.AbstractNetwork;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 
 /**
@@ -392,6 +393,14 @@ public abstract class FeatureManager implements Serializable{
 		this._cacheEnabled = ois.readBoolean();
 		this._numThreads = ois.readInt();
 		this._params_l = new LocalNetworkParam[NetworkConfig.NUM_THREADS];
+	}
+	
+	public static String NEURAL_FEATURE_TYPE_PREFIX = "neural";
+	public static String NEURAL_FEATURE_TYPE_SEPARATOR = "|||";
+	public static String createNeuralFeatureType(Class<? extends AbstractNetwork> neuralClass, String networkName) {
+		return NEURAL_FEATURE_TYPE_PREFIX
+				+ NEURAL_FEATURE_TYPE_SEPARATOR + neuralClass.getName()
+				+ NEURAL_FEATURE_TYPE_SEPARATOR + networkName;
 	}
 	
 }

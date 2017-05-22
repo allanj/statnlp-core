@@ -135,7 +135,7 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 		return nnInternalWeights;
 	}
 	
-	public void forwardNetwork(boolean training) {
+	public void forward(boolean training) {
 		if (optimizeNeural) { // update with new params
 			double[] nnInternalWeights = controller.getInternalNeuralWeights();
 			this.params.storage().copy(nnInternalWeights); // we can do this because params is contiguous
@@ -158,7 +158,7 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 		controller.updateExternalNeuralWeights(nnExternalWeights);
 	}
 	
-	public void backwardNetwork() {
+	public void backward() {
 		double[] grad = controller.getExternalNeuralGradients();
 		
 		Object[] args = new Object[0];

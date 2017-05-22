@@ -3,6 +3,7 @@ require 'optim'
 
 include 'nn-crf-interface/neural_server/OneHot.lua'
 include 'nn-crf-interface/neural_server/MultiLayerPerceptron.lua'
+include 'nn-crf-interface/neural_server/Utils.lua'
 
 local SEED = 1337
 torch.manualSeed(SEED)
@@ -28,12 +29,22 @@ else
     print("CPU mode")
 end
 
-local mlp
-function init_MLP(javadata, ...)
+local net
+function initialize(javadata, ...)
     local timer = torch.Timer()
-    mlp = MultiLayerPerceptron(false, gpuid)
+
+    -- re-seed
+    torch.manualSeed(SEED)
+    if gpuid >= 0 then cutorch.manualSeed(SEED) end
+
+    local networkClass = javadata:get("class")
+    if networkClass == "MultiLayerPerceptron" then
+        net = MultiLayerPerceptron(false, gpuid)
+    else
+        error("Unsupported network class " .. networkClass)
+    end
     local outputAndGradOutputPtr = {... }
-    local paramsPtr, gradParamsPtr = mlp:initialize(javadata, unpack(outputAndGradOutputPtr))
+    local paramsPtr, gradParamsPtr = net:initialize(javadata, unpack(outputAndGradOutputPtr))
     local time = timer:time().real
     print(string.format("Init took %.4fs", time))
     if paramsPtr ~= nil and gradParamsPtr ~= nil then
@@ -41,30 +52,30 @@ function init_MLP(javadata, ...)
     end
 end
 
-function fwd_MLP(training)
+function forward(training)
     local timer = torch.Timer()
-    mlp:forward(training)
+    net:forward(training)
     local time = timer:time().real
     print(string.format("Forward took %.4fs", time))
 end
 
-function bwd_MLP()
+function backward()
     local timer = torch.Timer()
-    mlp:backward()
+    net:backward()
     local time = timer:time().real
     print(string.format("Backward took %.4fs", time))
 end
 
 function save_model(prefix)
     local timer = torch.Timer()
-    mlp:save_model(prefix)
+    net:save_model(prefix)
     local time = timer:time().real
     print(string.format("Saving model took %.4fs", time))
 end
 
 function load_model(prefix)
     local timer = torch.Timer()
-    mlp:load_model(prefix)
+    net:load_model(prefix)
     local time = timer:time().real
     print(string.format("Loading model took %.4fs", time))
 end

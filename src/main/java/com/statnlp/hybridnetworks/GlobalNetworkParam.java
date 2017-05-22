@@ -417,9 +417,9 @@ public class GlobalNetworkParam implements Serializable{
 				}
 			}
 			
-			if (NetworkConfig.USE_NEURAL_FEATURES && type.startsWith(NetworkConfig.NEURAL_FEATURE_TYPE_PREFIX)) {
-				// e.g. neural_MultiLayerPerceptron_1
-				String[] neuralInfos = type.split(NetworkConfig.NEURAL_FEATURE_TYPE_SEPARATOR);
+			if (NetworkConfig.USE_NEURAL_FEATURES && type.startsWith(FeatureManager.NEURAL_FEATURE_TYPE_PREFIX)) {
+				// e.g. neural|||MultiLayerPerceptron|||1
+				String[] neuralInfos = type.split(FeatureManager.NEURAL_FEATURE_TYPE_SEPARATOR);
 				try {
 					AbstractNetwork neuralNet = (AbstractNetwork) Class.forName(neuralInfos[1]).newInstance();
 					_neuralType2Net.put(type, neuralNet);
@@ -512,7 +512,7 @@ public class GlobalNetworkParam implements Serializable{
 			Instance inst = network.getInstance();
 			int instId = inst.getInstanceId();
 			boolean isTestInst = instId > 0 && !inst.isLabeled() || !inst.getLabeledInstance().isLabeled();
-			if (isTestInst && !type.startsWith(NetworkConfig.NEURAL_FEATURE_TYPE_PREFIX)){
+			if (isTestInst && !type.startsWith(FeatureManager.NEURAL_FEATURE_TYPE_PREFIX)){
 				type = DUMP_TYPE;
 			}
 		}
