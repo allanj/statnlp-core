@@ -27,9 +27,11 @@ import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
+import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.StringIndex;
 import com.statnlp.neural.NeuralConfigReader;
+import com.statnlp.util.GenericPipeline;
 
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
@@ -37,8 +39,29 @@ import gnu.trove.set.TIntSet;
 
 public class LinearCRFMain {
 	
-	
 	public static void main(String args[]) throws IOException, InterruptedException{
+		args = ("--trainPath data/train.data "
+				+ "--devPath data/test.data "
+				+ "--testPath data/test.data "
+				+ "--modelPath test.model "
+				+ "--logPath test.log "
+				+ "--l2 0.01 "
+				+ "--weightInit 0.0 "
+				+ "--modelType SSVM "
+				+ "--margin 1.0 "
+				+ "--nodeMismatchCost 1.0 "
+				+ "--edgeMismatchCost 0.0 "
+				+ "--useBatchTraining "
+				+ "--batchSize 11 "
+				+ "--stoppingCriteria SMALL_RELATIVE_CHANGE "
+				+ "--maxIter 700 "
+				+ "--evaluateEvery 0 "
+				+ "train test evaluate").split(" ");
+		GenericPipeline pipeline = new GenericPipeline();
+		pipeline.parseArgs(args);
+		pipeline.execute();
+		System.exit(0);
+		
 		String trainPath = System.getProperty("trainPath", "data/train.data");
 		String testPath = System.getProperty("testPath", "data/test.data");
 		
@@ -67,9 +90,10 @@ public class LinearCRFMain {
 		NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 		NetworkConfig.OPTIMIZE_NEURAL = false;
 		NetworkConfig.AVOID_DUPLICATE_FEATURES = false;
+		NetworkConfig.STOPPING_CRITERIA = StoppingCriteria.MAX_ITERATION_REACHED;
 		String weightInitFile = null;
 		
-		int numIterations = Integer.parseInt(System.getProperty("numIter", "1000"));
+		int numIterations = Integer.parseInt(System.getProperty("numIter", "100"));
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 			NeuralConfigReader.readConfig("nn-crf-interface/neural_server/neural.config");
