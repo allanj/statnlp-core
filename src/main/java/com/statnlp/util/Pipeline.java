@@ -23,6 +23,7 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
+import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.util.instance_parser.InstanceParser;
 
@@ -190,7 +191,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.MODEL_TYPE = ModelType.valueOf(((String)value).toUpperCase());
+						NetworkConfig.MODEL_TYPE = (ModelType)value;
 					}
 
 					@Override
@@ -204,6 +205,31 @@ public abstract class Pipeline {
 				})
 				.help("The type of the model during training. "
 						+ "Model types SSVM and SOFTMAX_MARGIN require cost function to be defined"));
+		argParserObjects.put("--stoppingCriteria", argParser.addArgument("--stoppingCriteria")
+				.type(StoppingCriteria.class)
+				.choices(StoppingCriteria.values())
+				.setDefault(NetworkConfig.STOPPING_CRITERIA)
+				.action(new ArgumentAction(){
+
+					@Override
+					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+							Object value) throws ArgumentParserException {
+						NetworkConfig.STOPPING_CRITERIA = (StoppingCriteria)value;
+					}
+
+					@Override
+					public void onAttach(Argument arg) {}
+
+					@Override
+					public boolean consumeArgument() {
+						return true;
+					}
+					
+				})
+				.help("The stopping criteria to be used.\n"
+						+ "MAX_ITERATION_REACHED: Stop when the specified number of --maxIter is reached.\n"
+						+ "SMALL_ABSOLUTE_CHANGE: Stop when the change in objective function is small.\n"
+						+ "SMALL_RELATIVE_CHANGE: Stop when the ratio of change of objective function is small for three consecutive iterations."));
 		argParserObjects.put("--objtol", argParser.addArgument("--objtol")
 				.type(Double.class)
 				.setDefault(NetworkConfig.OBJTOL)
@@ -390,6 +416,25 @@ public abstract class Pipeline {
 					
 				})
 				.help("Whether to use mini-batches during training."));
+		argParserObjects.put("--useRandomBatch", argParser.addArgument("--useRandomBatch")
+				.action(new ArgumentAction(){
+
+					@Override
+					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+							Object value) throws ArgumentParserException {
+						NetworkConfig.RANDOM_BATCH = true;
+					}
+
+					@Override
+					public void onAttach(Argument arg) {}
+
+					@Override
+					public boolean consumeArgument() {
+						return false;
+					}
+					
+				})
+				.help("Whether to pick mini-batches randomly for each iteration."));
 		argParserObjects.put("--batchSize", argParser.addArgument("--batchSize")
 				.type(Integer.class)
 				.setDefault(NetworkConfig.BATCH_SIZE)
@@ -398,7 +443,11 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.BATCH_SIZE = (Integer)value;
+						int batchSize = (Integer)value;
+						if(batchSize <= 0){
+							throw new ArgumentParserException("--batchSize should be greater than 0.", argParser);
+						}
+						NetworkConfig.BATCH_SIZE = batchSize;
 					}
 
 					@Override
@@ -410,7 +459,7 @@ public abstract class Pipeline {
 					}
 					
 				})
-				.help("The size of batch to be used."));
+				.help("The size of batch to be used, should be greater than 0."));
 		argParserObjects.put("--l2", argParser.addArgument("--l2")
 				.type(Double.class)
 				.setDefault(NetworkConfig.L2_REGULARIZATION_CONSTANT)
@@ -682,7 +731,14 @@ public abstract class Pipeline {
 		if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX && NetworkConfig.USE_BATCH_TRAINING == false){
 			return OptimizerFactory.getLBFGSFactory();
 		} else {
-			return OptimizerFactory.getGradientDescentFactoryUsingAdaMThenStop();
+			switch (NetworkConfig.STOPPING_CRITERIA){
+			case SMALL_ABSOLUTE_CHANGE:
+			case SMALL_RELATIVE_CHANGE:
+				return OptimizerFactory.getGradientDescentFactoryUsingAdaMThenStop();
+			case MAX_ITERATION_REACHED:
+			default:
+				return OptimizerFactory.getGradientDescentFactoryUsingAdaM();
+			}
 		}
 	}
 	

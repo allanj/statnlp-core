@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
@@ -63,11 +64,29 @@ public abstract class NetworkModel implements Serializable{
 	//neuralCRF/SSVM socket controller
 	private NNCRFGlobalNetworkParam nnController;
 	private transient PrintStream[] outstreams = new PrintStream[]{System.out};
+	private transient Consumer<TrainingIterationInformation> endOfIterCallback;
+	
+	public static class TrainingIterationInformation {
+		public int iterNum;
+		public int epochNum;
+		public boolean done;
+		public boolean lastIter;
+		public double obj;
+		
+		public TrainingIterationInformation(int iterNum, int epochNum, boolean done, boolean lastIter, double obj){
+			this.iterNum = iterNum;
+			this.epochNum = epochNum;
+			this.done = done;
+			this.lastIter = lastIter;
+			this.obj = obj;
+		}
+	}
 	
 	public NetworkModel(FeatureManager fm, NetworkCompiler compiler, PrintStream... outstreams){
 		this._fm = fm;
 		this._numThreads = NetworkConfig.NUM_THREADS;
 		this._compiler = compiler;
+		this.endOfIterCallback = null;
 		if(outstreams == null){
 			outstreams = new PrintStream[0];
 		}
@@ -76,6 +95,10 @@ public abstract class NetworkModel implements Serializable{
 		for(int i=0; i<outstreams.length; i++){
 			this.outstreams[i+1] = outstreams[i];
 		}
+	}
+	
+	public void setEndOfIterCallback(Consumer<TrainingIterationInformation> callback){
+		this.endOfIterCallback = callback;
 	}
 	
 	public int getNumThreads(){
@@ -289,6 +312,8 @@ public abstract class NetworkModel implements Serializable{
 			int batchId = 0;
 			int epochNum = 0;
 			double epochObj = 0.0;
+			int size = Math.min(NetworkConfig.BATCH_SIZE, instIds.size());
+			int offset = 0;
 			for(int it = 0; it<=maxNumIterations; it++){
 				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
 				if(NetworkConfig.USE_BATCH_TRAINING){
@@ -296,21 +321,11 @@ public abstract class NetworkModel implements Serializable{
 					if(NetworkConfig.RANDOM_BATCH || batchId == 0) {
 						Collections.shuffle(instIds, RANDOM);
 					}
-					int size = NetworkConfig.BATCH_SIZE >= this._allInstances.length ? this._allInstances.length:NetworkConfig.BATCH_SIZE; 
 					for(int iid = 0; iid<size; iid++){
-						int offset = NetworkConfig.BATCH_SIZE*batchId;
-						batchInstIds.add(instIds.get(iid+offset));
+						batchInstIds.add(instIds.get((iid+offset) % instIds.size()));
 					}
-					if(!NetworkConfig.RANDOM_BATCH) {
-						batchId++;
-						int offset = NetworkConfig.BATCH_SIZE*batchId;
-						if(size+offset > instIds.size()) {
-							batchId = 0;
-							// this means one epoch
-							print(String.format("Epoch %d: Obj=%-18.12f", epochNum++, epochObj/instIds.size()), outstreams);
-							epochObj = 0.0;
-						}
-					}
+					batchId++;
+					offset = NetworkConfig.BATCH_SIZE*batchId;
 				}
 				for(LocalNetworkLearnerThread learner: this._learners){
 					learner.setIterationNumber(it);
@@ -342,6 +357,12 @@ public abstract class NetworkModel implements Serializable{
 				double obj = this._fm.getParam_G().getObj_old();
 				epochObj += obj;
 				print(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0), outstreams);
+				if(offset >= instIds.size()) {
+					batchId = 0;
+					// this means one epoch
+					print(String.format("Epoch %d: Obj=%-18.12f", epochNum++, multiplier*epochObj*instIds.size()/(size+offset)), outstreams);
+					epochObj = 0.0;
+				}
 				if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE && it>1 && obj<obj_old && Math.abs(obj-obj_old)>1E-5){
 					throw new RuntimeException("Error:\n"+obj_old+"\n>\n"+obj);
 				}
@@ -350,6 +371,9 @@ public abstract class NetworkModel implements Serializable{
 					if (lastIter || done) {
 						nnController.forwardNetwork(false);
 					}
+				}
+				if(endOfIterCallback != null){
+					endOfIterCallback.accept(new TrainingIterationInformation(it, epochNum, done, lastIter, obj));
 				}
 				if(lastIter){
 					print("Training completes. The specified number of iterations ("+it+") has passed.", outstreams);

@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -38,6 +39,7 @@ import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.hybridnetworks.NetworkModel.TrainingIterationInformation;
 import com.statnlp.hybridnetworks.TemplateBasedFeatureManager;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
@@ -101,8 +103,7 @@ public class GenericPipeline extends Pipeline{
 				        					.withName("File")
 				        					.withImmediateFlush(true)
 				        					.withIgnoreExceptions(false)
-				        					.withBufferedIo(false)
-				        					.withBufferSize(4000)
+				        					.withBufferedIo(true)
 				        					.withLayout(layout)
 				        					.withAdvertise(false)
 				        					.setConfiguration(config))
@@ -135,6 +136,11 @@ public class GenericPipeline extends Pipeline{
 		argParserObjects.put("--resultPath", argParser.addArgument("--resultPath")
 				.type(String.class)
 				.help("The path to where we should store prediction results."));
+		argParserObjects.put("--evaluateEvery", argParser.addArgument("--evaluateEvery")
+				.type(Integer.class)
+				.setDefault(0)
+				.metavar("n")
+				.help("Evaluate on development set every n iterations."));
 	}
 	
 	/* (non-Javadoc)
@@ -286,7 +292,6 @@ public class GenericPipeline extends Pipeline{
 	 */
 	@Override
 	protected void initTraining() {
-		// TODO Auto-generated method stub
 		
 	}
 
@@ -432,6 +437,30 @@ public class GenericPipeline extends Pipeline{
 	 */
 	@Override
 	protected void train(Instance[] trainInstances) {
+		if(hasParameter("evaluateEvery")){
+			int evaluateEvery = getParameter("evaluateEvery");
+			if(evaluateEvery > 0){
+				networkModel.setEndOfIterCallback(new Consumer<TrainingIterationInformation>(){
+
+					@Override
+					public void accept(TrainingIterationInformation t) {
+						int iterNum = t.iterNum;
+						if((iterNum+1) % evaluateEvery == 0){
+							Instance[] instances = getInstancesForTuning();
+							for(int k = 0; k < instances.length; k++){
+								instances[k].setUnlabeled();
+							}
+							
+							try {
+								instances = networkModel.decode(instances, true);
+							} catch (InterruptedException e) {}
+							evaluate(instances);
+						}
+					}
+					
+				});
+			}
+		}
 		try {
 			this.resetTimer();
 			long time = System.nanoTime();

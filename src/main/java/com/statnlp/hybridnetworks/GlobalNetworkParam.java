@@ -36,6 +36,7 @@ import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Label;
+import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.neural.RemoteNN;
 
@@ -717,12 +718,13 @@ public class GlobalNetworkParam implements Serializable{
     	} catch(ExceptionWithIflag e){
     		throw new NetworkException("Exception with Iflag:"+e.getMessage());
     	}
-    	if(this._opt.name().contains("LBFGS Optimizer") ){//|| this._opt.name().contains("ADAGRAD")|| this._opt.name().contains("ADAM")){
-	    	double diff = this.getObj()-this.getObj_old();
+    	double diff = this.getObj()-this.getObj_old();
+    	double diffRatio = Math.abs(diff/this.getObj_old());
+    	if(NetworkConfig.STOPPING_CRITERIA == StoppingCriteria.SMALL_ABSOLUTE_CHANGE){
 	    	if(diff >= 0 && diff < NetworkConfig.OBJTOL){
 	    		done = true;
 	    	}
-	    	double diffRatio = Math.abs(diff/this.getObj_old());
+    	} else if(NetworkConfig.STOPPING_CRITERIA == StoppingCriteria.SMALL_RELATIVE_CHANGE){
 	    	if(diff >= 0 && diffRatio < 1e-4){
 	    		this.smallChangeCount += 1;
 	    	} else {

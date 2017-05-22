@@ -79,6 +79,15 @@ public class NetworkConfig {
 	 */
 	public static final int[] DEFAULT_CAPACITY_NETWORK = new int[]{4096, 4096, 4096, 4096, 4096};
 	
+	public static enum StoppingCriteria {
+		MAX_ITERATION_REACHED,
+		SMALL_ABSOLUTE_CHANGE,
+		SMALL_RELATIVE_CHANGE,
+		;
+	}
+	
+	public static StoppingCriteria STOPPING_CRITERIA = StoppingCriteria.SMALL_RELATIVE_CHANGE;
+	
 	/**
 	 * The value used for stopping criterion of change in objective value in generative models
 	 */
