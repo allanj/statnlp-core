@@ -121,7 +121,7 @@ public class Segment implements Serializable, Comparable<Segment>{
 	
 	@Override
 	public int hashCode(){
-		return (this._bIndex + 7) ^ (this._eIndex + 7);
+		return Integer.hashCode(this._bIndex) ^ Integer.hashCode(this._eIndex);
 	}
 	
 	@Override

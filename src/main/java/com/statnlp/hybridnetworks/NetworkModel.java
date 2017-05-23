@@ -40,6 +40,7 @@ import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.ui.visualize.type.VisualizerFrame;
+import com.statnlp.util.instance_parser.InstanceParser;
 
 public abstract class NetworkModel implements Serializable{
 	
@@ -51,6 +52,7 @@ public abstract class NetworkModel implements Serializable{
 	protected FeatureManager _fm;
 	//the builder
 	protected NetworkCompiler _compiler;
+	protected InstanceParser _instanceParser;
 	//the list of instances.
 	protected transient Instance[] _allInstances;
 	protected transient Network[] unlabeledNetworkByInstanceId;
@@ -82,10 +84,11 @@ public abstract class NetworkModel implements Serializable{
 		}
 	}
 	
-	public NetworkModel(FeatureManager fm, NetworkCompiler compiler, PrintStream... outstreams){
+	public NetworkModel(FeatureManager fm, NetworkCompiler compiler, InstanceParser parser, PrintStream... outstreams){
 		this._fm = fm;
 		this._numThreads = NetworkConfig.NUM_THREADS;
 		this._compiler = compiler;
+		this._instanceParser = parser;
 		this.endOfIterCallback = null;
 		if(outstreams == null){
 			outstreams = new PrintStream[0];
@@ -123,6 +126,10 @@ public abstract class NetworkModel implements Serializable{
 	
 	public NetworkCompiler getNetworkCompiler(){
 		return _compiler;
+	}
+	
+	public InstanceParser getInstanceParser(){
+		return _instanceParser;
 	}
 	
 	protected abstract Instance[][] splitInstancesForTrain();
@@ -185,7 +192,7 @@ public abstract class NetworkModel implements Serializable{
 	 */
 	public void visualize(Class<? extends VisualizationViewerEngine> clazz) throws InterruptedException, IllegalArgumentException, IllegalStateException{
 		if(unlabeledNetworkByInstanceId == null){
-			throw new IllegalStateException("Please specify the instances to be visualized.");
+			throw new IllegalStateException("No previously used instances found. Please specify the instances to be visualized.");
 		}
 		visualize(clazz, null, _allInstances.length);
 	}
@@ -206,25 +213,46 @@ public abstract class NetworkModel implements Serializable{
 	 * Visualize the instances using the specified viewer engine.
 	 * @param clazz The class of the viewer engine to be used to visualize the instances.
 	 * @param allInstances The instances to be visualized
-	 * @param trainLength The number of instances to be visualized. This can be less than the number of instances in allInstances
+	 * @param numInstances The number of instances to be visualized. This can be less than the number of instances in allInstances
 	 * @throws InterruptedException If there are interruptions during the compilation process of the instances in multi-threaded setting.
 	 * @throws IllegalArgumentException If the viewer engine specified does not implement the correct constructor.
 	 * 									The viewer engine needs to implement the constructor with signature (NetworkCompiler, FeatureManager)
 	 */
-	public void visualize(Class<? extends VisualizationViewerEngine> clazz, Instance[] allInstances, int trainLength) throws InterruptedException, IllegalArgumentException {
+	public void visualize(Class<? extends VisualizationViewerEngine> clazz, Instance[] allInstances, int numInstances) throws InterruptedException, IllegalArgumentException {
+		try {
+			visualize(clazz.getConstructor(InstanceParser.class).newInstance(_instanceParser), allInstances, numInstances);
+		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
+				| NoSuchMethodException | SecurityException e) {
+			throw new IllegalArgumentException("The viewer class "+clazz.getName()+" must implement the constructor with signature (InstanceParser), or pass in an instantiated viewer.");
+		}
+	}
+	
+	/**
+	 * Visualize the instances using the specified viewer engine.
+	 * @param viewer The viewer engine to be used to visualize the instances.
+	 * @param allInstances The instances to be visualized
+	 * @throws InterruptedException If there are interruptions during the compilation process of the instances in multi-threaded setting.
+	 */
+	public void visualize(VisualizationViewerEngine viewer, Instance[] allInstances) throws InterruptedException {
+		visualize(viewer, allInstances, allInstances.length);
+	}
+	
+	/**
+	 * Visualize the instances using the specified viewer engine.
+	 * @param viewer The viewer engine to be used to visualize the instances.
+	 * @param allInstances The instances to be visualized
+	 * @param numInstances The number of instances to be visualized. This can be less than the number of instances in allInstances
+	 * @throws InterruptedException If there are interruptions during the compilation process of the instances in multi-threaded setting.
+	 */
+	public void visualize(VisualizationViewerEngine viewer, Instance[] allInstances, int numInstances) throws InterruptedException {
 		if(allInstances != null){
 			System.err.print("Compiling networks...");
 			long start = System.nanoTime();
-			preCompileNetworks(prepareInstanceForCompilation(allInstances, trainLength));
+			preCompileNetworks(prepareInstanceForCompilation(allInstances, numInstances));
 			long end = System.nanoTime();
 			System.err.printf("Done in %.3fs\n", (end-start)/1.0e9);
 		}
-		try {
-			new VisualizerFrame(this, clazz.getConstructor(GlobalNetworkParam.class).newInstance(_fm.getParam_G()));
-		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
-				| NoSuchMethodException | SecurityException e) {
-			throw new IllegalArgumentException("The viewer class "+clazz.getName()+" must implement the constructor with signature (GlobalNetworkParam)");
-		}
+		new VisualizerFrame(this, viewer);
 	}
 	
 	/**

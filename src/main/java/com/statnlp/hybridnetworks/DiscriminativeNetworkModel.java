@@ -20,6 +20,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.util.instance_parser.InstanceParser;
 
 public class DiscriminativeNetworkModel extends NetworkModel {
 	
@@ -29,8 +30,16 @@ public class DiscriminativeNetworkModel extends NetworkModel {
 		return new DiscriminativeNetworkModel(fm, builder, outstreams);
 	}
 	
+	public static DiscriminativeNetworkModel create(FeatureManager fm, NetworkCompiler builder, InstanceParser instanceParser, PrintStream... outstreams){
+		return new DiscriminativeNetworkModel(fm, builder, instanceParser, outstreams);
+	}
+	
 	public DiscriminativeNetworkModel(FeatureManager fm, NetworkCompiler builder, PrintStream... outstreams){
-		super(fm, builder, outstreams);
+		this(fm, builder, null, outstreams);
+	}
+	
+	public DiscriminativeNetworkModel(FeatureManager fm, NetworkCompiler builder, InstanceParser instanceParser, PrintStream... outstreams){
+		super(fm, builder, instanceParser, outstreams);
 	}
 	
 	@Override

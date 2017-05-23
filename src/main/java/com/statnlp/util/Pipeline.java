@@ -763,10 +763,13 @@ public abstract class Pipeline {
 		if(compiler == null){
 			initAndSetNetworkCompiler();
 		}
+		if(instanceParser == null){
+			initAndSetInstanceParser();
+		}
 		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
-			networkModel = GenerativeNetworkModel.create(fm, compiler);
+			networkModel = GenerativeNetworkModel.create(fm, compiler, instanceParser);
 		} else {
-			networkModel = DiscriminativeNetworkModel.create(fm, compiler);
+			networkModel = DiscriminativeNetworkModel.create(fm, compiler, instanceParser);
 		}
 	}
 	

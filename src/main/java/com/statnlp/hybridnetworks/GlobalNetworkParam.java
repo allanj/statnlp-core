@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
@@ -35,7 +34,6 @@ import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
-import com.statnlp.commons.types.Label;
 import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.neural.RemoteNN;
@@ -50,27 +48,6 @@ import com.statnlp.neural.RemoteNN;
 public class GlobalNetworkParam implements Serializable{
 	
 	private static final long serialVersionUID = -1216927656396018976L;
-	
-	public final Map<String, Label> LABELS = new HashMap<String, Label>();
-	public final Map<Integer, Label> LABELS_INDEX = new HashMap<Integer, Label>();
-	
-	public Label getLabel(String form){
-		if(!LABELS.containsKey(form)){
-			Label label = new Label(form, LABELS.size());
-			LABELS.put(form, label);
-			LABELS_INDEX.put(label.getId(), label);
-		}
-		return LABELS.get(form);
-	}
-	
-	public Label getLabel(int id){
-		return LABELS_INDEX.get(id);
-	}
-	
-	public void reset(){
-		LABELS.clear();
-		LABELS_INDEX.clear();
-	}
 	
 	//these parameters are used for discriminative training using LBFGS.
 	/** The L2 regularization parameter weight */
@@ -862,12 +839,6 @@ public class GlobalNetworkParam implements Serializable{
 		
 		out.writeObject("_nnController");
 		out.writeObject(this._nnController);
-		
-		out.writeObject("LABELS");
-		out.writeObject(this.LABELS);
-		
-		out.writeObject("LABELS_INDEX");
-		out.writeObject(this.LABELS_INDEX);
 	}
 	
 	@SuppressWarnings("unchecked")

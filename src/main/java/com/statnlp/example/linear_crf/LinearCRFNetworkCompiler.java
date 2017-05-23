@@ -36,6 +36,7 @@ import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.hybridnetworks.NodeHypothesis;
 import com.statnlp.hybridnetworks.ScoredIndex;
 import com.statnlp.util.Pipeline;
+import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 
 /**
  * @author wei_lu
@@ -71,7 +72,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	
 	public LinearCRFNetworkCompiler(Pipeline pipeline){
 		this._labels = new HashMap<Integer, Label>();
-		for(Label label: pipeline.param.LABELS.values()){
+		for(Label label: ((DelimiterBasedInstanceParser)pipeline.instanceParser).LABELS.values()){
 			this._labels.put(label.getId(), new Label(label));
 		}
 		edge2idx = new HashMap<Long, HashMap<Long, Integer>>();
@@ -95,7 +96,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	private LinearCRFNetwork compile_labeled(int networkId, LinearInstance<Label> inst, LocalNetworkParam param){
 		LinearCRFNetwork network = new LinearCRFNetwork(networkId, inst, param, this);
 		
-		ArrayList<Label> outputs = inst.getOutput();
+		ArrayList<Label> outputs = (ArrayList<Label>)inst.getOutput();
 		int size = outputs.size();
 		
 		// Add leaf

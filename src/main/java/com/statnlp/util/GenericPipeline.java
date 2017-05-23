@@ -15,10 +15,7 @@ import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -33,7 +30,6 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.NetworkCompiler;
@@ -227,7 +223,12 @@ public class GenericPipeline extends Pipeline{
 	protected void saveModel() throws IOException {
 		String modelPath = getParameter("modelPath");
 		if(modelPath == null){
-			throw LOGGER.throwing(Level.ERROR, new RuntimeException("["+getCurrentTask()+"]Saving model requires --modelPath to be set."));
+			RuntimeException e = LOGGER.throwing(Level.ERROR, new RuntimeException("["+getCurrentTask()+"]Saving model requires --modelPath to be set."));
+			if(getCurrentTask() == TASK_SAVE_MODEL){
+				throw e;
+			} else {
+				return;
+			}
 		}
 		LOGGER.info("Writing model into %s...", modelPath);
 		long startTime = System.currentTimeMillis();
@@ -487,10 +488,10 @@ public class GenericPipeline extends Pipeline{
 //				modelTextWriter.println("objtol: "+NetworkConfig.OBJTOL);
 //				modelTextWriter.println("Max iter: "+numIterations);
 //				modelTextWriter.println();
-				modelTextWriter.println("Labels:");
-				List<Label> labelsUsed = new ArrayList<Label>(param.LABELS.values());
-				Collections.sort(labelsUsed);
-				modelTextWriter.println(labelsUsed);
+//				modelTextWriter.println("Labels:");
+//				List<Label> labelsUsed = new ArrayList<Label>(param.LABELS.values());
+//				Collections.sort(labelsUsed);
+//				modelTextWriter.println(labelsUsed);
 				modelTextWriter.println("Num features: "+param.countFeatures());
 				modelTextWriter.println("Features:");
 				HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap = param.getFeatureIntMap();

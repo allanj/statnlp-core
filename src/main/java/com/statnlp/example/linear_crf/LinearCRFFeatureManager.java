@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.Map;
 
+import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.FeatureArray;
@@ -34,6 +36,8 @@ import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.neural.NeuralConfig;
 import com.statnlp.util.Pipeline;
+import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
+import com.statnlp.util.instance_parser.InstanceParser;
 
 /**
  * @author wei_lu
@@ -48,6 +52,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 	public int wordHalfWindowSize = 1;
 	public int posHalfWindowSize = -1;
 	public boolean productWithOutput = true;
+	public Map<Integer, Label> labels;
 	
 	private String OUT_SEP = NeuralConfig.OUT_SEP; 
 	private String IN_SEP = NeuralConfig.IN_SEP; 
@@ -90,21 +95,44 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		
 	}
 	
-	/**
-	 * @param param_g
-	 */
 	public LinearCRFFeatureManager(GlobalNetworkParam param_g) {
-		this(param_g, new LinearCRFConfig());
+		this(param_g, (InstanceParser)null, new LinearCRFConfig());
 	}
 	
-	public LinearCRFFeatureManager(GlobalNetworkParam param_g, String[] args){
-		this(param_g, new LinearCRFConfig(args));
+	public LinearCRFFeatureManager(GlobalNetworkParam param_g, String[] args) {
+		this(param_g, (InstanceParser)null, new LinearCRFConfig(args));
 	}
-	/**
-	 * @param param_g
-	 */
+	
 	public LinearCRFFeatureManager(GlobalNetworkParam param_g, LinearCRFConfig config) {
-		super(param_g);
+		this(param_g, (InstanceParser)null, config);
+	}
+	
+	public LinearCRFFeatureManager(GlobalNetworkParam param_g, Map<Integer, Label> labels) {
+		this(param_g, labels, new LinearCRFConfig());
+	}
+	
+	public LinearCRFFeatureManager(GlobalNetworkParam param_g, Map<Integer, Label> labels, String[] args){
+		this(param_g, labels, new LinearCRFConfig(args));
+	}
+	
+	public LinearCRFFeatureManager(GlobalNetworkParam param_g, Map<Integer, Label> labels, LinearCRFConfig config) {
+		this(param_g, (InstanceParser)null, config);
+		this.labels = labels;
+	}
+	
+	public LinearCRFFeatureManager(GlobalNetworkParam param_g, InstanceParser instanceParser) {
+		this(param_g, instanceParser, new LinearCRFConfig());
+	}
+	
+	public LinearCRFFeatureManager(GlobalNetworkParam param_g, InstanceParser instanceParser, String[] args){
+		this(param_g, instanceParser, new LinearCRFConfig(args));
+	}
+	
+	public LinearCRFFeatureManager(GlobalNetworkParam param_g, InstanceParser instanceParser, LinearCRFConfig config) {
+		super(param_g, instanceParser);
+		if(instanceParser != null){
+			this.labels = ((DelimiterBasedInstanceParser)instanceParser).LABELS_INDEX;
+		}
 		wordHalfWindowSize = config.wordHalfWindowSize;
 		posHalfWindowSize = config.posHalfWindowSize;
 		productWithOutput = config.productWithOutput;
@@ -119,7 +147,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 	}
 	
 	public LinearCRFFeatureManager(Pipeline pipeline){
-		this(pipeline.param);
+		this(pipeline.param, pipeline.instanceParser);
 	}
 
 	@Override
@@ -132,7 +160,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		LinearInstance<String> instance = (LinearInstance<String>)net.getInstance();
 		int size = instance.size();
 		
-		ArrayList<String[]> input = instance.getInput();
+		ArrayList<String[]> input = (ArrayList<String[]>)instance.getInput();
 		
 		long curNode = net.getNode(parent_k);
 		int[] arr = NetworkIDMapper.toHybridNodeArray(curNode);
@@ -152,7 +180,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		int child_tag_id = network.getNodeArray(children_k[0])[1];
 		int childNodeType = network.getNodeArray(children_k[0])[4];
 		
-		int labelSize = this._param_g.LABELS.size();
+		int labelSize = labels.size();
 
 		if(childNodeType == NODE_TYPES.LEAF.ordinal()){
 			child_tag_id = labelSize;

@@ -1,7 +1,9 @@
 package com.statnlp.example.weak_semi_crf;
 
 import java.util.ArrayList;
+import java.util.List;
 
+import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler.NodeType;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
@@ -51,7 +53,8 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 	@Override
 	protected FeatureArray extract_helper(Network net, int parent_k, int[] children_k) {
 		WeakSemiCRFNetwork network = (WeakSemiCRFNetwork)net;
-		WeakSemiCRFInstance instance = (WeakSemiCRFInstance)network.getInstance();
+		@SuppressWarnings("unchecked")
+		LinearInstance<Span> instance = (LinearInstance<Span>)network.getInstance();
 		
 		int[] parent_arr = network.getNodeArray(parent_k);
 		int parentPos = parent_arr[0];
@@ -81,8 +84,14 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 			return new FeatureArray(new int[]{cheatFeature});
 		}
 		
-		String input = instance.input;
-		String[] inputArr = instance.getInputAsArray();
+		List<String[]> inputTokenized = instance.input;
+		String input = "";
+		String[] inputArr = new String[inputTokenized.size()];
+		for(int i=0; i<inputTokenized.size(); i++){
+			String[] inputToken = inputTokenized.get(i);
+			input += inputToken[0];
+			inputArr[i] = inputToken[0];
+		}
 		int length = input.length();
 		int isSpaceFeature = param_g.toFeature(network, FeatureType.ENDS_WITH_SPACE.name(), parentLabelId+"", (inputArr[parentPos].equals(" "))+"");
 		int startCharFeature = param_g.toFeature(network, FeatureType.START_CHAR.name(), parentLabelId+"", inputArr[childPos]);

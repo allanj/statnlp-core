@@ -11,11 +11,13 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Label;
-import com.statnlp.hybridnetworks.GlobalNetworkParam;
+import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.util.Pipeline;
 import com.statnlp.util.instance_parser.InstanceParser;
 
@@ -26,7 +28,26 @@ public class WeakSemiCRFInstanceParser extends InstanceParser {
 
 	private static final long serialVersionUID = 4072193433227503755L;
 	
-	private GlobalNetworkParam param;
+	public final Map<String, Label> LABELS = new HashMap<String, Label>();
+	public final Map<Integer, Label> LABELS_INDEX = new HashMap<Integer, Label>();
+	
+	public Label getLabel(String form){
+		if(!LABELS.containsKey(form)){
+			Label label = new Label(form, LABELS.size());
+			LABELS.put(form, label);
+			LABELS_INDEX.put(label.getId(), label);
+		}
+		return LABELS.get(form);
+	}
+	
+	public Label getLabel(int id){
+		return LABELS_INDEX.get(id);
+	}
+	
+	public void reset(){
+		LABELS.clear();
+		LABELS_INDEX.clear();
+	}
 	
 	public boolean COMBINE_OUTSIDE_CHARS = true;
 	public boolean USE_SINGLE_OUTSIDE_TAG = true;
@@ -36,7 +57,6 @@ public class WeakSemiCRFInstanceParser extends InstanceParser {
 	 */
 	public WeakSemiCRFInstanceParser(Pipeline pipeline) {
 		super(pipeline);
-		this.param = pipeline.param;
 		try{
 			if(pipeline.hasParameter("combineOutsideChars")){
 				COMBINE_OUTSIDE_CHARS = Boolean.parseBoolean(pipeline.getParameter("combineOutsideChars"));
@@ -52,8 +72,9 @@ public class WeakSemiCRFInstanceParser extends InstanceParser {
 	/* (non-Javadoc)
 	 * @see com.statnlp.util.instance_parser.InstanceParser#buildInstances(java.lang.String[])
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
-	public WeakSemiCRFInstance[] buildInstances(String... sources) throws FileNotFoundException {
+	public LinearInstance<Span>[] buildInstances(String... sources) throws FileNotFoundException {
 		List<Instance> instances = new ArrayList<Instance>();
 		for(String source: sources){
 			try {
@@ -62,7 +83,7 @@ public class WeakSemiCRFInstanceParser extends InstanceParser {
 				throw new RuntimeException(e);
 			}
 		}
-		return instances.toArray(new WeakSemiCRFInstance[0]);
+		return instances.toArray(new LinearInstance[0]);
 	}
 	
 	/**
@@ -75,15 +96,21 @@ public class WeakSemiCRFInstanceParser extends InstanceParser {
 	 * @return
 	 * @throws IOException
 	 */
-	private WeakSemiCRFInstance[] readData(String fileName) throws IOException{
+	@SuppressWarnings("unchecked")
+	private LinearInstance<Span>[] readData(String fileName) throws IOException{
 		InputStreamReader isr = new InputStreamReader(new FileInputStream(fileName), "UTF-8");
 		BufferedReader br = new BufferedReader(isr);
-		ArrayList<WeakSemiCRFInstance> result = new ArrayList<WeakSemiCRFInstance>();
+		ArrayList<LinearInstance<Span>> result = new ArrayList<LinearInstance<Span>>();
 		String input = null;
+		List<String[]> inputTokenized = null;
 		List<Span> output = null;
 		int instanceId = 1;
 		while(br.ready()){
 			input = br.readLine();
+			inputTokenized = new ArrayList<String[]>();
+			for(int i=0; i<input.length(); i++){
+				inputTokenized.add(new String[]{input.substring(i,i+1)});
+			}
 			int length = input.length();
 			output = new ArrayList<Span>();
 			String[] spansStr = br.readLine().split("\\|");
@@ -93,7 +120,7 @@ public class WeakSemiCRFInstanceParser extends InstanceParser {
 					continue;
 				}
 				String[] startend_label = span.split(" ");
-				Label label = param.getLabel(startend_label[1]);
+				Label label = getLabel(startend_label[1]);
 				String[] start_end = startend_label[0].split(",");
 				int start = Integer.parseInt(start_end[0]);
 				int end = Integer.parseInt(start_end[1]);
@@ -113,13 +140,13 @@ public class WeakSemiCRFInstanceParser extends InstanceParser {
 				output.add(new Span(start, end, label));
 			}
 			createOutsideSpans(input, output, prevEnd, length);
-			WeakSemiCRFInstance instance = new WeakSemiCRFInstance(instanceId, 1.0, input, output);
+			LinearInstance<Span> instance = new LinearInstance<Span>(instanceId, 1.0, inputTokenized, output);
 			result.add(instance);
 			instanceId += 1;
 			br.readLine();
 		}
 		br.close();
-		return result.toArray(new WeakSemiCRFInstance[result.size()]);
+		return result.toArray(new LinearInstance[result.size()]);
 	}
 
 	
@@ -137,7 +164,7 @@ public class WeakSemiCRFInstanceParser extends InstanceParser {
 			int curEnd = input.indexOf(' ', curStart);
 			Label outsideLabel = null;
 			if(USE_SINGLE_OUTSIDE_TAG){
-				outsideLabel = param.getLabel("O");
+				outsideLabel = getLabel("O");
 				if(curEnd == -1 || curEnd > end){
 					curEnd = end;
 				} else if(curStart == curEnd){
@@ -149,36 +176,36 @@ public class WeakSemiCRFInstanceParser extends InstanceParser {
 					if(curStart == start){ // Start directly after previous tag: this is between tags
 						if(curStart == 0){ // Unless this is the start of the string
 							if(curEnd == length){
-								outsideLabel = param.getLabel("O"); // Case |<cur>|
+								outsideLabel = getLabel("O"); // Case |<cur>|
 							} else {
-								outsideLabel = param.getLabel("O-B"); // Case |<cur>###
+								outsideLabel = getLabel("O-B"); // Case |<cur>###
 							}
 						} else {
 							if(curEnd == length){
-								outsideLabel = param.getLabel("O-A"); // Case ###<cur>|
+								outsideLabel = getLabel("O-A"); // Case ###<cur>|
 							} else {
-								outsideLabel = param.getLabel("O-I"); // Case ###<cur>###
+								outsideLabel = getLabel("O-I"); // Case ###<cur>###
 							}
 						}
 					} else { // Start not immediately: this is before tags (found space before)
 						if(curEnd == length){
-							outsideLabel = param.getLabel("O"); // Case ### <cur>|
+							outsideLabel = getLabel("O"); // Case ### <cur>|
 						} else {
-							outsideLabel = param.getLabel("O-B"); // Case ### <cur>###
+							outsideLabel = getLabel("O-B"); // Case ### <cur>###
 						}
 					}
 				} else if(curStart == curEnd){ // It is immediately a space
 					curEnd += 1;
-					outsideLabel = param.getLabel("O"); // Tag space as a single outside token
+					outsideLabel = getLabel("O"); // Tag space as a single outside token
 				} else if(curStart < curEnd){ // Found a non-immediate space
 					if(curStart == start){ // Start immediately after previous tag: this is after tag
 						if(curStart == 0){
-							outsideLabel = param.getLabel("O"); // Case |<cur> ###
+							outsideLabel = getLabel("O"); // Case |<cur> ###
 						} else {
-							outsideLabel = param.getLabel("O-A"); // Case ###<cur> ###
+							outsideLabel = getLabel("O-A"); // Case ###<cur> ###
 						}
 					} else { // Start not immediately: this is a separate outside token
-						outsideLabel = param.getLabel("O"); // Case ### <cur> ###
+						outsideLabel = getLabel("O"); // Case ### <cur> ###
 					}
 				}
 			}

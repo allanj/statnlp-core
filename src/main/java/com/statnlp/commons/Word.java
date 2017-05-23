@@ -33,17 +33,7 @@ public class Word implements Token{
 	private String _form;
 	
 	public Word(String form){
-//		this._form = WordUtil.normalizeDigits(form);
 		this._form = form;
-		//luwei: I don't remember why we need to do the following??
-//		StringBuilder sb = new StringBuilder();
-//		for(char ch : form.toCharArray()){
-//			if(ch=='+')
-//				sb.append("*PLUS*");
-//			else
-//				sb.append(ch);
-//		}
-//		this._form = sb.toString();
 	}
 
 	public static Word[] toWords(String sentence){
@@ -83,7 +73,7 @@ public class Word implements Token{
 	
 	@Override
 	public int hashCode(){
-		return this._form.hashCode() + 7;
+		return this._form.hashCode();
 	}
 	
 	@Override

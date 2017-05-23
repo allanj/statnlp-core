@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
+import com.statnlp.util.instance_parser.InstanceParser;
 
 /**
  * The base class for the feature manager.
@@ -50,6 +51,12 @@ public abstract class FeatureManager implements Serializable{
 	 * The parameters associated with the network.
 	 */
 	protected GlobalNetworkParam _param_g;
+	
+	/**
+	 * The parser used to parse the instance. This might hold important information about the data statistics
+	 * that might be used in extracting features.
+	 */
+	protected InstanceParser _instanceParser;
 	/**
 	 * The local feature maps, one for each thread.
 	 */
@@ -65,7 +72,12 @@ public abstract class FeatureManager implements Serializable{
 	private NNCRFGlobalNetworkParam nnController;
 	
 	public FeatureManager(GlobalNetworkParam param_g){
+		this(param_g, null);
+	}
+	
+	public FeatureManager(GlobalNetworkParam param_g, InstanceParser instanceParser){
 		this._param_g = param_g;
+		this._instanceParser = instanceParser;
 		this._numThreads = NetworkConfig.NUM_THREADS;
 		this._params_l = new LocalNetworkParam[this._numThreads];
 		this._cacheEnabled = false;

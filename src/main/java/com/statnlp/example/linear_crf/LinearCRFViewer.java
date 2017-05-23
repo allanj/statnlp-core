@@ -2,14 +2,16 @@ package com.statnlp.example.linear_crf;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Map;
 
 import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
-import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.ui.visualize.type.VNode;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.ui.visualize.type.VisualizeGraph;
+import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
+import com.statnlp.util.instance_parser.InstanceParser;
 
 
 
@@ -23,14 +25,29 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 	
 	static double offset_height = 100;
 	
+	/**
+	 * The list of instances to be visualized
+	 */
 	protected LinearInstance<Label> instance;
 	
 	protected ArrayList<String[]> inputs;
 	
 	protected ArrayList<Label> outputs;
 	
-	public LinearCRFViewer(GlobalNetworkParam param) {
-		super(param);
+	/**
+	 * The list of labels to be used in the visualization.<br>
+	 * This member is used to support visualization on those codes that do not utilize
+	 * the generic pipeline. In the pipeline, use {@link #instanceParser} instead.
+	 */
+	protected Map<Integer, Label> labels;
+	
+	public LinearCRFViewer(Map<Integer, Label> labels){
+		super(null);
+		this.labels = labels;
+	}
+	
+	public LinearCRFViewer(InstanceParser instanceParser) {
+		super(instanceParser);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -56,10 +73,10 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 		}
 //		ids[1]; // tag_id
 //		ids[4]; // node type
-		if(param.getLabel(nodeId).getForm().equals("O")){
+		if(getLabel(nodeId).getForm().equals("O")){
 			return inputs.get(pos)[0];
 		}
-		return param.getLabel(nodeId).toString();
+		return getLabel(nodeId).toString();
 	}
 	
 	protected void initNodeColor(VisualizeGraph vg)
@@ -110,6 +127,14 @@ public class LinearCRFViewer extends VisualizationViewerEngine {
 			node.point = new Point2D.Double(x,y);
 			layout.setLocation(node, node.point);
 			layout.lock(node, true);
+		}
+	}
+	
+	private Label getLabel(int labelId){
+		if(this.instanceParser != null){
+			return ((DelimiterBasedInstanceParser)this.instanceParser).getLabel(labelId);
+		} else {
+			return this.labels.get(labelId);
 		}
 	}
 

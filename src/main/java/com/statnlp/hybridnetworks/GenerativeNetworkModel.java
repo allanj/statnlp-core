@@ -19,6 +19,7 @@ package com.statnlp.hybridnetworks;
 import java.util.ArrayList;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.util.instance_parser.InstanceParser;
 
 public class GenerativeNetworkModel extends NetworkModel {
 	
@@ -28,8 +29,16 @@ public class GenerativeNetworkModel extends NetworkModel {
 		return new GenerativeNetworkModel(fm, compiler);
 	}
 	
+	public static GenerativeNetworkModel create(FeatureManager fm, NetworkCompiler compiler, InstanceParser instanceParser){
+		return new GenerativeNetworkModel(fm, compiler, instanceParser);
+	}
+	
 	public GenerativeNetworkModel(FeatureManager fm, NetworkCompiler compiler){
-		super(fm, compiler);
+		this(fm, compiler, null);
+	}
+	
+	public GenerativeNetworkModel(FeatureManager fm, NetworkCompiler compiler, InstanceParser instanceParser){
+		super(fm, compiler, instanceParser);
 	}
 	
 	@Override
