@@ -39,10 +39,9 @@ public class RandomNetwork extends AbstractNetwork {
 	}
 
 	@Override
-	public double[] initialize() {
+	public void initialize() {
 		// TODO Auto-generated method stub
 		rand = new Random(1);
-		return getParams();
 	}
 
 	@Override
@@ -56,10 +55,6 @@ public class RandomNetwork extends AbstractNetwork {
 
 	@Override
 	public void backward() {
-		for (ContinuousFeature f : cfSet) {
-			for (int i = 0; i < randomSize; i++) {
-			}
-		}
 	}
 
 	@Override

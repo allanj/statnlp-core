@@ -18,8 +18,8 @@ import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.neural.AbstractNetwork;
+import com.statnlp.neural.MultiLayerPerceptron;
 import com.statnlp.neural.NeuralConfigReader;
-import com.statnlp.neural.RandomNetwork;
 
 public class LinearNEMain {
 	
@@ -72,9 +72,8 @@ public class LinearNEMain {
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 			NeuralConfigReader.readConfig(neural_config);
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
-//			net = new MultiLayerPerceptron("MyNet", MultiLayerPerceptron.createConfig(hiddenSize, numLayer));
-			net = new RandomNetwork("RandomNet", 100);
-			net.initialize();
+			net = new MultiLayerPerceptron("MyNet", MultiLayerPerceptron.createConfigFromFile(neural_config));
+//			net = new RandomNetwork("RandomNet", 100);
 			gnp.addFeatureValueProvider(net);
 		}
 		

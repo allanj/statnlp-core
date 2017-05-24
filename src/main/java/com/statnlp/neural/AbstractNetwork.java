@@ -45,8 +45,6 @@ public abstract class AbstractNetwork extends FeatureValueProvider {
 		backward();
 	}
 	
-	public abstract double[] initialize();
-	
 	public abstract void forward(boolean training);
 	
 	public abstract void backward();

@@ -11,14 +11,17 @@ function MultiLayerPerceptron:initialize(javadata, ...)
 
     local outputAndGradOutputPtr = {... }
 
-    for i=1,#outputAndGradOutputPtr do
-        local ptr = outputAndGradOutputPtr[i]
-        if i <= #outputAndGradOutputPtr/2 then
-            table.insert(outputPtr, torch.pushudata(ptr, "torch.DoubleTensor"))
-        else    
-            table.insert(gradOutput, torch.pushudata(ptr, "torch.DoubleTensor"))
-        end
-    end
+    self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
+    self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
+
+    -- for i=1,#outputAndGradOutputPtr do
+    --     local ptr = outputAndGradOutputPtr[i]
+    --     if i <= #outputAndGradOutputPtr/2 then
+    --         table.insert(self.outputPtr, torch.pushudata(ptr, "torch.DoubleTensor"))
+    --     else    
+    --         table.insert(self.gradOutputPtr, torch.pushudata(ptr, "torch.DoubleTensor"))
+    --     end
+    -- end
 
     -- numInputList, inputDimList, embSizeList, outputDim,
     -- numLayer, hiddenSize, activation, dropout
@@ -27,11 +30,11 @@ function MultiLayerPerceptron:initialize(javadata, ...)
     local data = self.data
     data.vocab = listToTable2D(javadata:get("vocab"))
     data.numInputList = listToTable(javadata:get("numInputList"))
+    data.embedding = listToTable(javadata:get("embedding"))
     data.embSizeList = listToTable(javadata:get("embSizeList"))
     data.fixEmbedding = javadata:get("fixEmbedding")
     data.wordList = listToTable(javadata:get("wordList"))
     data.inputDimList = listToTable(javadata:get("inputDimList"))
-    data.outputDimList = listToTable(javadata:get("outputDimList"))
     data.numLayer = javadata:get("numLayer")
     data.hiddenSize = javadata:get("hiddenSize")
     data.activation = javadata:get("activation")
@@ -39,7 +42,7 @@ function MultiLayerPerceptron:initialize(javadata, ...)
     data.optimizer = javadata:get("optimizer")
 
     -- what to forward
-    self:prepare_input()
+    self.x = self:prepare_input()
     self.fixEmbedding = data.fixEmbedding
     self.wordList = data.wordList
     self.word2idx = {}
@@ -81,7 +84,7 @@ function MultiLayerPerceptron:initialize(javadata, ...)
         if data.fixEmbedding then
             lt.accGradParameters = function() end
         end
-        pt:add(nn.Sequential():add(lt):add(nn.View(numInput,-1)))
+        pt:add(nn.Sequential():add(lt):add(nn.View(self.numInput,-1)))
         totalInput = totalInput + data.numInputList[i]
     end
 
@@ -98,11 +101,12 @@ function MultiLayerPerceptron:initialize(javadata, ...)
         mlp:add(jt)
     end
    
-    self.outputDimList = data.outputDimList
-    local ct = nn.ConcatTable()
-    self.numNetworks = #outputDimList
-    for n=1,numNetworks do
-        local middleLayers = nn.Sequential()
+    -- self.outputDimList = data.outputDimList
+    -- local ct = nn.ConcatTable()
+    -- self.numNetworks = #outputDimList
+    -- for n=1,numNetworks do
+        -- local middleLayers = nn.Sequential()
+        local middleLayers = mlp
         -- hidden layer
         for i=1,data.numLayer do
             if data.dropout ~= nil and data.dropout > 0 then
@@ -134,26 +138,26 @@ function MultiLayerPerceptron:initialize(javadata, ...)
             end
         end
 
-        if data.dropout ~= nil and data.dropout > 0 then
-            middleLayers:add(nn.Dropout(data.dropout))
-        end
+        -- if data.dropout ~= nil and data.dropout > 0 then
+        --     middleLayers:add(nn.Dropout(data.dropout))
+        -- end
 
         -- output layer (passed to CRF)
-        local outputDim = data.outputDimList[n]
-        local lastInputDim
-        if data.numLayer == 0 then
-            lastInputDim = totalDim
-        else
-            lastInputDim = data.hiddenSize
-        end
-        if data.useOutputBias then
-            middleLayers:add(nn.Linear(lastInputDim, outputDim))
-        else
-            middleLayers:add(nn.Linear(lastInputDim, outputDim):noBias())
-        end
-        ct:add(middleLayers)
-    end
-    mlp:add(ct)
+        -- local outputDim = data.outputDimList[n]
+        -- local lastInputDim
+        -- if data.numLayer == 0 then
+        --     lastInputDim = totalDim
+        -- else
+        --     lastInputDim = data.hiddenSize
+        -- end
+        -- if data.useOutputBias then
+        --     middleLayers:add(nn.Linear(lastInputDim, outputDim))
+        -- else
+        --     middleLayers:add(nn.Linear(lastInputDim, outputDim):noBias())
+        -- end
+        -- ct:add(middleLayers)
+    -- end
+    -- mlp:add(ct)
 
     if gpuid >= 0 then
         if data.fixEmbedding then inputLayer:cuda() end
@@ -184,14 +188,14 @@ function MultiLayerPerceptron:initialize(javadata, ...)
 
     self.params, self.gradParams = mlp:getParameters()
 
-    if data.fixEmbedding then print(inputLayer) end
+    if data.fixEmbedding then print(self.inputLayer) end
     print(mlp)
 
     if not doOptimization then -- no return array if optim is done here
         self.params:retain()
-        self.paramsPtr = torch.pointer(params)
+        self.paramsPtr = torch.pointer(self.params)
         self.gradParams:retain()
-        self.gradParamsPtr = torch.pointer(gradParams)
+        self.gradParamsPtr = torch.pointer(self.gradParams)
         return self.paramsPtr, self.gradParamsPtr    
     end
 end
@@ -230,19 +234,20 @@ function MultiLayerPerceptron:forward(isTraining)
         input_x = self.inputLayer:forward(x)
     end
     local output = mlp:forward(input_x)
-    for i=1,#output do
-        self.outputPtr[i]:copy(output[i])
-    end
+    self.outputPtr:copy(output)
+    -- for i=1,#output do
+    --     self.outputPtr[i]:copy(output[i])
+    -- end
 end
 
 function MultiLayerPerceptron:backward()
-    gradParams:zero()
+    self.gradParams:zero()
     local x = self.x
     local input_x = x
     if self.fixEmbedding then
         input_x = self.inputLayer:forward(x)
     end
-    self.net:backward(input_x, gradOutput)
+    self.net:backward(input_x, self.gradOutputPtr)
     if self.doOptimization then
         self.optimizer(self.feval, self.params, self.optimState)
     end

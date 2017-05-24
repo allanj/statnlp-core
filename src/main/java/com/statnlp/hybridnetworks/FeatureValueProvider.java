@@ -1,8 +1,8 @@
 package com.statnlp.hybridnetworks;
 
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 public abstract class FeatureValueProvider {
@@ -13,7 +13,7 @@ public abstract class FeatureValueProvider {
 	
 	public FeatureValueProvider(ContinuousFeatureStorage storage) {
 		setStorage(storage);
-		cfSet = Collections.newSetFromMap(new ConcurrentHashMap<ContinuousFeature,Boolean>());
+		cfSet = Collections.synchronizedSet(new LinkedHashSet<ContinuousFeature>());
 	}
 	
 	public ContinuousFeatureStorage getStorage() {
@@ -27,6 +27,8 @@ public abstract class FeatureValueProvider {
 	public void addFeature(ContinuousFeature f) {
 		cfSet.add(f);
 	}
+	
+	public abstract void initialize();
 	
 	public abstract void computeValues();
 	

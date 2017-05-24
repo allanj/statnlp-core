@@ -22,7 +22,7 @@ public class ContinuousFeature implements Serializable {
 	public ContinuousFeature(ContinuousFeatureIdentifier featureBox, ContinuousFeatureStorage featureStorage) {
 		this.fb = featureBox;
 		this.fst = featureStorage;
-		this.inputID = this.fst.addInput(this.fb.getInput());
+		this.inputID = this.fst.addInput(this.fb);
 	}
 	
 	public int getStartFs() {

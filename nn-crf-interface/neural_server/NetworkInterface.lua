@@ -1,8 +1,9 @@
 require 'nn'
 require 'optim'
 
-include 'nn-crf-interface/neural_server/OneHot.lua'
+include 'nn-crf-interface/neural_server/AbstractNetwork.lua'
 include 'nn-crf-interface/neural_server/MultiLayerPerceptron.lua'
+include 'nn-crf-interface/neural_server/OneHot.lua'
 include 'nn-crf-interface/neural_server/Utils.lua'
 
 local SEED = 1337

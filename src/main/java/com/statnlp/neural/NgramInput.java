@@ -21,6 +21,22 @@ public class NgramInput implements AbstractInput {
 		}
 	}
 	
+	public List<String> getNgram(int idx) {
+		return ngrams.get(idx);
+	}
+	
+	public String getToken(int idx, int pos) {
+		return ngrams.get(idx).get(pos);
+	}
+	
+	public int length(int idx) {
+		return ngrams.get(idx).size();
+	}
+	
+	public int getNumType() {
+		return ngrams.size();
+	}
+	
 	@Override
 	public int hashCode() {
 	    return ngrams.hashCode();

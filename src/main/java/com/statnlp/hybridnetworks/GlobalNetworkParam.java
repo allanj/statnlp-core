@@ -391,6 +391,10 @@ public class GlobalNetworkParam implements Serializable{
 			
 //		}
 		
+		for (FeatureValueProvider provider : _featureValueProviders) {
+			provider.initialize();
+		}
+		
 		/** Must prepare the feature map before reset counts and obj
 		 * The reset will use feature2rep.
 		 * **/

@@ -1,34 +1,28 @@
 package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
-
-import com.statnlp.neural.AbstractInput;
 
 public class ContinuousFeatureStorage implements Serializable {
 
 	private static final long serialVersionUID = -3046249582596299640L;
 	
-	private HashMap<AbstractInput,Integer> input2row;
+	private Map<ContinuousFeatureIdentifier,Integer> id2row;
 	private int dim;
 	private double[] fv;
 	private double[] fvGrad;
 	
 	public ContinuousFeatureStorage() {
-		this.input2row = new HashMap<AbstractInput, Integer>();
+		this.id2row = new LinkedHashMap<ContinuousFeatureIdentifier,Integer>();
 	}
 	
-	public synchronized int addInput(AbstractInput input) {
-		if (!input2row.containsKey(input)) {
-			input2row.put(input, input2row.size());
+	public synchronized int addInput(ContinuousFeatureIdentifier cfID) {
+		if (!id2row.containsKey(cfID)) {
+			id2row.put(cfID, id2row.size());
 		}
-		return input2row.get(input);
-	}
-	
-	public Set<AbstractInput> getInputs() {
-		return input2row.keySet();
+		return id2row.get(cfID);
 	}
 
 	public double getFv(int inputID, int idx) {
@@ -37,6 +31,10 @@ public class ContinuousFeatureStorage implements Serializable {
 	
 	public double getFvGrad(int inputID, int idx) {
 		return fvGrad[inputID*dim+idx];
+	}
+	
+	public double[] getFvGrad() {
+		return fvGrad;
 	}
 	
 	public int getDim() {
@@ -48,16 +46,38 @@ public class ContinuousFeatureStorage implements Serializable {
 	}
 
 	public void setFv(int inputID, int idx, double val) {
-		if (fv == null) {
-			fv = new double[input2row.size()*dim];
-		}
+		lazyInitFv();
 		fv[inputID*dim+idx] = val;
 	}
 	
+	public void setFv(double[] vals) {
+		lazyInitFv();
+		System.arraycopy(vals, 0, fv, 0, id2row.size()*dim);
+	}
+	
+	public void setFv(int inputID, double[] vals) {
+		lazyInitFv();
+		System.arraycopy(vals, 0, fv, inputID*dim, dim);
+	}
+	
 	public void setFvGrad(int inputID, int idx, double val) {
-		if (fvGrad == null) {
-			fvGrad = new double[input2row.size()*dim];
-		}
+		lazyInitFvGrad();
 		fvGrad[inputID*dim+idx] = val;
+	}
+	
+	public Set<ContinuousFeatureIdentifier> getIdentifiers() {
+		return id2row.keySet();
+	}
+	
+	private void lazyInitFv() {
+		if(fv == null) {
+			fv = new double[id2row.size()*dim];
+		}
+	}
+	
+	private void lazyInitFvGrad() {
+		if(fvGrad == null) {
+			fvGrad = new double[id2row.size()*dim];
+		}
 	}
 }
