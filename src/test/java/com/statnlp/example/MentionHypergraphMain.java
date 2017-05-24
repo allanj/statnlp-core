@@ -34,7 +34,7 @@ public class MentionHypergraphMain {
 	public static void main(String[] args) throws InterruptedException, IOException, ClassNotFoundException, IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException{
 		boolean serializeModel = true;
 		
-		String train_filename = "data/ACE04/mention-standard/FINE_TYPE/train.data.90";
+		String train_filename = "data/ACE04/mention-standard/FINE_TYPE/train.data.30";
 		String test_filename = "data/ACE04/mention-standard/FINE_TYPE/test.data";
 		
 		MentionHypergraphInstance[] trainInstances = readData(train_filename, true, true);

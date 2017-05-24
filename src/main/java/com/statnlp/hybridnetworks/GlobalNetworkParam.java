@@ -22,7 +22,6 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -34,7 +33,6 @@ import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
-import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Label;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.neural.RemoteNN;
@@ -166,14 +164,12 @@ public class GlobalNetworkParam implements Serializable{
 		this._str2intMap = new TObjectIntHashMap<String>();
 	}
 	
-
 	private synchronized int toInt(String s){
 		if(!this._str2intMap.containsKey(s)){
 			this._str2intMap.put(s, this._str2intMap.size());
 		}
 		return this._str2intMap.get(s);
 	}
-	
 	
 	/**
 	 * Get the map from feature type to [a map from output to [a map from input to feature ID]]
@@ -219,8 +215,11 @@ public class GlobalNetworkParam implements Serializable{
 	 * @return
 	 */
 	public int[] getFeatureRep(int f_global){
+		if(!this._storeFeatureReps) return null;
 		return this._feature2rep[f_global];
 	}
+	
+	private boolean _storeFeatureReps = false;
 	
 	/**
 	 * Add certain value to the specified feature (identified by the id)
@@ -360,23 +359,28 @@ public class GlobalNetworkParam implements Serializable{
 		this._weights = weights_new;
 		this.resetCountsAndObj();
 		
-		this._feature2rep = new int[this._size][];
-		Iterator<Integer> types = this._featureIntMap.keySet().iterator();
-		while(types.hasNext()){
-			int type = types.next();
-			HashMap<Integer, HashMap<Integer, Integer>> output2input = this._featureIntMap.get(type);
-			Iterator<Integer> outputs = output2input.keySet().iterator();
-			while(outputs.hasNext()){
-				int output = outputs.next();
-				HashMap<Integer, Integer> input2id = output2input.get(output);
-				Iterator<Integer> inputs = input2id.keySet().iterator();
-				while(inputs.hasNext()){
-					int input = inputs.next();
-					int id = input2id.get(input);
-					this._feature2rep[id] = new int[]{type, output, input};
+		if(this._storeFeatureReps){
+			
+			this._feature2rep = new int[this._size][];
+			Iterator<Integer> types = this._featureIntMap.keySet().iterator();
+			while(types.hasNext()){
+				int type = types.next();
+				HashMap<Integer, HashMap<Integer, Integer>> output2input = this._featureIntMap.get(type);
+				Iterator<Integer> outputs = output2input.keySet().iterator();
+				while(outputs.hasNext()){
+					int output = outputs.next();
+					HashMap<Integer, Integer> input2id = output2input.get(output);
+					Iterator<Integer> inputs = input2id.keySet().iterator();
+					while(inputs.hasNext()){
+						int input = inputs.next();
+						int id = input2id.get(input);
+						this._feature2rep[id] = new int[]{type, output, input};
+					}
 				}
 			}
+		
 		}
+		
 		this._version = 0;
 		if(!NetworkConfig.USE_NEURAL_FEATURES)
 			this._opt = this._optFactory.create(this._weights.length, getFeatureIntMap());
@@ -424,20 +428,22 @@ public class GlobalNetworkParam implements Serializable{
 		/** Must prepare the feature map before reset counts and obj
 		 * The reset will use feature2rep.
 		 * **/
-		this._feature2rep = new int[this._size][];
-		Iterator<Integer> types = this._featureIntMap.keySet().iterator();
-		while(types.hasNext()){
-			int type = types.next();
-			HashMap<Integer, HashMap<Integer, Integer>> output2input = this._featureIntMap.get(type);
-			Iterator<Integer> outputs = output2input.keySet().iterator();
-			while(outputs.hasNext()){
-				int output = outputs.next();
-				HashMap<Integer, Integer> input2id = output2input.get(output);
-				Iterator<Integer> inputs = input2id.keySet().iterator();
-				while(inputs.hasNext()){
-					int input = inputs.next();
-					int id = input2id.get(input);
-					this._feature2rep[id] = new int[]{type, output, input};
+		if(this._storeFeatureReps){
+			this._feature2rep = new int[this._size][];
+			Iterator<Integer> types = this._featureIntMap.keySet().iterator();
+			while(types.hasNext()){
+				int type = types.next();
+				HashMap<Integer, HashMap<Integer, Integer>> output2input = this._featureIntMap.get(type);
+				Iterator<Integer> outputs = output2input.keySet().iterator();
+				while(outputs.hasNext()){
+					int output = outputs.next();
+					HashMap<Integer, Integer> input2id = output2input.get(output);
+					Iterator<Integer> inputs = input2id.keySet().iterator();
+					while(inputs.hasNext()){
+						int input = inputs.next();
+						int id = input2id.get(input);
+						this._feature2rep[id] = new int[]{type, output, input};
+					}
 				}
 			}
 		}
@@ -904,8 +910,8 @@ public class GlobalNetworkParam implements Serializable{
 		out.writeObject("_featureIntMap");
 		out.writeObject(this._featureIntMap);
 		
-		out.writeObject("_feature2rep");
-		out.writeObject(this._feature2rep);
+//		out.writeObject("_feature2rep");
+//		out.writeObject(this._feature2rep);
 		
 		out.writeObject("_weights");
 		out.writeObject(this._weights);
@@ -939,7 +945,7 @@ public class GlobalNetworkParam implements Serializable{
 			this._featureIntMap = (HashMap<Integer, HashMap<Integer, HashMap<Integer, Integer>>>)obj;
 		}
 		if(version == null){
-			this._feature2rep = (int[][])in.readObject();
+//			this._feature2rep = (int[][])in.readObject();
 			this._weights = (double[])in.readObject();
 			this._size = in.readInt();
 			this._fixedFeaturesSize = in.readInt();
