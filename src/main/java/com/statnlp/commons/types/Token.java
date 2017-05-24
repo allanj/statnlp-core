@@ -18,9 +18,26 @@ package com.statnlp.commons.types;
 
 import java.io.Serializable;
 
-public interface Token extends Serializable{
+public abstract class Token implements Serializable {
 	
-	public int getId();
-	public String getName();
+	private static final long serialVersionUID = -4938196035280070845L;
+	protected int _id = -1;
+	protected String _form;
+	
+	public Token(String name) {
+		this._form = name;
+	}
+	
+	public void setId(int id){
+		this._id = id;
+	}
+	
+	public int getId(){
+		return this._id;
+	}
+	
+	public String getForm() {
+		return this._form;
+	}
 	
 }

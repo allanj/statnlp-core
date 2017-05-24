@@ -20,7 +20,7 @@ import java.io.Serializable;
 
 /**
  * Defines a segment described by begin index and end index.
- * @author Lu Wei <luwei@statnlp.com>
+ * @author Lu Wei (luwei@statnlp.com)
  *
  */
 public class Segment implements Serializable, Comparable<Segment>{

@@ -20,11 +20,15 @@ public class DelimiterBasedInstanceParser extends InstanceParser implements Seri
 	
 	private static final long serialVersionUID = -4113323166917321677L;
 	
+	private boolean locked = false;
 	public final Map<String, Label> LABELS = new HashMap<String, Label>();
 	public final Map<Integer, Label> LABELS_INDEX = new HashMap<Integer, Label>();
 	
 	public Label getLabel(String form){
 		if(!LABELS.containsKey(form)){
+			if(locked){
+				throw new IllegalArgumentException("Label "+form+" is not one of the registered labels: "+LABELS.values());
+			}
 			Label label = new Label(form, LABELS.size());
 			LABELS.put(form, label);
 			LABELS_INDEX.put(label.getId(), label);
@@ -34,6 +38,14 @@ public class DelimiterBasedInstanceParser extends InstanceParser implements Seri
 	
 	public Label getLabel(int id){
 		return LABELS_INDEX.get(id);
+	}
+	
+	public void lock(){
+		locked = true;
+	}
+	
+	public boolean locked(){
+		return locked;
 	}
 	
 	public void reset(){

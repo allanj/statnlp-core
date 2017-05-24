@@ -27,10 +27,6 @@ import java.io.Serializable;
  */
 public interface DAG extends Serializable{
 	
-	//hIndex -- the height of the node in the DAG.
-	//wIndex -- the width id of the node in the DAG.
-	public Token get(int hIndex, int wIndex);
-	
 	//get the node by id, the nodes in the DAG are sorted in topological order.
 	public Token get(int id);
 	

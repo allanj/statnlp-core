@@ -102,19 +102,14 @@ public class MentionHypergraphMain {
 				fm.getParam_G().setWeight(mentionPenaltyFeatureIndex, mentionPenalty);
 			}
 			System.out.println(String.format("Mention penalty: %.1f", fm.getParam_G().getWeight(mentionPenaltyFeatureIndex)));
-			Instance[] predictions = model.decode(testInstances);
+			Instance[] predictions = model.decode(testInstances, true);
+			fm.getParam_G().setVersion(fm.getParam_G().getVersion()+1);
 			int corr = 0;
 			int totalGold = 0;
 			int totalPred = 0;
+			int count = 0;
 			for(Instance inst: predictions){
 				MentionHypergraphInstance instance = (MentionHypergraphInstance)inst;
-				System.out.println("Words:");
-				System.out.println(toString(instance.input.words));
-				System.out.println("Gold:");
-				System.out.println(instance.output);
-				System.out.println("Prediction:");
-				System.out.println(instance.prediction);
-				System.out.println();
 				List<Span> goldSpans = instance.output;
 				List<Span> predSpans = instance.prediction;
 				int curTotalGold = goldSpans.size();
@@ -131,12 +126,22 @@ public class MentionHypergraphMain {
 				if(curTotalPred == 0) precision = 0.0;
 				if(curTotalGold == 0) recall = 0.0;
 				if(curTotalPred == 0 || curTotalGold == 0) f1 = 0.0;
-				System.out.println("Correct spans: "+curCorr);
-				System.out.println("Gold spans: "+curTotalGold);
-				System.out.println("Predicted spans: "+curTotalPred);
-				System.out.println(String.format("P: %.2f%%", precision));
-				System.out.println(String.format("R: %.2f%%", recall));
-				System.out.println(String.format("F: %.2f%%", f1));
+				if(count < 3){
+					System.out.println("Words:");
+					System.out.println(toString(instance.input.words));
+					System.out.println("Gold:");
+					System.out.println(instance.output);
+					System.out.println("Prediction:");
+					System.out.println(instance.prediction);
+					System.out.println();
+					System.out.println("Correct spans: "+curCorr);
+					System.out.println("Gold spans: "+curTotalGold);
+					System.out.println("Predicted spans: "+curTotalPred);
+					System.out.println(String.format("P: %.2f%%", precision));
+					System.out.println(String.format("R: %.2f%%", recall));
+					System.out.println(String.format("F: %.2f%%", f1));
+				}
+				count += 1;
 			}
 			System.out.println("Correct spans: "+corr);
 			System.out.println("Gold spans: "+totalGold);
