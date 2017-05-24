@@ -37,9 +37,9 @@ public class LinearCRFMain {
 		String trainPath = System.getProperty("trainPath", "data/train.data");
 		String testPath = System.getProperty("testPath", "data/test.data");
 		
-		String resultPath = System.getProperty("resultPath", "experiments/test/lcrf.result");
-		String modelPath = System.getProperty("modelPath", "experiments/test/lcrf.model");
-		String logPath = System.getProperty("logPath", "experiments/test/lcrf.log");
+		String resultPath = System.getProperty("resultPath", "experiments/tmp/lcrf.result");
+		String modelPath = System.getProperty("modelPath", "experiments/tmp/lcrf.model");
+		String logPath = System.getProperty("logPath", "experiments/tmp/lcrf.log");
 		
 		boolean writeModelText = Boolean.parseBoolean(System.getProperty("writeModelText", "false"));
 
@@ -48,7 +48,7 @@ public class LinearCRFMain {
 		NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = Boolean.parseBoolean(System.getProperty("featuresFromLabeledOnly", "false"));
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = Boolean.parseBoolean(System.getProperty("cacheFeatures", "true"));
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = Double.parseDouble(System.getProperty("l2", "0.01")); //0.01
-		NetworkConfig.NUM_THREADS = Integer.parseInt(System.getProperty("numThreads", "4"));
+		NetworkConfig.NUM_THREADS = Integer.parseInt(System.getProperty("numThreads", "2"));
 		
 		NetworkConfig.MODEL_TYPE = ModelType.valueOf(System.getProperty("modelType", "CRF")); // The model to be used: CRF, SSVM, or SOFTMAX_MARGIN
 		NetworkConfig.USE_BATCH_TRAINING = Boolean.parseBoolean(System.getProperty("useBatchTraining", "false")); // To use or not to use mini-batches in gradient descent optimizer
@@ -221,7 +221,7 @@ public class LinearCRFMain {
 		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(param, argsToFeatureManager);
 		
 		NetworkModel model = DiscriminativeNetworkModel.create(fm, compiler, outstream);
-		model.visualize(LinearCRFViewer.class, trainInstances);
+//		model.visualize(LinearCRFViewer.class, trainInstances);
 		
 		model.train(trainInstances, numIterations);
 		
@@ -243,20 +243,20 @@ public class LinearCRFMain {
 			modelTextWriter.println(labelsUsed);
 			GlobalNetworkParam paramG = fm.getParam_G();
 			modelTextWriter.println("Num features: "+paramG.countFeatures());
-			modelTextWriter.println("Features:");
-			HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap = paramG.getFeatureIntMap();
-			for(String featureType: sorted(featureIntMap.keySet())){
-				modelTextWriter.println(featureType);
-				HashMap<String, HashMap<String, Integer>> outputInputMap = featureIntMap.get(featureType);
-				for(String output: sorted(outputInputMap.keySet())){
-					modelTextWriter.println("\t"+output);
-					HashMap<String, Integer> inputMap = outputInputMap.get(output);
-					for(String input: sorted(inputMap.keySet())){
-						int featureId = inputMap.get(input);
-						modelTextWriter.printf("\t\t%s %d %.17f\n", input, featureId, fm.getParam_G().getWeight(featureId));
-					}
-				}
-			}
+//			modelTextWriter.println("Features:");
+//			HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap = paramG.getFeatureIntMap();
+//			for(String featureType: sorted(featureIntMap.keySet())){
+//				modelTextWriter.println(featureType);
+//				HashMap<String, HashMap<String, Integer>> outputInputMap = featureIntMap.get(featureType);
+//				for(String output: sorted(outputInputMap.keySet())){
+//					modelTextWriter.println("\t"+output);
+//					HashMap<String, Integer> inputMap = outputInputMap.get(output);
+//					for(String input: sorted(inputMap.keySet())){
+//						int featureId = inputMap.get(input);
+//						modelTextWriter.printf("\t\t%s %d %.17f\n", input, featureId, fm.getParam_G().getWeight(featureId));
+//					}
+//				}
+//			}
 			modelTextWriter.close();
 		}
 		

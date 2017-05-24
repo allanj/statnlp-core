@@ -211,7 +211,9 @@ public abstract class NetworkModel implements Serializable{
 	 * @throws InterruptedException If there are interruptions during multi-threaded training.
 	 */
 	public void train(Instance[] allInstances, int maxNumIterations) throws InterruptedException{
+		
 		train(allInstances, allInstances.length, maxNumIterations);
+
 	}
 	
 	/**

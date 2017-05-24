@@ -173,6 +173,15 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	 * @param it
 	 */
 	private void train(int it) {
+		
+		Runtime rt = Runtime.getRuntime();
+		long ram;
+		
+		System.gc();
+		ram = (rt.totalMemory() - rt.freeMemory())/1024/1024;
+		System.err.println("RAM[BEF]:"+ram);
+
+		
 		for (int i = 0; i < this._instances.length; i++) {
 			if (NetworkConfig.USE_BATCH_TRAINING && !this.chargeInstsIds.contains(this._instances[i].getInstanceId())
 					&& !this.chargeInstsIds.contains(-this._instances[i].getInstanceId()))
@@ -209,6 +218,12 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 				network.train();
 			}
 		}
+		
+		System.gc();
+		ram = (rt.totalMemory() - rt.freeMemory())/1024/1024;
+		System.err.println("RAM[AFT]:"+ram);
+		System.err.println("==END==");
+		
 	}
 	
 	public Network getNetwork(int networkId){

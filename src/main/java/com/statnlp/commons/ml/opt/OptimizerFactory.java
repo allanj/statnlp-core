@@ -365,7 +365,7 @@ public abstract class OptimizerFactory implements Serializable {
 	
 	public abstract Optimizer create(int numWeights);
 	
-	public Optimizer create(int numWeights, HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap){
+	public Optimizer create(int numWeights, HashMap<Integer, HashMap<Integer, HashMap<Integer, Integer>>> featureIntMap){
 		return create(numWeights);
 	}
 
