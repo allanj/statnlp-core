@@ -310,10 +310,10 @@ public abstract class NetworkModel implements Serializable{
 					else learner.setTrainInstanceIdSet(new HashSet<Integer>(instIds));
 				}
 				long time = System.currentTimeMillis();
-				if (NetworkConfig.USE_NEURAL_FEATURES) {
-//					nnController.forwardNetwork(true);
-					forward();
-				}
+				
+				// Feature value provider's ``forward''
+				this._fm.getParam_G().callProviders();
+				
 				List<Future<Void>> results = pool.invokeAll(callables);
 				for(Future<Void> result: results){
 					try{
@@ -339,10 +339,8 @@ public abstract class NetworkModel implements Serializable{
 					throw new RuntimeException("Error:\n"+obj_old+"\n>\n"+obj);
 				}
 				obj_old = obj;
-				if (NetworkConfig.USE_NEURAL_FEATURES) {
-					if (lastIter || done) {
-						forward();
-					}
+				if (lastIter || done) {
+					this._fm.getParam_G().callProviders();
 				}
 				if(lastIter){
 					print("Training completes. The specified number of iterations ("+it+") has passed.", outstreams);
@@ -355,12 +353,6 @@ public abstract class NetworkModel implements Serializable{
 			}
 		} finally {
 			pool.shutdown();
-		}
-	}
-	
-	private void forward() {
-		for (AbstractNetwork nn : this._fm.getParam_G().getNeuralNets()) {
-			nn.forward(false, this._allInstances);
 		}
 	}
 

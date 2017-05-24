@@ -1,4 +1,4 @@
-local MultiLayerPerceptron, parent = torch.class('MultiLayerPerceptron', 'AbstractServer')
+local MultiLayerPerceptron, parent = torch.class('MultiLayerPerceptron', 'AbstractNetwork')
 
 function MultiLayerPerceptron:__init(doOptimization, gpuid)
     parent.__init(self, doOptimization)

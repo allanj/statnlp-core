@@ -20,4 +20,25 @@ public class NgramInput implements AbstractInput {
 			ngrams.get(idx).add(token);
 		}
 	}
+	
+	@Override
+	public int hashCode() {
+	    return ngrams.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object o){
+	    if(o == null)
+	    	return false;
+	    if(!(o instanceof NgramInput))
+	    	return false;
+
+	    NgramInput other = (NgramInput) o;
+	    return this.ngrams.equals(other.ngrams);
+	}
+	
+	@Override
+	public String toString() {
+		return ngrams.toString();
+	}
 }

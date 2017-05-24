@@ -53,10 +53,6 @@ public abstract class Instance implements Serializable{
 	private Instance _unlabeledInstance;
 	/** The top-K predictions of this instance */
 	protected List<?> _topKPredictions;
-	/** The input list for the neural network */
-	private List<AbstractInput> _inputList;
-	/** The tensor list corresponding to output nodes in the neural network */
-	private List<AbstractTensor> _tensorList;
 	
 	/**
 	 * Create an instance.
@@ -198,19 +194,4 @@ public abstract class Instance implements Serializable{
 	public void setTopKPredictions(List<?> topKPredictions){
 		this._topKPredictions = topKPredictions;
 	}
-	
-	public void setInput(int idx, AbstractInput input) {
-		if (this._inputList == null) {
-			this._inputList = new ArrayList<AbstractInput>();
-		}
-		while (idx >= this._inputList.size()) {
-			this._inputList.add(null);
-		}
-		this._inputList.set(idx, input);
-	}
-	
-	public List<AbstractTensor> getTensorList() {
-		return this._tensorList;
-	}
-	
 }

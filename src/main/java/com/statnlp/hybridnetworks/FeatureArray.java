@@ -17,10 +17,10 @@
 package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-
-import com.statnlp.commons.types.Instance;
+import java.util.List;
 
 /**
  * The class storing a list of features by their indices.<br>
@@ -40,6 +40,8 @@ public class FeatureArray implements Serializable{
 	private FeatureBox _fb;
 	/** The flag signifying the scope of the feature indices, whether local (per thread) or global (combined feature map). */
 	protected boolean _isLocal = false;
+	
+	private List<ContinuousFeature> _cfs;
 
 	/** An empty feature array */
 	public static final FeatureArray EMPTY = new FeatureArray(new int[0]);
@@ -55,11 +57,6 @@ public class FeatureArray implements Serializable{
 	 * @param fs
 	 * @param next
 	 */
-	public FeatureArray(int[] fs, double[] fv, FeatureArray next) {
-		this._fb = new FeatureBox(fs, fv);
-		this._next = next;
-	}
-	
 	public FeatureArray(int[] fs, FeatureArray next) {
 		this._fb = new FeatureBox(fs);
 		this._next = next;
@@ -71,12 +68,6 @@ public class FeatureArray implements Serializable{
 	 * combined with setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.
 	 * @param fs
 	 */
-	public FeatureArray(int[] fs, double[] fv) {
-		this._fb = new FeatureBox(fs, fv);
-		this._next = null;
-		this._isLocal = false;
-	}
-	
 	public FeatureArray(int[] fs) {
 		this._fb = new FeatureBox(fs);
 		this._next = null;
@@ -91,7 +82,8 @@ public class FeatureArray implements Serializable{
 	 * @see #FeatureArray(int[], FeatureArray)
 	 */
 	public FeatureArray(FeatureBox fb) {
-		this(fb, null);
+		this._fb = fb;
+		this._next = null;
 		this._isLocal = false;
 	}
 
@@ -107,6 +99,39 @@ public class FeatureArray implements Serializable{
 		this._fb = fb;
 		this._next = next;
 		this._isLocal = false;
+	}
+	
+	/**
+	 * Include continuous features
+	 * @param fs
+	 * @param cfs
+	 */
+	public FeatureArray(int[] fs, List<ContinuousFeature> cfs) {
+		this._fb = new FeatureBox(fs);
+		this._next = null;
+		this._isLocal = false;
+		this._cfs = cfs;
+	}
+	
+	public FeatureArray(int[] fs, List<ContinuousFeature> cfs, FeatureArray next) {
+		this._fb = new FeatureBox(fs);
+		this._next = next;
+		this._isLocal = false;
+		this._cfs = cfs;
+	}
+	
+	public FeatureArray(FeatureBox fb, List<ContinuousFeature> cfs) {
+		this._fb = fb;
+		this._next = null;
+		this._isLocal = false;
+		this._cfs = cfs;
+	}
+	
+	public FeatureArray(FeatureBox fb, List<ContinuousFeature> cfs, FeatureArray next) {
+		this._fb = fb;
+		this._next = next;
+		this._isLocal = false;
+		this._cfs = cfs;
 	}
 
 	private FeatureArray(double score) {
@@ -135,12 +160,7 @@ public class FeatureArray implements Serializable{
 		}
 
 		int[] fs_local = new int[length];
-		double[] fv_local = null;
 		int localIdx = 0;
-		boolean hasFeatureValue = this._fb.getValue() != null;
-		if (hasFeatureValue) {
-			fv_local = new double[length];
-		}
 		for(int k = 0; k<this._fb.length(); k++, localIdx++){
 			if(this._fb.get(k) == -1 && NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY){
 				localIdx--;
@@ -152,20 +172,31 @@ public class FeatureArray implements Serializable{
 				fs_local[localIdx] = this._fb.get(k);
 			}
 			
-			if (hasFeatureValue) {
-				fv_local[localIdx] = this._fb.getValue(k);
-			}
-			
 			if(fs_local[localIdx]==-1){
 				throw new RuntimeException("The local feature got an id of -1 for " + this._fb.get(k));
 			}
 		}
-
+		
+		List<ContinuousFeature> cfs_local = null;
+		if (this._cfs != null) {
+			cfs_local = new ArrayList<ContinuousFeature>();
+			for(ContinuousFeature cf : this._cfs) {
+				int cf_startFs_local; 
+				if(!NetworkConfig.PARALLEL_FEATURE_EXTRACTION || NetworkConfig.NUM_THREADS == 1 || param._isFinalized){
+					cf_startFs_local = param.toLocalFeature(cf.getStartFs());
+				} else {
+					cf_startFs_local = cf.getStartFs();
+				}
+				
+				ContinuousFeature cf_local = new ContinuousFeature(cf.getInput(), cf_startFs_local, cf.getLenFs(), cf.getStorage());
+				cfs_local.add(cf_local);
+			}
+		}
 		FeatureArray fa;
 		if (this._next != null){
-			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, fv_local, param), this._next.toLocal(param)); //saving memory
+			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, param), cfs_local, this._next.toLocal(param)); //saving memory
 		} else {
-			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, fv_local, param)); //saving memory
+			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, param), cfs_local); //saving memory
 		}
 		fa._isLocal = true;
 		fa._fb._alwaysChange = this._fb._alwaysChange;
@@ -207,6 +238,16 @@ public class FeatureArray implements Serializable{
 			param.addCount(f_local, count);
 		}
 		
+		if (this._cfs != null) {
+			for(ContinuousFeature cf : this._cfs) {
+				for(int i = 0; i < cf.getLenFs(); i++){
+					int f_local = cf.getStartFs()+i;
+					param.addCount(f_local, count * cf.getFv(i));
+					cf.setFvGrad(i, count * param.getWeight(f_local));
+				}
+			}
+		}
+		
 		// Recursively update the next chain
 		if(this._next != null){
 			this._next.update(param, count);
@@ -242,7 +283,7 @@ public class FeatureArray implements Serializable{
 	 * @param param
 	 * @return
 	 */
-	public double getScore(LocalNetworkParam param, Instance instance, int version){
+	public double getScore(LocalNetworkParam param, int version){
 		if(this == NEGATIVE_INFINITY){
 			return this._totalScore;
 		}
@@ -258,12 +299,12 @@ public class FeatureArray implements Serializable{
 		}
 		this._totalScore = 0.0;
 		if (this._fb._version != version){
-			this._fb._currScore = this.computeScore(param, instance, this.getCurrent());
+			this._fb._currScore = this.computeScore(param, this.getCurrent(), this._cfs);
 			this._fb._version = version;
 		}
 		this._totalScore += this._fb._currScore;
 		if (this._next != null){
-			this._totalScore += this._next.getScore(param, instance, version);
+			this._totalScore += this._next.getScore(param, version);
 		}
 		return this._totalScore;
 	}
@@ -275,21 +316,23 @@ public class FeatureArray implements Serializable{
 	 * @param fs
 	 * @return
 	 */
-	private double computeScore(LocalNetworkParam param, Instance instance, int[] fs){
+	private double computeScore(LocalNetworkParam param, int[] fs, List<ContinuousFeature> cfs){
 		if(!this._isLocal != param.isGlobalMode()) {
 			throw new RuntimeException("This FeatureArray is local? "+this._isLocal+"; The param is "+param.isGlobalMode());
 		}
 		
-		this._fb.setFeatureValues(instance, param);
-
 		double score = 0.0;
-		int pos = 0;
 		for(int f : fs){
 			if(f!=-1){
-				if (param.isNeural(f)) {
-					score += param.getWeight(f) * this._fb.getValue(pos++);
-				} else {
-					score += param.getWeight(f);
+				score += param.getWeight(f);
+			}
+		}
+		
+		if (cfs != null) {
+			for (ContinuousFeature cf : cfs) {
+				for(int i = 0; i < cf.getLenFs(); i++) {
+					int f = cf.getStartFs()+i;
+					score += param.getWeight(f) * cf.getFv(i);
 				}
 			}
 		}
@@ -350,6 +393,11 @@ public class FeatureArray implements Serializable{
 	 */
 	public int size(){
 		int size = this._fb.length();
+		if (this._cfs != null) {
+			for (ContinuousFeature cf : this._cfs) {
+				size += cf.getLenFs();
+			}
+		}
 		if (this._next != null){
 			size += this._next.size();
 		}
@@ -372,6 +420,9 @@ public class FeatureArray implements Serializable{
 	@Override
 	public int hashCode(){
 		int code = Arrays.hashCode(_fb._fs);
+		if (this._cfs != null) {
+			code = code ^ this._cfs.hashCode();
+		}
 		if (this._next != null){
 			code = code ^ this._next.hashCode();
 		}
@@ -386,6 +437,13 @@ public class FeatureArray implements Serializable{
 				if(this._fb.get(k) != fa._fb.get(k)){
 					return false;
 				}
+			}
+			if(this._cfs == null) {
+				if(fa._cfs != null){
+					return false;
+				}
+			}else{
+				return this._cfs.equals(fa._cfs);
 			}
 			if(this._next == null){
 				if(fa._next != null){

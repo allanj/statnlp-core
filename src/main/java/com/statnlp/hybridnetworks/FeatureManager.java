@@ -112,12 +112,11 @@ public abstract class FeatureManager implements Serializable{
 			this._param_g._obj_old = this._param_g._obj;
 			return false;
 		}
-		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			if (nnController == null) {
-				nnController = this._param_g._nnController;
-			}
-			nnController.backwardNetwork();
+		
+		for (FeatureValueProvider provider : this._param_g.getFeatureValueProviders()) {
+			provider.update();
 		}
+		
 		boolean done = this._param_g.update();
 
 		if(NetworkConfig.NUM_THREADS != 1){

@@ -168,22 +168,6 @@ public class LocalNetworkParam implements Serializable{
 		}
 	}
 	
-	public boolean isNeural(int featureID){
-		if(this.isGlobalMode()){
-			return this._fm.getParam_G().isNeural(featureID);
-		} else {
-			return this._fm.getParam_G().isNeural(this._fs[featureID]);
-		}
-	}
-	
-	public int[] getNeuralLocation(int featureID) {
-		if(this.isGlobalMode()){
-			return this._fm.getParam_G().getNeuralLocation(featureID);
-		} else {
-			return this._fm.getParam_G().getNeuralLocation(this._fs[featureID]);
-		}
-	}
-	
 	/**
 	 * The number of features.
 	 * @return

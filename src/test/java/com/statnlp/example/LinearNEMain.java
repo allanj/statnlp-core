@@ -15,9 +15,11 @@ import com.statnlp.example.linear_ne.Entity;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
+import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.neural.AbstractNetwork;
 import com.statnlp.neural.NeuralConfigReader;
+import com.statnlp.neural.RandomNetwork;
 
 public class LinearNEMain {
 	
@@ -38,6 +40,8 @@ public class LinearNEMain {
 	public static String nerOut = "nn-crf-interface/nlp-from-scratch/me/output/ner_out.txt";
 	public static String neural_config = "nn-crf-interface/neural_server/neural.debug.config";
 	
+	private static int hiddenSize = 100;
+	private static int numLayer = 1; 
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 		
@@ -63,9 +67,15 @@ public class LinearNEMain {
 		
 		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory());
 		
+		AbstractNetwork net = null;
+		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 			NeuralConfigReader.readConfig(neural_config);
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
+//			net = new MultiLayerPerceptron("MyNet", MultiLayerPerceptron.createConfig(hiddenSize, numLayer));
+			net = new RandomNetwork("RandomNet", 100);
+			net.initialize();
+			gnp.addFeatureValueProvider(net);
 		}
 		
 		System.err.println("[Info] "+Entity.Entities.size()+" entities: "+Entity.Entities.toString());
@@ -82,7 +92,7 @@ public class LinearNEMain {
             all_instances[i].setUnlabeled();
         }
 		
-		ECRFFeatureManager fa = new ECRFFeatureManager(gnp);
+		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, net);
 		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler();
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
 		ECRFInstance[] ecrfs = trainInstances.toArray(new ECRFInstance[trainInstances.size()]);

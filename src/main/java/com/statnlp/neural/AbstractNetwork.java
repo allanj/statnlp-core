@@ -1,40 +1,53 @@
 package com.statnlp.neural;
 
-import java.util.List;
+import java.util.HashMap;
 
-import com.statnlp.commons.types.Instance;
+import com.statnlp.hybridnetworks.ContinuousFeatureStorage;
+import com.statnlp.hybridnetworks.FeatureValueProvider;
 
-public abstract class AbstractNetwork {
-	// Reference to controller instance for updating weights and getting gradients
-//	protected NNCRFInterface controller;
+public abstract class AbstractNetwork extends FeatureValueProvider {
 	
-	// whether to use CRF's optimizer to optimize internal neural parameters
-	protected boolean optimizeNeural;
+	protected HashMap<String,Object> config;
+	
+	protected String name;
+
+	protected static int numNetworks;
+	
+	protected boolean isTraining;
 	
 	public AbstractNetwork() {
-		this(false);
+		this(""+numNetworks, null);
+		numNetworks++;
 	}
 	
-	public AbstractNetwork(boolean optimizeNeural) {
-		this.optimizeNeural = optimizeNeural;
+	public AbstractNetwork(String name) {
+		this(name, null);
 	}
 	
-//	public void setController(NNCRFInterface controller) {
-//		this.controller = controller;
-//	}
+	public AbstractNetwork(HashMap<String,Object> config) {
+		this(""+numNetworks, config);
+		numNetworks++;
+	}
 	
-	public abstract double[] initNetwork(List<Integer> numInputList, List<Integer> inputDimList, List<String> wordList,
-			   String lang, List<String> embeddingList, List<Integer> embSizeList,
-			   List<Integer> outputDimList, List<List<Integer>> vocab);
+	public AbstractNetwork(String name, HashMap<String,Object> config) {
+		super(new ContinuousFeatureStorage());
+		this.name = name;
+		this.config = config;
+	}
 	
-	public abstract void setInput(Instance[] instances);
+	@Override
+	public void computeValues() {
+		forward(isTraining);
+	}
+	
+	@Override
+	public void update() {
+		backward();
+	}
+	
+	public abstract double[] initialize();
 	
 	public abstract void forward(boolean training);
-	
-	public void forward(boolean training, Instance[] instances) {
-		this.setInput(instances);
-		this.forward(training);
-	}
 	
 	public abstract void backward();
 	
@@ -43,10 +56,16 @@ public abstract class AbstractNetwork {
 	public abstract void load(String prefix);
 	
 	public abstract void cleanUp();
-
-	public abstract int getParamSize();
-
-	public abstract double[] getParams();
-
-	public abstract double[] getGradParams();
+	
+	public String getName() {
+		return this.name;
+	}
+	
+	public void setTraining(boolean flag) {
+		isTraining = flag;
+	}
+	
+	public boolean isTraining() {
+		return isTraining;
+	}
 }
