@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import com.statnlp.neural.AbstractNetwork;
-import com.statnlp.neural.NNCRFGlobalNetworkParam;
 
 /**
  * The base class for the feature manager.
@@ -59,11 +58,6 @@ public abstract class FeatureManager implements Serializable{
 	protected boolean _cacheEnabled = false;
 	
 	protected int _numThreads;
-	
-	/**
-	 * The communication controller for Neural CRF.
-	 */
-	private NNCRFGlobalNetworkParam nnController;
 	
 	public FeatureManager(GlobalNetworkParam param_g){
 		this._param_g = param_g;
@@ -297,7 +291,7 @@ public abstract class FeatureManager implements Serializable{
 			}
 		}
 		
-		FeatureArray fa = this.extract_helper(network, parent_k, children_k);
+		FeatureArray fa = this.extract_helper(network, parent_k, children_k, children_k_index);
 		
 		if(shouldCache){
 			this._cache[network.getNetworkId()][parent_k][children_k_index] = fa;
@@ -315,7 +309,7 @@ public abstract class FeatureManager implements Serializable{
 	 * @param children_k The node indices of the children of a SINGLE hyperedge
 	 * @return
 	 */
-	protected abstract FeatureArray extract_helper(Network network, int parent_k, int[] children_k);
+	protected abstract FeatureArray extract_helper(Network network, int parent_k, int[] children_k, int children_k_index);
 
 	/**
 	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate

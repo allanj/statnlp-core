@@ -41,8 +41,6 @@ public class FeatureArray implements Serializable{
 	/** The flag signifying the scope of the feature indices, whether local (per thread) or global (combined feature map). */
 	protected boolean _isLocal = false;
 	
-	private List<ContinuousFeature> _cfs;
-
 	/** An empty feature array */
 	public static final FeatureArray EMPTY = new FeatureArray(new int[0]);
 	/** A feature with very negative score, used to signify that the hyperpath containing this feature should not be selected */
@@ -101,39 +99,6 @@ public class FeatureArray implements Serializable{
 		this._isLocal = false;
 	}
 	
-	/**
-	 * Include continuous features
-	 * @param fs
-	 * @param cfs
-	 */
-	public FeatureArray(int[] fs, List<ContinuousFeature> cfs) {
-		this._fb = new FeatureBox(fs);
-		this._next = null;
-		this._isLocal = false;
-		this._cfs = cfs;
-	}
-	
-	public FeatureArray(int[] fs, List<ContinuousFeature> cfs, FeatureArray next) {
-		this._fb = new FeatureBox(fs);
-		this._next = next;
-		this._isLocal = false;
-		this._cfs = cfs;
-	}
-	
-	public FeatureArray(FeatureBox fb, List<ContinuousFeature> cfs) {
-		this._fb = fb;
-		this._next = null;
-		this._isLocal = false;
-		this._cfs = cfs;
-	}
-	
-	public FeatureArray(FeatureBox fb, List<ContinuousFeature> cfs, FeatureArray next) {
-		this._fb = fb;
-		this._next = next;
-		this._isLocal = false;
-		this._cfs = cfs;
-	}
-
 	private FeatureArray(double score) {
 		this._totalScore = score;
 	}
@@ -177,26 +142,11 @@ public class FeatureArray implements Serializable{
 			}
 		}
 		
-		List<ContinuousFeature> cfs_local = null;
-		if (this._cfs != null) {
-			cfs_local = new ArrayList<ContinuousFeature>();
-			for(ContinuousFeature cf : this._cfs) {
-				int cf_startFs_local; 
-				if(!NetworkConfig.PARALLEL_FEATURE_EXTRACTION || NetworkConfig.NUM_THREADS == 1 || param._isFinalized){
-					cf_startFs_local = param.toLocalFeature(cf.getStartFs());
-				} else {
-					cf_startFs_local = cf.getStartFs();
-				}
-				
-				ContinuousFeature cf_local = new ContinuousFeature(cf.getInput(), cf_startFs_local, cf.getLenFs(), cf.getStorage());
-				cfs_local.add(cf_local);
-			}
-		}
 		FeatureArray fa;
 		if (this._next != null){
-			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, param), cfs_local, this._next.toLocal(param)); //saving memory
+			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, param), this._next.toLocal(param)); //saving memory
 		} else {
-			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, param), cfs_local); //saving memory
+			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, param)); //saving memory
 		}
 		fa._isLocal = true;
 		fa._fb._alwaysChange = this._fb._alwaysChange;
@@ -236,16 +186,6 @@ public class FeatureArray implements Serializable{
 		int[] fs_local = this.getCurrent();
 		for(int f_local : fs_local){
 			param.addCount(f_local, count);
-		}
-		
-		if (this._cfs != null) {
-			for(ContinuousFeature cf : this._cfs) {
-				for(int i = 0; i < cf.getLenFs(); i++){
-					int f_local = cf.getStartFs()+i;
-					param.addCount(f_local, count * cf.getFv(i));
-					cf.setFvGrad(i, count * param.getWeight(f_local));
-				}
-			}
 		}
 		
 		// Recursively update the next chain
@@ -299,7 +239,7 @@ public class FeatureArray implements Serializable{
 		}
 		this._totalScore = 0.0;
 		if (this._fb._version != version){
-			this._fb._currScore = this.computeScore(param, this.getCurrent(), this._cfs);
+			this._fb._currScore = this.computeScore(param, this.getCurrent());
 			this._fb._version = version;
 		}
 		this._totalScore += this._fb._currScore;
@@ -316,7 +256,7 @@ public class FeatureArray implements Serializable{
 	 * @param fs
 	 * @return
 	 */
-	private double computeScore(LocalNetworkParam param, int[] fs, List<ContinuousFeature> cfs){
+	private double computeScore(LocalNetworkParam param, int[] fs){
 		if(!this._isLocal != param.isGlobalMode()) {
 			throw new RuntimeException("This FeatureArray is local? "+this._isLocal+"; The param is "+param.isGlobalMode());
 		}
@@ -328,14 +268,6 @@ public class FeatureArray implements Serializable{
 			}
 		}
 		
-		if (cfs != null) {
-			for (ContinuousFeature cf : cfs) {
-				for(int i = 0; i < cf.getLenFs(); i++) {
-					int f = cf.getStartFs()+i;
-					score += param.getWeight(f) * cf.getFv(i);
-				}
-			}
-		}
 		return score;
 	}
 
@@ -393,11 +325,6 @@ public class FeatureArray implements Serializable{
 	 */
 	public int size(){
 		int size = this._fb.length();
-		if (this._cfs != null) {
-			for (ContinuousFeature cf : this._cfs) {
-				size += cf.getLenFs();
-			}
-		}
 		if (this._next != null){
 			size += this._next.size();
 		}
@@ -420,9 +347,6 @@ public class FeatureArray implements Serializable{
 	@Override
 	public int hashCode(){
 		int code = Arrays.hashCode(_fb._fs);
-		if (this._cfs != null) {
-			code = code ^ this._cfs.hashCode();
-		}
 		if (this._next != null){
 			code = code ^ this._next.hashCode();
 		}
@@ -437,13 +361,6 @@ public class FeatureArray implements Serializable{
 				if(this._fb.get(k) != fa._fb.get(k)){
 					return false;
 				}
-			}
-			if(this._cfs == null) {
-				if(fa._cfs != null){
-					return false;
-				}
-			}else{
-				return this._cfs.equals(fa._cfs);
 			}
 			if(this._next == null){
 				if(fa._next != null){

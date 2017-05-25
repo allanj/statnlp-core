@@ -27,15 +27,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import com.fasterxml.jackson.core.JsonFactory.Feature;
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
-import com.statnlp.neural.AbstractInput;
-import com.statnlp.neural.AbstractNetwork;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
@@ -104,7 +101,6 @@ public class GlobalNetworkParam implements Serializable{
 //	protected NNCRFGlobalNetworkParam _nnController;	
 	/** The weights that some of them will be replaced by neural net if NNCRF is enabled. */
 	private transient double[] concatWeights, concatCounts;
-	private transient List<double[]> allWeights, allCounts;
 	
 	private final String DUMP_TYPE = "test";
 	
@@ -517,15 +513,6 @@ public class GlobalNetworkParam implements Serializable{
 
 		return inputToIdx.get(input);
 	}
-	
-	public ContinuousFeature toContinuousFeature(Network network, int parent_k, int[] children_k, String type, String output, int nDim, AbstractInput input, ContinuousFeatureStorage storage) {
-		int startFs = this.toFeature(network, type, output, "0");
-		for (int i = 1; i < nDim; i++) {
-			this.toFeature(network, type, output, ""+i);
-		}
-		ContinuousFeature cf = new ContinuousFeature(input, startFs, nDim, storage);
-		return cf;
-	}
 
 	/**
 	 * Returns the feature ID of the specified feature from the global feature index.<br>
@@ -694,21 +681,18 @@ public class GlobalNetworkParam implements Serializable{
 				concatCounts = new double[concatDim];
 			}
 //			_nnController.getNonNeuralAndInternalNeuralWeights(concatWeights, concatCounts);
-			if (allWeights == null) {
-				allWeights = new ArrayList<double[]>();
-				allCounts = new ArrayList<double[]>();
-			}
-			allWeights.clear();
-			allCounts.clear();
-			allWeights.add(this._weights);
-			allCounts.add(this._counts);
+			int ptr = 0;
+			System.arraycopy(_weights, 0, concatWeights, ptr, _weights.length);
+			System.arraycopy(_counts, 0, concatCounts, ptr, _counts.length);
+			ptr += _weights.length;
 			for (FeatureValueProvider provider : this._featureValueProviders) {
-				if (provider.getParams() == null || provider.getGradParams() == null) continue;
-				allWeights.add(provider.getParams());
-				allCounts.add(provider.getGradParams());
+				double[] params = provider.getParams();
+				double[] gradParams = provider.getGradParams();
+				if (params == null || gradParams == null) continue;
+				System.arraycopy(params, 0, concatWeights, ptr, params.length);
+				System.arraycopy(gradParams, 0, concatCounts, ptr, gradParams.length);
+				ptr += params.length;
 			}
-			concatArray(concatWeights, allWeights);
-			concatArray(concatCounts, allCounts);
 			this._opt.setVariables(concatWeights);
 			this._opt.setGradients(concatCounts);
 		}else{
@@ -758,7 +742,18 @@ public class GlobalNetworkParam implements Serializable{
     	
     	if (NetworkConfig.USE_NEURAL_FEATURES) {
 //    		_nnController.updateNonNeuralAndInternalNeuralWeights(concatWeights);
-    		unpackArray(concatWeights, allWeights);
+    		int ptr = 0;
+    		System.arraycopy(concatWeights, ptr, _weights, 0, _weights.length);
+    		System.arraycopy(concatCounts, ptr, _counts, 0, _counts.length);
+    		ptr += _weights.length;
+			for (FeatureValueProvider provider : this._featureValueProviders) {
+				double[] params = provider.getParams();
+				double[] gradParams = provider.getGradParams();
+				if (params == null || gradParams == null) continue;
+				System.arraycopy(concatWeights, ptr, params, 0, params.length);
+				System.arraycopy(concatCounts, ptr, gradParams, 0, gradParams.length);
+				ptr += params.length;
+			}
     	}
     	
 		this._version ++;
@@ -771,26 +766,6 @@ public class GlobalNetworkParam implements Serializable{
 			result += provider.getParamSize();
 		}
 		return result;
-	}
-	
-	private void concatArray(double[] result, List<double[]> arrList) {
-		int cnt = 0;
-		for(int i = 0; i < arrList.size(); i++) {
-			double[] arr = arrList.get(i);
-			for (double d : arr) {
-				result[cnt++] = d;
-			}
-		}
-	}
-	
-	private void unpackArray(double[] result, List<double[]> arrList) {
-		int cnt = 0;
-		for(int i = 0; i < arrList.size(); i++) {
-			double[] arr = arrList.get(i);
-			for(int j = 0; j < arr.length; j++) {
-				arr[j] = result[cnt++];
-			}
-		}
 	}
 	
 	public boolean isDiscriminative(){
@@ -889,13 +864,21 @@ public class GlobalNetworkParam implements Serializable{
 		return this._featureValueProviders;
 	}
 	
-	public void callProviders() {
+	public void computeContinousScores() {
 		for (FeatureValueProvider provider : _featureValueProviders) {
 			provider.computeValues();
 		}
 	}
 	
-	public void updateProviders() {
+	public double getContinuousScore(Network network, int parent_k, int[] children_k, int children_k_index) {
+		double score = 0.0;
+		for (FeatureValueProvider provider : _featureValueProviders) {
+			score += provider.getScore(network, parent_k, children_k_index);
+		}
+		return score;
+	}
+	
+	public void updateContinuous() {
 		for (FeatureValueProvider provider : _featureValueProviders) {
 			provider.update();
 		}

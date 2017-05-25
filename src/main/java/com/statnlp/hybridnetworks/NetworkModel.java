@@ -312,7 +312,7 @@ public abstract class NetworkModel implements Serializable{
 				long time = System.currentTimeMillis();
 				
 				// Feature value provider's ``forward''
-				this._fm.getParam_G().callProviders();
+				this._fm.getParam_G().computeContinousScores();
 				
 				List<Future<Void>> results = pool.invokeAll(callables);
 				for(Future<Void> result: results){
@@ -340,7 +340,7 @@ public abstract class NetworkModel implements Serializable{
 				}
 				obj_old = obj;
 				if (lastIter || done) {
-					this._fm.getParam_G().callProviders();
+					this._fm.getParam_G().computeContinousScores();
 				}
 				if(lastIter){
 					print("Training completes. The specified number of iterations ("+it+") has passed.", outstreams);

@@ -2,7 +2,6 @@ package com.statnlp.neural;
 
 import java.util.HashMap;
 
-import com.statnlp.hybridnetworks.ContinuousFeatureStorage;
 import com.statnlp.hybridnetworks.FeatureValueProvider;
 
 public abstract class AbstractNetwork extends FeatureValueProvider {
@@ -30,7 +29,7 @@ public abstract class AbstractNetwork extends FeatureValueProvider {
 	}
 	
 	public AbstractNetwork(String name, HashMap<String,Object> config) {
-		super(new ContinuousFeatureStorage());
+		super();
 		this.name = name;
 		this.config = config;
 	}

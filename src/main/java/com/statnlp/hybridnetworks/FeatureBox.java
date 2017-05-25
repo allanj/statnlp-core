@@ -3,10 +3,6 @@ package com.statnlp.hybridnetworks;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
-
-import com.statnlp.commons.types.Instance;
-import com.statnlp.neural.AbstractTensor;
 
 /**
  * The class used by {@link FeatureArray} to store the list of feature indices and 

@@ -3,42 +3,32 @@ package com.statnlp.example.linear_ne;
 import java.util.ArrayList;
 
 import com.statnlp.commons.types.Sentence;
-import com.statnlp.hybridnetworks.ContinuousFeature;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
-import com.statnlp.hybridnetworks.ContinuousFeatureStorage;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.neural.AbstractNetwork;
 import com.statnlp.neural.MultiLayerPerceptron;
-import com.statnlp.neural.NeuralConfig;
-import com.statnlp.neural.NgramInput;
-import com.statnlp.neural.RandomNetwork;
 
 public class ECRFFeatureManager extends FeatureManager {
 
 	private static final long serialVersionUID = 376931974939202432L;
 
 	public enum FEATYPE {local,entity, neural};
-	private String OUT_SEP = NeuralConfig.OUT_SEP; 
-	private String IN_SEP = NeuralConfig.IN_SEP;
-	
-	private String neuralType;
+	private String OUT_SEP = MultiLayerPerceptron.OUT_SEP; 
+	private String IN_SEP = MultiLayerPerceptron.IN_SEP;
 	
 	private AbstractNetwork net;
 	
 	public ECRFFeatureManager(GlobalNetworkParam param_g, AbstractNetwork net) {
 		super(param_g);
 		this.net = net;
-		if (net != null) {
-			this.neuralType = FeatureManager.createNeuralFeatureType(net.getClass(), net.getName());
-		}
 	}
 	
 	@Override
-	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k) {
+	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k, int children_k_index) {
 		
 		//the tag in the sentence is actually the caps id.
 		
@@ -50,7 +40,6 @@ public class ECRFFeatureManager extends FeatureManager {
 		
 		FeatureArray fa = null;
 		ArrayList<Integer> featureList = new ArrayList<Integer>();
-		ArrayList<ContinuousFeature> continuousFeatureList = new ArrayList<ContinuousFeature>();
 		
 		int pos = nodeArr[0]-1;
 		int eId = nodeArr[1];
@@ -81,18 +70,10 @@ public class ECRFFeatureManager extends FeatureManager {
 //			featureList.add(this._param_g.toFeature(network,FEATYPE.neural.name(), currEn,  currWord));
 //			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+
 //										llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt));
-			NgramInput ngram = new NgramInput(2);
-			ngram.addNgram(0, llw, lw, currWord, rw, rrw);
-			ngram.addNgram(1, llt, lt, currTag, rt, rrt);
-			int H = 0;
-			if (net instanceof MultiLayerPerceptron) {
-				H = ((MultiLayerPerceptron) net).getHiddenSize();
-			} else if (net instanceof RandomNetwork) {
-				H = ((RandomNetwork) net).getRandomSize(); 
-			}
-			ContinuousFeature nf = this._param_g.toContinuousFeature(network, parent_k, children_k, this.neuralType, currEn, H, ngram, this.net.getStorage());
-			net.addFeature(nf);
-			continuousFeatureList.add(nf);
+
+			String input = llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt;
+			net.addHyperEdgeInput(network, parent_k, children_k_index, input);
+			
 //			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw));
 		}
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), currEn,  	currWord));
@@ -132,7 +113,7 @@ public class ECRFFeatureManager extends FeatureManager {
 		int[] features = new int[finalList.size()];
 		for(int i=0;i<finalList.size();i++) features[i] = finalList.get(i);
 		if(features.length==0) return FeatureArray.EMPTY;
-		fa = new FeatureArray(features, continuousFeatureList);
+		fa = new FeatureArray(features);
 		
 		return fa;
 	}

@@ -22,8 +22,6 @@ import java.util.List;
 
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
-import com.statnlp.neural.AbstractInput;
-import com.statnlp.neural.AbstractTensor;
 
 /**
  * A base class representing an instance, to hold the surface form (e.g., the words of a sentence) of a 

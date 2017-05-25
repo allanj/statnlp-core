@@ -7,7 +7,6 @@ import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
@@ -15,8 +14,6 @@ import java.util.Scanner;
 import th4j.Tensor.DoubleTensor;
 
 import com.naef.jnlua.LuaState;
-import com.statnlp.hybridnetworks.ContinuousFeature;
-import com.statnlp.hybridnetworks.ContinuousFeatureIdentifier;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.neural.util.LuaFunctionHelper;
 import com.sun.jna.Library;
@@ -29,16 +26,21 @@ import com.sun.jna.Native;
 public class MultiLayerPerceptron extends AbstractNetwork {
 	private boolean DEBUG = false;
 	
+	public static final String IN_SEP = "#IN#";
+	public static final String OUT_SEP = "#OUT#";
+	
 	// Torch NN server information
 	private LuaState L;
-	private DoubleTensor params, gradParams;
-	private double[] paramsArr, gradParamsArr;
-	private DoubleTensor outputTensorBuffer;
-	private DoubleTensor gradTensorBuffer;
+	private DoubleTensor paramsTensor, gradParamsTensor;
+	private DoubleTensor outputTensorBuffer, gradTensorBuffer;
 	
 	private boolean optimizeNeural;
+	
+	private List<String> embedding;
+	private int vocabSize;
+	private int hiddenSize, numLayer;
 
-	public MultiLayerPerceptron(String name, HashMap<String,Object> config) {
+	public MultiLayerPerceptron(String name, HashMap<String, Object> config) {
 		super(name, config);
 		this.optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
 		
@@ -68,9 +70,13 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 		Native.loadLibrary("libjnlua5.1.jnilib", Library.class);
 	}
 	
-	@Override
+	@SuppressWarnings("unchecked")
 	public void initialize() {
-		cfStorage.setDim(getHiddenSize());
+		this.embedding = (List<String>) config.get("embedding");
+		this.hiddenSize = (int) config.get("hiddenSize");
+		this.numLayer = (int) config.get("numLayer");
+		this.weights = new double[getHiddenSize()];
+		
 		List<Integer> numInputList = new ArrayList<Integer>();
 		List<Integer> inputDimList = new ArrayList<Integer>();
 		List<String> wordList = new ArrayList<String>();
@@ -78,18 +84,20 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 		List<HashMap<String,Integer>> token2idxList = new ArrayList<HashMap<String,Integer>>();
 		List<String> embeddingList = getEmbeddingList();
 		boolean first = true;
-		for (ContinuousFeatureIdentifier f : cfStorage.getIdentifiers()) {
-			NgramInput input = (NgramInput) f.getInput();
+		for (Object obj : inputSet) {
+			String input = (String) obj;
+			String[] inputPerType = input.split(OUT_SEP);
 			List<Integer> entry = new ArrayList<Integer>();
-			for (int i = 0; i < input.getNumType(); i++) {
+			for (int i = 0; i < inputPerType.length; i++) {
+				String[] tokens = inputPerType[i].split(IN_SEP);
 				if (first) {
-					numInputList.add(input.length(i));
+					numInputList.add(tokens.length);
 					inputDimList.add(0);
 					token2idxList.add(new HashMap<String, Integer>());
 				}
 				HashMap<String,Integer> token2idx = token2idxList.get(i);
-				for (int j = 0; j < input.length(i); j++) {
-					String token = input.getToken(i, j);
+				for (int j = 0; j < tokens.length; j++) {
+					String token = tokens[j];
 					if (!token2idx.containsKey(token)) {
 						inputDimList.set(i, inputDimList.get(i)+1);
 						int idx = NetworkConfig.IS_INDEXED_NEURAL_FEATURES? Integer.parseInt(token):token2idx.size();
@@ -113,8 +121,11 @@ public class MultiLayerPerceptron extends AbstractNetwork {
         config.put("inputDimList", inputDimList);
         config.put("wordList", wordList);
         config.put("vocab", vocab);
+        this.vocabSize = ((List<?>) config.get("vocab")).size();
         
         // 2D buffer array to be used by backward()
+//        this.output = new double[getVocabSize()*getHiddenSize()];
+        this.gradOutput = new double[getVocabSize()*getHiddenSize()];
         this.outputTensorBuffer = new DoubleTensor(getVocabSize(), getHiddenSize());
         this.gradTensorBuffer = new DoubleTensor(getVocabSize(), getHiddenSize());
         
@@ -131,17 +142,17 @@ public class MultiLayerPerceptron extends AbstractNetwork {
         Object[] outputs = LuaFunctionHelper.execLuaFunction(this.L, "initialize", args, retTypes);
         
 		if(optimizeNeural) {
-			this.params = (DoubleTensor) outputs[0];
-			this.gradParams = (DoubleTensor) outputs[1];
-			this.paramsArr = getArray(this.params);
-			this.gradParamsArr = getArray(this.gradParams);
+			this.paramsTensor = (DoubleTensor) outputs[0];
+			this.gradParamsTensor = (DoubleTensor) outputs[1];
+			this.params = getArray(this.paramsTensor);
+			this.gradParams = getArray(this.gradParamsTensor);
 		}
 	}
 	
 	@Override
 	public void forward(boolean training) {
 		if (optimizeNeural) { // update with new params
-			this.params.storage().copy(paramsArr); // we can do this because params is contiguous
+			this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
 		}
 		
 		Object[] args = new Object[]{training};
@@ -149,22 +160,36 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, retTypes);
 		
 		// copy forward result
-//		getStorage().setFv(getArray(outputTensorBuffer));
+		double[] output = getArray(outputTensorBuffer);
+		int H = getHiddenSize();
+		int i = 0;
+		for (Object obj : inputSet) {
+			String input = (String) obj;
+			double score = 0.0;
+			for (int j = 0; j < H; j++) {
+				score += weights[j]*output[i*H+j];
+			}
+			input2score.put(input, score);
+			i++;
+		}
+//		System.arraycopy(getArray(outputTensorBuffer), 0, output, 0, output.length);
 	}
 	
 	@Override
 	public void backward() {
-		gradTensorBuffer.storage().copy(getStorage().getFvGrad());
+		for (int i = 0; i < gradOutput.length; i++) {
+			// for testing
+			gradOutput[i] = 0.0;
+		}
+		gradTensorBuffer.storage().copy(gradOutput);
 		
 		Object[] args = new Object[0];
 		Class<?>[] retTypes = new Class[0];
 		LuaFunctionHelper.execLuaFunction(this.L, "backward", args, retTypes);
 		
-//		if(optimizeNeural) { // copy gradParams computed by Torch
-//			gradParamsArr = getArray(this.gradParams);
-//		} else { // params has changed so re-assign (or copy)
-//			paramsArr = getArray(this.params);
-//		}
+		if(optimizeNeural) { // copy gradParams computed by Torch
+			gradParams = getArray(this.gradParamsTensor);
+		}
 	}
 	
 	@Override
@@ -275,38 +300,22 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 		return config;
 	}
 	
-	@SuppressWarnings("unchecked")
 	public List<String> getEmbeddingList() {
-		return (List<String>) config.get("embedding");
+		return embedding;
 	}
 	
 	public int getVocabSize() {
-		return ((List<?>) config.get("vocab")).size();
+		return vocabSize;
 	}
 	
 	public int getHiddenSize() {
-		return (int) config.get("hiddenSize");
+		return hiddenSize;
 	}
 	
 	public int getNumLayer() {
-		return (int) config.get("numLayer");
+		return numLayer;
 	}
 
-	@Override
-	public int getParamSize() {
-		return paramsArr.length;
-	}
-
-	@Override
-	public double[] getParams() {
-		return paramsArr;
-	}
-
-	@Override
-	public double[] getGradParams() {
-		return gradParamsArr;
-	}
-	
 	private double[] getArray(DoubleTensor t) {
 		return t.storage().getRawData().getDoubleArray(0, (int) t.nElement());
 	}
