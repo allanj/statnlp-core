@@ -262,7 +262,25 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 	}
 	
 	public double costAt(Network network, int parent_k, int[] child_k){
-		return super.costAt(network, parent_k, child_k);
+		int size = network.getInstance().size();
+		int pos = network.getNodeArray(parent_k)[0]-1;
+		if(pos < 0 || pos >= size){
+			return 0.0;
+		}
+		Label label = _labels.get(network.getNodeArray(parent_k)[1]);
+		if(label == null){
+			return 0.0;
+		}
+		@SuppressWarnings("unchecked")
+		Label gold = ((LinearInstance<Label>)network.getInstance()).getOutput().get(pos);
+		double loss = 1.0;
+		if(gold.getForm().startsWith("O")){
+			loss = 0.01;
+		}
+		if(!gold.equals(label)){
+			return loss;
+		}
+		return 0.0;
 	}
 
 	/**

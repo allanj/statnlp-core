@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -22,11 +23,11 @@ import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
-import com.statnlp.example.linear_crf.LinearCRFViewer;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
+import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.StringIndex;
 import com.statnlp.neural.NeuralConfigReader;
@@ -195,6 +196,17 @@ public class LinearCRFMain {
 			}
 		}
 		
+		numIterations = 100;
+		NetworkConfig.MODEL_TYPE = ModelType.CRF;
+		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.0001;
+		NetworkConfig.MARGIN = 1.0;
+		NetworkConfig.BATCH_SIZE = 1;
+		NetworkConfig.USE_BATCH_TRAINING = false;
+		NetworkConfig.NORMALIZE_COST = false;
+		NetworkConfig.NODE_COST = 1.0;
+		NetworkConfig.EDGE_COST = 0.0;
+		NetworkConfig.STOPPING_CRITERIA = StoppingCriteria.MAX_ITERATION_REACHED;
+		
 		PrintStream outstream = new PrintStream(logPath);
 		
 		OptimizerFactory optimizerFactory;
@@ -202,6 +214,7 @@ public class LinearCRFMain {
 			optimizerFactory = OptimizerFactory.getLBFGSFactory();
 		} else {
 			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaMThenStop();
+			optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(0.2);
 		}
 		if(weightInitFile != null){
 			HashMap<String, HashMap<String, HashMap<String, Double>>> featureWeightMap = new HashMap<String, HashMap<String, HashMap<String, Double>>>();
@@ -242,7 +255,13 @@ public class LinearCRFMain {
 		GlobalNetworkParam param = new GlobalNetworkParam(optimizerFactory);
 
 		int numTrain = -1;
+		getLabel("O");
+		getLabel("I-MISC");
+		getLabel("I-LOC");
+		getLabel("I-PER");
+		getLabel("I-ORG");
 		LinearInstance<Label>[] trainInstances = readCoNLLData(param, trainPath, true, true, numTrain);
+		trainInstances = Arrays.asList(trainInstances).subList(0, 1000).toArray(new LinearInstance[1]);
 		int size = trainInstances.length;
 		System.err.println("Read.."+size+" instances from "+trainPath);
 		
@@ -250,7 +269,7 @@ public class LinearCRFMain {
 		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(param, argsToFeatureManager);
 		
 		NetworkModel model = DiscriminativeNetworkModel.create(fm, compiler, outstream);
-		model.visualize(LinearCRFViewer.class, trainInstances);
+//		model.visualize(LinearCRFViewer.class, trainInstances);
 		
 		model.train(trainInstances, numIterations);
 		
@@ -293,8 +312,8 @@ public class LinearCRFMain {
 		}
 		
 		LinearInstance<Label>[] testInstances = readCoNLLData(param, testPath, true, false);
-//		testInstances = Arrays.copyOf(testInstances, 1);
-		int k = 8;
+		testInstances = Arrays.asList(testInstances).subList(1000, 1100).toArray(new LinearInstance[1]);
+		int k = 1;
 		Instance[] predictions = model.decode(testInstances, k);
 		
 		PrintStream[] outstreams = new PrintStream[]{outstream, System.out};
@@ -304,7 +323,6 @@ public class LinearCRFMain {
 		int total = 0;
 		int count = 0;
 		for(Instance ins: predictions){
-			@SuppressWarnings("unchecked")
 			LinearInstance<Label> instance = (LinearInstance<Label>)ins;
 			List<Label> goldLabel = instance.getOutput();
 			List<Label> actualLabel = instance.getPrediction();
@@ -328,6 +346,7 @@ public class LinearCRFMain {
 		resultStream.close();
 		print(String.format("Correct/Total: %d/%d", corr, total), outstreams);
 		print(String.format("Accuracy: %.2f%%", 100.0*corr/total), outstreams);
+		print(String.format("Error: %.2f%%", 100-100.0*corr/total), outstreams);
 		outstream.close();
 	}
 	
@@ -347,7 +366,13 @@ public class LinearCRFMain {
 				labels = new ArrayList<Label>();
 			}
 			String line = br.readLine().trim();
+			if(line.startsWith("-DOCSTART-")){
+				continue;
+			}
 			if(line.length() == 0){
+				if(words.size() == 0){
+					continue;
+				}
 				LinearInstance<Label> instance = new LinearInstance<Label>(instanceId, 1, words, labels);
 				if(isLabeled){
 					instance.setLabeled(); // Important!
@@ -364,7 +389,9 @@ public class LinearCRFMain {
 				String[] features = line.substring(0, lastSpace).split(" ");
 				words.add(features);
 				if(withLabels){
-					Label label = getLabel(line.substring(lastSpace+1));
+					String labelStr = line.substring(lastSpace+1);
+					labelStr = labelStr.replace("B-", "I-");
+					Label label = getLabel(labelStr);
 					labels.add(label);
 				}
 			}

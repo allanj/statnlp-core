@@ -31,9 +31,7 @@ import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
-import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
-import com.statnlp.neural.NeuralConfig;
 import com.statnlp.util.Pipeline;
 import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 import com.statnlp.util.instance_parser.InstanceParser;
@@ -52,9 +50,6 @@ public class LinearCRFFeatureManager extends FeatureManager{
 	public boolean productWithOutput = true;
 	public Map<Integer, Label> labels;
 	public Map<FeatureType, Boolean> featureTypes;
-	
-	private String OUT_SEP = NeuralConfig.OUT_SEP; 
-	private String IN_SEP = NeuralConfig.IN_SEP; 
 	
 	public enum FeatureType {
 		WORD(true),
@@ -175,7 +170,6 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		
 		@SuppressWarnings("unchecked")
 		LinearInstance<String> instance = (LinearInstance<String>)net.getInstance();
-		int size = instance.size();
 		
 		ArrayList<String[]> input = (ArrayList<String[]>)instance.getInput();
 		
@@ -187,6 +181,10 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		int nodeType = arr[4];
 		if(!productWithOutput){
 			tag_id = -1;
+		}
+		
+		if(nodeType == NODE_TYPES.ROOT.ordinal()){
+			return FeatureArray.EMPTY;
 		}
 		
 		if(nodeType == NODE_TYPES.LEAF.ordinal()){
@@ -206,120 +204,36 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		if(CHEAT){
 			return new FeatureArray(new int[]{param_g.toFeature(net, "CHEAT", tag_id+"", Math.abs(instance.getInstanceId())+" "+pos+" "+child_tag_id)});
 		}
+		String word = input.get(pos)[0];
+		boolean firstIsUpper = word.substring(0,1).toUpperCase().equals(word.substring(0,1));
+		boolean allIsUpper = word.toUpperCase().equals(word);
+		int length = Math.min(word.length(), 6);
+		boolean containsPeriod = word.contains(".");
+		
+		String label = tag_id == labelSize ? "O" : this.labels.get(tag_id).getForm();
+		String childLabel = child_tag_id == labelSize ? "O" : this.labels.get(child_tag_id).getForm();
+		
+		if(!label.startsWith("O")){
+			label = label.substring(2);
+		}
+		if(!childLabel.startsWith("O")){
+			childLabel = childLabel.substring(2);
+		}
 
 		ArrayList<Integer> features = new ArrayList<Integer>();
-		int prevIdx = pos - 1;
-		int nextIdx = pos + 1;
-		String prevWord = "STR";
-		String nextWord ="END";
-		String prevPos = "STR";
-		if(nextIdx<input.size()-1) nextWord = input.get(nextIdx)[0];
-		if(prevIdx>=0) {
-			prevWord = input.get(prevIdx)[0]; 
-			prevPos = input.get(prevIdx)[1];
-		}
 		
-		if(NetworkConfig.USE_NEURAL_FEATURES){
-			String postag = input.get(pos)[1];
-//			features.add(param_g.toFeature(network, FeatureType.neural.name(), tag_id+"",input.get(pos)[0]));
-			features.add(param_g.toFeature(network, FeatureType.neural.name(), tag_id+"", prevWord+IN_SEP+input.get(pos)[0]+IN_SEP+nextWord+OUT_SEP+prevPos+IN_SEP+postag));
-		} else {
-			// Word window features
-			if(isEnabled(FeatureType.WORD) && tag_id != labelSize){
-				int wordWindowSize = wordHalfWindowSize*2+1;
-				if(wordWindowSize < 0){
-					wordWindowSize = 0;
-				}
-				for(int i=0; i<wordWindowSize; i++){
-					String word = "***";
-					int relIdx = i-wordHalfWindowSize;
-					int idx = pos + relIdx;
-					if(idx >= 0 && idx < size){
-						word = input.get(idx)[0];
-					}
-					if(idx > pos) continue; // Only consider the left window
-					features.add(param_g.toFeature(network, FeatureType.WORD+":"+relIdx, tag_id+"", word));
-				}
-			}
-		}
-		
-		// POS tag window features
-		if(isEnabled(FeatureType.TAG) && tag_id != labelSize){
-			int posWindowSize = posHalfWindowSize*2+1;
-			if(posWindowSize < 0){
-				posWindowSize = 0;
-			}
-			for(int i=0; i<posWindowSize; i++){
-				String postag = "***";
-				int relIdx = i-posHalfWindowSize;
-				int idx = pos + relIdx;
-				if(idx >= 0 && idx < size){
-					postag = input.get(idx)[1];
-				}
-				features.add(param_g.toFeature(network, FeatureType.TAG+":"+relIdx, tag_id+"", postag));
-			}
-		}
-		
-		// Word bigram features
-		if(isEnabled(FeatureType.WORD_BIGRAM)){
-			for(int i=0; i<2; i++){
-				String bigram = "";
-				for(int j=0; j<2; j++){
-					int idx = pos+i+j-1;
-					if(idx >=0 && idx < size){
-						bigram += input.get(idx)[0];
-					} else {
-						bigram += "***";
-					}
-					if(j==0){
-						bigram += " ";
-					}
-				}
-				features.add(param_g.toFeature(network, FeatureType.WORD_BIGRAM+":"+i, tag_id+"", bigram));
-			}
-		}
-		
-		// POS tag bigram features
-		if(isEnabled(FeatureType.TAG_BIGRAM)){
-			for(int i=0; i<2; i++){
-				String bigram = "";
-				for(int j=0; j<2; j++){
-					int idx = pos+i+j-1;
-					if(idx >=0 && idx < size){
-						bigram += input.get(idx)[1];
-					} else {
-						bigram += "***";
-					}
-					if(j==0){
-						bigram += " ";
-					}
-				}
-				features.add(param_g.toFeature(network, FeatureType.TAG_BIGRAM+":"+i, tag_id+"", bigram));
-			}
-		}
-		
-		// Label feature
-		if(isEnabled(FeatureType.LABEL)){
-			int labelFeature = param_g.toFeature(network, FeatureType.LABEL.name(), tag_id+"", "");
-			features.add(labelFeature);
-		}
-		FeatureArray featureArray = createFeatureArray(network, features);
+		features.add(param_g.toFeature(network, "BIAS", "", ""));
+		features.add(param_g.toFeature(network, "BIAS_TAG", label, ""));
 
-		// Edge-based features
-		features.clear();
-		// Label transition feature
-		if(isEnabled(FeatureType.TRANSITION)){
-			if(tag_id != labelSize && child_tag_id != labelSize){
-				int transitionFeature = param_g.toFeature(network, FeatureType.TRANSITION.name(), child_tag_id+" "+tag_id, "");
-				features.add(transitionFeature);
-			}
-		}
-		
-		if(features.size() > 0){
-			return createFeatureArray(network, features, featureArray);
-		} else {
-			return featureArray;
-		}
+		features.add(param_g.toFeature(network, "FIRSTISUPPER", label+"", ""+firstIsUpper));
+		features.add(param_g.toFeature(network, "ALLISUPPER", label+"", ""+allIsUpper));
+		features.add(param_g.toFeature(network, "PERIOD", label+"", ""+containsPeriod));
+		features.add(param_g.toFeature(network, "LENGTH", label+"", ""+length));
+		features.add(param_g.toFeature(network, "LENGTH_ALLISUPPER", label+"", ""+length+"_"+allIsUpper));
+		features.add(param_g.toFeature(network, "LENGTH_FIRSTISUPPER", label+"", ""+length+"_"+firstIsUpper));
+		features.add(param_g.toFeature(network, "LENGTH_PERIOD", label+"", ""+length+"_"+containsPeriod));
+		FeatureArray nodeFeatures = createFeatureArray(network, features);
+		return createFeatureArray(network, new int[]{param_g.toFeature(network, "TRANS", childLabel+"_"+label, "")}, nodeFeatures);
 	}
 
 }
