@@ -713,7 +713,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				fa.update_MF_Version(this._param, count, src2fIdx2Dst.get(k), this.getUnlabeledNetwork().currentMarginalMap);
 			}else{
 				fa.update(this._param, count);
-//				this._param._fm.getParam_G().updateContinuous(count); // todo
+				this._param._fm.getParam_G().setContinuousCount(count, this, k, children_k_index); // todo
 			}
 			if(!NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 				for(int child_k: children_k){

@@ -686,6 +686,11 @@ public class GlobalNetworkParam implements Serializable{
 			System.arraycopy(_counts, 0, concatCounts, ptr, _counts.length);
 			ptr += _weights.length;
 			for (FeatureValueProvider provider : this._featureValueProviders) {
+				double[] weights = provider.getWeights();
+				double[] gradWeights = provider.getGradWeights();
+				System.arraycopy(weights, 0, concatWeights, ptr, weights.length);
+				System.arraycopy(gradWeights, 0, concatCounts, ptr, weights.length);
+				ptr += weights.length;
 				double[] params = provider.getParams();
 				double[] gradParams = provider.getGradParams();
 				if (params == null || gradParams == null) continue;
@@ -747,6 +752,11 @@ public class GlobalNetworkParam implements Serializable{
     		System.arraycopy(concatCounts, ptr, _counts, 0, _counts.length);
     		ptr += _weights.length;
 			for (FeatureValueProvider provider : this._featureValueProviders) {
+				double[] weights = provider.getWeights();
+				double[] gradWeights = provider.getGradWeights();
+				System.arraycopy(concatWeights, ptr, weights, 0, weights.length);
+				System.arraycopy(concatCounts, ptr, gradWeights, 0, gradWeights.length);
+				ptr += weights.length;
 				double[] params = provider.getParams();
 				double[] gradParams = provider.getGradParams();
 				if (params == null || gradParams == null) continue;
@@ -763,6 +773,7 @@ public class GlobalNetworkParam implements Serializable{
 	private int getFeatureSize() {
 		int result = this.countFeatures();
 		for (FeatureValueProvider provider : this._featureValueProviders) {
+			result += provider.getWeightSize();
 			result += provider.getParamSize();
 		}
 		return result;
@@ -870,6 +881,12 @@ public class GlobalNetworkParam implements Serializable{
 		}
 	}
 	
+	public void updateContinuous() {
+		for (FeatureValueProvider provider : _featureValueProviders) {
+			provider.update();
+		}
+	}
+	
 	public double getContinuousScore(Network network, int parent_k, int[] children_k, int children_k_index) {
 		double score = 0.0;
 		for (FeatureValueProvider provider : _featureValueProviders) {
@@ -878,9 +895,9 @@ public class GlobalNetworkParam implements Serializable{
 		return score;
 	}
 	
-	public void updateContinuous() {
+	public void setContinuousCount(double count, Network network, int parent_k, int children_k_index) {
 		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.update();
+			provider.update(count, network, parent_k, children_k_index);
 		}
 	}
 	

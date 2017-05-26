@@ -2,28 +2,27 @@ package com.statnlp.hybridnetworks;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 
 public abstract class FeatureValueProvider {
 	
-	protected double[] weights, gradWeights, params, gradParams;
+	protected double[] weights, gradWeights;
 	
-	protected double[] gradOutput;
+	protected double[] params, gradParams;
+	
+	protected double[] output, gradOutput;
 	
 	protected Map<Integer,Map<Integer,Map<Integer,Object>>> edge2input;
 	
-	protected Set<Object> inputSet;
+	protected Map<Object,Integer> input2id;
 	
 	protected Map<Object,Double> input2score;
 	
 	public FeatureValueProvider() {
 		edge2input = new HashMap<Integer, Map<Integer,Map<Integer,Object>>>();
 		input2score = new HashMap<Object, Double>();
-		inputSet = new LinkedHashSet<Object>();
+		input2id = new LinkedHashMap<Object,Integer>();
 	}
 	
 	public synchronized void addHyperEdgeInput(Network network, int parent_k, int children_k_idx, Object input) {
@@ -35,17 +34,27 @@ public abstract class FeatureValueProvider {
 			edge2input.get(instanceID).put(parent_k, new HashMap<Integer,Object>());
 		}
 		edge2input.get(instanceID).get(parent_k).put(children_k_idx, input);
-		inputSet.add(input);
+		input2id.put(input, input2id.size());
 	}
 	
 	public abstract void initialize();
 	
 	public abstract void computeValues();
 	
+	public abstract void update(double count, Network network, int parent_k, int children_k_index);
+	
 	public abstract void update();
+	
+	public int getWeightSize() {
+		return weights.length;
+	}
 	
 	public double[] getWeights() {
 		return weights;
+	}
+	
+	public double[] getGradWeights() {
+		return gradWeights;
 	}
 	
 	public int getParamSize() {
@@ -60,20 +69,20 @@ public abstract class FeatureValueProvider {
 		return gradParams;
 	}
 	
-	public double getScore(Network network, int parent_k, int children_k_index) {
+	public abstract double getScore(Network network, int parent_k, int children_k_index);
+	
+	public Object getHyperEdgeInput(Network network, int parent_k, int children_k_index) {
 		int instanceID = network.getInstance().getInstanceId();
 		Map<Integer, Map<Integer, Object>> tmp = edge2input.get(instanceID);
 		if (tmp == null)
-			return 0.0;
+			return null;
 		
 		Map<Integer, Object> tmp2 = tmp.get(parent_k);
 		if (tmp2 == null)
-			return 0.0;
+			return null;
 		
 		Object input = tmp2.get(children_k_index);
-		if (input == null)
-			return 0.0;
-		return input2score.get(input);
+		return input;
 	}
 	
 // TODO for backpropagation

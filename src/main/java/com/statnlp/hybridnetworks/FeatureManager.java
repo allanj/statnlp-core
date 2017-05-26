@@ -107,9 +107,7 @@ public abstract class FeatureManager implements Serializable{
 			return false;
 		}
 		
-		for (FeatureValueProvider provider : this._param_g.getFeatureValueProviders()) {
-			provider.update();
-		}
+		this._param_g.updateContinuous();
 		
 		boolean done = this._param_g.update();
 

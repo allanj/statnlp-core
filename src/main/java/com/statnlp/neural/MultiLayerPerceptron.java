@@ -7,13 +7,16 @@ import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 
+import scala.util.Random;
 import th4j.Tensor.DoubleTensor;
 
 import com.naef.jnlua.LuaState;
+import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.neural.util.LuaFunctionHelper;
 import com.sun.jna.Library;
@@ -72,10 +75,16 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 	
 	@SuppressWarnings("unchecked")
 	public void initialize() {
+		Random r = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
 		this.embedding = (List<String>) config.get("embedding");
 		this.hiddenSize = (int) config.get("hiddenSize");
 		this.numLayer = (int) config.get("numLayer");
 		this.weights = new double[getHiddenSize()];
+		for(int i = 0; i < weights.length; i++) {
+			weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (r.nextDouble()-.5)/10 :
+				NetworkConfig.FEATURE_INIT_WEIGHT;
+		}
+		this.gradWeights = new double[getHiddenSize()];
 		
 		List<Integer> numInputList = new ArrayList<Integer>();
 		List<Integer> inputDimList = new ArrayList<Integer>();
@@ -84,7 +93,7 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 		List<HashMap<String,Integer>> token2idxList = new ArrayList<HashMap<String,Integer>>();
 		List<String> embeddingList = getEmbeddingList();
 		boolean first = true;
-		for (Object obj : inputSet) {
+		for (Object obj : input2id.keySet()) {
 			String input = (String) obj;
 			String[] inputPerType = input.split(OUT_SEP);
 			List<Integer> entry = new ArrayList<Integer>();
@@ -150,6 +159,20 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 	}
 	
 	@Override
+	public double getScore(Network network, int parent_k, int children_k_index) {
+		double val = 0.0;
+		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
+		if (input != null) {
+			int H = hiddenSize;
+			int id = input2id.get(input);
+			for (int i = 0; i < H; i++) {
+				val += weights[i] * output[id * H + i];
+			}
+		}
+		return val;
+	}
+	
+	@Override
 	public void forward(boolean training) {
 		if (optimizeNeural) { // update with new params
 			this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
@@ -160,27 +183,47 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, retTypes);
 		
 		// copy forward result
-		double[] output = getArray(outputTensorBuffer);
-		int H = getHiddenSize();
-		int i = 0;
-		for (Object obj : inputSet) {
-			String input = (String) obj;
-			double score = 0.0;
-			for (int j = 0; j < H; j++) {
-				score += weights[j]*output[i*H+j];
+		output = getArray(outputTensorBuffer);
+//		int H = getHiddenSize();
+//		int i = 0;
+//		for (Object obj : input2id.keySet()) {
+//			String input = (String) obj;
+//			double score = 0.0;
+//			for (int j = 0; j < H; j++) {
+//				score += weights[j]*output[i*H+j];
+//			}
+//			input2score.put(input, score);
+//			i++;
+//		}
+	}
+	
+	@Override
+	public void update(double count, Network network, int parent_k, int children_k_index) {
+		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
+		if (input != null) {
+			int H = hiddenSize;
+			int id = input2id.get(input);
+			for (int i = 0; i < H; i++) {
+				gradOutput[id*H+i] += count * weights[i];
 			}
-			input2score.put(input, score);
-			i++;
+			for (int i = 0; i < H; i++) {
+				gradWeights[i] -= count * output[id*H+i];
+			}
+//			for (int i = 0; i < output.length; i += hiddenSize) {
+//				for (int j = 0; j < hiddenSize; j++) {
+//					gradWeights[j] -= count * output[i+j];
+//				}
+//			}
+//			for (int i = 0; i < gradOutput.length; i += hiddenSize) {
+//				for (int j = 0; j < hiddenSize; j++) {
+//					gradOutput[i+j] += count * weights[j];
+//				}
+//			}
 		}
-//		System.arraycopy(getArray(outputTensorBuffer), 0, output, 0, output.length);
 	}
 	
 	@Override
 	public void backward() {
-		for (int i = 0; i < gradOutput.length; i++) {
-			// for testing
-			gradOutput[i] = 0.0;
-		}
 		gradTensorBuffer.storage().copy(gradOutput);
 		
 		Object[] args = new Object[0];
@@ -190,6 +233,8 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 		if(optimizeNeural) { // copy gradParams computed by Torch
 			gradParams = getArray(this.gradParamsTensor);
 		}
+		
+		Arrays.fill(gradOutput, 0.0);
 	}
 	
 	@Override
