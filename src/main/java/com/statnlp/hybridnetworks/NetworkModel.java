@@ -335,7 +335,8 @@ public abstract class NetworkModel implements Serializable{
 		HashSet<Integer> batchInstIds = new HashSet<Integer>();
 		double obj_old = Double.NEGATIVE_INFINITY;
 		//run the EM-style algorithm now...
-		long startTime = System.currentTimeMillis();
+		long startTime = System.nanoTime();
+		long epochStartTime = System.nanoTime();
 		try{
 			int batchId = 0;
 			int epochNum = 0;
@@ -360,7 +361,7 @@ public abstract class NetworkModel implements Serializable{
 					if(NetworkConfig.USE_BATCH_TRAINING) learner.setInstanceIdSet(batchInstIds);
 					else learner.setTrainInstanceIdSet(new HashSet<Integer>(instIds));
 				}
-				long time = System.currentTimeMillis();
+				long time = System.nanoTime();
 				if (NetworkConfig.USE_NEURAL_FEATURES) {
 					nnController.forwardNetwork(true);
 				}
@@ -381,15 +382,19 @@ public abstract class NetworkModel implements Serializable{
 				} else {
 					done = this._fm.update();
 				}
-				time = System.currentTimeMillis() - time;
+				time = System.nanoTime() - time;
 				double obj = this._fm.getParam_G().getObj_old();
 				epochObj += obj;
-				print(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1000.0, obj/obj_old, (System.currentTimeMillis()-startTime)/1000.0), outstreams);
+				if(!NetworkConfig.USE_BATCH_TRAINING){
+					print(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1.0e9, obj/obj_old, (System.nanoTime()-startTime)/1.0e9), outstreams);
+				}
 				if(offset >= instIds.size()) {
 					batchId = 0;
 					// this means one epoch
-					print(String.format("Epoch %d: Obj=%-18.12f", epochNum++, multiplier*epochObj*instIds.size()/(size+offset)), outstreams);
+					time = System.nanoTime();
+					print(String.format("Epoch %d: Obj=%-18.12f Time=%.3fs Total time: %.3fs", epochNum++, multiplier*epochObj*instIds.size()/(size+offset), (time-epochStartTime)/1.0e9, (time-startTime)/1.0e9), outstreams);
 					epochObj = 0.0;
+					epochStartTime = System.nanoTime();
 				}
 				if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE && it>1 && obj<obj_old && Math.abs(obj-obj_old)>1E-5){
 					throw new RuntimeException("Error:\n"+obj_old+"\n>\n"+obj);

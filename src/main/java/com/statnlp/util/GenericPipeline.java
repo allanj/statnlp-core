@@ -15,6 +15,7 @@ import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -68,12 +69,21 @@ public class GenericPipeline extends Pipeline{
 		argParserObjects.put("--trainPath", argParser.addArgument("--trainPath")
 				.type(String.class)
 				.help("The path to training data."));
+		argParserObjects.put("--numTrain", argParser.addArgument("--numTrain")
+				.type(Integer.class)
+				.help("The number of training data to be taken from the training file."));
 		argParserObjects.put("--devPath", argParser.addArgument("--devPath")
 				.type(String.class)
 				.help("The path to development data"));
+		argParserObjects.put("--numDev", argParser.addArgument("--numDev")
+				.type(Integer.class)
+				.help("The number of development data to be taken from the development file."));
 		argParserObjects.put("--testPath", argParser.addArgument("--testPath")
 				.type(String.class)
 				.help("The path to test data"));
+		argParserObjects.put("--numTest", argParser.addArgument("--numTest")
+				.type(Integer.class)
+				.help("The number of test data to be taken from the test file."));
 		argParserObjects.put("--modelPath", argParser.addArgument("--modelPath")
 				.type(String.class)
 				.help("The path to the model"));
@@ -367,6 +377,13 @@ public class GenericPipeline extends Pipeline{
 		}
 		try {
 			Instance[] trainInstances = instanceParser.buildInstances((String)getParameter("trainPath"));
+			if(hasParameter("numTrain")){
+				int numTrain = getParameter("numTrain");
+				if(numTrain > 0){
+					numTrain = Math.min(trainInstances.length, numTrain);
+					trainInstances = Arrays.copyOfRange(trainInstances, 0, numTrain);
+				}
+			}
 			setParameter("trainInstances", trainInstances);
 			return trainInstances;
 		} catch (FileNotFoundException e) {
@@ -383,6 +400,13 @@ public class GenericPipeline extends Pipeline{
 		}
 		try {
 			Instance[] devInstances = instanceParser.buildInstances((String)getParameter("devPath"));
+			if(hasParameter("numDev")){
+				int numDev = getParameter("numDev");
+				if(numDev > 0){
+					numDev = Math.min(devInstances.length, numDev);
+					devInstances = Arrays.copyOfRange(devInstances, 0, numDev);
+				}
+			}
 			setParameter("devInstances", devInstances);
 			return devInstances;
 		} catch (FileNotFoundException e) {
@@ -399,6 +423,13 @@ public class GenericPipeline extends Pipeline{
 		}
 		try {
 			Instance[] testInstances = instanceParser.buildInstances((String)getParameter("testPath"));
+			if(hasParameter("numTest")){
+				int numTest = getParameter("numTest");
+				if(numTest > 0){
+					numTest = Math.min(testInstances.length, numTest);
+					testInstances = Arrays.copyOfRange(testInstances, 0, numTest);
+				}
+			}
 			setParameter("testInstances", testInstances);
 			return testInstances;
 		} catch (FileNotFoundException e) {

@@ -162,7 +162,7 @@ public class NetworkConfig {
 	/**
 	 * Build features in parallel during the touch process 
 	 */
-	public static boolean PARALLEL_FEATURE_EXTRACTION = false;
+	public static boolean PARALLEL_FEATURE_EXTRACTION = true;
 	/**
 	 * Build features only from labeled instances
 	 */
