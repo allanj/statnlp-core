@@ -241,13 +241,16 @@ function MultiLayerPerceptron:forward(isTraining)
 end
 
 function MultiLayerPerceptron:backward()
+    local mlp = self.net
     self.gradParams:zero()
     local x = self.x
     local input_x = x
     if self.fixEmbedding then
         input_x = self.inputLayer:forward(x)
     end
-    self.net:backward(input_x, self.gradOutputPtr)
+    if #mlp > 0 then
+        self.net:backward(input_x, self.gradOutputPtr)
+    end
     if self.doOptimization then
         self.optimizer(self.feval, self.params, self.optimState)
     end

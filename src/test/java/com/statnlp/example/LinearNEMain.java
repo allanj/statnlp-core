@@ -70,7 +70,7 @@ public class LinearNEMain {
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
-			net = new MultiLayerPerceptron("MyNet", MultiLayerPerceptron.createConfigFromFile(neural_config));
+			net = new MultiLayerPerceptron("MyNet", MultiLayerPerceptron.createConfigFromFile(neural_config), 1, Entity.Entities.size());
 			gnp.addFeatureValueProvider(net);
 		}
 		
@@ -92,11 +92,12 @@ public class LinearNEMain {
 		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler();
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
 		ECRFInstance[] ecrfs = trainInstances.toArray(new ECRFInstance[trainInstances.size()]);
-		if(NetworkConfig.USE_NEURAL_FEATURES){
-			model.train(all_instances, trainInstances.size(), numIteration);
-		}else{
-			model.train(ecrfs, numIteration);
-		}
+//		if(NetworkConfig.USE_NEURAL_FEATURES){
+//			model.train(all_instances, trainInstances.size(), numIteration);
+//		}else{
+//			model.train(ecrfs, numIteration);
+//		}
+		model.train(ecrfs, numIteration);
 		Instance[] predictions = model.decode(testInstances.toArray(new ECRFInstance[testInstances.size()]));
 		ECRFEval.evalNER(predictions, nerOut);
 	}

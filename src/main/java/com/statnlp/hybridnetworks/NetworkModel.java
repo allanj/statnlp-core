@@ -313,6 +313,7 @@ public abstract class NetworkModel implements Serializable{
 				
 				// Feature value provider's ``forward''
 				this._fm.getParam_G().computeContinousScores();
+				this._fm.getParam_G().resetCountContinuous();
 				
 				List<Future<Void>> results = pool.invokeAll(callables);
 				for(Future<Void> result: results){
@@ -322,7 +323,6 @@ public abstract class NetworkModel implements Serializable{
 						throw new RuntimeException(e);
 					}
 				}
-				
 				
 				boolean done = true;
 				boolean lastIter = (it == maxNumIterations);
@@ -496,10 +496,24 @@ public abstract class NetworkModel implements Serializable{
 			}
 		}
 		
+		if (NetworkConfig.FEATURE_TOUCH_TEST) {
+			System.err.println("Touching test set.");
+			
+			for(int threadId = 0; threadId<this._numThreads; threadId++){
+				this._decoders[threadId].setTouch();
+				this._decoders[threadId].start();
+			}
+			for(int threadId = 0; threadId<this._numThreads; threadId++){
+				this._decoders[threadId].join();
+				this._decoders[threadId].setUnTouch();
+			}
+		}
+		
 		System.err.println("Okay. Decoding started.");
 		
 		long time = System.currentTimeMillis();
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
+			this._decoders[threadId] = this._decoders[threadId].copyThread(this._fm);
 			this._decoders[threadId].start();
 		}
 		for(int threadId = 0; threadId<this._numThreads; threadId++){

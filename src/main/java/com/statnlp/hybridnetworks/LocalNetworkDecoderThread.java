@@ -36,6 +36,7 @@ public class LocalNetworkDecoderThread extends Thread{
 	private NetworkCompiler _compiler;
 	private boolean _cacheParam = true;
 	private int numPredictionsGenerated = 1;
+	private boolean isTouching;
 	
 	//please make sure the threadId is 0-indexed.
 	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler){
@@ -58,8 +59,12 @@ public class LocalNetworkDecoderThread extends Thread{
 		this(threadId, fm, instances, compiler, param, cacheParam, 1);
 	}
 	
-	//please make sure the threadId is 0-indexed.
 	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, LocalNetworkParam param, boolean cacheParam, int numPredictionsGenerated){
+		this(threadId, fm, instances, compiler, param, cacheParam, numPredictionsGenerated, false);
+	}
+	
+	//please make sure the threadId is 0-indexed.
+	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, LocalNetworkParam param, boolean cacheParam, int numPredictionsGenerated, boolean isTouching){
 		this._threadId = threadId;
 		this._param = param;
 		fm.setLocalNetworkParams(this._threadId, this._param);
@@ -73,6 +78,12 @@ public class LocalNetworkDecoderThread extends Thread{
 		this._compiler = compiler;
 		this._cacheParam = cacheParam;
 		this.numPredictionsGenerated = numPredictionsGenerated;
+		this.isTouching = isTouching;
+	}
+	
+	public LocalNetworkDecoderThread copyThread(FeatureManager fm) {
+		return new LocalNetworkDecoderThread(_threadId, fm, _instances_input, 
+				_compiler, _param, _cacheParam, numPredictionsGenerated, isTouching);
 	}
 	
 	public LocalNetworkParam getParam(){
@@ -81,7 +92,11 @@ public class LocalNetworkDecoderThread extends Thread{
 	
 	@Override
 	public void run(){
-		this.max();
+		if(!isTouching){
+    		this.max();
+    	} else {
+    		this.touch();
+    	}
 	}
 	
 	public void max(){
@@ -226,4 +241,29 @@ public class LocalNetworkDecoderThread extends Thread{
 		return this._instances_output;
 	}
 	
+	/**
+     * Go through all networks to know the possible features, 
+     * and caching the networks if {@link #_cacheNetworks} is true.
+     */
+	public void touch(){
+		long time = System.currentTimeMillis();
+		//extract the features..
+		for(int networkId = 0; networkId< this._instances_input.length; networkId++){
+			if(networkId%100==0)
+				System.err.print('.');
+			Network network = this._compiler.compileAndStore(networkId, this._instances_input[networkId], this._param);
+			network.touch();
+		}
+		System.err.println();
+		time = System.currentTimeMillis() - time;
+		System.out.println("Thread "+this._threadId + " touch time: "+ time/1000.0+" secs.");
+	}
+	
+	public void setTouch(){
+		this.isTouching = true;
+	}
+
+	public void setUnTouch(){
+		this.isTouching = false;
+	}
 }
