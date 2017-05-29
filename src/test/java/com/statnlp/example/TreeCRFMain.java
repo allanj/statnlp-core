@@ -43,11 +43,10 @@ public class TreeCRFMain {
 		TreeCRFInstance[] testInstances;
 		if(useToyData){
 			trainInstances = getToyData(true);
-			testInstances = readPTB(test_filename, true, false);
+			testInstances = getToyData(false);
 		} else {
 			trainInstances = readPTB(train_filename, true, true);
 			testInstances = readPTB(test_filename, true, false);
-//			testInstances = getToyData(false);
 		}
 		
 		labels = new ArrayList<Label>();

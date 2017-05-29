@@ -259,7 +259,7 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		if(children_k.length == 0){
 			// Trying to evaluate a node without child. This case happens when
 			// there is a node in the unlabeled network which has no applicable rules.
-			return null;
+			return BinaryTree.EMPTY;
 		} else if(children_k.length == 1){ // Either the network root node or leaf node
 			int child_k = children_k[0];
 			if(nodeType == NodeType.ROOT.ordinal()){

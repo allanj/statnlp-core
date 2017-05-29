@@ -18,6 +18,8 @@ public class BinaryTree implements Serializable{
 	
 	public LabeledWord[] leaves;
 	public String[] words;
+	
+	public static final BinaryTree EMPTY = new BinaryTree();
 
 	public BinaryTree() {}
 	
@@ -78,6 +80,9 @@ public class BinaryTree implements Serializable{
 	}
 	
 	public String toString(int level){
+		if(value == null && (left == null || right == null)){
+			return "-NULL-";
+		}
 		StringBuilder builder = new StringBuilder();
 		if(left == null){
 			for(int i=0; i<level; i++) builder.append("  ");
