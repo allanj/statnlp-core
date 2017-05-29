@@ -23,7 +23,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
@@ -188,7 +187,7 @@ public abstract class FeatureManager implements Serializable{
 	 * @param gf2lf The feature indices mapping from global feature indices to local feature indices.<br>
 	 * 				This is used in each local network param to get the correct local feature indices.
 	 */
-	private void addIntoGlobalFeatures(TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> globalMap, TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> localMap, HashMap<Integer, Integer> gf2lf){
+	private void addIntoGlobalFeatures(TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> globalMap, TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> localMap, TIntIntHashMap gf2lf){
 		TIntObjectIterator<TIntObjectHashMap<TIntIntHashMap>> iter1 = localMap.iterator();
 		while(iter1.hasNext()){
 			iter1.advance();
@@ -227,7 +226,7 @@ public abstract class FeatureManager implements Serializable{
 	 * if the features are not already present in the local feature index.
 	 * @param globalFeaturesToLocalFeatures The mapping from global feature indices into local feature indices
 	 */
-	protected void addIntoLocalFeatures(HashMap<Integer, Integer> globalFeaturesToLocalFeatures){
+	protected void addIntoLocalFeatures(TIntIntHashMap globalFeaturesToLocalFeatures){
 		TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> globalMap = this._param_g.getFeatureIntMap();
 		for(int type: globalMap.keys()){
 			TIntObjectHashMap<TIntIntHashMap> outputToInputToIndex = globalMap.get(type);

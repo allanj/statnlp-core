@@ -23,7 +23,6 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -112,6 +111,7 @@ public class GlobalNetworkParam implements Serializable{
 	protected double[] _bestWeight;
 	/** A flag whether the model is discriminative */
 	protected boolean _isDiscriminative;
+	
 	/**
 	 * The current number of features that will be updated as the process goes.
 	 * @see #_fixedFeaturesSize
@@ -345,7 +345,6 @@ public class GlobalNetworkParam implements Serializable{
 //		this.lockIt();
 	}
 	
-
 	public void lockItAndKeepExistingFeatureWeights(){
 		Random r = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
 		
@@ -410,6 +409,8 @@ public class GlobalNetworkParam implements Serializable{
 	 * If this is locked it means no new features will be allowed.
 	 */
 	public void lockIt(){
+		
+		
 		Random r = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
 		
 		if(this.isLocked()) return;
@@ -567,7 +568,6 @@ public class GlobalNetworkParam implements Serializable{
 		} catch (NullPointerException e){
 			throw new NetworkException("Missing network on some toFeature calls while trying to extract only from labeled networks.");
 		}
-//		HashMap<Integer, HashMap<Integer, HashMap<Integer, Integer>>> featureIntMap = null;
 		TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> featureIntMap = null;
 		if(!NetworkConfig.PARALLEL_FEATURE_EXTRACTION || NetworkConfig.NUM_THREADS == 1 || this.isLocked()){
 			featureIntMap = this._featureIntMap;
@@ -682,9 +682,7 @@ public class GlobalNetworkParam implements Serializable{
 	 * 		   is less than {@link NetworkConfig#objtol}, false otherwise.
 	 */
 	private boolean updateGenerative(){
-//		HashMap<String, Double> word2count = new HashMap<String, Double>();
 		
-		//TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>>
 		TIntObjectIterator<TIntObjectHashMap<TIntIntHashMap>> types = this._featureIntMap.iterator();
 		while(types.hasNext()){
 			types.advance();
