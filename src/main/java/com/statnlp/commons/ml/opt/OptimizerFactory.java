@@ -17,9 +17,11 @@
 package com.statnlp.commons.ml.opt;
 
 import java.io.Serializable;
-import java.util.HashMap;
 
 import com.statnlp.commons.ml.opt.GradientDescentOptimizer.AdaptiveStrategy;
+
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
 
 public abstract class OptimizerFactory implements Serializable {
 	
@@ -365,7 +367,7 @@ public abstract class OptimizerFactory implements Serializable {
 	
 	public abstract Optimizer create(int numWeights);
 	
-	public Optimizer create(int numWeights, HashMap<Integer, HashMap<Integer, HashMap<Integer, Integer>>> featureIntMap){
+	public Optimizer create(int numWeights, TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> featureIntMap){
 		return create(numWeights);
 	}
 

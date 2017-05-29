@@ -28,6 +28,11 @@ import java.util.Iterator;
 
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 
+import gnu.trove.iterator.TIntIntIterator;
+import gnu.trove.iterator.TIntObjectIterator;
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+
 /**
  * The base class for the feature manager.
  * The only function to be implemented is the {@link #extract_helper(Network, int, int[])} method.
@@ -164,7 +169,7 @@ public abstract class FeatureManager implements Serializable{
 	 * Starts the routine to copy all local feature index into global feature index.
 	 */
 	protected void mergeSubFeaturesToGlobalFeatures(){
-		HashMap<Integer, HashMap<Integer, HashMap<Integer, Integer>>> globalFeature2IntMap = this._param_g.getFeatureIntMap();
+		TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> globalFeature2IntMap = this._param_g.getFeatureIntMap();
 
 		this._param_g._size = 0;
 		for(int t=0;t<this._param_g._subFeatureIntMaps.size();t++){
@@ -183,27 +188,30 @@ public abstract class FeatureManager implements Serializable{
 	 * @param gf2lf The feature indices mapping from global feature indices to local feature indices.<br>
 	 * 				This is used in each local network param to get the correct local feature indices.
 	 */
-	private void addIntoGlobalFeatures(HashMap<Integer, HashMap<Integer, HashMap<Integer, Integer>>> globalMap, HashMap<Integer, HashMap<Integer, HashMap<Integer, Integer>>> localMap, HashMap<Integer, Integer> gf2lf){
-		Iterator<Integer> iter1 = localMap.keySet().iterator();
+	private void addIntoGlobalFeatures(TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> globalMap, TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> localMap, HashMap<Integer, Integer> gf2lf){
+		TIntObjectIterator<TIntObjectHashMap<TIntIntHashMap>> iter1 = localMap.iterator();
 		while(iter1.hasNext()){
-			int localType = iter1.next();
-			HashMap<Integer, HashMap<Integer, Integer>> localOutput2input = localMap.get(localType);
+			iter1.advance();
+			int localType = iter1.key();
+			TIntObjectHashMap<TIntIntHashMap> localOutput2input = localMap.get(localType);
 			if(!globalMap.containsKey(localType)){
-				globalMap.put(localType, new HashMap<Integer, HashMap<Integer, Integer>>());
+				globalMap.put(localType, new TIntObjectHashMap<TIntIntHashMap>());
 			}
 			//this map
-			HashMap<Integer, HashMap<Integer, Integer>> globalOutput2input = globalMap.get(localType);
-			Iterator<Integer> iter2 = localOutput2input.keySet().iterator();
+			TIntObjectHashMap<TIntIntHashMap> globalOutput2input = globalMap.get(localType);
+			TIntObjectIterator<TIntIntHashMap> iter2 = localOutput2input.iterator();
 			while(iter2.hasNext()){
-				int localOutput = iter2.next();
-				HashMap<Integer, Integer> localInput2int = localOutput2input.get(localOutput);
+				iter2.advance();
+				int localOutput = iter2.key();
+				TIntIntHashMap localInput2int = localOutput2input.get(localOutput);
 				if(!globalOutput2input.containsKey(localOutput)){
-					globalOutput2input.put(localOutput, new HashMap<Integer, Integer>());
+					globalOutput2input.put(localOutput, new TIntIntHashMap());
 				}
-				HashMap<Integer, Integer> globalInput2int = globalOutput2input.get(localOutput);
-				Iterator<Integer> iter3 = localInput2int.keySet().iterator();
+				TIntIntHashMap globalInput2int = globalOutput2input.get(localOutput);
+				TIntIntIterator iter3 = localInput2int.iterator();
 				while(iter3.hasNext()){
-					int localInput = iter3.next();
+					iter3.advance();
+					int localInput = iter3.key();
 					if(!globalInput2int.containsKey(localInput)){
 						globalInput2int.put(localInput, this._param_g._size++);
 					}
@@ -220,12 +228,12 @@ public abstract class FeatureManager implements Serializable{
 	 * @param globalFeaturesToLocalFeatures The mapping from global feature indices into local feature indices
 	 */
 	protected void addIntoLocalFeatures(HashMap<Integer, Integer> globalFeaturesToLocalFeatures){
-		HashMap<Integer, HashMap<Integer, HashMap<Integer, Integer>>> globalMap = this._param_g.getFeatureIntMap();
-		for(Integer type: globalMap.keySet()){
-			HashMap<Integer, HashMap<Integer, Integer>> outputToInputToIndex = globalMap.get(type);
-			for(Integer output: outputToInputToIndex.keySet()){
-				HashMap<Integer, Integer> inputToIndex = outputToInputToIndex.get(output);
-				for(Integer featureIndex: inputToIndex.values()){
+		TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> globalMap = this._param_g.getFeatureIntMap();
+		for(int type: globalMap.keys()){
+			TIntObjectHashMap<TIntIntHashMap> outputToInputToIndex = globalMap.get(type);
+			for(int output: outputToInputToIndex.keys()){
+				TIntIntHashMap inputToIndex = outputToInputToIndex.get(output);
+				for(int featureIndex: inputToIndex.values()){
 					if(!globalFeaturesToLocalFeatures.containsKey(featureIndex)){
 						globalFeaturesToLocalFeatures.put(featureIndex, globalFeaturesToLocalFeatures.size());
 					}
@@ -239,22 +247,25 @@ public abstract class FeatureManager implements Serializable{
 	 * the input features.
 	 */
 	protected void completeType2Int(){
-		HashMap<Integer, HashMap<Integer, HashMap<Integer, Integer>>> globalMap = this._param_g._featureIntMap;
-		HashMap<Integer, ArrayList<Integer>> type2Input = this._param_g._type2inputMap;
-		Iterator<Integer> iterType = globalMap.keySet().iterator();
+		TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> globalMap = this._param_g._featureIntMap;
+		TIntObjectHashMap<ArrayList<Integer>> type2Input = this._param_g._type2inputMap;
+		TIntObjectIterator<TIntObjectHashMap<TIntIntHashMap>> iterType = globalMap.iterator();
 		while(iterType.hasNext()){
-			int type = iterType.next();
+			iterType.advance();
+			int type = iterType.key();
 			if(!type2Input.containsKey(type)){
 				type2Input.put(type, new ArrayList<Integer>());
 			}
-			HashMap<Integer, HashMap<Integer, Integer>> output2input  = globalMap.get(type);
-			Iterator<Integer> iterOutput = output2input.keySet().iterator();
+			TIntObjectHashMap<TIntIntHashMap> output2input  = globalMap.get(type);
+			TIntObjectIterator<TIntIntHashMap> iterOutput = output2input.iterator();
 			while(iterOutput.hasNext()){
-				int output = iterOutput.next();
-				HashMap<Integer, Integer> input2int = output2input.get(output);
-				Iterator<Integer> iterInput = input2int.keySet().iterator();
+				iterOutput.advance();
+				int output = iterOutput.key();
+				TIntIntHashMap input2int = output2input.get(output);
+				TIntIntIterator iterInput = input2int.iterator();
 				while(iterInput.hasNext()){
-					int input = iterInput.next();
+					iterInput.advance();
+					int input = iterInput.key();
 					ArrayList<Integer> inputs = type2Input.get(type);
 					int index = Collections.binarySearch(inputs, input);
 					if(index<0){

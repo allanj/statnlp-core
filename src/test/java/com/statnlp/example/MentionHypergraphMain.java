@@ -34,19 +34,14 @@ public class MentionHypergraphMain {
 	public static void main(String[] args) throws InterruptedException, IOException, ClassNotFoundException, IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException{
 		boolean serializeModel = true;
 		
-		String train_filename = "data/ACE04/mention-standard/FINE_TYPE/train.data.30";
-		String test_filename = "data/ACE04/mention-standard/FINE_TYPE/test.data";
+		String train_filename = "data/ACE04/mention-standard/FINE_TYPE/train.data.90";
 		
 		MentionHypergraphInstance[] trainInstances = readData(train_filename, true, true);
-		MentionHypergraphInstance[] testInstances = readData(test_filename, true, false);
 		
 		labels = new ArrayList<Label>();
 		labels.addAll(Label.LABELS.values()); 
 		int maxSize = 0;
 		for(MentionHypergraphInstance instance: trainInstances){
-			maxSize = Math.max(maxSize, instance.size());
-		}
-		for(MentionHypergraphInstance instance: testInstances){
 			maxSize = Math.max(maxSize, instance.size());
 		}
 		
@@ -96,6 +91,13 @@ public class MentionHypergraphMain {
 		}
 		
 		int mentionPenaltyFeatureIndex = fm.getParam_G().getFeatureId(FeatureType.MENTION_PENALTY.name(), "MP", "MP");
+		
+		String test_filename = "data/ACE04/mention-standard/FINE_TYPE/test.data";
+		MentionHypergraphInstance[] testInstances = readData(test_filename, true, false);
+		
+		for(MentionHypergraphInstance instance: testInstances){
+			maxSize = Math.max(maxSize, instance.size());
+		}
 		
 		for(double mentionPenalty = -0.2; mentionPenalty < 1.0; mentionPenalty += 0.2){
 			if(mentionPenalty >= 0.0){
