@@ -24,7 +24,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 	private static final long serialVersionUID = 6585870230920484539L;
 	public Map<Integer, Label> labels;
 	public int maxSize = 500;
-	public int maxSegmentLength = 20;
+	public int maxSegmentLength = 100;
 	public long[] allNodes;
 	public int[][][] allChildren;
 	
@@ -47,20 +47,28 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		this.maxSize = Math.max(maxSize, this.maxSize);
 		this.maxSegmentLength = Math.max(maxSegmentLength, this.maxSegmentLength);
 		System.out.println(String.format("Max size: %s, Max segment length: %s", maxSize, maxSegmentLength));
-		System.out.println(Arrays.asList(labels));
+		System.out.println(Arrays.asList(this.labels));
 		buildUnlabeled();
 	}
 	
-	public WeakSemiCRFNetworkCompiler(Pipeline pipeline) {
+	public WeakSemiCRFNetworkCompiler(Pipeline<?> pipeline) {
 		this.labels = new HashMap<Integer, Label>();
 		for(Label label: ((WeakSemiCRFInstanceParser)pipeline.instanceParser).LABELS.values()){
 			this.labels.put(label.getId(), label);
 		}
 		try{
-			this.maxSize = Math.max(Integer.parseInt(pipeline.getParameter("maxSize")), this.maxSize);
+			Object maxSize = pipeline.getParameter("maxSize");
+			if(String.class.isInstance(maxSize)){
+				maxSize = Integer.parseInt((String)maxSize);
+			}
+			this.maxSize = Math.max((int)maxSize, this.maxSize);
 		} catch (NullPointerException | NumberFormatException e){}
 		try{
-			this.maxSegmentLength = Math.max(Integer.parseInt(pipeline.getParameter("maxSegmentLength")), this.maxSegmentLength);
+			Object maxSegmentLength = pipeline.getParameter("maxSegmentLength");
+			if(String.class.isInstance(maxSegmentLength)){
+				maxSegmentLength = Integer.parseInt((String)maxSegmentLength);
+			}
+			this.maxSegmentLength = Math.max((int)maxSegmentLength, this.maxSegmentLength);
 		} catch (NullPointerException | NumberFormatException e){}
 		System.out.println(String.format("Max size: %s, Max segment length: %s", maxSize, maxSegmentLength));
 		System.out.println(Arrays.asList(labels));

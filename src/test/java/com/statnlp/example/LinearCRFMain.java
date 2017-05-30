@@ -30,11 +30,35 @@ import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.neural.NeuralConfigReader;
+import com.statnlp.util.GenericPipeline;
 
 public class LinearCRFMain {
 	
-	
 	public static void main(String args[]) throws IOException, InterruptedException{
+		args = ("--linearModelClass com.statnlp.example.linear_crf.LinearCRF "
+				+ "--trainPath data/CoNLL2003/eng.train "
+				+ "--numTrain 1000 "
+				+ "--testPath data/CoNLL2003/eng.testb "
+				+ "--numTest 100 "
+				+ "--modelPath test.model "
+				+ "--logPath test.log "
+				+ "--l2 0.01 "
+				+ "--weightInit 0.0 "
+				+ "--modelType CRF "
+				+ "--margin 1.0 "
+				+ "--nodeMismatchCost 1.0 "
+				+ "--edgeMismatchCost 0.0 "
+				+ "--useBatchTraining "
+				+ "--batchSize 11 "
+				+ "--stoppingCriteria MAX_ITERATION_REACHED "
+				+ "--maxIter 1000 "
+				+ "--evaluateEvery 0 "
+				+ "train test evaluate visualize").split(" ");
+		GenericPipeline pipeline = new GenericPipeline();
+		pipeline.parseArgs(args);
+		pipeline.execute();
+		System.exit(0);
+
 		String trainPath = System.getProperty("trainPath", "data/train.data");
 		String testPath = System.getProperty("testPath", "data/test.data");
 		

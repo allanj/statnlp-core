@@ -10,10 +10,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.apache.logging.log4j.Logger;
 
 import com.statnlp.commons.ml.opt.GradientDescentOptimizer;
+import com.statnlp.commons.ml.opt.GradientDescentOptimizerFactory;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
@@ -25,6 +27,7 @@ import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.util.instance_parser.InstanceParser;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -34,45 +37,55 @@ import net.sourceforge.argparse4j.inf.ArgumentAction;
 import net.sourceforge.argparse4j.inf.ArgumentChoice;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
-import net.sourceforge.argparse4j.inf.Namespace;
 
 /**
  * The generic main class to all StatNLP models.
  */
-public abstract class Pipeline {
+public abstract class Pipeline<THIS extends Pipeline<?>> {
 	
 	public static final Logger LOGGER = GeneralUtils.createLogger(Pipeline.class);
 	
+	/** The information required to build a proper pipeline */
 	public InstanceParser instanceParser;
-	public NetworkCompiler compiler;
-	public FeatureManager fm;
+	public Class<? extends InstanceParser> instanceParserClass;
+	public NetworkCompiler networkCompiler;
+	public Class<? extends NetworkCompiler> networkCompilerClass;
+	public FeatureManager featureManager;
+	public Class<? extends FeatureManager> featureManagerClass;
+	public Class<? extends VisualizationViewerEngine> visualizerClass;
 	public NetworkModel networkModel;
 	public GlobalNetworkParam param;
+	public OptimizerFactory optimizerFactory;
 	
-	public long timer = 0;
+	/** */
+	public Consumer<Instance[]> evaluateCallback;
+	
+	/** Records the start time of the pipeline */
+	private long timer = 0;
 	
 	private String currentTaskName;
 
 	// Argument Parser-related class members
-	public Namespace parameters;
+	public Map<String, Object> parameters;
 	public String[] unprocessedArgs;
 	public ArgumentParser argParser;
 	protected HashMap<String, Argument> argParserObjects = new HashMap<String, Argument>();
 	
 	// Main tasks
-	public final String TASK_TRAIN = "train";
-	public final String TASK_TUNE = "tune";
-	public final String TASK_TEST = "test";
-	public final String TASK_EVALUATE = "evaluate";
-	public final String TASK_VISUALIZE = "visualize";
+	public static final String TASK_NOOP = "noop";
+	public static final String TASK_TRAIN = "train";
+	public static final String TASK_TUNE = "tune";
+	public static final String TASK_TEST = "test";
+	public static final String TASK_EVALUATE = "evaluate";
+	public static final String TASK_VISUALIZE = "visualize";
 	
 	// Auxiliary Tasks
-	public final String TASK_LOAD_MODEL = "loadModel";
-	public final String TASK_SAVE_MODEL = "saveModel";
-	public final String TASK_READ_INSTANCES = "readInstances";
-	public final String TASK_SAVE_PREDICTIONS = "savePredictions";
-	public final String TASK_EXTRACT_FEATURES = "extractFeatures";
-	public final String TASK_WRITE_FEATURES = "writeFeatures";
+	public static final String TASK_LOAD_MODEL = "loadModel";
+	public static final String TASK_SAVE_MODEL = "saveModel";
+	public static final String TASK_READ_INSTANCES = "readInstances";
+	public static final String TASK_SAVE_PREDICTIONS = "savePredictions";
+	public static final String TASK_EXTRACT_FEATURES = "extractFeatures";
+	public static final String TASK_WRITE_FEATURES = "writeFeatures";
 	
 	/** The list of tasks which have been registered and can be run. */
 	public final LinkedHashMap<String, Runnable> registeredTasks = new LinkedHashMap<String, Runnable>();
@@ -87,20 +100,23 @@ public abstract class Pipeline {
 	}
 	
 	private void initRegisteredTasks(){
+		// No-op task
+		registerTask(TASK_NOOP, new Runnable(){public void run() {}});
+		
 		// Main tasks
-		registeredTasks.put(TASK_TRAIN, this::Train);
-		registeredTasks.put(TASK_TUNE, this::Tune);
-		registeredTasks.put(TASK_TEST, this::Test);
-		registeredTasks.put(TASK_EVALUATE, this::Evaluate);
-		registeredTasks.put(TASK_VISUALIZE, this::Visualize);
+		registerTask(TASK_TRAIN, this::Train);
+		registerTask(TASK_TUNE, this::Tune);
+		registerTask(TASK_TEST, this::Test);
+		registerTask(TASK_EVALUATE, this::Evaluate);
+		registerTask(TASK_VISUALIZE, this::Visualize);
 		
 		// Auxiliary tasks
-		registeredTasks.put(TASK_LOAD_MODEL, this::LoadModel);
-		registeredTasks.put(TASK_SAVE_MODEL, this::SaveModel);
-		registeredTasks.put(TASK_READ_INSTANCES, this::ReadInstances);
-		registeredTasks.put(TASK_SAVE_PREDICTIONS, this::SavePredictions);
-		registeredTasks.put(TASK_EXTRACT_FEATURES, this::ExtractFeatures);
-		registeredTasks.put(TASK_WRITE_FEATURES, this::WriteFeatures);
+		registerTask(TASK_LOAD_MODEL, this::LoadModel);
+		registerTask(TASK_SAVE_MODEL, this::SaveModel);
+		registerTask(TASK_READ_INSTANCES, this::ReadInstances);
+		registerTask(TASK_SAVE_PREDICTIONS, this::SavePredictions);
+		registerTask(TASK_EXTRACT_FEATURES, this::ExtractFeatures);
+		registerTask(TASK_WRITE_FEATURES, this::WriteFeatures);
 	}
 	
 	/**
@@ -153,15 +169,10 @@ public abstract class Pipeline {
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
 						String[] args = argsAsArray(value);
-						List<String> unknownTasks = new ArrayList<String>();
-						for(String task: args){
-							if(!registeredTasks.containsKey(task)){
-								unknownTasks.add(task);
-							}
-							taskList.add(task);
-						}
-						if(!unknownTasks.isEmpty()){
-							throw new ArgumentParserException("Unrecognized tasks: "+unknownTasks, argParser);
+						try{
+							addTasks(args);
+						} catch (IllegalArgumentException e){
+							throw new ArgumentParserException(e, argParser);
 						}
 					}
 
@@ -181,6 +192,23 @@ public abstract class Pipeline {
 		argParserObjects.put("--maxIter", argParser.addArgument("--maxIter")
 				.type(Integer.class)
 				.setDefault(1000)
+				.action(new ArgumentAction(){
+
+					@Override
+					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+							Object value) throws ArgumentParserException {
+						withMaxIter((int)value);
+					}
+
+					@Override
+					public void onAttach(Argument arg) {}
+
+					@Override
+					public boolean consumeArgument() {
+						return true;
+					}
+					
+				})
 				.help("The maximum number of training iterations."));
 		argParserObjects.put("--modelType", argParser.addArgument("--modelType")
 				.type(ModelType.class)
@@ -191,7 +219,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.MODEL_TYPE = (ModelType)value;
+						withModelType((ModelType)value);
 					}
 
 					@Override
@@ -214,7 +242,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.STOPPING_CRITERIA = (StoppingCriteria)value;
+						withStoppingCriteria((StoppingCriteria)value);
 					}
 
 					@Override
@@ -238,7 +266,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.OBJTOL = (Double)value;
+						withObjtol((double)value);
 					}
 
 					@Override
@@ -259,7 +287,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.MARGIN = (Double)value;
+						withMargin((double)value);
 					}
 
 					@Override
@@ -280,7 +308,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.NODE_COST = (Double)value;
+						withNodeMismatchCost((double)value);
 					}
 
 					@Override
@@ -301,7 +329,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.EDGE_COST = (Double)value;
+						withEdgeMismatchCost((double)value);
 					}
 
 					@Override
@@ -349,12 +377,20 @@ public abstract class Pipeline {
 						String[] args = argsAsArray(value);
 						try{
 							double initialWeight = Double.parseDouble((String)args[0]);
-							NetworkConfig.FEATURE_INIT_WEIGHT = initialWeight;
+							withWeightInit(initialWeight);
 						} catch (NumberFormatException e){
 							if(args[0].equals("random")){
-								NetworkConfig.RANDOM_INIT_WEIGHT = true;
 								if(args.length > 1){
-									NetworkConfig.RANDOM_INIT_FEATURE_SEED = Integer.parseInt(args[1]);
+									int seed = Integer.parseInt(args[1]);
+									withWeightInitRandom(true, seed);
+								} else {
+									withWeightInitRandom(true);
+								}
+							} else {
+								try{
+									withWeightInit(args);
+								} catch (Exception e1){
+									throw new ArgumentParserException(e1, argParser);
 								}
 							}
 						}
@@ -380,7 +416,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.TRAIN_MODE_IS_GENERATIVE = true;
+						withUseGenerativeModel(true);
 					}
 
 					@Override
@@ -395,6 +431,23 @@ public abstract class Pipeline {
 				.help("Whether to use generative model (like HMM) or discriminative model (like CRF)."));
 		argParserObjects.put("--useGD", argParser.addArgument("--useGD")
 				.action(Arguments.storeTrue())
+				.action(new ArgumentAction(){
+
+					@Override
+					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+							Object value) throws ArgumentParserException {
+						withOptimizerFactory(GradientDescentOptimizerFactory.getGradientDescentFactoryUsingAdaM());
+					}
+
+					@Override
+					public void onAttach(Argument arg) {}
+
+					@Override
+					public boolean consumeArgument() {
+						return false;
+					}
+					
+				})
 				.help("Whether to use gradient descent (which will uses Adam with default parameters). "
 						+ "Override the --useGD argument object programmatically to modify this default behavior."));
 		argParserObjects.put("--useBatchTraining", argParser.addArgument("--useBatchTraining")
@@ -403,7 +456,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.USE_BATCH_TRAINING = true;
+						withUseBatchTraining(true);
 					}
 
 					@Override
@@ -422,7 +475,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.RANDOM_BATCH = true;
+						withUseRandomBatch(true);
 					}
 
 					@Override
@@ -443,11 +496,11 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						int batchSize = (Integer)value;
-						if(batchSize <= 0){
-							throw new ArgumentParserException("--batchSize should be greater than 0.", argParser);
+						try{
+							withBatchSize((int)value);
+						} catch (Exception e){
+							throw new ArgumentParserException(e, argParser);
 						}
-						NetworkConfig.BATCH_SIZE = batchSize;
 					}
 
 					@Override
@@ -468,7 +521,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.L2_REGULARIZATION_CONSTANT = (Double)value;
+						withL2((double)value);
 					}
 
 					@Override
@@ -483,7 +536,7 @@ public abstract class Pipeline {
 				.help("The L2 regularization value."));
 
 		// Threading Settings
-		argParserObjects.put("--nThreads", argParser.addArgument("--nThreads")
+		argParserObjects.put("--numThreads", argParser.addArgument("--numThreads")
 				.type(Integer.class)
 				.setDefault(NetworkConfig.NUM_THREADS)
 				.action(new ArgumentAction(){
@@ -491,7 +544,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.NUM_THREADS = (Integer)value;
+						withNumThreads((int)value);
 					}
 
 					@Override
@@ -512,7 +565,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.PARALLEL_FEATURE_EXTRACTION = false;
+						withParallelFeatureExtraction(false);
 					}
 
 					@Override
@@ -532,7 +585,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = true;
+						withExtractFeaturesFromLabeledOnly(true);
 					}
 
 					@Override
@@ -553,7 +606,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.AVOID_DUPLICATE_FEATURES = true;
+						withAttemptMemorySaving(true);
 					}
 
 					@Override
@@ -575,7 +628,7 @@ public abstract class Pipeline {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						NetworkConfig.DEBUG_MODE = true;
+						withDebugMode(true);
 					}
 
 					@Override
@@ -590,6 +643,367 @@ public abstract class Pipeline {
 				.help("Whether to enable debug mode."));
 	}
 
+	@SuppressWarnings("unchecked")
+	public THIS getThis(){
+		return (THIS)this;
+	}
+	
+	/**
+	 * Adds a task to be executed.
+	 * @param task The task to be executed. The task has to be registered.
+	 * @return
+	 * @throws IllegalArgumentException If the task is not registered.
+	 */
+	public THIS addTask(String task) throws IllegalArgumentException {
+		if(!registeredTasks.containsKey(task)){
+			throw new IllegalArgumentException("Unrecognized task: "+task);
+		}
+		taskList.add(task);
+		return getThis();
+	}
+
+	/**
+	 * Adds a list of tasks to be executed in order.
+	 * @param tasks The tasks to be executed. The tasks have to be registered.
+	 * @return
+	 * @throws IllegalArgumentException If some of the tasks are not registered.
+	 */
+	public THIS addTasks(String... tasks) throws IllegalArgumentException {
+		List<String> unknownTasks = new ArrayList<String>();
+		for(String task: tasks){
+			if(!registeredTasks.containsKey(task)){
+				unknownTasks.add(task);
+			}
+		}
+		if(!unknownTasks.isEmpty()){
+			throw new IllegalArgumentException("Unrecognized tasks: "+unknownTasks);
+		}
+		for(String task: tasks){
+			taskList.add(task);
+		}
+		return getThis();
+	}
+	
+	/**
+	 * With the specified maximum number of iterations the training should go.
+	 * @param maxIter The maximum number of iterations.
+	 * @return
+	 */
+	public THIS withMaxIter(int maxIter){
+		return withParameter("maxIter", maxIter);
+	}
+	
+	/**
+	 * With the specified type of the objective function.
+	 * @param modelType
+	 * @return
+	 * @see {@link NetworkConfig.ModelType}
+	 */
+	public THIS withModelType(ModelType modelType){
+		NetworkConfig.MODEL_TYPE = modelType;
+		return getThis();
+	}
+	
+	/**
+	 * With the specified stopping criteria while training.<br>
+	 * This is only taken into account if {@link #withOptimizerFactory(OptimizerFactory)} is not specified.
+	 * @param stoppingCriteria
+	 * @return
+	 */
+	public THIS withStoppingCriteria(StoppingCriteria stoppingCriteria){
+		NetworkConfig.STOPPING_CRITERIA = stoppingCriteria;
+		return getThis();
+	}
+	
+	/**
+	 * With the specified tolerance in objective value change.<br>
+	 * This is only relevant when {@link NetworkConfig.StoppingCriteria#SMALL_ABSOLUTE_CHANGE} is used. 
+	 * @param objtol
+	 * @return
+	 */
+	public THIS withObjtol(double objtol){
+		NetworkConfig.OBJTOL = objtol;
+		return getThis();
+	}
+	
+	/**
+	 * With the specified value for the margin.<br>
+	 * This is only relevant when cost is used in the selected {@link NetworkConfig.ModelType}.
+	 * @param margin
+	 * @return
+	 */
+	public THIS withMargin(double margin){
+		NetworkConfig.MARGIN = margin;
+		return getThis();
+	}
+	
+	/**
+	 * With the specified cost when a node in prediction is not found in the gold network.<br>
+	 * This is only relevant when cost is used in the selected {@link NetworkConfig.ModelType}.
+	 * @param cost
+	 * @return
+	 */
+	public THIS withNodeMismatchCost(double cost){
+		NetworkConfig.NODE_COST = cost;
+		return getThis();
+	}
+
+	/**
+	 * With the specified cost when an edge in prediction is not found in the gold network.<br>
+	 * This is only relevant when cost is used in the selected {@link NetworkConfig.ModelType}.
+	 * @param cost
+	 * @return
+	 */
+	public THIS withEdgeMismatchCost(double cost){
+		NetworkConfig.EDGE_COST = cost;
+		return getThis();
+	}
+	
+	/**
+	 * With the specified value as the initial value for the weights.
+	 * @param initialValue
+	 * @return
+	 */
+	public THIS withWeightInit(double initialValue){
+		NetworkConfig.FEATURE_INIT_WEIGHT = initialValue;
+		return getThis();
+	}
+	
+	/**
+	 * With random initialization of the weights.
+	 * @return
+	 */
+	public THIS withWeightInitRandom(boolean randomInit){
+		NetworkConfig.RANDOM_INIT_WEIGHT = randomInit;
+		return getThis();
+	}
+	
+	/**
+	 * With random initialization of the weights, with the specified seed.
+	 * @param seed
+	 * @return
+	 */
+	public THIS withWeightInitRandom(boolean randomInit, int seed){
+		NetworkConfig.RANDOM_INIT_WEIGHT = randomInit;
+		NetworkConfig.RANDOM_INIT_FEATURE_SEED = seed;
+		return getThis();
+	}
+	
+	public THIS withWeightInit(String... args){
+		throw new UnsupportedOperationException("Weight initialization parameter not recognized: "+Arrays.toString(args));
+	}
+	
+	/**
+	 * Whether to use a generative model.
+	 * @param useGenerativeModel
+	 * @return
+	 */
+	public THIS withUseGenerativeModel(boolean useGenerativeModel){
+		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = useGenerativeModel;
+		return getThis();
+	}
+
+	/**
+	 * With the specified optimizer factory to be used when training.
+	 * @param factory
+	 * @return
+	 */
+	public THIS withOptimizerFactory(OptimizerFactory factory){
+		this.optimizerFactory = factory;
+		return getThis();
+	}
+	
+	/**
+	 * Whether to use batch training.
+	 * @param useBatchTraining
+	 * @return
+	 * @see #withBatchSize(int)
+	 * @see #withUseRandomBatch(boolean)
+	 */
+	public THIS withUseBatchTraining(boolean useBatchTraining){
+		NetworkConfig.USE_BATCH_TRAINING = useBatchTraining;
+		return getThis();
+	}
+	
+	/**
+	 * Whether to randomize the batches per epoch when batch training is used.
+	 * @param useRandomBatch
+	 * @return
+	 * @see #withUseBatchTraining(boolean)
+	 */
+	public THIS withUseRandomBatch(boolean useRandomBatch){
+		NetworkConfig.RANDOM_BATCH = useRandomBatch;
+		return getThis();
+	}
+	
+	/**
+	 * With the specified batch size.<br>
+	 * This is only relevant when batch mode is used.
+	 * @param batchSize
+	 * @return
+	 * @see #withUseBatchTraining(boolean)
+	 * @throws IllegalArgumentException
+	 */
+	public THIS withBatchSize(int batchSize) throws IllegalArgumentException {
+		if(batchSize <= 0){
+			throw new IllegalArgumentException("--batchSize should be greater than 0.");
+		}
+		NetworkConfig.BATCH_SIZE = batchSize;
+		return getThis();
+	}
+	
+	/**
+	 * With the specified l2-regularization parameter.
+	 * @param l2
+	 * @return
+	 */
+	public THIS withL2(double l2){
+		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
+		return getThis();
+	}
+	
+	/**
+	 * With the specified number of threads used when training and testing.
+	 * @param numThreads
+	 * @return
+	 */
+	public THIS withNumThreads(int numThreads){
+		NetworkConfig.NUM_THREADS = numThreads;
+		return getThis();
+	}
+	
+	/**
+	 * Whether to extract features in parallel or serially.
+	 * @param useParallelFeatureExtraction
+	 * @return
+	 */
+	public THIS withParallelFeatureExtraction(boolean useParallelFeatureExtraction){
+		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = useParallelFeatureExtraction;
+		return getThis();
+	}
+	
+	/**
+	 * Whether to extract features only from labeled networks.
+	 * @param fromLabeledOnly
+	 * @return
+	 */
+	public THIS withExtractFeaturesFromLabeledOnly(boolean fromLabeledOnly){
+		NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY = fromLabeledOnly;
+		return getThis();
+	}
+	
+	/**
+	 * Whether to attempt to save memory by avoiding duplicate features.
+	 * @param attempt
+	 * @return
+	 */
+	public THIS withAttemptMemorySaving(boolean attempt){
+		NetworkConfig.AVOID_DUPLICATE_FEATURES = attempt;
+		return getThis();
+	}
+	
+	/**
+	 * Whether the framework should run in debug mode.
+	 * @param debug
+	 * @return
+	 */
+	public THIS withDebugMode(boolean debug){
+		NetworkConfig.AVOID_DUPLICATE_FEATURES = debug;
+		return getThis();
+	}
+	
+	/**
+	 * With the specified instance parser.
+	 * @param instanceParser
+	 * @return
+	 */
+	public THIS withInstanceParser(InstanceParser instanceParser){
+		setInstanceParser(instanceParser);
+		return getThis();
+	}
+	
+	/**
+	 * With the specified instance parser class.
+	 * @param instanceParserClass
+	 * @return
+	 */
+	public THIS withInstanceParser(Class<? extends InstanceParser> instanceParserClass){
+		setInstanceParserClass(instanceParserClass);
+		return getThis();
+	}
+
+	/**
+	 * With the specified network compiler.
+	 * @param networkCompiler
+	 * @return
+	 */
+	public THIS withNetworkCompiler(NetworkCompiler networkCompiler){
+		setNetworkCompiler(networkCompiler);
+		return getThis();
+	}
+
+	/**
+	 * With the specified network compiler class
+	 * @param networkCompilerClass
+	 * @return
+	 */
+	public THIS withNetworkCompiler(Class<? extends NetworkCompiler> networkCompilerClass){
+		setNetworkCompilerClass(networkCompilerClass);
+		return getThis();
+	}
+	
+	/**
+	 * With the specified feature manager.
+	 * @param featureManager
+	 * @return
+	 */
+	public THIS withFeatureManager(FeatureManager featureManager){
+		setFeatureManager(featureManager);
+		return getThis();
+	}
+	
+	/**
+	 * With the specified feature manager class
+	 * @param featureManagerClass
+	 * @return
+	 */
+	public THIS withFeatureManager(Class<? extends FeatureManager> featureManagerClass){
+		setFeatureManagerClass(featureManagerClass);
+		return getThis();
+	}
+	
+	/**
+	 * With the specified visualizer class
+	 * @param visualizerClass
+	 * @return
+	 */
+	public THIS withVisualizerClass(Class<? extends VisualizationViewerEngine> visualizerClass){
+		setVisualizerClass(visualizerClass);
+		return getThis();
+	}
+	
+	/**
+	 * With the specified parameter set.<br>
+	 * This is the with* version of the {@link #setParameter(String, Object)} function.
+	 * @param key
+	 * @param value
+	 * @return
+	 */
+	public THIS withParameter(String key, Object value){
+		setParameter(key, value);
+		return getThis();
+	}
+	
+	/**
+	 * With the specified function for evaluation
+	 * @param evaluateCallback
+	 * @return
+	 */
+	public THIS withEvaluateCallback(Consumer<Instance[]> evaluateCallback){
+		this.evaluateCallback = evaluateCallback;
+		return getThis();
+	}
+	
 	/**
 	 * Initialize InstanceParser in the context of current pipeline
 	 */
@@ -603,6 +1017,10 @@ public abstract class Pipeline {
 		this.instanceParser = instanceParser;
 	}
 	
+	public void setInstanceParserClass(Class<? extends InstanceParser> instanceParserClass){
+		this.instanceParserClass = instanceParserClass;
+	}
+	
 	/**
 	 * Initialize NetworkCompiler in the context of current pipeline
 	 * It will call getNetworkCompilerParameters() from Parser to get necessary parameters
@@ -614,7 +1032,11 @@ public abstract class Pipeline {
 	}
 	
 	public void setNetworkCompiler(NetworkCompiler compiler){
-		this.compiler = compiler;
+		this.networkCompiler = compiler;
+	}
+	
+	public void setNetworkCompilerClass(Class<? extends NetworkCompiler> networkCompilerClass){
+		this.networkCompilerClass = networkCompilerClass;
 	}
 	
 	/**
@@ -627,8 +1049,16 @@ public abstract class Pipeline {
 		setFeatureManager(initFeatureManager());
 	}
 	
+	public void setFeatureManagerClass(Class<? extends FeatureManager> featureManagerClass){
+		this.featureManagerClass = featureManagerClass;
+	}
+	
 	public void setFeatureManager(FeatureManager fm){
-		this.fm = fm;
+		this.featureManager = fm;
+	}
+	
+	public void setVisualizerClass(Class<? extends VisualizationViewerEngine> visualizerClass){
+		this.visualizerClass = visualizerClass;
 	}
 	
 	/**
@@ -728,6 +1158,9 @@ public abstract class Pipeline {
 	 * @return
 	 */
 	protected OptimizerFactory getOptimizerFactory(){
+		if(this.optimizerFactory != null){
+			return this.optimizerFactory;
+		}
 		if(NetworkConfig.MODEL_TYPE.USE_SOFTMAX && NetworkConfig.USE_BATCH_TRAINING == false){
 			return OptimizerFactory.getLBFGSFactory();
 		} else {
@@ -757,19 +1190,19 @@ public abstract class Pipeline {
 		if(param == null){
 			initGlobalNetworkParam();
 		}
-		if(fm == null){
+		if(featureManager == null){
 			initAndSetFeatureManager();
 		}
-		if(compiler == null){
+		if(networkCompiler == null){
 			initAndSetNetworkCompiler();
 		}
 		if(instanceParser == null){
 			initAndSetInstanceParser();
 		}
 		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
-			networkModel = GenerativeNetworkModel.create(fm, compiler, instanceParser);
+			networkModel = GenerativeNetworkModel.create(featureManager, networkCompiler, instanceParser);
 		} else {
-			networkModel = DiscriminativeNetworkModel.create(fm, compiler, instanceParser);
+			networkModel = DiscriminativeNetworkModel.create(featureManager, networkCompiler, instanceParser);
 		}
 	}
 	
@@ -818,7 +1251,11 @@ public abstract class Pipeline {
 	public void Evaluate(){
 		initEvaluation();
 		Instance[] instanceForEvaluation = getInstancesForEvaluation();
-		evaluate(instanceForEvaluation);
+		if(evaluateCallback == null){
+			evaluate(instanceForEvaluation);
+		} else {
+			evaluateCallback.accept(instanceForEvaluation);
+		}
 	}
 	
 	public void Visualize(){
@@ -874,11 +1311,11 @@ public abstract class Pipeline {
 		writeFeatures(instances);
 	}
 
-	public Pipeline parseArgs(String[] args){
+	public THIS parseArgs(String[] args){
 		return parseArgs(args, true);
 	}
 	
-	public Pipeline parseArgs(String[] args, boolean retainExistingState){
+	public THIS parseArgs(String[] args, boolean retainExistingState){
 //		// If we want to support typo in arguments
 //		String[] mainArgs = null;
 //		String[] restArgs = null;
@@ -904,12 +1341,9 @@ public abstract class Pipeline {
 		List<String> unknownArgs = new ArrayList<String>();
 		try{
 			if(retainExistingState && parameters != null){
-				Namespace newParameters = argParser.parseKnownArgs(args, unknownArgs);
-				for(String key: parameters.getAttrs().keySet()){
-					parameters.getAttrs().put(key, newParameters.get(key));
-				}
+				argParser.parseKnownArgs(args, unknownArgs, parameters);
 			} else {
-				parameters = argParser.parseKnownArgs(args, unknownArgs);
+				parameters = argParser.parseKnownArgs(args, unknownArgs).getAttrs();
 			}
 		} catch (ArgumentParserException e){
 			LOGGER.error(argParser.formatHelp());
@@ -918,7 +1352,7 @@ public abstract class Pipeline {
 		}
 		unprocessedArgs = unknownArgs.toArray(new String[unknownArgs.size()]);
 		parseUnknownArgs(unprocessedArgs);
-		return this;
+		return getThis();
 	}
 	
 	public void parseUnknownArgs(String[] args){
@@ -980,12 +1414,23 @@ public abstract class Pipeline {
 		return currentTaskName;
 	}
 	
+	public void initExecute(){
+		LOGGER.info("Tasks to be executed: %s", taskList);
+	}
+	
 	public void execute(){
+		initExecute();
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {}
+		resetTimer();
 		for(String task: taskList){
 			Runnable action = registeredTasks.get(task);
 			setCurrentTask(task);
 			action.run();
 		}
+		long duration = getElapsedTime();
+		LOGGER.info("Total execution time: %.3fs", duration/1.0e9);
 	}
 	
 	public void execute(String[] args){
@@ -999,43 +1444,100 @@ public abstract class Pipeline {
 	
 	@SuppressWarnings("unchecked")
 	public <T extends FeatureManager> T getFeatureManager(){
-		return (T) this.fm;
+		return (T) this.featureManager;
 	}
 	
 	@SuppressWarnings("unchecked")
 	public <T extends NetworkCompiler> T getNetworkCompiler(){
-		return (T) this.compiler;
+		return (T) this.networkCompiler;
 	}
 	
 	public NetworkModel getNetworkModel(){
 		return this.networkModel;
 	}
 	
+	/**
+	 * Resets the start time to current time.
+	 */
 	public void resetTimer(){
-		this.timer = 0;
+		this.timer = System.nanoTime();
 	}
 	
+	/**
+	 * Returns the start time of this pipeline as recorded by the last call to {@link #resetTimer()}.
+	 * @return
+	 */
 	public long getTimer(){
 		return this.timer;
 	}
 	
+	/**
+	 * Returns the elapsed time since the start of this pipeline or since the last call to {@link #resetTimer()}.
+	 * @return
+	 */
+	public long getElapsedTime(){
+		return System.nanoTime()-this.timer;
+	}
+	
+	/**
+	 * Initialize the parameters, filling in the default values.
+	 */
+	public void initParameters(){
+		parameters = argParser.parseKnownArgsOrFail(new String[]{TASK_NOOP}, null).getAttrs();
+		taskList.remove(TASK_NOOP);
+	}
+	
+	/**
+	 * Whether the parameter with the specified key has been provided and is not null.
+	 * @param key
+	 * @return
+	 */
 	public boolean hasParameter(String key){
-		return this.parameters.getAttrs().containsKey(key) && this.parameters.get(key)!=null;
+		if(this.parameters == null){
+			initParameters();
+		}
+		return this.parameters.containsKey(key) && this.parameters.get(key)!=null;
 	}
 	
+	/**
+	 * Returns the argument associated with the specified key.<br>
+	 * @param key
+	 * @return
+	 */
 	public <T> T getParameter(String key){
-		return this.parameters.get(key);
+		if(this.parameters == null){
+			initParameters();
+		}
+		@SuppressWarnings("unchecked")
+		T result = (T)this.parameters.get(key);
+		return result;
 	}
 	
+	/**
+	 * Sets the parameter as specified by the key to the given value.
+	 * @param key
+	 * @param value
+	 */
 	public void setParameter(String key, Object value){
-		this.parameters.getAttrs().put(key, value);
+		if(this.parameters == null){
+			initParameters();
+		}
+		this.parameters.put(key, value);
 	}
 	
-	public boolean deleteParameter(String key){
+	/**
+	 * Removes the parameter associated with the specified key.
+	 * @param key
+	 * @return Whether the key previously existed.
+	 */
+	public boolean removeParameter(String key){
+		if(this.parameters == null){
+			initParameters();
+		}
 		if(!hasParameter(key)){
 			return false;
 		}
-		this.parameters.getAttrs().remove(key);
+		this.parameters.remove(key);
 		return true;
 	}
 	

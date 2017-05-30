@@ -54,8 +54,8 @@ public class WeakSemiCRFMain {
 			trainInstances = readCoNLLData(train_filename, true);
 			testInstances = readCoNLLData(test_filename, false);
 		} else {
-			train_filename = "data/SMSNP/SMSNP.train";
-			test_filename = "data/SMSNP/SMSNP.test";
+			train_filename = "data/SMSNP/SMSNP.train.100";
+			test_filename = "data/SMSNP/SMSNP.train.100";
 			trainInstances = readData(train_filename, true);
 			testInstances = readData(test_filename, false);
 		}
@@ -145,8 +145,12 @@ public class WeakSemiCRFMain {
 		int totalPred = 0;
 		for(Instance inst: predictions){
 			LinearInstance<Span> instance = (LinearInstance<Span>)inst;
+			StringBuilder input = new StringBuilder();
+			for(String[] inputs: instance.input){
+				input.append(inputs[0]);
+			}
 			System.out.println("Input:");
-			System.out.println(instance.input);
+			System.out.println(input);
 			System.out.println("Gold:");
 			System.out.println(instance.output);
 			System.out.println("Prediction:");

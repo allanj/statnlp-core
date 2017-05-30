@@ -37,9 +37,12 @@ public abstract class OptimizerFactory implements Serializable {
 	
 	protected OptimizerFactory() {}
 	
+	/**
+	 * Return the factory object to create an L-BFGS optimizer.
+	 * @return
+	 */
 	public static LBFGSOptimizerFactory getLBFGSFactory(){
-		LBFGSOptimizerFactory factory = new LBFGSOptimizerFactory();
-		return factory;
+		return new LBFGSOptimizerFactory();
 	}
 	
 	/**

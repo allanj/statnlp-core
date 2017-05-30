@@ -19,10 +19,8 @@
  */
 package com.statnlp.example.linear_crf;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.statnlp.commons.types.Label;
@@ -40,8 +38,7 @@ import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 import com.statnlp.util.instance_parser.InstanceParser;
 
 /**
- * @author wei_lu
- *
+ * @author Aldrian Obaja (aldrianobaja.m@gmail.com)
  */
 public class LinearCRFFeatureManager extends FeatureManager{
 
@@ -53,12 +50,13 @@ public class LinearCRFFeatureManager extends FeatureManager{
 	public int posHalfWindowSize = -1;
 	public boolean productWithOutput = true;
 	public Map<Integer, Label> labels;
+	public Map<FeatureType, Boolean> featureTypes;
 	
 	private String OUT_SEP = NeuralConfig.OUT_SEP; 
 	private String IN_SEP = NeuralConfig.IN_SEP; 
 	
 	public enum FeatureType {
-		WORD,
+		WORD(true),
 		WORD_BIGRAM(false),
 		TAG(false),
 		TAG_BIGRAM(false),
@@ -67,30 +65,22 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		neural(false),
 		;
 		
-		private boolean isEnabled;
+		private boolean enabledByDefault;
 		
 		private FeatureType(){
 			this(true);
 		}
 		
-		private FeatureType(boolean enabled){
-			this.isEnabled = enabled;
+		private FeatureType(boolean enabledByDefault){
+			this.enabledByDefault = enabledByDefault;
 		}
 		
-		public void enable(){
-			this.isEnabled = true;
+		public boolean enabledByDefault(){
+			return enabledByDefault;
 		}
 		
-		public void disable(){
-			this.isEnabled = false;
-		}
-		
-		public boolean enabled(){
-			return isEnabled;
-		}
-		
-		public boolean disabled(){
-			return !isEnabled;
+		public boolean disabledByDefault(){
+			return !enabledByDefault;
 		}
 		
 	}
@@ -136,17 +126,43 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		wordHalfWindowSize = config.wordHalfWindowSize;
 		posHalfWindowSize = config.posHalfWindowSize;
 		productWithOutput = config.productWithOutput;
+		featureTypes = new HashMap<FeatureType, Boolean>();
 		if(config.features != null){
-			for(FeatureType feat: FeatureType.values()){
-				feat.disable();
+			for(FeatureType featureType: FeatureType.values()){
+				disable(featureType);
 			}
 			for(String feat: config.features){
-				FeatureType.valueOf(feat.toUpperCase()).enable();
+				enable(FeatureType.valueOf(feat.toUpperCase()));
 			}
 		}
 	}
+
+	/**
+	 * Enables the specified feature type.
+	 * @param featureType
+	 */
+	public void enable(FeatureType featureType){
+		featureTypes.put(featureType, true);
+	}
 	
-	public LinearCRFFeatureManager(Pipeline pipeline){
+	/**
+	 * Disables the specified feature type.
+	 * @param featureType
+	 */
+	public void disable(FeatureType featureType){
+		featureTypes.put(featureType, false);
+	}
+	
+	/**
+	 * Returns whether the specified feature type is enabled.
+	 * @param featureType
+	 * @return
+	 */
+	public boolean isEnabled(FeatureType featureType){
+		return featureTypes.get(featureType);
+	}
+	
+	public LinearCRFFeatureManager(Pipeline<?> pipeline){
 		this(pipeline.param, pipeline.instanceParser);
 	}
 
@@ -208,7 +224,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 			features.add(param_g.toFeature(network, FeatureType.neural.name(), tag_id+"", prevWord+IN_SEP+input.get(pos)[0]+IN_SEP+nextWord+OUT_SEP+prevPos+IN_SEP+postag));
 		} else {
 			// Word window features
-			if(FeatureType.WORD.enabled() && tag_id != labelSize){
+			if(isEnabled(FeatureType.WORD) && tag_id != labelSize){
 				int wordWindowSize = wordHalfWindowSize*2+1;
 				if(wordWindowSize < 0){
 					wordWindowSize = 0;
@@ -227,7 +243,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		}
 		
 		// POS tag window features
-		if(FeatureType.TAG.enabled() && tag_id != labelSize){
+		if(isEnabled(FeatureType.TAG) && tag_id != labelSize){
 			int posWindowSize = posHalfWindowSize*2+1;
 			if(posWindowSize < 0){
 				posWindowSize = 0;
@@ -244,7 +260,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		}
 		
 		// Word bigram features
-		if(FeatureType.WORD_BIGRAM.enabled()){
+		if(isEnabled(FeatureType.WORD_BIGRAM)){
 			for(int i=0; i<2; i++){
 				String bigram = "";
 				for(int j=0; j<2; j++){
@@ -263,7 +279,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		}
 		
 		// POS tag bigram features
-		if(FeatureType.TAG_BIGRAM.enabled()){
+		if(isEnabled(FeatureType.TAG_BIGRAM)){
 			for(int i=0; i<2; i++){
 				String bigram = "";
 				for(int j=0; j<2; j++){
@@ -282,51 +298,26 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		}
 		
 		// Label feature
-		if(FeatureType.LABEL.enabled()){
+		if(isEnabled(FeatureType.LABEL)){
 			int labelFeature = param_g.toFeature(network, FeatureType.LABEL.name(), tag_id+"", "");
 			features.add(labelFeature);
 		}
-		
+		FeatureArray featureArray = createFeatureArray(network, features);
+
+		// Edge-based features
+		features.clear();
 		// Label transition feature
-		if(FeatureType.TRANSITION.enabled()){
+		if(isEnabled(FeatureType.TRANSITION)){
 			if(tag_id != labelSize && child_tag_id != labelSize){
 				int transitionFeature = param_g.toFeature(network, FeatureType.TRANSITION.name(), child_tag_id+" "+tag_id, "");
 				features.add(transitionFeature);
 			}
 		}
 		
-		int[] featureArray = new int[features.size()];
-		for(int i=0; i<featureArray.length; i++){
-			featureArray[i] = features.get(i);
-		}
-		return createFeatureArray(network, featureArray);
-	}
-	
-
-	
-	private void writeObject(ObjectOutputStream oos) throws IOException{
-		oos.writeInt(wordHalfWindowSize);
-		oos.writeInt(posHalfWindowSize);
-		oos.writeBoolean(productWithOutput);
-		oos.writeObject(OUT_SEP);
-		oos.writeObject(IN_SEP);
-		oos.writeInt(FeatureType.values().length);
-		for(FeatureType featureType: FeatureType.values()){
-			oos.writeObject(featureType.name());
-			oos.writeBoolean(featureType.isEnabled);
-		}
-	}
-	
-	private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException{
-		wordHalfWindowSize = ois.readInt();
-		posHalfWindowSize = ois.readInt();
-		productWithOutput = ois.readBoolean();
-		OUT_SEP = (String)ois.readObject();
-		IN_SEP = (String)ois.readObject();
-		int numFeatureTypes = ois.readInt();
-		for(int i=0; i<numFeatureTypes; i++){
-			FeatureType featureType = FeatureType.valueOf((String)ois.readObject());
-			featureType.isEnabled = ois.readBoolean();
+		if(features.size() > 0){
+			return createFeatureArray(network, features, featureArray);
+		} else {
+			return featureArray;
 		}
 	}
 

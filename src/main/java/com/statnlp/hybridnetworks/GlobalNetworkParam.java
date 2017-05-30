@@ -302,9 +302,20 @@ public class GlobalNetworkParam implements Serializable{
 	}
 	
 
+	private void initWeights(double[] weights, int from, int to){
+		if(NetworkConfig.RANDOM_INIT_WEIGHT){
+			Random r = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
+			for(int k=from; k<to; k++){
+				weights[k] = (r.nextDouble()-0.5)/10;
+			}
+		} else {
+			for(int k=from; k<to; k++){
+				weights[k] = NetworkConfig.FEATURE_INIT_WEIGHT;
+			}
+		}
+	}
+
 	public void lockItAndKeepExistingFeatureWeights(){
-		Random r = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
-		
 		if(this.isLocked()) return;
 		
 		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
@@ -316,10 +327,7 @@ public class GlobalNetworkParam implements Serializable{
 		for(int k = 0; k<this._weights.length; k++){
 			weights_new[k] = this._weights[k];
 		}
-		for(int k = this._weights.length ; k<this._size; k++){
-			weights_new[k] = NetworkConfig.RANDOM_INIT_WEIGHT ? (r.nextDouble()-.5)/10 :
-				NetworkConfig.FEATURE_INIT_WEIGHT;
-		}
+		initWeights(weights_new, this._weights.length, this._size);
 		this._weights = weights_new;
 		this.resetCountsAndObj();
 		
@@ -356,8 +364,6 @@ public class GlobalNetworkParam implements Serializable{
 	 * If this is locked it means no new features will be allowed.
 	 */
 	public void lockIt(){
-		Random r = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
-		
 		if(this.isLocked()) return;
 		
 		this.expandFeaturesForGenerativeModelDuringTesting();
@@ -367,10 +373,7 @@ public class GlobalNetworkParam implements Serializable{
 		for(int k = 0; k<this._fixedFeaturesSize; k++){
 			weights_new[k] = this._weights[k];
 		}
-		for(int k = this._fixedFeaturesSize ; k<this._size; k++){
-			weights_new[k] = NetworkConfig.RANDOM_INIT_WEIGHT ? (r.nextDouble()-.5)/10 :
-				NetworkConfig.FEATURE_INIT_WEIGHT;
-		}
+		initWeights(weights_new, this._fixedFeaturesSize, this._size);
 		this._weights = weights_new;
 		
 		// initialize NN params and gradParams

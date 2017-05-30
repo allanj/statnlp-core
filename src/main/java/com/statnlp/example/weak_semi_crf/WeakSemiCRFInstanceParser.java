@@ -55,7 +55,7 @@ public class WeakSemiCRFInstanceParser extends InstanceParser {
 	/**
 	 * @param pipeline
 	 */
-	public WeakSemiCRFInstanceParser(Pipeline pipeline) {
+	public WeakSemiCRFInstanceParser(Pipeline<?> pipeline) {
 		super(pipeline);
 		try{
 			if(pipeline.hasParameter("combineOutsideChars")){

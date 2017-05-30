@@ -58,11 +58,11 @@ public class DelimiterBasedInstanceParser extends InstanceParser implements Seri
 	/** The delimiter when reading the input. This will be parsed as a regex. */
 	public String regexDelimiter;
 	
-	public DelimiterBasedInstanceParser(Pipeline pipeline){
+	public DelimiterBasedInstanceParser(Pipeline<?> pipeline){
 		this(pipeline, "[ \t]+", -1);
 	}
 
-	public DelimiterBasedInstanceParser(Pipeline pipeline, String regexDelimiter, int labelColumnIndex) {
+	public DelimiterBasedInstanceParser(Pipeline<?> pipeline, String regexDelimiter, int labelColumnIndex) {
 		super(pipeline);
 		this.regexDelimiter = regexDelimiter;
 		this.labelColumnIndex = labelColumnIndex;

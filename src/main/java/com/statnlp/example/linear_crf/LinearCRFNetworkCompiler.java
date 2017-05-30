@@ -70,7 +70,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		this.compile_unlabled_generic();
 	}
 	
-	public LinearCRFNetworkCompiler(Pipeline pipeline){
+	public LinearCRFNetworkCompiler(Pipeline<?> pipeline){
 		this._labels = new HashMap<Integer, Label>();
 		for(Label label: ((DelimiterBasedInstanceParser)pipeline.instanceParser).LABELS.values()){
 			this._labels.put(label.getId(), new Label(label));

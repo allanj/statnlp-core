@@ -46,7 +46,7 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 		super(param_g);
 	}
 	
-	public WeakSemiCRFFeatureManager(Pipeline pipeline){
+	public WeakSemiCRFFeatureManager(Pipeline<?> pipeline){
 		this(pipeline.param);
 	}
 	
