@@ -200,6 +200,54 @@ function MultiLayerPerceptron:initialize(javadata, ...)
     end
 end
 
+function MultiLayerPerceptron:initializeForDecoding(javadata)
+    self.test_data = {}
+    local data = self.test_data
+    data.vocab = listToTable2D(javadata:get("vocab"))
+    data.wordList = listToTable(javadata:get("wordList"))
+    data.inputDimList = listToTable(javadata:get("inputDimList"))
+
+    -- what to forward
+    self.test_x = self:prepare_test_input()
+    self.test_wordList = data.wordList
+    self.test_word2idx = {}
+    local wordList = self.test_wordList
+    local word2idx = self.test_word2idx
+    for i=1,#wordList do
+        if self.word2idx[wordList[i]] ~= nil then
+            word2idx[wordList[i]] = self.word2idx[wordList[i]]
+        else
+            word2idx[wordList[i]] = #word2idx+1
+        end
+    end
+    self.test_numInput = self.test_x[1]:size(1)
+
+    -- Handling of unseen tokens
+    self.test_inputLayer = self.inputLayer:clone()
+    self.test_net = self.net:clone()
+    for i=1,#data.inputDimList do
+        local inputDim = data.inputDimList[i]
+        local lt, nnView        
+        -- for now just get the first LookupTable (commonly word)
+        if self.fixEmbedding then
+            lt = self.test_inputLayer:get(1):get(i):get(1)
+            nnView = self.test_inputLayer:get(1):get(i):get(2)
+        else
+            lt = self.test_net:get(1):get(i):get(1)
+            nnView = self.test_net:get(1):get(i):get(2)
+        end
+        if self.data.embSizeList[i] == 0 then
+            lt._eye:resize(inputDim, lt.outputSize)
+        else
+            local lt_W = lt.weight
+            if lt_W:size(1) < inputDim then
+                lt_W:resize(inputDim, lt_W:size(2))
+            end
+        end
+        nnView:resetSize(self.test_numInput,-1)
+    end
+end
+
 function MultiLayerPerceptron:prepare_input()
     local gpuid = self.gpuid
     local data = self.data
@@ -221,23 +269,48 @@ function MultiLayerPerceptron:prepare_input()
     return result
 end
 
-function MultiLayerPerceptron:forward(isTraining)
-    local mlp = self.net
-    if isTraining then
-        mlp:training()
-    else
-        mlp:evaluate()
+function MultiLayerPerceptron:prepare_test_input()
+    local gpuid = self.gpuid
+    local vocab = self.test_data.vocab
+    local numInputList = self.data.numInputList
+    local embSizeList = self.data.embSizeList
+    local result = {}
+    local startIdx = 0
+    for i=1,#numInputList do
+        table.insert(result, torch.Tensor(#vocab, numInputList[i]))
+        for j=1,#vocab do
+            for k=1,numInputList[i] do
+                result[i][j][k] = vocab[j][startIdx+k]
+            end
+        end
+        startIdx = startIdx + numInputList[i]
+        if gpuid >= 0 then result[i] = result[i]:cuda() end
     end
-    local x = self.x
+    return result
+end
+
+function MultiLayerPerceptron:forward(isTraining)
+    local mlp, x, inputLayer
+    if isTraining then
+        mlp = self.net
+        inputLayer = self.inputLayer
+        mlp:training()
+        x = self.x
+    else
+        mlp = self.test_net
+        inputLayer = self.test_inputLayer
+        mlp:evaluate()
+        x = self.test_x
+    end
     local input_x = x
     if self.fixEmbedding then
-        input_x = self.inputLayer:forward(x)
+        input_x = inputLayer:forward(x)
     end
     local output = mlp:forward(input_x)
+    if not self.outputPtr:isSameSizeAs(output) then
+        self.outputPtr:resizeAs(output)
+    end
     self.outputPtr:copy(output)
-    -- for i=1,#output do
-    --     self.outputPtr[i]:copy(output[i])
-    -- end
 end
 
 function MultiLayerPerceptron:backward()

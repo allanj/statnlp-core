@@ -512,6 +512,10 @@ public abstract class NetworkModel implements Serializable{
 		System.err.println("Okay. Decoding started.");
 		
 		long time = System.currentTimeMillis();
+		
+		this._fm.getParam_G().initializeProviderForDecoding();
+		this._fm.getParam_G().computeContinousScores();
+		
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
 			this._decoders[threadId] = this._decoders[threadId].copyThread(this._fm);
 			this._decoders[threadId].start();

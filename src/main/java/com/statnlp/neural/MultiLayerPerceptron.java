@@ -181,8 +181,9 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 	
 	@Override
 	public void initializeForDecoding() {
-		List<Integer> inputDimList = new ArrayList<Integer>(this.inputDimList);
+		setTraining(false);
 		List<String> wordList = new ArrayList<String>(this.wordList);
+		List<Integer> inputDimList = new ArrayList<Integer>(this.inputDimList);
 		List<List<Integer>> vocab = new ArrayList<List<Integer>>();
 		List<HashMap<String,Integer>> token2idxList = new ArrayList<HashMap<String,Integer>>();
 		for (int i = 0; i < this.token2idxList.size(); i++) {
@@ -217,13 +218,13 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 			vocab.add(entry);
 		}
 		
-        config.put("inputDimList", inputDimList);
+		config.put("inputDimList", inputDimList);
         config.put("wordList", wordList);
         config.put("vocab", vocab);
         
         Object[] args = new Object[]{config};
         Class<?>[] retTypes = new Class[]{};
-        Object[] outputs = LuaFunctionHelper.execLuaFunction(this.L, "initializeForDecoding", args, retTypes);
+        LuaFunctionHelper.execLuaFunction(this.L, "initializeForDecoding", args, retTypes);
 	}
 	
 	@Override
@@ -231,9 +232,12 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 		double val = 0.0;
 		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
 		int[] nodeArr = NetworkIDMapper.toHybridNodeArray(network.getNode(parent_k));
-		int outputLabel = nodeArr[outputIdx]; 
+		int outputLabel = nodeArr[outputIdx];
+		int instanceID = network.getInstance().getInstanceId();
+		boolean isTest = instanceID > 0 && !network.getInstance().isLabeled();
 		if (input != null) {
 			int H = getHiddenSize();
+			Map<Object,Integer> input2id = isTest ? this.testInput2id : this.input2id;
 			int id = input2id.get(input);
 			for (int i = 0; i < H; i++) {
 				val += weights[outputLabel*H+i] * output[id*H+i];

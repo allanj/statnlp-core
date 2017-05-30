@@ -35,9 +35,18 @@ function AbstractNetwork:initialize(data, ...)
     end
 end
 
+function AbstractNetwork:initializeForDecoding(data)
+    self.test_net = self.net
+    self:prepare_test_input()
+end
+
 function AbstractNetwork:prepare_input()
     -- Set the batch input ``x'' accordingly
     self.x = torch.Tensor()
+end
+
+function AbstractNetwork:prepare_test_input()
+    self.test_x = self.x
 end
 
 function AbstractNetwork:forward(isTraining)

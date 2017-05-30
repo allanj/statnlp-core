@@ -25,6 +25,7 @@ public abstract class FeatureValueProvider {
 		edge2input = new HashMap<Integer, Map<Integer,Map<Integer,Object>>>();
 		input2score = new HashMap<Object, Double>();
 		input2id = new LinkedHashMap<Object,Integer>();
+		testInput2id = new LinkedHashMap<Object, Integer>();
 		this.outputIdx = outputIdx;
 		this.numOutput = numOutput;
 	}
@@ -102,10 +103,7 @@ public abstract class FeatureValueProvider {
 		return input;
 	}
 	
-// TODO for backpropagation
-//	for(each i)
-//		gradWeights[i] += count * output[i];
-//		gradOutput[i] += count * weights[i];
-//
-	
+	public void clearDecodingState() {
+		testInput2id.clear();
+	}
 }

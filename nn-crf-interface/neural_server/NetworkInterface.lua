@@ -53,6 +53,14 @@ function initialize(javadata, ...)
     end
 end
 
+function initializeForDecoding(javadata)
+    local timer = torch.Timer()
+    net:initializeForDecoding(javadata)
+    local time = timer:time().real
+    print(string.format("Init for decoding took %.4fs", time))
+end
+
+
 function forward(training)
     local timer = torch.Timer()
     net:forward(training)

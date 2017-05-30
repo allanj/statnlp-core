@@ -12,7 +12,7 @@ public abstract class AbstractNetwork extends FeatureValueProvider {
 
 	protected static int numNetworks;
 	
-	protected boolean isTraining;
+	protected boolean isTraining = true;
 	
 	public AbstractNetwork(int outputIdx, int numOutput) {
 		this(""+numNetworks, null, outputIdx, numOutput);
