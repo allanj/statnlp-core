@@ -330,17 +330,17 @@ public class BaseNetwork extends TableLookupNetwork {
 			while(node_ids.hasNext()){
 				values.add(node_ids.next());
 			}
-			long[] _nodes = new long[this._children_tmp.keySet().size()];
-			boolean[] isVisible = new boolean[_nodes.length];
+			long[] nodeList = new long[this._children_tmp.keySet().size()];
+			boolean[] isVisible = new boolean[nodeList.length];
 			HashMap<Long, Integer> nodesValue2IdMap = new HashMap<Long, Integer>();
 			Collections.sort(values);
 			for(int k = 0 ; k<values.size(); k++){
-				_nodes[k] = values.get(k);
+				nodeList[k] = values.get(k);
 				isVisible[k] = true;
-				nodesValue2IdMap.put(_nodes[k], k);
+				nodesValue2IdMap.put(nodeList[k], k);
 			}
 			
-			int[][][] _children = new int[_nodes.length][][];
+			int[][][] childrenList = new int[nodeList.length][][];
 
 			Iterator<Long> parents = this._children_tmp.keySet().iterator();
 			while(parents.hasNext()){
@@ -348,10 +348,10 @@ public class BaseNetwork extends TableLookupNetwork {
 				int parent_index = nodesValue2IdMap.get(parent);
 				List<long[]> childrens = _children_tmp.get(parent);
 				if(childrens==null){
-					_children[parent_index] = new int[1][0];
+					childrenList[parent_index] = new int[1][0];
 				} else {
-					_children[parent_index] = new int[childrens.size()][];
-					for(int k = 0 ; k <_children[parent_index].length; k++){
+					childrenList[parent_index] = new int[childrens.size()][];
+					for(int k = 0 ; k <childrenList[parent_index].length; k++){
 						long[] children = childrens.get(k);
 						int[] children_index = new int[children.length];
 						for(int m = 0; m<children.length; m++){
@@ -361,7 +361,7 @@ public class BaseNetwork extends TableLookupNetwork {
 								children_index[m] = nodesValue2IdMap.get(children[m]);
 							}
 						}
-						_children[parent_index][k] = children_index;
+						childrenList[parent_index][k] = children_index;
 					}
 				}
 			}
@@ -369,14 +369,14 @@ public class BaseNetwork extends TableLookupNetwork {
 			// This is done so that every node is visited in the feature extraction step
 			// This is consistent with what's written in http://portal.acm.org/citation.cfm?doid=1654494.1654500
 			// See Definition 3 on "source vertex"
-			for(int k = 0 ; k<_children.length; k++){
-				if(_children[k]==null){
-					_children[k] = new int[1][0];
+			for(int k = 0 ; k<childrenList.length; k++){
+				if(childrenList[k]==null){
+					childrenList[k] = new int[1][0];
 				}
 			}
 			T result = null;
 			if(networkID != null || instance != null || param != null || compiler != null){
-				result = quickBuild(networkClass, networkID, instance, _nodes, _children, _nodes.length, param, compiler);
+				result = quickBuild(networkClass, networkID, instance, nodeList, childrenList, nodeList.length, param, compiler);
 			} else {
 				try {
 					result = quickBuild(networkClass);
@@ -384,12 +384,12 @@ public class BaseNetwork extends TableLookupNetwork {
 						| IllegalArgumentException e) {
 					throw new RuntimeException("No public empty constructor found for network class "+networkClass.getName(), e);
 				}
-				result._nodes = _nodes;
-				result._children = _children;
-				result.nodeCount = _nodes.length;
+				result._nodes = nodeList;
+				result._children = childrenList;
+				result.nodeCount = nodeList.length;
 			}
 			if (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD) {
-				result.structArr = new int[_nodes.length];
+				result.structArr = new int[nodeList.length];
 			}
 			result.isVisible = isVisible;
 			return result;
