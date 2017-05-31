@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.example.base.BaseNetwork;
+import com.statnlp.example.base.BaseNetwork.NetworkBuilder;
 import com.statnlp.example.tree_crf.Label.LabelType;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
@@ -31,7 +33,7 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 	public Map<Label, Set<CNFRule>> rules;
 	public Label rootLabel;
 	public int maxSize;
-	public TreeCRFNetwork genericUnlabeled;
+	public BaseNetwork genericUnlabeled;
 	
 	public TreeCRFNetworkCompiler(List<Label> labels, Map<Label, Set<CNFRule>> rules, Label rootLabel) {
 		this.labels = labels;
@@ -43,7 +45,7 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 	}
 
 	@Override
-	public TreeCRFNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
+	public BaseNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
 		TreeCRFInstance instance = (TreeCRFInstance)inst;
 		if(inst.isLabeled()){
 			return compileLabeled(networkId, instance, param);
@@ -52,20 +54,20 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		}
 	}
 	
-	public TreeCRFNetwork compileLabeled(int networkId, TreeCRFInstance instance, LocalNetworkParam param){
-		TreeCRFNetwork network = new TreeCRFNetwork(networkId, instance, param);
+	public BaseNetwork compileLabeled(int networkId, TreeCRFInstance instance, LocalNetworkParam param){
+		NetworkBuilder<BaseNetwork> networkBuilder = NetworkBuilder.builder();
 		BinaryTree output = instance.output;
 		int size = instance.size();
 		
-		long node = compileLabeled_helper(network, output, 0);
+		long node = compileLabeled_helper(networkBuilder, output, 0);
 		long root = toNode_root(size-1);
-		network.addNode(root);
-		network.addEdge(root, new long[]{node});
+		networkBuilder.addNode(root);
+		networkBuilder.addEdge(root, new long[]{node});
 		
-		network.finalizeNetwork();
+		BaseNetwork network = networkBuilder.build(networkId, instance, param, this);
 
 		if(DEBUG){
-			TreeCRFNetwork unlabeled = compileUnlabeled(networkId, instance, param);
+			BaseNetwork unlabeled = compileUnlabeled(networkId, instance, param);
 			if(!unlabeled.contains(network)){
 				throw new NetworkException("Labeled network is not contained in the unlabeled version");
 			}
@@ -74,25 +76,25 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		return network;
 	}
 	
-	private long compileLabeled_helper(TreeCRFNetwork network, BinaryTree output, int start){
+	private long compileLabeled_helper(NetworkBuilder<BaseNetwork> networkBuilder, BinaryTree output, int start){
 		int height = output.getLeaves().length-1;
 		int index = start;
 		long node = toNode(height, index, output.value.label.id);
-		network.addNode(node);
+		networkBuilder.addNode(node);
 		if(output.left != null){
 			int leftSize = output.left.getLeaves().length;
-			long leftNode = compileLabeled_helper(network, output.left, start);
-			long rightNode = compileLabeled_helper(network, output.right, start+leftSize);
-			network.addEdge(node, new long[]{leftNode, rightNode});
+			long leftNode = compileLabeled_helper(networkBuilder, output.left, start);
+			long rightNode = compileLabeled_helper(networkBuilder, output.right, start+leftSize);
+			networkBuilder.addEdge(node, new long[]{leftNode, rightNode});
 		} else {
 			long sink = toNode_sink();
-			network.addNode(sink);
-			network.addEdge(node, new long[]{sink});
+			networkBuilder.addNode(sink);
+			networkBuilder.addEdge(node, new long[]{sink});
 		}
 		return node;
 	}
 	
-	public TreeCRFNetwork compileUnlabeled(int networkId, TreeCRFInstance instance, LocalNetworkParam param){
+	public BaseNetwork compileUnlabeled(int networkId, TreeCRFInstance instance, LocalNetworkParam param){
 		int size = instance.size();
 		long[] allNodes = genericUnlabeled.getAllNodes();
 		int[][][] allChildren = genericUnlabeled.getAllChildren();
@@ -101,18 +103,18 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		int root_k = Arrays.binarySearch(allNodes, root);
 		int numNodes = root_k+1;
 		
-		TreeCRFNetwork network = new TreeCRFNetwork(networkId, instance, allNodes, allChildren, param, numNodes);
+		BaseNetwork network = NetworkBuilder.quickBuild(networkId, instance, allNodes, allChildren, numNodes, param, this);
 		return network;
 	}
 	
 	private void buildUnlabeled(){
 		System.err.print("Building generic unlabeled tree up to size "+maxSize+"...");
 		long startTime = System.currentTimeMillis();
-		TreeCRFNetwork network = new TreeCRFNetwork();
+		NetworkBuilder<BaseNetwork> networkBuilder = NetworkBuilder.builder();
 		int size = this.maxSize;
 		
 		long sink = toNode_sink();
-		network.addNode(sink);
+		networkBuilder.addNode(sink);
 		for(int col=0; col<size; col++){
 			for(int row=col; row>=0; row--){
 				int height = col-row;
@@ -122,8 +124,8 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 						if(label.type != LabelType.TERMINAL) continue;
 						int labelId = label.id;
 						long leaf = toNode(height, index, labelId);
-						network.addNode(leaf);
-						network.addEdge(leaf, new long[]{sink});
+						networkBuilder.addNode(leaf);
+						networkBuilder.addEdge(leaf, new long[]{sink});
 					}
 				} else { // Non-terminal
 					for(Label label: labels){
@@ -132,7 +134,7 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 						if(curRules == null) continue;
 						int labelId = label.id;
 						long node = toNode(height, index, labelId);
-						network.addNode(node);
+						networkBuilder.addNode(node);
 						
 						// Add all possible children
 						for(int childIdx=0; childIdx<height; childIdx++){
@@ -144,20 +146,20 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 								int leftLabelId = rule.firstRight.id;
 								int rightLabelId = rule.secondRight.id;
 								long leftNode = toNode(leftHeight, leftIndex, leftLabelId);
-								if(!network.contains(leftNode)) continue;
+								if(!networkBuilder.contains(leftNode)) continue;
 								long rightNode = toNode(rightHeight, rightIndex, rightLabelId);
-								if(!network.contains(rightNode)) continue;
-								network.addEdge(node, new long[]{leftNode, rightNode});
+								if(!networkBuilder.contains(rightNode)) continue;
+								networkBuilder.addEdge(node, new long[]{leftNode, rightNode});
 							}
 						}
 					}
 					if(index == 0){
 						long root = toNode_root(height);
-						network.addNode(root);
+						networkBuilder.addNode(root);
 						for(Label label: labels){
 							if(label.type != LabelType.NON_TERMINAL) continue;
 							long node = toNode(height, 0, label.id);
-							network.addEdge(root, new long[]{node});
+							networkBuilder.addEdge(root, new long[]{node});
 						}
 					}
 				}
@@ -165,14 +167,14 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		}
 		// Create a super root to hold all the intermediate roots, so that they won't be removed by removeUnused
 		long superRoot = toNode_superRoot(size);
-		network.addNode(superRoot);
+		networkBuilder.addNode(superRoot);
 		for(int height=1; height<size; height++){
 			long root = toNode_root(height);
-			network.addEdge(superRoot, new long[]{root});
+			networkBuilder.addEdge(superRoot, new long[]{root});
 		}
-		network.checkValidNodesAndRemoveUnused();
-		network.remove_tmp(superRoot);
-		network.finalizeNetwork();
+		networkBuilder.checkValidNodesAndRemoveUnused();
+		networkBuilder.remove_tmp(superRoot);
+		BaseNetwork network = networkBuilder.buildRudimentaryNetwork();
 		long endTime = System.currentTimeMillis();
 		System.err.println(String.format("Done in %.3fs", (endTime-startTime)/1000.0));
 		genericUnlabeled = network;
@@ -238,7 +240,7 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 	 */
 	@Override
 	public TreeCRFInstance decompile(Network net) {
-		TreeCRFNetwork network = (TreeCRFNetwork)net;
+		BaseNetwork network = (BaseNetwork)net;
 		TreeCRFInstance instance = (TreeCRFInstance)network.getInstance().duplicate();
 
 		int root_k = network.countNodes()-1;
@@ -249,7 +251,7 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		return instance;
 	}
 	
-	private BinaryTree decompile_helper(TreeCRFNetwork network, int parent_k){
+	private BinaryTree decompile_helper(BaseNetwork network, int parent_k){
 		int[] children_k = network.getMaxPath(parent_k);
 		int[] parent_arr = network.getNodeArray(parent_k);
 		int height = parent_arr[1];

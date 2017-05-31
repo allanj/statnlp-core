@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.example.base.BaseNetwork;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler.NodeType;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
@@ -52,7 +53,7 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 	
 	@Override
 	protected FeatureArray extract_helper(Network net, int parent_k, int[] children_k) {
-		WeakSemiCRFNetwork network = (WeakSemiCRFNetwork)net;
+		BaseNetwork network = (BaseNetwork)net;
 		@SuppressWarnings("unchecked")
 		LinearInstance<Span> instance = (LinearInstance<Span>)network.getInstance();
 		

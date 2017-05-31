@@ -1,6 +1,7 @@
 package com.statnlp.util;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,18 +39,47 @@ public class GeneralUtils {
 	
 	private static boolean configurationFactorySet = false;
 
+	public static List<String> sorted(Set<String> coll){
+		List<String> result = new ArrayList<String>(coll);
+		Collections.sort(result);
+		return result;
+	}
+	
+	/**
+	 * Search for a constructor that can be called given the given parameters.
+	 * @param input
+	 * @param parameters
+	 * @return
+	 * @throws NoSuchMethodException
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T> Constructor<T> getMatchingAvailableConstructor(Class<T> input, Class<?>... parameters) throws NoSuchMethodException{
+		for(Constructor<T> constructor: (Constructor<T>[])input.getDeclaredConstructors()){
+			Class<?>[] paramTypes = constructor.getParameterTypes();
+			if(paramTypes.length != parameters.length){
+				continue;
+			}
+			boolean matching = true;
+			for(int i=0; i<parameters.length; i++){
+				Class<?> paramType = paramTypes[i];
+				if(!paramType.isAssignableFrom(parameters[i])){
+					matching = false;
+					break;
+				}
+			}
+			if(matching){
+				return constructor;
+			}
+		}
+		throw new NoSuchMethodException();
+	}
+
 	public static Logger createLogger(Class<?> clazz){
 		if(!configurationFactorySet){
 			ConfigurationFactory.setConfigurationFactory(new WithLogFileConfigurationFactory());
 			configurationFactorySet = true;
 		}
 		return LogManager.getLogger(clazz, new StringFormatterMessageFactory());
-	}
-
-	public static List<String> sorted(Set<String> coll){
-		List<String> result = new ArrayList<String>(coll);
-		Collections.sort(result);
-		return result;
 	}
 	
 	public static void updateLogger(String logPath){

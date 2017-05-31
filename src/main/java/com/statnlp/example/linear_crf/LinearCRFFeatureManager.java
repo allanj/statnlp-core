@@ -25,6 +25,7 @@ import java.util.Map;
 
 import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.example.base.BaseNetwork;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
@@ -170,7 +171,7 @@ public class LinearCRFFeatureManager extends FeatureManager{
 	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k) {
 		GlobalNetworkParam param_g = this._param_g;
 		
-		LinearCRFNetwork net = (LinearCRFNetwork)network;
+		BaseNetwork net = (BaseNetwork)network;
 		
 		@SuppressWarnings("unchecked")
 		LinearInstance<String> instance = (LinearInstance<String>)net.getInstance();

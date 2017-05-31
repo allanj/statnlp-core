@@ -10,6 +10,8 @@ import java.util.Map;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.example.base.BaseNetwork;
+import com.statnlp.example.base.BaseNetwork.NetworkBuilder;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
@@ -77,7 +79,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public WeakSemiCRFNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
+	public BaseNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
 		try{
 			if(inst.isLabeled()){
 				return compileLabeled(networkId, (LinearInstance<Span>)inst, param);
@@ -90,8 +92,8 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		}
 	}
 	
-	private WeakSemiCRFNetwork compileLabeled(int networkId, LinearInstance<Span> instance, LocalNetworkParam param){
-		WeakSemiCRFNetwork network = new WeakSemiCRFNetwork(networkId, instance, param);
+	private BaseNetwork compileLabeled(int networkId, LinearInstance<Span> instance, LocalNetworkParam param){
+		NetworkBuilder<BaseNetwork> networkBuilder = NetworkBuilder.builder();
 		
 		List<Span> output = instance.getOutput();
 		Collections.sort(output);
@@ -99,7 +101,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		
 		// Add leaf
 		long leaf = toNode_leaf();
-		network.addNode(leaf);
+		networkBuilder.addNode(leaf);
 		
 		long prevNode = leaf;
 		
@@ -108,54 +110,54 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 			long begin = toNode_begin(span.start, labelId);
 			long end = toNode_end(span.end-1, labelId);
 			
-			network.addNode(begin);
-			network.addNode(end);
+			networkBuilder.addNode(begin);
+			networkBuilder.addNode(end);
 			for(int i=span.start; i<span.end; i++){
 				for(int j=0; j<labels.size(); j++){
 					try{
-						network.addNode(toNode_begin(i, j));
+						networkBuilder.addNode(toNode_begin(i, j));
 					} catch (Exception e){}
 					try{
-						network.addNode(toNode_end(i, j));
+						networkBuilder.addNode(toNode_end(i, j));
 					} catch (Exception e){}
 				}
 			}
 			
-			network.addEdge(begin, new long[]{prevNode});
-			network.addEdge(end, new long[]{begin});
+			networkBuilder.addEdge(begin, new long[]{prevNode});
+			networkBuilder.addEdge(end, new long[]{begin});
 			
 			prevNode = end;
 		}
 		
 		// Add root
 		long root = toNode_root(size-1);
-		network.addNode(root);
-		network.addEdge(root, new long[]{prevNode});
+		networkBuilder.addNode(root);
+		networkBuilder.addEdge(root, new long[]{prevNode});
 		
-		network.finalizeNetwork();
+		BaseNetwork network = networkBuilder.build(networkId, instance, param, this);
 //		viewer.visualizeNetwork(network, null, "Labeled network for network "+networkId);
 		
 		if(DEBUG){
 			System.out.println(network);
-			WeakSemiCRFNetwork unlabeled = compileUnlabeled(networkId, instance, param);
+			BaseNetwork unlabeled = compileUnlabeled(networkId, instance, param);
 			System.out.println("Contained: "+unlabeled.contains(network));
 		}
 		return network;
 	}
 	
-	private WeakSemiCRFNetwork compileUnlabeled(int networkId, LinearInstance<Span> instance, LocalNetworkParam param){
+	private BaseNetwork compileUnlabeled(int networkId, LinearInstance<Span> instance, LocalNetworkParam param){
 		int size = instance.size();
 		long root = toNode_root(size-1);
 		int root_k = Arrays.binarySearch(allNodes, root);
 		int numNodes = root_k + 1;
-		return new WeakSemiCRFNetwork(networkId, instance, allNodes, allChildren, param, numNodes);
+		return NetworkBuilder.quickBuild(networkId, instance, allNodes, allChildren, numNodes, param, this);
 	}
 	
 	private void buildUnlabeled(){
-		WeakSemiCRFNetwork network = new WeakSemiCRFNetwork();
+		NetworkBuilder<BaseNetwork> networkBuilder = NetworkBuilder.builder();
 		
 		long leaf = toNode_leaf();
-		network.addNode(leaf);
+		networkBuilder.addNode(leaf);
 		List<Long> prevNodes = new ArrayList<Long>();
 		List<Long> currNodes = new ArrayList<Long>();
 		prevNodes.add(leaf);
@@ -164,29 +166,29 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 				long beginNode = toNode_begin(pos, labelId);
 				long endNode = toNode_end(pos, labelId);
 				
-				network.addNode(beginNode);
-				network.addNode(endNode);
+				networkBuilder.addNode(beginNode);
+				networkBuilder.addNode(endNode);
 				
 				currNodes.add(endNode);
 				
 				for(int prevPos=pos; prevPos > pos-maxSegmentLength && prevPos >= 0; prevPos--){
 					long prevBeginNode = toNode_begin(prevPos, labelId);
-					network.addEdge(endNode, new long[]{prevBeginNode});
+					networkBuilder.addEdge(endNode, new long[]{prevBeginNode});
 				}
 				
 				for(long prevNode: prevNodes){
-					network.addEdge(beginNode, new long[]{prevNode});
+					networkBuilder.addEdge(beginNode, new long[]{prevNode});
 				}
 			}
 			long root = toNode_root(pos);
-			network.addNode(root);
+			networkBuilder.addNode(root);
 			for(long currNode: currNodes){
-				network.addEdge(root, new long[]{currNode});	
+				networkBuilder.addEdge(root, new long[]{currNode});	
 			}
 			prevNodes = currNodes;
 			currNodes = new ArrayList<Long>();
 		}
-		network.finalizeNetwork();
+		BaseNetwork network = networkBuilder.buildRudimentaryNetwork();
 		allNodes = network.getAllNodes();
 		allChildren = network.getAllChildren();
 	}
@@ -213,7 +215,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 
 	@Override
 	public LinearInstance<Span> decompile(Network net) {
-		WeakSemiCRFNetwork network = (WeakSemiCRFNetwork)net;
+		BaseNetwork network = (BaseNetwork)net;
 		@SuppressWarnings("unchecked")
 		LinearInstance<Span> result = (LinearInstance<Span>)network.getInstance().duplicate();
 		List<Span> prediction = new ArrayList<Span>();
