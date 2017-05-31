@@ -36,15 +36,6 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 		this.compileUnlabeledInstancesGeneric();
 	}
 	
-	@Override
-	public FCRFNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
-		FCRFInstance lcrfInstance = (FCRFInstance)inst;
-		if(lcrfInstance.isLabeled())
-			return compileLabeledInstances(networkId, lcrfInstance, param);
-		else
-			return compileUnlabeledInstances(networkId, lcrfInstance, param);
-	}
-	
 	public long toNode_leaf(){
 		int[] arr = new int[]{0, Chunk.CHUNKS.size()+Tag.TAGS.size(), NODE_TYPES.LEAF.ordinal()};
 		return NetworkIDMapper.toHybridNodeID(arr);
@@ -84,7 +75,8 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 	 * @param param
 	 * @return
 	 */
-	public FCRFNetwork compileLabeledInstances(int networkId, FCRFInstance inst, LocalNetworkParam param) {
+	public FCRFNetwork compileLabeled(int networkId, Instance instance, LocalNetworkParam param) {
+		FCRFInstance inst = (FCRFInstance)instance;
 //		FCRFNetwork lcrfNetwork = new FCRFNetwork(networkId, inst, param, this);
 		NetworkBuilder<FCRFNetwork> lcrfNetwork = NetworkBuilder.builder(FCRFNetwork.class);
 		long leaf = toNode_leaf();
@@ -129,8 +121,7 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 	}
 	
 
-	public FCRFNetwork compileUnlabeledInstances(int networkId, FCRFInstance inst, LocalNetworkParam param) {
-
+	public FCRFNetwork compileUnlabeled(int networkId, Instance inst, LocalNetworkParam param) {
 		long[] allNodes = genericUnlabeledNetwork.getAllNodes();
 		long root = toNode_root(inst.size());
 		int rootIdx = Arrays.binarySearch(allNodes, root);

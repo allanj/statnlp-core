@@ -50,7 +50,8 @@ public class MentionHypergraphNetworkCompiler extends NetworkCompiler {
 		}
 	}
 	
-	private BaseNetwork compileLabeled(int networkId, MentionHypergraphInstance instance, LocalNetworkParam param){
+	public BaseNetwork compileLabeled(int networkId, Instance inst, LocalNetworkParam param){
+		MentionHypergraphInstance instance = (MentionHypergraphInstance)inst;
 		NetworkBuilder<BaseNetwork> networkBuilder = NetworkBuilder.builder();
 		int size = instance.size();
 		
@@ -143,7 +144,7 @@ public class MentionHypergraphNetworkCompiler extends NetworkCompiler {
 //		System.out.println(builder.toString());
 //	}
 
-	private BaseNetwork compileUnlabeled(int networkId, MentionHypergraphInstance instance, LocalNetworkParam param){
+	public BaseNetwork compileUnlabeled(int networkId, Instance instance, LocalNetworkParam param){
 		int size = instance.size();
 		long root = toNode_A(0, size);
 		long[] allNodes = unlabeledNetwork.getAllNodes();

@@ -24,16 +24,6 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 		this.compileUnlabeledInstancesGeneric();
 	}
 	
-	@Override
-	public BaseNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
-		// TODO Auto-generated method stub
-		ECRFInstance lcrfInstance = (ECRFInstance)inst;
-		if(lcrfInstance.isLabeled())
-			return compileLabeledInstances(networkId, lcrfInstance, param);
-		else
-			return compileUnlabeledInstances(networkId, lcrfInstance, param);
-	}
-	
 	public long toNode_leaf(){
 		int[] arr = new int[]{0,Entity.get("O").getId(), 0,0,NODE_TYPES.LEAF.ordinal()};
 		return NetworkIDMapper.toHybridNodeID(arr);
@@ -77,7 +67,8 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 	}
 	
 
-	public BaseNetwork compileLabeledInstances(int networkId, ECRFInstance inst, LocalNetworkParam param){
+	public BaseNetwork compileLabeled(int networkId, Instance instance, LocalNetworkParam param){
+		ECRFInstance inst = (ECRFInstance)instance;
 		NetworkBuilder<BaseNetwork> lcrfNetwork = NetworkBuilder.builder();
 		long leaf = toNode_leaf();
 		long[] children = new long[]{leaf};
@@ -99,7 +90,7 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 		return network;
 	}
 	
-	public BaseNetwork compileUnlabeledInstances(int networkId, ECRFInstance inst, LocalNetworkParam param){
+	public BaseNetwork compileUnlabeled(int networkId, Instance inst, LocalNetworkParam param){
 		long[] allNodes = genericUnlabeledNetwork.getAllNodes();
 		long root = toNode_root(inst.size());
 		int rootIdx = Arrays.binarySearch(allNodes, root);

@@ -15,7 +15,6 @@ import com.statnlp.example.base.BaseNetwork.NetworkBuilder;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
-import com.statnlp.hybridnetworks.NetworkException;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.util.Pipeline;
 
@@ -76,23 +75,10 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		System.out.println(Arrays.asList(labels));
 		buildUnlabeled();
 	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public BaseNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
-		try{
-			if(inst.isLabeled()){
-				return compileLabeled(networkId, (LinearInstance<Span>)inst, param);
-			} else {
-				return compileUnlabeled(networkId, (LinearInstance<Span>)inst, param);
-			}
-		} catch (NetworkException e){
-			System.out.println(inst);
-			throw e;
-		}
-	}
 	
-	private BaseNetwork compileLabeled(int networkId, LinearInstance<Span> instance, LocalNetworkParam param){
+	public BaseNetwork compileLabeled(int networkId, Instance inst, LocalNetworkParam param){
+		@SuppressWarnings("unchecked")
+		LinearInstance<Span> instance = (LinearInstance<Span>)inst;
 		NetworkBuilder<BaseNetwork> networkBuilder = NetworkBuilder.builder();
 		
 		List<Span> output = instance.getOutput();
@@ -144,7 +130,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		return network;
 	}
 	
-	private BaseNetwork compileUnlabeled(int networkId, LinearInstance<Span> instance, LocalNetworkParam param){
+	public BaseNetwork compileUnlabeled(int networkId, Instance instance, LocalNetworkParam param){
 		int size = instance.size();
 		long root = toNode_root(size-1);
 		int root_k = Arrays.binarySearch(allNodes, root);

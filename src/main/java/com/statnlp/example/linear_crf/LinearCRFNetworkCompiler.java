@@ -82,20 +82,9 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		this.compile_unlabled_generic();
 	}
 	
-	@Override
-	public BaseNetwork compile(int networkId, Instance instance, LocalNetworkParam param) {
+	public BaseNetwork compileLabeled(int networkId, Instance instance, LocalNetworkParam param){
 		@SuppressWarnings("unchecked")
-		LinearInstance<Label> inst = (LinearInstance<Label>) instance;
-		if(inst.isLabeled()){
-			return this.compile_labeled(networkId, inst, param);
-		} else {
-			return this.compile_unlabeled(networkId, inst, param);
-		}
-		
-	}
-	
-	
-	private BaseNetwork compile_labeled(int networkId, LinearInstance<Label> inst, LocalNetworkParam param){
+		LinearInstance<Label> inst = (LinearInstance<Label>)instance;
 		NetworkBuilder<BaseNetwork> networkBuilder = NetworkBuilder.builder(BaseNetwork.class);
 		
 		ArrayList<Label> outputs = (ArrayList<Label>)inst.getOutput();
@@ -134,7 +123,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		return network;
 	}
 
-	private BaseNetwork compile_unlabeled(int networkId, LinearInstance<Label> inst, LocalNetworkParam param){
+	public BaseNetwork compileUnlabeled(int networkId, Instance inst, LocalNetworkParam param){
 		int size = inst.size();
 		long root = this.toNode_root(size);
 		

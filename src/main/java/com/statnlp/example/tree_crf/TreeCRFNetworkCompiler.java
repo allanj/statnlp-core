@@ -43,18 +43,9 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		Collections.sort(this.labels);
 		buildUnlabeled();
 	}
-
-	@Override
-	public BaseNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
-		TreeCRFInstance instance = (TreeCRFInstance)inst;
-		if(inst.isLabeled()){
-			return compileLabeled(networkId, instance, param);
-		} else {
-			return compileUnlabeled(networkId, instance, param);
-		}
-	}
 	
-	public BaseNetwork compileLabeled(int networkId, TreeCRFInstance instance, LocalNetworkParam param){
+	public BaseNetwork compileLabeled(int networkId, Instance inst, LocalNetworkParam param){
+		TreeCRFInstance instance = (TreeCRFInstance)inst;
 		NetworkBuilder<BaseNetwork> networkBuilder = NetworkBuilder.builder();
 		BinaryTree output = instance.output;
 		int size = instance.size();
@@ -94,7 +85,7 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		return node;
 	}
 	
-	public BaseNetwork compileUnlabeled(int networkId, TreeCRFInstance instance, LocalNetworkParam param){
+	public BaseNetwork compileUnlabeled(int networkId, Instance instance, LocalNetworkParam param){
 		int size = instance.size();
 		long[] allNodes = genericUnlabeled.getAllNodes();
 		int[][][] allChildren = genericUnlabeled.getAllChildren();
