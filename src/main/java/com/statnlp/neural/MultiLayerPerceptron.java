@@ -13,6 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import org.ejml.data.DMatrixRMaj;
+import org.ejml.data.Matrix;
+import org.ejml.dense.row.CommonOps_DDRM;
+import org.ejml.simple.SimpleMatrix;
+
 import scala.util.Random;
 import th4j.Tensor.DoubleTensor;
 
@@ -39,6 +44,11 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 	private DoubleTensor paramsTensor, gradParamsTensor;
 	private DoubleTensor outputTensorBuffer, gradTensorBuffer;
 	
+	private SimpleMatrix weightMatrix, gradWeightMatrix;
+	private SimpleMatrix outputMatrix, gradOutputMatrix;
+	private SimpleMatrix forwardMatrix;
+	private SimpleMatrix countWeightMatrix, countOutputMatrix;
+	
 	private boolean optimizeNeural;
 	private boolean hasParams;
 	
@@ -50,6 +60,8 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 	private List<Integer> inputDimList;
 	private List<String> wordList;
 	private List<HashMap<String,Integer>> token2idxList;
+
+	private SimpleMatrix weightMatrix_tran;
 
 	public MultiLayerPerceptron(String name, HashMap<String, Object> config, int outputIdx, int numOutput) {
 		super(name, config, outputIdx, numOutput);
@@ -138,12 +150,19 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 				totalInputDim += token2idxList.get(i).size();
 			}
 		}
-		this.weights = new double[numOutput*getHiddenSize()];
+
+		// Weight matrix
+		this.weightMatrix = new SimpleMatrix(numOutput, getHiddenSize());
+		this.weightMatrix_tran = new SimpleMatrix(getHiddenSize(), numOutput);
+		this.gradWeightMatrix = new SimpleMatrix(numOutput, getHiddenSize());
+		DMatrixRMaj weightDMatrix = this.weightMatrix.getMatrix();
+		this.weights = weightDMatrix.data;
 		for(int i = 0; i < weights.length; i++) {
 			weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (r.nextDouble()-.5)/10 :
 				NetworkConfig.FEATURE_INIT_WEIGHT;
 		}
-		this.gradWeights = new double[numOutput*getHiddenSize()];
+		DMatrixRMaj gradWeightDMatrix = this.gradWeightMatrix.getMatrix();
+		this.gradWeights = gradWeightDMatrix.data;
 		
 		config.put("numInputList", numInputList);
         config.put("inputDimList", inputDimList);
@@ -152,9 +171,19 @@ public class MultiLayerPerceptron extends AbstractNetwork {
         this.vocabSize = ((List<?>) config.get("vocab")).size();
         
         // 2D buffer array to be used by backward()
-        this.gradOutput = new double[getVocabSize()*getHiddenSize()];
         this.outputTensorBuffer = new DoubleTensor(getVocabSize(), getHiddenSize());
         this.gradTensorBuffer = new DoubleTensor(getVocabSize(), getHiddenSize());
+        
+        // Forward matrices
+        this.outputMatrix = new SimpleMatrix(getVocabSize(), getHiddenSize());
+        this.forwardMatrix = new SimpleMatrix(getVocabSize(), numOutput);
+        
+        // Backward matrices
+        this.gradOutputMatrix = new SimpleMatrix(getVocabSize(), getHiddenSize());
+        DMatrixRMaj gradOutputDMatrix = this.gradOutputMatrix.getMatrix();
+        this.gradOutput = gradOutputDMatrix.data;
+        this.countOutputMatrix = new SimpleMatrix(getVocabSize(), numOutput);
+        this.countWeightMatrix = new SimpleMatrix(numOutput, getVocabSize());
         
         Object[] args = new Object[3];
         args[0] = config;
@@ -173,6 +202,10 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 			this.gradParamsTensor = (DoubleTensor) outputs[1];
 			if (this.paramsTensor.nElement() > 0) {
 				this.params = getArray(this.paramsTensor);
+				for(int i = 0; i < this.params.length; i++) {
+					this.params[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (r.nextDouble()-.5)/10 :
+						NetworkConfig.FEATURE_INIT_WEIGHT;
+				}
 				this.gradParams = getArray(this.gradParamsTensor);
 				this.hasParams = true;
 			}
@@ -222,6 +255,10 @@ public class MultiLayerPerceptron extends AbstractNetwork {
         config.put("wordList", wordList);
         config.put("vocab", vocab);
         
+        // Forward matrices
+        this.outputMatrix = new SimpleMatrix(vocab.size(), getHiddenSize());
+        this.forwardMatrix = new SimpleMatrix(vocab.size(), numOutput);
+        
         Object[] args = new Object[]{config};
         Class<?>[] retTypes = new Class[]{};
         LuaFunctionHelper.execLuaFunction(this.L, "initializeForDecoding", args, retTypes);
@@ -239,9 +276,10 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 			int H = getHiddenSize();
 			Map<Object,Integer> input2id = isTest ? this.testInput2id : this.input2id;
 			int id = input2id.get(input);
-			for (int i = 0; i < H; i++) {
-				val += weights[outputLabel*H+i] * output[id*H+i];
-			}
+//			for (int i = 0; i < H; i++) {
+//				val += weights[outputLabel*H+i] * output[id*H+i];
+//			}
+			val = forwardMatrix.get(id, outputLabel);
 		}
 		return val;
 	}
@@ -259,28 +297,40 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 		
 		// copy forward result
 		output = getArray(outputTensorBuffer);
+		DMatrixRMaj outputData = this.outputMatrix.getMatrix();
+		outputData.data = output;
+		
+		CommonOps_DDRM.transpose(weightMatrix.getMatrix(), weightMatrix_tran.getMatrix());
+		CommonOps_DDRM.mult(outputMatrix.getMatrix(), weightMatrix_tran.getMatrix(), forwardMatrix.getMatrix());
 	}
 	
 	@Override
-	public void update(double count, Network network, int parent_k, int children_k_index) {
+	public synchronized void update(double count, Network network, int parent_k, int children_k_index) {
 		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
 		int[] nodeArr = NetworkIDMapper.toHybridNodeArray(network.getNode(parent_k));
 		int outputLabel = nodeArr[outputIdx];
 		if (input != null) {
 			int H = getHiddenSize();
 			int id = input2id.get(input);
-			for (int i = 0; i < H; i++) {
-				gradOutput[id*H+i] += count * weights[i];
-			}
-			for (int i = 0; i < H; i++) {
-				gradWeights[outputLabel*H+i] -= count * output[id*H+i];
-			}
+			double countOutput = countOutputMatrix.get(id, outputLabel);
+			countOutputMatrix.set(id, outputLabel, countOutput+count);
+			double countWeight = countWeightMatrix.get(outputLabel, id);
+			countWeightMatrix.set(outputLabel, id, countWeight-count);
+//			for (int i = 0; i < H; i++) {
+//				gradOutput[id*H+i] += count * weights[outputLabel*H+i];
+//			}
+//			for (int i = 0; i < H; i++) {
+//				gradWeights[outputLabel*H+i] -= count * output[id*H+i];
+//			}
 		}
 	}
 	
 	@Override
 	public void backward() {
 		gradTensorBuffer.storage().copy(gradOutput);
+		
+		CommonOps_DDRM.mult(countOutputMatrix.getMatrix(), weightMatrix.getMatrix(), gradOutputMatrix.getMatrix());
+		CommonOps_DDRM.mult(countWeightMatrix.getMatrix(), outputMatrix.getMatrix(), gradWeightMatrix.getMatrix());
 		
 		Object[] args = new Object[0];
 		Class<?>[] retTypes = new Class[0];
@@ -290,7 +340,10 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 			gradParams = getArray(this.gradParamsTensor);
 		}
 		
-		Arrays.fill(gradOutput, 0.0);
+//		Arrays.fill(gradOutput, 0.0);
+		gradOutputMatrix.set(0.0);
+		countOutputMatrix.set(0.0);
+		countWeightMatrix.set(0.0);
 	}
 	
 	@Override

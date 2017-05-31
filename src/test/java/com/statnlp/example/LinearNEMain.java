@@ -39,9 +39,6 @@ public class LinearNEMain {
 	public static String nerOut = "nn-crf-interface/nlp-from-scratch/me/output/ner_out.txt";
 	public static String neural_config = "nn-crf-interface/neural_server/neural.debug.config";
 	
-	private static int hiddenSize = 100;
-	private static int numLayer = 1; 
-	
 	public static void main(String[] args) throws IOException, InterruptedException{
 		
 		processArgs(args);
