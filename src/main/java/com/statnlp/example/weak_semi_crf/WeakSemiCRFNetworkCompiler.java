@@ -135,7 +135,6 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		networkBuilder.addEdge(root, new long[]{prevNode});
 		
 		BaseNetwork network = networkBuilder.build(networkId, instance, param, this);
-//		viewer.visualizeNetwork(network, null, "Labeled network for network "+networkId);
 		
 		if(DEBUG){
 			System.out.println(network);

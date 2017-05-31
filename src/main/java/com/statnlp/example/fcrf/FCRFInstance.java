@@ -5,9 +5,7 @@ import java.util.ArrayList;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Sentence;
 
-
 public class FCRFInstance extends Instance {
-
 
 	private static final long serialVersionUID = 1851514046050983662L;
 	protected Sentence sentence;

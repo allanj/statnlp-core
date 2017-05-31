@@ -30,7 +30,7 @@ public class BaseNetwork extends TableLookupNetwork {
 	
 	private static final long serialVersionUID = 293079042713879263L;
 	/** Stores the actual count of relevant nodes */
-	private int nodeCount;
+	int nodeCount;
 	
 	/**
 	 * To create an empty network.<br>
@@ -386,6 +386,7 @@ public class BaseNetwork extends TableLookupNetwork {
 				}
 				result._nodes = _nodes;
 				result._children = _children;
+				result.nodeCount = _nodes.length;
 			}
 			if (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD) {
 				result.structArr = new int[_nodes.length];
