@@ -22,7 +22,7 @@ import com.statnlp.neural.MultiLayerPerceptron;
 
 public class LinearNEMain {
 	
-	public static boolean DEBUG = true;
+	public static boolean DEBUG = false;
 
 	public static int trainNumber = -100;
 	public static int testNumber = -100;
@@ -67,7 +67,7 @@ public class LinearNEMain {
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
-			net = new MultiLayerPerceptron("MyNet", MultiLayerPerceptron.createConfigFromFile(neural_config), 1, Entity.Entities.size());
+			net = new MultiLayerPerceptron("MyNet", MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size());
 			gnp.addFeatureValueProvider(net);
 		}
 		

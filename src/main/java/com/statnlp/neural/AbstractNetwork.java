@@ -14,22 +14,22 @@ public abstract class AbstractNetwork extends FeatureValueProvider {
 	
 	protected boolean isTraining = true;
 	
-	public AbstractNetwork(int outputIdx, int numOutput) {
-		this(""+numNetworks, null, outputIdx, numOutput);
+	public AbstractNetwork(int numOutput) {
+		this(""+numNetworks, null, numOutput);
 		numNetworks++;
 	}
 	
-	public AbstractNetwork(String name, int outputIdx, int numOutput) {
-		this(name, null, outputIdx, numOutput);
+	public AbstractNetwork(String name, int numOutput) {
+		this(name, null, numOutput);
 	}
 	
-	public AbstractNetwork(HashMap<String,Object> config, int outputIdx, int numOutput) {
-		this(""+numNetworks, config, outputIdx, numOutput);
+	public AbstractNetwork(HashMap<String,Object> config, int numOutput) {
+		this(""+numNetworks, config, numOutput);
 		numNetworks++;
 	}
 	
-	public AbstractNetwork(String name, HashMap<String,Object> config, int outputIdx, int numOutput) {
-		super(outputIdx, numOutput);
+	public AbstractNetwork(String name, HashMap<String,Object> config, int numOutput) {
+		super(numOutput);
 		this.name = name;
 		this.config = config;
 	}

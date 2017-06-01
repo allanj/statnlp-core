@@ -223,7 +223,9 @@ function MultiLayerPerceptron:initializeForDecoding(javadata)
     self.test_numInput = self.test_x[1]:size(1)
 
     -- Handling of unseen tokens
-    self.test_inputLayer = self.inputLayer:clone()
+    if self.fixEmbedding then
+        self.test_inputLayer = self.inputLayer:clone()
+    end
     self.test_net = self.net:clone()
     for i=1,#data.inputDimList do
         local inputDim = data.inputDimList[i]

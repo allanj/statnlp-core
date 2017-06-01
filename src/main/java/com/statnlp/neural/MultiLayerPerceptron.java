@@ -7,14 +7,12 @@ import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
 import org.ejml.data.DMatrixRMaj;
-import org.ejml.data.Matrix;
 import org.ejml.dense.row.CommonOps_DDRM;
 import org.ejml.simple.SimpleMatrix;
 
@@ -24,7 +22,6 @@ import th4j.Tensor.DoubleTensor;
 import com.naef.jnlua.LuaState;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.neural.util.LuaFunctionHelper;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
@@ -63,8 +60,8 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 
 	private SimpleMatrix weightMatrix_tran;
 
-	public MultiLayerPerceptron(String name, HashMap<String, Object> config, int outputIdx, int numOutput) {
-		super(name, config, outputIdx, numOutput);
+	public MultiLayerPerceptron(String name, HashMap<String, Object> config, int numOutput) {
+		super(name, config, numOutput);
 		this.optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
 		
 		configure();
@@ -268,11 +265,10 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 	public double getScore(Network network, int parent_k, int children_k_index) {
 		double val = 0.0;
 		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		int[] nodeArr = NetworkIDMapper.toHybridNodeArray(network.getNode(parent_k));
-		int outputLabel = nodeArr[outputIdx];
 		int instanceID = network.getInstance().getInstanceId();
 		boolean isTest = instanceID > 0 && !network.getInstance().isLabeled();
 		if (input != null) {
+			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
 			int H = getHiddenSize();
 			Map<Object,Integer> input2id = isTest ? this.testInput2id : this.input2id;
 			int id = input2id.get(input);
@@ -305,17 +301,20 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 	}
 	
 	@Override
-	public synchronized void update(double count, Network network, int parent_k, int children_k_index) {
+	public void update(double count, Network network, int parent_k, int children_k_index) {
 		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		int[] nodeArr = NetworkIDMapper.toHybridNodeArray(network.getNode(parent_k));
-		int outputLabel = nodeArr[outputIdx];
 		if (input != null) {
+			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
 			int H = getHiddenSize();
 			int id = input2id.get(input);
-			double countOutput = countOutputMatrix.get(id, outputLabel);
-			countOutputMatrix.set(id, outputLabel, countOutput+count);
-			double countWeight = countWeightMatrix.get(outputLabel, id);
-			countWeightMatrix.set(outputLabel, id, countWeight-count);
+			synchronized (countOutputMatrix) {
+				double countOutput = countOutputMatrix.get(id, outputLabel);
+				countOutputMatrix.set(id, outputLabel, countOutput+count);
+			}
+			synchronized (countWeightMatrix) {
+				double countWeight = countWeightMatrix.get(outputLabel, id);
+				countWeightMatrix.set(outputLabel, id, countWeight-count);
+			}
 //			for (int i = 0; i < H; i++) {
 //				gradOutput[id*H+i] += count * weights[outputLabel*H+i];
 //			}

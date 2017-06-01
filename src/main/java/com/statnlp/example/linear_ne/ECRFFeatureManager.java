@@ -73,7 +73,7 @@ public class ECRFFeatureManager extends FeatureManager {
 
 			String input = llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt;
 //			String input = currWord;
-			net.addHyperEdgeInput(network, parent_k, children_k_index, input); // todo: add the label!
+			net.addHyperEdge(network, parent_k, children_k_index, input, eId); // todo: add the label!
 			
 //			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw));
 		} else {
