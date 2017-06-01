@@ -19,6 +19,7 @@ import java.util.function.Consumer;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.Message;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.LinearInstance;
@@ -250,8 +251,14 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 					return instanceParserClass.getConstructor(Pipeline.class).newInstance(this);
 				} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
 						| InvocationTargetException | NoSuchMethodException | SecurityException e) {
-					LOGGER.fatal("[%s]Instance parser class name %s cannot be instantiated with Pipeline object as the argument.", getCurrentTask(), instanceParserClass);
-					throw new RuntimeException(LOGGER.throwing(Level.FATAL, e));
+					try {
+						return instanceParserClass.newInstance();
+					} catch (InstantiationException | IllegalAccessException e1) {
+						LOGGER.fatal("[%s]Instance parser class name %s can neither be instantiated with Pipeline "
+								+ "object as the argument, nor does it have a public empty constructor.",
+								getCurrentTask(), instanceParserClass);
+						throw new RuntimeException(LOGGER.throwing(Level.FATAL, e));
+					}
 				}
 			}
 			return new DelimiterBasedInstanceParser(this);
@@ -270,30 +277,56 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 			return networkCompiler;
 		}
 		String currentTask = getCurrentTask();
-		if(currentTask.equals(TASK_TRAIN) || currentTask.equals(TASK_VISUALIZE)){
+		if(networkModel != null){
+			return networkModel.getNetworkCompiler();
+		} else {
+			boolean failEarly = true;
+			if(!currentTask.equals(TASK_TRAIN) && !currentTask.equals(TASK_VISUALIZE)){
+				LOGGER.warn("[%s]No model has been loaded, cannot load network compiler from model, "
+						+ "attempting to create a network compiler now.", currentTask);
+				failEarly = false;
+			}
 			if(networkCompilerClass == null){
 				String linearModelClassName = getParameter("linearModelClass");
 				String networkCompilerClassName = linearModelClassName+"NetworkCompiler";
 				try {
 					networkCompilerClass = (Class<? extends NetworkCompiler>)Class.forName(networkCompilerClassName);
 				} catch (ClassNotFoundException e) {
-					LOGGER.fatal("[%s]Network compiler class name cannot be inferred from model class name %s", getCurrentTask(), linearModelClassName);
-					throw new RuntimeException(LOGGER.throwing(Level.FATAL, e));
+					Message message = LOGGER.getMessageFactory().newMessage(
+							"[%s]Network compiler class name cannot be inferred from model class name %s",
+							currentTask, linearModelClassName);
+					if(failEarly){
+						LOGGER.fatal(message);
+						throw new RuntimeException(LOGGER.throwing(Level.FATAL, e));
+					} else {
+						LOGGER.warn(message);
+						LOGGER.throwing(Level.WARN, e);
+						LOGGER.warn("[%s]Network compiler creation failed, no network compiler was created.", currentTask);
+						return null;
+					}
 				}
 			}
 			try {
 				return (NetworkCompiler)networkCompilerClass.getConstructor(Pipeline.class).newInstance(this);
 			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException |
 					InvocationTargetException | NoSuchMethodException | SecurityException e) {
-				LOGGER.fatal("[%s]Network compiler class %s cannot be instantiated with Pipeline object as the argument.", getCurrentTask(), networkCompilerClass.getName());
-				throw new RuntimeException(LOGGER.throwing(Level.FATAL, e));
+				try {
+					return (NetworkCompiler)networkCompilerClass.newInstance();
+				} catch (InstantiationException | IllegalAccessException e1) {
+					Message message = LOGGER.getMessageFactory().newMessage("[%s]Network compiler class %s can neither be instantiated with Pipeline "
+							+ "object as the argument, nor does it have a public empty constructor.",
+							currentTask, networkCompilerClass.getName());
+					if(failEarly){
+						LOGGER.fatal(message);
+						throw new RuntimeException(LOGGER.throwing(Level.FATAL, e));
+					} else {
+						LOGGER.warn(message);
+						LOGGER.throwing(Level.WARN, e);
+						LOGGER.warn("[%s]Network compiler creation failed, no network compiler was created.", currentTask);
+						return null;
+					}
+				}
 			}
-		} else {
-			if(networkModel == null){
-				LOGGER.warn("[%s]No model has been loaded, cannot load network compiler.", getCurrentTask());
-				return null;
-			}
-			return networkModel.getNetworkCompiler();
 		}
 	}
 
@@ -307,12 +340,23 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 			return featureManager;
 		}
 		String currentTask = getCurrentTask();
-		if(currentTask.equals(TASK_TRAIN) || currentTask.equals(TASK_VISUALIZE)){
+		if(networkModel != null){
+			return networkModel.getFeatureManager();
+		} else {
+			boolean failEarly = true;
+			if(!currentTask.equals(TASK_TRAIN) && !currentTask.equals(TASK_VISUALIZE)){
+				LOGGER.warn("[%s]No model has been loaded, cannot load feature manager from model, "
+						+ "attempting to create a feature manager now.", currentTask);
+				failEarly = false;
+			}
 			if(featureManagerClass == null){
 				if(hasParameter("useFeatureTemplate") && (boolean)getParameter("useFeatureTemplate")){
 					if(hasParameter("featureTemplatePath")){
+						LOGGER.info("[%s]Using template-based feature manager with templates from %s.",
+								currentTask, (String)getParameter("featureTemplatePath"));
 						return new TemplateBasedFeatureManager(param, (String)getParameter("featureTemplatePath"));	
 					} else {
+						LOGGER.info("[%s]Using template-based feature manager with default template.", currentTask);
 						return new TemplateBasedFeatureManager(param);
 					}
 				}
@@ -321,27 +365,47 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 				try {
 					featureManagerClass = (Class<? extends FeatureManager>)Class.forName(featureManagerClassName);
 				} catch (ClassNotFoundException e) {
-					LOGGER.fatal("[%s]Feature manager class name cannot be inferred from model class name %s", getCurrentTask(), linearModelClassName);
-					throw new RuntimeException(LOGGER.throwing(Level.FATAL, e));
+					Message message = LOGGER.getMessageFactory().newMessage(
+							"[%s]Feature manager class name cannot be inferred from model class name %s",
+							currentTask, linearModelClassName);
+					if(failEarly){
+						LOGGER.fatal(message);
+						throw new RuntimeException(LOGGER.throwing(Level.FATAL, e));
+					} else {
+						LOGGER.warn(message);
+						LOGGER.throwing(Level.WARN, e);
+						LOGGER.warn("[%s]Feature manager creation failed, no feature manager was created.", currentTask);
+						return null;
+					}
 				} 
 			} else {
 				if(hasParameter("useFeatureTemplate") && (boolean)getParameter("useFeatureTemplate")){
-					LOGGER.warn("[%s]Both useFeatureTemplate and featureManagerClass are specified. Using the specified featureManagerClass.", getCurrentTask());
+					LOGGER.warn("[%s]Both useFeatureTemplate and featureManagerClass are specified. "
+							+ "Using the specified featureManagerClass.", currentTask);
 				}
 			}
 			try {
-				return (FeatureManager)featureManagerClass.getConstructor(Pipeline.class).newInstance(this);
+				return featureManagerClass.getConstructor(Pipeline.class).newInstance(this);
 			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException |
 					InvocationTargetException | NoSuchMethodException | SecurityException e) {
-				LOGGER.fatal("[%s]Feature manager class name cannot be inferred from model class name %s", getCurrentTask(), featureManagerClass.getName());
-				throw new RuntimeException(LOGGER.throwing(Level.FATAL, e));
+				try {
+					return featureManagerClass.newInstance();
+				} catch (InstantiationException | IllegalAccessException e1) {
+					Message message = LOGGER.getMessageFactory().newMessage(
+							"[%s]Feature manager class %s can neither be instantiated with Pipeline "
+							+ "object as the argument, nor does it have a public empty constructor.",
+							currentTask, featureManagerClass.getName());
+					if(failEarly){
+						LOGGER.fatal(message);
+						throw new RuntimeException(LOGGER.throwing(Level.FATAL, e));
+					} else {
+						LOGGER.warn(message);
+						LOGGER.throwing(Level.WARN, e);
+						LOGGER.warn("[%s]Feature manager creation failed, no feature manager was created.", currentTask);
+						return null;
+					}
+				}
 			}
-		} else {
-			if(networkModel == null){
-				LOGGER.warn("[%s]No model has been loaded, cannot load feature manager.", getCurrentTask());
-				return null;
-			}
-			return networkModel.getFeatureManager();
 		}
 	}
 

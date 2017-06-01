@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.util.Pipeline;
 
 /**
  * The base class for network compiler, a class to convert a problem representation between 
@@ -33,6 +34,21 @@ import com.statnlp.commons.types.Instance;
  *
  */
 public abstract class NetworkCompiler implements Serializable{
+	
+	/**
+	 * Creates an empty network compiler
+	 */
+	public NetworkCompiler(){
+		
+	}
+	
+	/**
+	 * A constructor taking a Pipeline object as an input
+	 * @param pipeline
+	 */
+	public NetworkCompiler(Pipeline<?> pipeline){
+		
+	}
 	
 	/**
 	 * A class to store information about a single instance (both labeled and unlabeled versions)

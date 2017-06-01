@@ -356,7 +356,6 @@ public class GlobalNetworkParam implements Serializable{
 		this._locked = true;
 		
 		System.err.println(this._size+" features.");
-		
 	}
 	
 	/**

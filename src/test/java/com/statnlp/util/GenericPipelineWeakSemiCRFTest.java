@@ -29,6 +29,7 @@ public class GenericPipelineWeakSemiCRFTest {
 				.withTestPath("data/SMSNP/SMSNP.test.100")						// Specify the test data
 				.withModelPath("test.model")									// Specify where to save the model (if not specified no model will be written)
 				.withLogPath("test.log")										// Specify the log file
+				.withAttemptMemorySaving(true)									// Save memory and time
 				.withInstanceParser(WeakSemiCRFInstanceParser.class)			// Specify the instance parser (the one responsible to read the data)
 				.withFeatureManager(WeakSemiCRFFeatureManager.class)			// Specify the feature manager
 				.withNetworkCompiler(WeakSemiCRFNetworkCompiler.class)			// Specify the network compiler
@@ -36,7 +37,7 @@ public class GenericPipelineWeakSemiCRFTest {
 				.withEvaluateCallback(GenericPipelineWeakSemiCRFTest::evaluate) // Specify the evaluation function
 				.addTask("train")
 				.addTasks("test", "evaluate")
-				.addTask("visualize")
+//				.addTask("visualize")
 				;
 		pipeline.execute();
 	}
@@ -131,7 +132,7 @@ public class GenericPipelineWeakSemiCRFTest {
 			avgF1 += f1;
 			System.out.println(String.format("%6s: #Corr:%2$3d, #Pred:%3$3d, #Gold:%4$3d, Pr=%5$#5.2f%% Rc=%6$#5.2f%% F1=%7$#5.2f%%", ((WeakSemiCRFInstanceParser)pipeline.instanceParser).getLabel(i).getForm(), corrects[i], totalPred[i], totalGold[i], precision*100, recall*100, f1*100));
 		}
-		System.out.printf("Macro average F1: %.2f%%", 100*avgF1/size);
+		System.out.println(String.format("Macro average F1: %.2f%%", 100*avgF1/size));
 	}
 	
 	/**

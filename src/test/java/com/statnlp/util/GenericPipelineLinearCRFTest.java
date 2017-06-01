@@ -18,6 +18,7 @@ public class GenericPipelineLinearCRFTest {
 				.withTestPath("data/test.data")	  // Specify the test data
 				.withModelPath("test.model")	  // Specify where to save the model (if not specified no model will be written)
 				.withLogPath("test.log")		  // Specify the log file
+				.withAttemptMemorySaving(true)	  // Save memory and time
 				.addTask("train")				  // Specify the tasks
 				.addTasks("test", "evaluate")	  // You can use the plural or the singular
 				.addTask("visualize")			  // And you can add tasks multiple times, which will be executed in order

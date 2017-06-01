@@ -74,15 +74,13 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 		GlobalNetworkParam param_g = this._param_g;
 		int bigramFeature = param_g.toFeature(network, FeatureType.BIGRAM.name(), parentLabelId+"", parentLabelId+" "+childLabelId);
 		if(parentType == NodeType.ROOT || childType == NodeType.LEAF){
-			return new FeatureArray(new int[]{
-					bigramFeature,
-			});
+			return createFeatureArray(network, new int[]{bigramFeature});
 		}
 		
 		if(CHEAT){
 			int instanceId = Math.abs(instance.getInstanceId());
 			int cheatFeature = param_g.toFeature(network, FeatureType.CHEAT.name(), parentLabelId+"", instanceId+" "+parentPos+" "+childPos+" "+parentLabelId+" "+childLabelId);
-			return new FeatureArray(new int[]{cheatFeature});
+			return createFeatureArray(network, new int[]{cheatFeature});
 		}
 		
 		List<String[]> inputTokenized = instance.input;
@@ -93,13 +91,14 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 			input += inputToken[0];
 			inputArr[i] = inputToken[0];
 		}
+		String segment = input.substring(childPos, parentPos);
 		int length = input.length();
 		int isSpaceFeature = param_g.toFeature(network, FeatureType.ENDS_WITH_SPACE.name(), parentLabelId+"", (inputArr[parentPos].equals(" "))+"");
 		int startCharFeature = param_g.toFeature(network, FeatureType.START_CHAR.name(), parentLabelId+"", inputArr[childPos]);
 		int endCharFeature = param_g.toFeature(network, FeatureType.END_CHAR.name(), parentLabelId+"", inputArr[parentPos]);
-		int segmentFeature = param_g.toFeature(network, FeatureType.SEGMENT.name(), parentLabelId+"", input.substring(childPos, parentPos));
+		int segmentFeature = param_g.toFeature(network, FeatureType.SEGMENT.name(), parentLabelId+"", segment);
 		
-		String[] words = input.split(" ");
+		String[] words = segment.split(" ");
 		int numSpaces = words.length-1;
 		int numSpacesFeature = param_g.toFeature(network, FeatureType.NUM_SPACES.name(), parentLabelId+"", numSpaces+"");
 		
@@ -125,17 +124,20 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 		int nextWordFeature = param_g.toFeature(network, FeatureType.NEXT_WORD.name(), parentLabelId+"", input.substring(parentPos+1, nextSpaceIdx));
 		int endBoundaryWordFeature = param_g.toFeature(network, FeatureType.END_BOUNDARY_WORD.name(), parentLabelId+"", input.substring(lastSpaceIdx, nextSpaceIdx));
 		
-		ArrayList<Integer> features = new ArrayList<Integer>();
-		features.add(bigramFeature);
-		features.add(isSpaceFeature);
-		features.add(startCharFeature);
-		features.add(endCharFeature);
-		features.add(segmentFeature);
-		features.add(numSpacesFeature);
-		features.add(prevWordFeature);
-		features.add(nextWordFeature);
-		features.add(startBoundaryWordFeature);
-		features.add(endBoundaryWordFeature);
+		ArrayList<Integer> edgeFeatures = new ArrayList<Integer>();
+		ArrayList<Integer> nodeStartFeatures = new ArrayList<Integer>();
+		ArrayList<Integer> nodeEndFeatures = new ArrayList<Integer>();
+		edgeFeatures.add(bigramFeature);
+		nodeEndFeatures.add(isSpaceFeature);
+		nodeStartFeatures.add(startCharFeature);
+		nodeEndFeatures.add(endCharFeature);
+		edgeFeatures.add(segmentFeature);
+		edgeFeatures.add(numSpacesFeature);
+		nodeStartFeatures.add(prevWordFeature);
+		nodeEndFeatures.add(nextWordFeature);
+		nodeStartFeatures.add(startBoundaryWordFeature);
+		nodeEndFeatures.add(endBoundaryWordFeature);
+		
 		
 		int[] wordFeatures = new int[2*words.length];
 		for(int i=0; i<words.length; i++){
@@ -143,7 +145,7 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 			wordFeatures[2*words.length-i-1] = param_g.toFeature(network, FeatureType.WORDS.name()+"-"+i, parentLabelId+"", words[i]);
 		}
 		for(int feature: wordFeatures){
-			features.add(feature);
+			edgeFeatures.add(feature);
 		}
 		
 		int unigramFeatureSize = 2*unigramWindowSize;
@@ -161,7 +163,7 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 			unigramFeatures[unigramFeatureSize-i-1] = param_g.toFeature(network, FeatureType.UNIGRAM+":-"+i, parentLabelId+"", curInput);
 		}
 		for(int feature: unigramFeatures){
-			features.add(feature);
+			edgeFeatures.add(feature);
 		}
 		
 		int substringFeatureSize = 2*substringWindowSize;
@@ -179,16 +181,13 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 			substringFeatures[unigramFeatureSize-i-1] = param_g.toFeature(network, FeatureType.SUBSTRING+":-"+i, parentLabelId+"", curInput);
 		}
 		for(int feature: substringFeatures){
-			features.add(feature);
+			edgeFeatures.add(feature);
 		}
 		
-		int[] featureArr = new int[features.size()];
-		int i=0;
-		for(int feature: features){
-			featureArr[i] = feature;
-			i++;
-		}
-		return new FeatureArray(featureArr);
+		FeatureArray featureArray = createFeatureArray(network, edgeFeatures);
+		featureArray = createFeatureArray(network, nodeStartFeatures, featureArray);
+		featureArray = createFeatureArray(network, nodeEndFeatures, featureArray);
+		return featureArray;
 	}
 
 }
