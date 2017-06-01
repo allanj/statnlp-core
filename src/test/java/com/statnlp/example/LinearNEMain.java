@@ -22,7 +22,7 @@ import com.statnlp.neural.MultiLayerPerceptron;
 
 public class LinearNEMain {
 	
-	public static boolean DEBUG = false;
+	public static boolean DEBUG = true;
 
 	public static int trainNumber = -100;
 	public static int testNumber = -100;
