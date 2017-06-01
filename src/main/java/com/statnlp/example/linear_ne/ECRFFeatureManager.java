@@ -96,7 +96,7 @@ public class ECRFFeatureManager extends FeatureManager {
 //		}
 		String prevEntity = Entity.get(childEId).getForm();
 //
-//		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), currEn,  prevEntity));
+		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), currEn,  prevEntity));
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "currW-prevE-currE",currWord+":"+prevEntity+":"+currEn));
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "prevW-prevE-currE",lw+":"+prevEntity+":"+currEn));
 //		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "nextW-prevE-currE",rw+":"+prevEntity+":"+currEn));
