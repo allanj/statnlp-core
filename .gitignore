@@ -6,3 +6,4 @@ target/
 experiments/*
 data/*
 *.jar
+ner_out.txt
