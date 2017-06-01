@@ -177,9 +177,9 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 		Runtime rt = Runtime.getRuntime();
 		long ram;
 		
-		System.gc();
-		ram = (rt.totalMemory() - rt.freeMemory())/1024/1024;
-		System.err.println("RAM[BEF]:"+ram);
+//		System.gc();
+//		ram = (rt.totalMemory() - rt.freeMemory())/1024/1024;
+//		System.err.println("RAM[BEF]:"+ram);
 
 		
 		for (int i = 0; i < this._instances.length; i++) {
@@ -219,10 +219,10 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 			}
 		}
 		
-		System.gc();
-		ram = (rt.totalMemory() - rt.freeMemory())/1024/1024;
-		System.err.println("RAM[AFT]:"+ram);
-		System.err.println("==END==");
+//		System.gc();
+//		ram = (rt.totalMemory() - rt.freeMemory())/1024/1024;
+//		System.err.println("RAM[AFT]:"+ram);
+//		System.err.println("==END==");
 		
 	}
 	
