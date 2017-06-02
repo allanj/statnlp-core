@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.statnlp.example.weak_semi_crf;
+package com.statnlp.example;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,8 +9,15 @@ import java.util.List;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.example.weak_semi_crf.Span;
+import com.statnlp.example.weak_semi_crf.WeakSemiCRFFeatureManager;
+import com.statnlp.example.weak_semi_crf.WeakSemiCRFInstanceParser;
+import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler;
 import com.statnlp.util.GenericPipeline;
 
+/**
+ * An example of how to implement a custom pipeline by extending the GenericPipeline class.
+ */
 public class WeakSemiCRFPipeline extends GenericPipeline {
 	
 	public WeakSemiCRFInstanceParser initInstanceParser(){

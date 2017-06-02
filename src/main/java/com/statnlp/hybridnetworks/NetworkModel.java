@@ -285,7 +285,6 @@ public abstract class NetworkModel implements Serializable{
 		for(int i=0; i<trainLength; i++){
 			instIds.add(i+1);
 		}
-		printUsedMemory("before compile");
 		/*
 		 * Pre-compile the networks
 		 * In mean-field, we need to pre-compile because we need the unlabeled network
@@ -295,7 +294,7 @@ public abstract class NetworkModel implements Serializable{
 		if(NetworkConfig.PRE_COMPILE_NETWORKS){
 			preCompileNetworks(insts);
 		}
-		printUsedMemory("after compile");
+		printUsedMemory("before touch");
 		boolean keepExistingThreads = NetworkConfig.PRE_COMPILE_NETWORKS ? true : false;
 		// The first touch
 		touch(insts, keepExistingThreads);
