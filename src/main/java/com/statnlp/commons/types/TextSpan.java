@@ -19,8 +19,6 @@ package com.statnlp.commons.types;
 import java.io.Serializable;
 import java.util.ArrayList;
 
-import com.statnlp.commons.AttributedWord;
-
 public abstract class TextSpan implements Serializable{
 	
 	private static final long serialVersionUID = -271990869644409937L;
@@ -198,7 +196,7 @@ public abstract class TextSpan implements Serializable{
 		StringBuilder sb = new StringBuilder();
 		for(int k = 0; k<this._words.length; k++){
 			if(k!=0) sb.append(' ');
-			sb.append(this.getWord(k).getName());
+			sb.append(this.getWord(k).getForm());
 		}
 		return sb.toString();
 	}
@@ -210,7 +208,7 @@ public abstract class TextSpan implements Serializable{
 			if(this.length()!=span.length())
 				return false;
 			for(int k = 0; k<this.length(); k++){
-				if(!this.getWord(k).getName().equals(span.getWord(k).getName()))
+				if(!this.getWord(k).getForm().equals(span.getWord(k).getForm()))
 					return false;
 			}
 			return true;
@@ -223,7 +221,7 @@ public abstract class TextSpan implements Serializable{
 		StringBuilder sb = new StringBuilder();
 		for(int k = 0; k<this._words.length; k++){
 			if(k!=0) sb.append(' ');
-			sb.append(this.getWord(k).getName());
+			sb.append(this.getWord(k).getForm());
 		}
 		return sb.toString();
 	}

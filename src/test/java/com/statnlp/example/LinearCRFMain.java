@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 import com.statnlp.InitWeightOptimizerFactory;
@@ -29,6 +30,7 @@ import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.StringIndex;
 import com.statnlp.neural.NeuralConfigReader;
+import com.statnlp.util.GenericPipeline;
 
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
@@ -36,8 +38,31 @@ import gnu.trove.set.TIntSet;
 
 public class LinearCRFMain {
 	
-	
 	public static void main(String args[]) throws IOException, InterruptedException{
+		args = ("--linearModelClass com.statnlp.example.linear_crf.LinearCRF "
+				+ "--trainPath data/CoNLL2003/eng.train "
+				+ "--numTrain 1000 "
+				+ "--testPath data/CoNLL2003/eng.testb "
+				+ "--numTest 100 "
+				+ "--modelPath test.model "
+				+ "--logPath test.log "
+				+ "--l2 0.01 "
+				+ "--weightInit 0.0 "
+				+ "--modelType CRF "
+				+ "--margin 1.0 "
+				+ "--nodeMismatchCost 1.0 "
+				+ "--edgeMismatchCost 0.0 "
+				+ "--useBatchTraining "
+				+ "--batchSize 11 "
+				+ "--stoppingCriteria MAX_ITERATION_REACHED "
+				+ "--maxIter 1000 "
+				+ "--evaluateEvery 0 "
+				+ "train test evaluate visualize").split(" ");
+		GenericPipeline pipeline = new GenericPipeline();
+		pipeline.parseArgs(args);
+		pipeline.execute();
+		System.exit(0);
+
 		String trainPath = System.getProperty("trainPath", "data/train.data");
 		String testPath = System.getProperty("testPath", "data/test.data");
 		
@@ -221,7 +246,7 @@ public class LinearCRFMain {
 		int size = trainInstances.length;
 		System.err.println("Read.."+size+" instances from "+trainPath);
 		
-		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler(param.LABELS.values());
+		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler(LABELS.values());
 		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(param, argsToFeatureManager);
 		
 		NetworkModel model = DiscriminativeNetworkModel.create(fm, compiler, outstream);
@@ -281,10 +306,10 @@ public class LinearCRFMain {
 		for(Instance ins: predictions){
 			@SuppressWarnings("unchecked")
 			LinearInstance<Label> instance = (LinearInstance<Label>)ins;
-			ArrayList<Label> goldLabel = instance.getOutput();
-			ArrayList<Label> actualLabel = instance.getPrediction();
-			List<ArrayList<Label>> topKPredictions = instance.getTopKPredictions();
-			ArrayList<String[]> words = instance.getInput();
+			List<Label> goldLabel = instance.getOutput();
+			List<Label> actualLabel = instance.getPrediction();
+			List<List<Label>> topKPredictions = instance.getTopKPredictions();
+			ArrayList<String[]> words = (ArrayList<String[]>)instance.getInput();
 			for(int i=0; i<goldLabel.size(); i++){
 				if(goldLabel.get(i).equals(actualLabel.get(i))){
 					corr++;
@@ -339,7 +364,7 @@ public class LinearCRFMain {
 				String[] features = line.substring(0, lastSpace).split(" ");
 				words.add(features);
 				if(withLabels){
-					Label label = param.getLabel(line.substring(lastSpace+1));
+					Label label = getLabel(line.substring(lastSpace+1));
 					labels.add(label);
 				}
 			}
@@ -359,6 +384,27 @@ public class LinearCRFMain {
 		}
 		Collections.sort(result);
 		return result;
+	}
+
+	public static final Map<String, Label> LABELS = new HashMap<String, Label>();
+	public static final Map<Integer, Label> LABELS_INDEX = new HashMap<Integer, Label>();
+	
+	public static Label getLabel(String form){
+		if(!LABELS.containsKey(form)){
+			Label label = new Label(form, LABELS.size());
+			LABELS.put(form, label);
+			LABELS_INDEX.put(label.getId(), label);
+		}
+		return LABELS.get(form);
+	}
+	
+	public static Label getLabel(int id){
+		return LABELS_INDEX.get(id);
+	}
+	
+	public static void reset(){
+		LABELS.clear();
+		LABELS_INDEX.clear();
 	}
 
 	private static void printHelp(){

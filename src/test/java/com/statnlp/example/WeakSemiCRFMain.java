@@ -12,13 +12,15 @@ import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Label;
+import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.weak_semi_crf.Span;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFFeatureManager;
-import com.statnlp.example.weak_semi_crf.WeakSemiCRFInstance;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFViewer;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
@@ -34,6 +36,7 @@ public class WeakSemiCRFMain {
 	
 	private static GlobalNetworkParam param;
 	
+	@SuppressWarnings("unchecked")
 	public static void main(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException, NoSuchFieldException, SecurityException, InterruptedException, IllegalArgumentException, IllegalAccessException{
 		boolean serializeModel = false;
 		boolean useCoNLLData = false;
@@ -42,8 +45,8 @@ public class WeakSemiCRFMain {
 		
 		String train_filename;
 		String test_filename;
-		WeakSemiCRFInstance[] trainInstances; 
-		WeakSemiCRFInstance[] testInstances;
+		LinearInstance<Span>[] trainInstances; 
+		LinearInstance<Span>[] testInstances;
 		
 		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
@@ -67,12 +70,12 @@ public class WeakSemiCRFMain {
 		}
 		if(limitNumInstances){
 			int limit = 100;
-			WeakSemiCRFInstance[] tmp = new WeakSemiCRFInstance[limit];
+			LinearInstance<Span>[] tmp = new LinearInstance[limit];
 			for(int i=0; i<limit; i++){
 				tmp[i] = trainInstances[i];
 			}
 			trainInstances = tmp;
-			tmp = new WeakSemiCRFInstance[limit];
+			tmp = new LinearInstance[limit];
 			for(int i=0; i<limit; i++){
 				tmp[i] = testInstances[i];
 			}
@@ -81,13 +84,13 @@ public class WeakSemiCRFMain {
 		
 		int maxSize = 0;
 		int maxSpan = 0;
-		for(WeakSemiCRFInstance instance: trainInstances){
+		for(LinearInstance<Span> instance: trainInstances){
 			maxSize = Math.max(maxSize, instance.size());
 			for(Span span: instance.output){
 				maxSpan = Math.max(maxSpan, span.end-span.start);
 			}
 		}
-		for(WeakSemiCRFInstance instance: testInstances){
+		for(LinearInstance<Span> instance: testInstances){
 			maxSize = Math.max(maxSize, instance.size());
 		}
 		
@@ -99,7 +102,7 @@ public class WeakSemiCRFMain {
 		
 		WeakSemiCRFFeatureManager fm = new WeakSemiCRFFeatureManager(param);
 		
-		Label[] labels = param.LABELS.values().toArray(new Label[param.LABELS.size()]);
+		Label[] labels = LABELS.values().toArray(new Label[LABELS.size()]);
 		
 		WeakSemiCRFNetworkCompiler compiler = new WeakSemiCRFNetworkCompiler(labels, maxSize, maxSpan);
 		
@@ -141,9 +144,13 @@ public class WeakSemiCRFMain {
 		int totalGold = 0;
 		int totalPred = 0;
 		for(Instance inst: predictions){
-			WeakSemiCRFInstance instance = (WeakSemiCRFInstance)inst;
+			LinearInstance<Span> instance = (LinearInstance<Span>)inst;
+			StringBuilder input = new StringBuilder();
+			for(String[] inputs: instance.input){
+				input.append(inputs[0]);
+			}
 			System.out.println("Input:");
-			System.out.println(instance.input);
+			System.out.println(input);
 			System.out.println("Gold:");
 			System.out.println(instance.output);
 			System.out.println("Prediction:");
@@ -191,12 +198,13 @@ public class WeakSemiCRFMain {
 	}
 	
 	private static void printScore(Instance[] instances){
-		int size = param.LABELS.size();
+		int size = LABELS.size();
 		int[] corrects = new int[size];
 		int[] totalGold = new int[size];
 		int[] totalPred = new int[size];
 		for(Instance inst: instances){
-			WeakSemiCRFInstance instance = (WeakSemiCRFInstance)inst;
+			@SuppressWarnings("unchecked")
+			LinearInstance<Span> instance = (LinearInstance<Span>)inst;
 			List<Span> predicted = duplicate(instance.getPrediction());
 			List<Span> actual = duplicate(instance.getOutput());
 			for(Span span: actual){
@@ -218,7 +226,7 @@ public class WeakSemiCRFMain {
 			double recall = (totalGold[i] == 0) ? 0.0 : 1.0*corrects[i]/totalGold[i];
 			double f1 = (precision == 0.0 || recall == 0.0) ? 0.0 : 2/((1/precision)+(1/recall));
 			avgF1 += f1;
-			System.out.println(String.format("%6s: #Corr:%2$3d, #Pred:%3$3d, #Gold:%4$3d, Pr=%5$#5.2f%% Rc=%6$#5.2f%% F1=%7$#5.2f%%", param.getLabel(i).getForm(), corrects[i], totalPred[i], totalGold[i], precision*100, recall*100, f1*100));
+			System.out.println(String.format("%6s: #Corr:%2$3d, #Pred:%3$3d, #Gold:%4$3d, Pr=%5$#5.2f%% Rc=%6$#5.2f%% F1=%7$#5.2f%%", getLabel(i).getForm(), corrects[i], totalPred[i], totalGold[i], precision*100, recall*100, f1*100));
 		}
 		System.out.printf("Macro average F1: %.2f%%", 100*avgF1/size);
 	}
@@ -253,16 +261,22 @@ public class WeakSemiCRFMain {
 	 * @return
 	 * @throws IOException
 	 */
-	private static WeakSemiCRFInstance[] readData(String fileName, boolean isLabeled) throws IOException{
+	@SuppressWarnings("unchecked")
+	private static LinearInstance<Span>[] readData(String fileName, boolean isLabeled) throws IOException{
 		InputStreamReader isr = new InputStreamReader(new FileInputStream(fileName), "UTF-8");
 		BufferedReader br = new BufferedReader(isr);
-		ArrayList<WeakSemiCRFInstance> result = new ArrayList<WeakSemiCRFInstance>();
+		ArrayList<LinearInstance<Span>> result = new ArrayList<LinearInstance<Span>>();
 		String input = null;
+		List<String[]> inputTokenized = null;
 		List<Span> output = null;
 		int instanceId = 1;
 		while(br.ready()){
 			input = br.readLine();
 			int length = input.length();
+			inputTokenized = new ArrayList<String[]>();
+			for(int i=0; i<length; i++){
+				inputTokenized.add(new String[]{input.substring(i, i+1)});
+			}
 			output = new ArrayList<Span>();
 			String[] spansStr = br.readLine().split("\\|");
 			List<Span> spans = new ArrayList<Span>();
@@ -271,7 +285,7 @@ public class WeakSemiCRFMain {
 					continue;
 				}
 				String[] startend_label = span.split(" ");
-				Label label = param.getLabel(startend_label[1]);
+				Label label = getLabel(startend_label[1]);
 				String[] start_end = startend_label[0].split(",");
 				int start = Integer.parseInt(start_end[0]);
 				int end = Integer.parseInt(start_end[1]);
@@ -291,7 +305,7 @@ public class WeakSemiCRFMain {
 				output.add(new Span(start, end, label));
 			}
 			createOutsideSpans(input, output, prevEnd, length);
-			WeakSemiCRFInstance instance = new WeakSemiCRFInstance(instanceId, 1.0, input, output);
+			LinearInstance<Span> instance = new LinearInstance<Span>(instanceId, 1.0, inputTokenized, output);
 			if(isLabeled){
 				instance.setLabeled();
 			} else {
@@ -302,7 +316,7 @@ public class WeakSemiCRFMain {
 			br.readLine();
 		}
 		br.close();
-		return result.toArray(new WeakSemiCRFInstance[result.size()]);
+		return result.toArray(new LinearInstance[result.size()]);
 	}
 	
 	/**
@@ -319,7 +333,7 @@ public class WeakSemiCRFMain {
 			int curEnd = input.indexOf(' ', curStart);
 			Label outsideLabel = null;
 			if(USE_SINGLE_OUTSIDE_TAG){
-				outsideLabel = param.getLabel("O");
+				outsideLabel = getLabel("O");
 				if(curEnd == -1 || curEnd > end){
 					curEnd = end;
 				} else if(curStart == curEnd){
@@ -331,36 +345,36 @@ public class WeakSemiCRFMain {
 					if(curStart == start){ // Start directly after previous tag: this is between tags
 						if(curStart == 0){ // Unless this is the start of the string
 							if(curEnd == length){
-								outsideLabel = param.getLabel("O"); // Case |<cur>|
+								outsideLabel = getLabel("O"); // Case |<cur>|
 							} else {
-								outsideLabel = param.getLabel("O-B"); // Case |<cur>###
+								outsideLabel = getLabel("O-B"); // Case |<cur>###
 							}
 						} else {
 							if(curEnd == length){
-								outsideLabel = param.getLabel("O-A"); // Case ###<cur>|
+								outsideLabel = getLabel("O-A"); // Case ###<cur>|
 							} else {
-								outsideLabel = param.getLabel("O-I"); // Case ###<cur>###
+								outsideLabel = getLabel("O-I"); // Case ###<cur>###
 							}
 						}
 					} else { // Start not immediately: this is before tags (found space before)
 						if(curEnd == length){
-							outsideLabel = param.getLabel("O"); // Case ### <cur>|
+							outsideLabel = getLabel("O"); // Case ### <cur>|
 						} else {
-							outsideLabel = param.getLabel("O-B"); // Case ### <cur>###
+							outsideLabel = getLabel("O-B"); // Case ### <cur>###
 						}
 					}
 				} else if(curStart == curEnd){ // It is immediately a space
 					curEnd += 1;
-					outsideLabel = param.getLabel("O"); // Tag space as a single outside token
+					outsideLabel = getLabel("O"); // Tag space as a single outside token
 				} else if(curStart < curEnd){ // Found a non-immediate space
 					if(curStart == start){ // Start immediately after previous tag: this is after tag
 						if(curStart == 0){
-							outsideLabel = param.getLabel("O"); // Case |<cur> ###
+							outsideLabel = getLabel("O"); // Case |<cur> ###
 						} else {
-							outsideLabel = param.getLabel("O-A"); // Case ###<cur> ###
+							outsideLabel = getLabel("O-A"); // Case ###<cur> ###
 						}
 					} else { // Start not immediately: this is a separate outside token
-						outsideLabel = param.getLabel("O"); // Case ### <cur> ###
+						outsideLabel = getLabel("O"); // Case ### <cur> ###
 					}
 				}
 			}
@@ -376,11 +390,13 @@ public class WeakSemiCRFMain {
 	 * @return
 	 * @throws IOException
 	 */
-	private static WeakSemiCRFInstance[] readCoNLLData(String fileName, boolean isLabeled) throws IOException{
+	@SuppressWarnings("unchecked")
+	private static LinearInstance<Span>[] readCoNLLData(String fileName, boolean isLabeled) throws IOException{
 		InputStreamReader isr = new InputStreamReader(new FileInputStream(fileName), "UTF-8");
 		BufferedReader br = new BufferedReader(isr);
-		ArrayList<WeakSemiCRFInstance> result = new ArrayList<WeakSemiCRFInstance>();
+		ArrayList<LinearInstance<Span>> result = new ArrayList<LinearInstance<Span>>();
 		String input = null;
+		List<String[]> inputTokenized = null;
 		List<Span> output = null;
 		int instanceId = 1;
 		int start = -1;
@@ -389,6 +405,7 @@ public class WeakSemiCRFMain {
 		while(br.ready()){
 			if(input == null){
 				input = "";
+				inputTokenized = new ArrayList<String[]>();
 				output = new ArrayList<Span>();
 				start = -1;
 				end = 0;
@@ -398,12 +415,13 @@ public class WeakSemiCRFMain {
 			if(line.length() == 0){
 				input = input.trim();
 				end = input.length();
+				for(int i=0; i<end; i++){
+					inputTokenized.add(new String[]{input.substring(i, i+1)});
+				}
 				if(start != -1){
 					createSpan(output, start, end, prevLabel);
 				}
-				WeakSemiCRFInstance instance = new WeakSemiCRFInstance(instanceId, 1);
-				instance.input = input;
-				instance.output = output;
+				LinearInstance<Span> instance = new LinearInstance<Span>(instanceId, 1, inputTokenized, output);
 				if(isLabeled){
 					instance.setLabeled(); // Important!
 				} else {
@@ -425,37 +443,37 @@ public class WeakSemiCRFMain {
 					if(prevLabel != null && !prevLabel.getForm().matches("O-[BI]")){
 						// Assumption: consecutive non-outside tags are separated by a space
 						input += " ";
-						createSpan(output, end, end+1, param.getLabel("O"));
+						createSpan(output, end, end+1, getLabel("O"));
 						end += 1;
 					}
 					start = end;
 					input += word;
-					label = param.getLabel(form.substring(form.indexOf("-")+1));
+					label = getLabel(form.substring(form.indexOf("-")+1));
 				} else if(form.startsWith("I")){
 					input += " "+word;
-					label = param.getLabel(form.substring(form.indexOf("-")+1));
+					label = getLabel(form.substring(form.indexOf("-")+1));
 				} else if(form.startsWith("O")){
 					if(start != -1){
 						createSpan(output, start, end, prevLabel);
 					}
 					if(prevLabel != null && form.matches("O(-B)?")){
 						input += " ";
-						createSpan(output, end, end+1, param.getLabel("O"));
+						createSpan(output, end, end+1, getLabel("O"));
 						end += 1;
 					}
 					start = end;
 					input += word;
 					if(USE_SINGLE_OUTSIDE_TAG){
-						label = param.getLabel("O");
+						label = getLabel("O");
 					} else {
-						label = param.getLabel(form);
+						label = getLabel(form);
 					}
 				}
 				prevLabel = label;
 			}
 		}
 		br.close();
-		return result.toArray(new WeakSemiCRFInstance[result.size()]);
+		return result.toArray(new LinearInstance[result.size()]);
 	}
 	
 	private static void createSpan(List<Span> output, int start, int end, Label label){
@@ -470,6 +488,27 @@ public class WeakSemiCRFMain {
 		} else {
 			output.add(new Span(start, end, label));
 		}
+	}
+
+	public static final Map<String, Label> LABELS = new HashMap<String, Label>();
+	public static final Map<Integer, Label> LABELS_INDEX = new HashMap<Integer, Label>();
+	
+	public static Label getLabel(String form){
+		if(!LABELS.containsKey(form)){
+			Label label = new Label(form, LABELS.size());
+			LABELS.put(form, label);
+			LABELS_INDEX.put(label.getId(), label);
+		}
+		return LABELS.get(form);
+	}
+	
+	public static Label getLabel(int id){
+		return LABELS_INDEX.get(id);
+	}
+	
+	public static void reset(){
+		LABELS.clear();
+		LABELS_INDEX.clear();
 	}
 
 }

@@ -9,10 +9,12 @@ import java.util.Map;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Label;
+import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.example.base.BaseNetwork;
+import com.statnlp.example.base.BaseNetwork.NetworkBuilder;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
-import com.statnlp.hybridnetworks.NetworkException;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
 import com.statnlp.util.Pipeline;
 
@@ -23,7 +25,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 	private static final long serialVersionUID = 6585870230920484539L;
 	public Map<Integer, Label> labels;
 	public int maxSize = 500;
-	public int maxSegmentLength = 20;
+	public int maxSegmentLength = 100;
 	public long[] allNodes;
 	public int[][][] allChildren;
 	
@@ -46,42 +48,38 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		this.maxSize = Math.max(maxSize, this.maxSize);
 		this.maxSegmentLength = Math.max(maxSegmentLength, this.maxSegmentLength);
 		System.out.println(String.format("Max size: %s, Max segment length: %s", maxSize, maxSegmentLength));
-		System.out.println(Arrays.asList(labels));
+		System.out.println(Arrays.asList(this.labels));
 		buildUnlabeled();
 	}
 	
-	public WeakSemiCRFNetworkCompiler(Pipeline pipeline) {
+	public WeakSemiCRFNetworkCompiler(Pipeline<?> pipeline) {
 		this.labels = new HashMap<Integer, Label>();
-		for(Label label: pipeline.param.LABELS.values()){
+		for(Label label: ((WeakSemiCRFInstanceParser)pipeline.instanceParser).LABELS.values()){
 			this.labels.put(label.getId(), label);
 		}
 		try{
-			this.maxSize = Math.max(Integer.parseInt(pipeline.getParameter("maxSize")), this.maxSize);
-		} catch (NullPointerException e){}
+			Object maxSize = pipeline.getParameter("maxSize");
+			if(String.class.isInstance(maxSize)){
+				maxSize = Integer.parseInt((String)maxSize);
+			}
+			this.maxSize = Math.max((int)maxSize, this.maxSize);
+		} catch (NullPointerException | NumberFormatException e){}
 		try{
-			this.maxSegmentLength = Math.max(Integer.parseInt(pipeline.getParameter("maxSegmentLength")), this.maxSegmentLength);
-		} catch (NullPointerException e){}
+			Object maxSegmentLength = pipeline.getParameter("maxSegmentLength");
+			if(String.class.isInstance(maxSegmentLength)){
+				maxSegmentLength = Integer.parseInt((String)maxSegmentLength);
+			}
+			this.maxSegmentLength = Math.max((int)maxSegmentLength, this.maxSegmentLength);
+		} catch (NullPointerException | NumberFormatException e){}
 		System.out.println(String.format("Max size: %s, Max segment length: %s", maxSize, maxSegmentLength));
 		System.out.println(Arrays.asList(labels));
 		buildUnlabeled();
 	}
-
-	@Override
-	public WeakSemiCRFNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
-		try{
-			if(inst.isLabeled()){
-				return compileLabeled(networkId, (WeakSemiCRFInstance)inst, param);
-			} else {
-				return compileUnlabeled(networkId, (WeakSemiCRFInstance)inst, param);
-			}
-		} catch (NetworkException e){
-			System.out.println(inst);
-			throw e;
-		}
-	}
 	
-	private WeakSemiCRFNetwork compileLabeled(int networkId, WeakSemiCRFInstance instance, LocalNetworkParam param){
-		WeakSemiCRFNetwork network = new WeakSemiCRFNetwork(networkId, instance, param);
+	public BaseNetwork compileLabeled(int networkId, Instance inst, LocalNetworkParam param){
+		@SuppressWarnings("unchecked")
+		LinearInstance<Span> instance = (LinearInstance<Span>)inst;
+		NetworkBuilder<BaseNetwork> networkBuilder = NetworkBuilder.builder();
 		
 		List<Span> output = instance.getOutput();
 		Collections.sort(output);
@@ -89,7 +87,7 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 		
 		// Add leaf
 		long leaf = toNode_leaf();
-		network.addNode(leaf);
+		networkBuilder.addNode(leaf);
 		
 		long prevNode = leaf;
 		
@@ -98,55 +96,53 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 			long begin = toNode_begin(span.start, labelId);
 			long end = toNode_end(span.end-1, labelId);
 			
-			network.addNode(begin);
-			network.addNode(end);
+			networkBuilder.addNode(begin);
+			networkBuilder.addNode(end);
 			for(int i=span.start; i<span.end; i++){
 				for(int j=0; j<labels.size(); j++){
 					try{
-						network.addNode(toNode_begin(i, j));
+						networkBuilder.addNode(toNode_begin(i, j));
 					} catch (Exception e){}
 					try{
-						network.addNode(toNode_end(i, j));
+						networkBuilder.addNode(toNode_end(i, j));
 					} catch (Exception e){}
 				}
 			}
 			
-			network.addEdge(begin, new long[]{prevNode});
-			network.addEdge(end, new long[]{begin});
+			networkBuilder.addEdge(begin, new long[]{prevNode});
+			networkBuilder.addEdge(end, new long[]{begin});
 			
 			prevNode = end;
 		}
 		
 		// Add root
 		long root = toNode_root(size-1);
-		network.addNode(root);
-		network.addEdge(root, new long[]{prevNode});
+		networkBuilder.addNode(root);
+		networkBuilder.addEdge(root, new long[]{prevNode});
 		
-		network.finalizeNetwork();
-		
-//		viewer.visualizeNetwork(network, null, "Labeled network for network "+networkId);
+		BaseNetwork network = networkBuilder.build(networkId, instance, param, this);
 		
 		if(DEBUG){
 			System.out.println(network);
-			WeakSemiCRFNetwork unlabeled = compileUnlabeled(networkId, instance, param);
+			BaseNetwork unlabeled = compileUnlabeled(networkId, instance, param);
 			System.out.println("Contained: "+unlabeled.contains(network));
 		}
 		return network;
 	}
 	
-	private WeakSemiCRFNetwork compileUnlabeled(int networkId, WeakSemiCRFInstance instance, LocalNetworkParam param){
+	public BaseNetwork compileUnlabeled(int networkId, Instance instance, LocalNetworkParam param){
 		int size = instance.size();
 		long root = toNode_root(size-1);
 		int root_k = Arrays.binarySearch(allNodes, root);
 		int numNodes = root_k + 1;
-		return new WeakSemiCRFNetwork(networkId, instance, allNodes, allChildren, param, numNodes);
+		return NetworkBuilder.quickBuild(networkId, instance, allNodes, allChildren, numNodes, param, this);
 	}
 	
 	private void buildUnlabeled(){
-		WeakSemiCRFNetwork network = new WeakSemiCRFNetwork();
+		NetworkBuilder<BaseNetwork> networkBuilder = NetworkBuilder.builder();
 		
 		long leaf = toNode_leaf();
-		network.addNode(leaf);
+		networkBuilder.addNode(leaf);
 		List<Long> prevNodes = new ArrayList<Long>();
 		List<Long> currNodes = new ArrayList<Long>();
 		prevNodes.add(leaf);
@@ -155,29 +151,29 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 				long beginNode = toNode_begin(pos, labelId);
 				long endNode = toNode_end(pos, labelId);
 				
-				network.addNode(beginNode);
-				network.addNode(endNode);
+				networkBuilder.addNode(beginNode);
+				networkBuilder.addNode(endNode);
 				
 				currNodes.add(endNode);
 				
 				for(int prevPos=pos; prevPos > pos-maxSegmentLength && prevPos >= 0; prevPos--){
 					long prevBeginNode = toNode_begin(prevPos, labelId);
-					network.addEdge(endNode, new long[]{prevBeginNode});
+					networkBuilder.addEdge(endNode, new long[]{prevBeginNode});
 				}
 				
 				for(long prevNode: prevNodes){
-					network.addEdge(beginNode, new long[]{prevNode});
+					networkBuilder.addEdge(beginNode, new long[]{prevNode});
 				}
 			}
 			long root = toNode_root(pos);
-			network.addNode(root);
+			networkBuilder.addNode(root);
 			for(long currNode: currNodes){
-				network.addEdge(root, new long[]{currNode});	
+				networkBuilder.addEdge(root, new long[]{currNode});	
 			}
 			prevNodes = currNodes;
 			currNodes = new ArrayList<Long>();
 		}
-		network.finalizeNetwork();
+		BaseNetwork network = networkBuilder.buildRudimentaryNetwork();
 		allNodes = network.getAllNodes();
 		allChildren = network.getAllChildren();
 	}
@@ -203,9 +199,10 @@ public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {
 	}
 
 	@Override
-	public WeakSemiCRFInstance decompile(Network net) {
-		WeakSemiCRFNetwork network = (WeakSemiCRFNetwork)net;
-		WeakSemiCRFInstance result = (WeakSemiCRFInstance)network.getInstance().duplicate();
+	public LinearInstance<Span> decompile(Network net) {
+		BaseNetwork network = (BaseNetwork)net;
+		@SuppressWarnings("unchecked")
+		LinearInstance<Span> result = (LinearInstance<Span>)network.getInstance().duplicate();
 		List<Span> prediction = new ArrayList<Span>();
 		int node_k = network.countNodes()-1;
 		while(node_k > 0){

@@ -20,7 +20,7 @@ import java.io.Serializable;
 
 /**
  * Defines a segment described by begin index and end index.
- * @author Lu Wei <luwei@statnlp.com>
+ * @author Lu Wei (luwei@statnlp.com)
  *
  */
 public class Segment implements Serializable, Comparable<Segment>{
@@ -121,7 +121,7 @@ public class Segment implements Serializable, Comparable<Segment>{
 	
 	@Override
 	public int hashCode(){
-		return (this._bIndex + 7) ^ (this._eIndex + 7);
+		return Integer.hashCode(this._bIndex) ^ Integer.hashCode(this._eIndex);
 	}
 	
 	@Override

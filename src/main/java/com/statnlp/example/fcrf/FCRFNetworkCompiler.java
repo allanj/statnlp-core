@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.example.base.BaseNetwork.NetworkBuilder;
 import com.statnlp.example.fcrf.FCRFConfig.TASK;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
@@ -33,15 +34,6 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 		this.IOBESencoding = IOBESencoding;
 		NetworkIDMapper.setCapacity(new int[]{1000, 500, 10});
 		this.compileUnlabeledInstancesGeneric();
-	}
-	
-	@Override
-	public FCRFNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
-		FCRFInstance lcrfInstance = (FCRFInstance)inst;
-		if(lcrfInstance.isLabeled())
-			return compileLabeledInstances(networkId, lcrfInstance, param);
-		else
-			return compileUnlabeledInstances(networkId, lcrfInstance, param);
 	}
 	
 	public long toNode_leaf(){
@@ -83,8 +75,10 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 	 * @param param
 	 * @return
 	 */
-	public FCRFNetwork compileLabeledInstances(int networkId, FCRFInstance inst, LocalNetworkParam param) {
-		FCRFNetwork lcrfNetwork = new FCRFNetwork(networkId, inst, param);
+	public FCRFNetwork compileLabeled(int networkId, Instance instance, LocalNetworkParam param) {
+		FCRFInstance inst = (FCRFInstance)instance;
+//		FCRFNetwork lcrfNetwork = new FCRFNetwork(networkId, inst, param, this);
+		NetworkBuilder<FCRFNetwork> lcrfNetwork = NetworkBuilder.builder(FCRFNetwork.class);
 		long leaf = toNode_leaf();
 		lcrfNetwork.addNode(leaf);
 		long root = toNode_root(inst.size());
@@ -118,27 +112,26 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 			}
 			lcrfNetwork.addEdge(root, t_children);
 		}
-		lcrfNetwork.finalizeNetwork();
+		FCRFNetwork network = lcrfNetwork.build(networkId, inst, param, this);
 
-		if (!genericUnlabeledNetwork.contains(lcrfNetwork)) {
+		if (!genericUnlabeledNetwork.contains(network)) {
 			System.err.println("wrong");
 		}
-		return lcrfNetwork;
+		return network;
 	}
 	
 
-	public FCRFNetwork compileUnlabeledInstances(int networkId, FCRFInstance inst, LocalNetworkParam param) {
-
+	public FCRFNetwork compileUnlabeled(int networkId, Instance inst, LocalNetworkParam param) {
 		long[] allNodes = genericUnlabeledNetwork.getAllNodes();
 		long root = toNode_root(inst.size());
 		int rootIdx = Arrays.binarySearch(allNodes, root);
-		FCRFNetwork lcrfNetwork = new FCRFNetwork(networkId, inst, allNodes, genericUnlabeledNetwork.getAllChildren(),
-				param, rootIdx + 1);
+		FCRFNetwork lcrfNetwork = NetworkBuilder.quickBuild(FCRFNetwork.class, networkId, inst, allNodes, genericUnlabeledNetwork.getAllChildren(),
+				rootIdx+1, param, this);
 		return lcrfNetwork;
 	}
 	
 	public void compileUnlabeledInstancesGeneric(){
-		FCRFNetwork lcrfNetwork = new FCRFNetwork();
+		NetworkBuilder<FCRFNetwork> lcrfNetwork = NetworkBuilder.builder(FCRFNetwork.class);
 		long leaf = toNode_leaf();
 		lcrfNetwork.addNode(leaf);
 		long[] children = new long[]{leaf};
@@ -220,8 +213,8 @@ public class FCRFNetworkCompiler extends NetworkCompiler{
 			
 			
 		}
-		lcrfNetwork.finalizeNetwork();
-		genericUnlabeledNetwork =  lcrfNetwork;
+		FCRFNetwork network = lcrfNetwork.buildRudimentaryNetwork();
+		genericUnlabeledNetwork =  network;
 		System.err.println(genericUnlabeledNetwork.getAllNodes().length+" nodes..");
 	}
 

@@ -22,9 +22,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
@@ -32,7 +30,7 @@ import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
-import com.statnlp.commons.types.Label;
+import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.neural.RemoteNN;
 
@@ -51,27 +49,6 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 public class GlobalNetworkParam implements Serializable{
 	
 	private static final long serialVersionUID = -1216927656396018976L;
-	
-	public final Map<String, Label> LABELS = new HashMap<String, Label>();
-	public final Map<Integer, Label> LABELS_INDEX = new HashMap<Integer, Label>();
-	
-	public Label getLabel(String form){
-		if(!LABELS.containsKey(form)){
-			Label label = new Label(form, LABELS.size());
-			LABELS.put(form, label);
-			LABELS_INDEX.put(label.getId(), label);
-		}
-		return LABELS.get(form);
-	}
-	
-	public Label getLabel(int id){
-		return LABELS_INDEX.get(id);
-	}
-	
-	public void reset(){
-		LABELS.clear();
-		LABELS_INDEX.clear();
-	}
 	
 	//these parameters are used for discriminative training using LBFGS.
 	/** The L2 regularization parameter weight */
@@ -367,6 +344,19 @@ public class GlobalNetworkParam implements Serializable{
 		lockIt(true);
 	}
 
+	private void initWeights(double[] weights, int from, int to){
+		if(NetworkConfig.RANDOM_INIT_WEIGHT){
+			Random r = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
+			for(int k=from; k<to; k++){
+				weights[k] = (r.nextDouble()-0.5)/10;
+			}
+		} else {
+			for(int k=from; k<to; k++){
+				weights[k] = NetworkConfig.FEATURE_INIT_WEIGHT;
+			}
+		}
+	}
+
 	/**
 	 * Lock current features.
 	 * If this is locked it means no new features will be allowed.
@@ -381,8 +371,6 @@ public class GlobalNetworkParam implements Serializable{
 	 * @param keepExistingWeights Whether to keep existing weights
 	 */
 	public void lockIt(boolean keepExistingWeights){
-		Random r = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
-		
 		if(this.isLocked()) return;
 		
 		if(!this.isDiscriminative()){
@@ -397,13 +385,7 @@ public class GlobalNetworkParam implements Serializable{
 		} else {
 			numWeightsKept = this._fixedFeaturesSize;
 		}
-		for(int k = 0; k<numWeightsKept; k++){
-			weights_new[k] = this._weights[k];
-		}
-		for(int k = numWeightsKept ; k<this._size; k++){
-			weights_new[k] = NetworkConfig.RANDOM_INIT_WEIGHT ? (r.nextDouble()-.5)/10 :
-				NetworkConfig.FEATURE_INIT_WEIGHT;
-		}
+		initWeights(weights_new, numWeightsKept, this._size);
 		this._weights = weights_new;
 		
 		// initialize NN params and gradParams
@@ -758,12 +740,13 @@ public class GlobalNetworkParam implements Serializable{
     	} catch(ExceptionWithIflag e){
     		throw new NetworkException("Exception with Iflag:"+e.getMessage());
     	}
-    	if(this._opt.name().contains("LBFGS Optimizer") ){//|| this._opt.name().contains("ADAGRAD")|| this._opt.name().contains("ADAM")){
-	    	double diff = this.getObj()-this.getObj_old();
+    	double diff = this.getObj()-this.getObj_old();
+    	double diffRatio = Math.abs(diff/this.getObj_old());
+    	if(NetworkConfig.STOPPING_CRITERIA == StoppingCriteria.SMALL_ABSOLUTE_CHANGE){
 	    	if(diff >= 0 && diff < NetworkConfig.OBJTOL){
 	    		done = true;
 	    	}
-	    	double diffRatio = Math.abs(diff/this.getObj_old());
+    	} else if(NetworkConfig.STOPPING_CRITERIA == StoppingCriteria.SMALL_RELATIVE_CHANGE){
 	    	if(diff >= 0 && diffRatio < 1e-4){
 	    		this.smallChangeCount += 1;
 	    	} else {
@@ -899,12 +882,6 @@ public class GlobalNetworkParam implements Serializable{
 		
 		out.writeObject("_nnController");
 		out.writeObject(this._nnController);
-		
-		out.writeObject("LABELS");
-		out.writeObject(this.LABELS);
-		
-		out.writeObject("LABELS_INDEX");
-		out.writeObject(this.LABELS_INDEX);
 	}
 	
 	@SuppressWarnings("unchecked")

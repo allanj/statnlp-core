@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.example.base.BaseNetwork;
+import com.statnlp.example.base.BaseNetwork.NetworkBuilder;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
@@ -22,7 +24,7 @@ public class MentionHypergraphNetworkCompiler extends NetworkCompiler {
 	
 	public Label[] labels;
 	public int maxSize = 200;
-	public MentionHypergraphNetwork unlabeledNetwork;
+	public BaseNetwork unlabeledNetwork;
 	
 	public enum NodeType{
 		X_NODE,
@@ -39,7 +41,7 @@ public class MentionHypergraphNetworkCompiler extends NetworkCompiler {
 	}
 
 	@Override
-	public MentionHypergraphNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
+	public BaseNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
 		MentionHypergraphInstance instance = (MentionHypergraphInstance)inst;
 		if(instance.isLabeled()){
 			return compileLabeled(networkId, instance, param);
@@ -48,33 +50,34 @@ public class MentionHypergraphNetworkCompiler extends NetworkCompiler {
 		}
 	}
 	
-	private MentionHypergraphNetwork compileLabeled(int networkId, MentionHypergraphInstance instance, LocalNetworkParam param){
-		MentionHypergraphNetwork network = new MentionHypergraphNetwork(networkId, instance, param);
+	public BaseNetwork compileLabeled(int networkId, Instance inst, LocalNetworkParam param){
+		MentionHypergraphInstance instance = (MentionHypergraphInstance)inst;
+		NetworkBuilder<BaseNetwork> networkBuilder = NetworkBuilder.builder();
 		int size = instance.size();
 		
 		long xNode = toNode_X();
-		network.addNode(xNode);
+		networkBuilder.addNode(xNode);
 		for(Span span: instance.output){
 			int labelId = span.label.id;
 			long prevINode = -1;
 			for(int pos=span.start; pos<span.end; pos++){
 				long curINode = toNode_I(pos, size, labelId);
-				if(!network.contains(curINode)){
-					network.addNode(curINode);
+				if(!networkBuilder.contains(curINode)){
+					networkBuilder.addNode(curINode);
 				}
 				if(prevINode == -1){
 					long tNode = toNode_T(pos, size, labelId);
-					if(!network.contains(tNode)){
-						network.addNode(tNode);
+					if(!networkBuilder.contains(tNode)){
+						networkBuilder.addNode(tNode);
 					}
 					try{
-						network.addEdge(tNode, new long[]{curINode});
+						networkBuilder.addEdge(tNode, new long[]{curINode});
 					} catch (NetworkException e){
 						// do nothing, edge from T to I already added (two mentions with the same start index)
 					}
 				} else {
 					try{
-						network.addEdge(prevINode, new long[]{curINode});
+						networkBuilder.addEdge(prevINode, new long[]{curINode});
 					} catch (NetworkException e){
 						// do nothing, edge from prevI to curI already added (overlapping mentions)
 					}
@@ -82,7 +85,7 @@ public class MentionHypergraphNetworkCompiler extends NetworkCompiler {
 				prevINode = curINode;
 			}
 			try{
-				network.addEdge(prevINode, new long[]{xNode});
+				networkBuilder.addEdge(prevINode, new long[]{xNode});
 			} catch (NetworkException e){
 				// do nothing, edge from I to X already added (two mentions with the same end index)
 			}
@@ -92,39 +95,39 @@ public class MentionHypergraphNetworkCompiler extends NetworkCompiler {
 			for(int idx=0; idx<labels.length; idx++){
 				Label label = labels[idx];
 				long iNode = toNode_I(pos, size, label.id);
-				if(network.contains(iNode)){
+				if(networkBuilder.contains(iNode)){
 					// Convert two edges (one to X one to next I) to a single hyperedge
-					ArrayList<long[]> childrenList = network.getChildren_tmp(iNode);
+					List<long[]> childrenList = networkBuilder.getChildren_tmp(iNode);
 					if(childrenList.size() > 1){
 						childrenList.clear();
 						long nextINode = toNode_I(pos+1, size, label.id);
-						network.addEdge(iNode, new long[]{xNode, nextINode});
+						networkBuilder.addEdge(iNode, new long[]{xNode, nextINode});
 					}
 				}
 				long tNode = toNode_T(pos, size, label.id);
-				if(!network.contains(tNode)){
-					network.addNode(tNode);
-					network.addEdge(tNode, new long[]{xNode});
+				if(!networkBuilder.contains(tNode)){
+					networkBuilder.addNode(tNode);
+					networkBuilder.addEdge(tNode, new long[]{xNode});
 				}
 				tNodes[idx] = tNode;
 			}
 			long eNode = toNode_E(pos, size);
-			network.addNode(eNode);
-			network.addEdge(eNode, tNodes);
+			networkBuilder.addNode(eNode);
+			networkBuilder.addEdge(eNode, tNodes);
 			long aNode = toNode_A(pos, size);
-			network.addNode(aNode);
+			networkBuilder.addNode(aNode);
 			if(pos < size-1){
 				long nextANode = toNode_A(pos+1, size);
-				network.addEdge(aNode, new long[]{eNode, nextANode});
+				networkBuilder.addEdge(aNode, new long[]{eNode, nextANode});
 			} else {
-				network.addEdge(aNode, new long[]{eNode});
+				networkBuilder.addEdge(aNode, new long[]{eNode});
 			}
 		}
 		
-		network.finalizeNetwork();
+		BaseNetwork network = networkBuilder.build(networkId, instance, param, this);
 		
 		if(DEBUG){
-			MentionHypergraphNetwork unlabeled = compileUnlabeled(networkId, instance, param);
+			BaseNetwork unlabeled = compileUnlabeled(networkId, instance, param);
 			System.out.println("Contained: "+unlabeled.contains(network));
 		}
 		return network;
@@ -141,57 +144,57 @@ public class MentionHypergraphNetworkCompiler extends NetworkCompiler {
 //		System.out.println(builder.toString());
 //	}
 
-	private MentionHypergraphNetwork compileUnlabeled(int networkId, MentionHypergraphInstance instance, LocalNetworkParam param){
+	public BaseNetwork compileUnlabeled(int networkId, Instance instance, LocalNetworkParam param){
 		int size = instance.size();
 		long root = toNode_A(0, size);
 		long[] allNodes = unlabeledNetwork.getAllNodes();
 		int[][][] allChildren = unlabeledNetwork.getAllChildren();
 		int root_k  = unlabeledNetwork.getNodeIndex(root);
 		int numNodes = root_k+1;
-		MentionHypergraphNetwork network = new MentionHypergraphNetwork(networkId, instance, allNodes, allChildren, param, numNodes);
+		BaseNetwork network = NetworkBuilder.quickBuild(networkId, instance, allNodes, allChildren, numNodes, param, this);
 		return network;
 	}
 	
 	private void buildUnlabeled(){
 		System.err.print("Building generic unlabeled tree up to size "+maxSize+"...");
 		long startTime = System.currentTimeMillis();
-		MentionHypergraphNetwork network = new MentionHypergraphNetwork();
+		NetworkBuilder<BaseNetwork> networkBuilder = NetworkBuilder.builder();
 		int size = maxSize;
 		
 		long xNode = toNode_X();
-		network.addNode(xNode);
+		networkBuilder.addNode(xNode);
 		for(int pos=size-1; pos>=0; pos--){
 			long[] tNodes = new long[labels.length];
 			for(int idx=0; idx<labels.length; idx++){
 				Label label = labels[idx];
 				long iNode = toNode_I(pos, size, label.id);
-				network.addNode(iNode);
-				network.addEdge(iNode, new long[]{xNode});
+				networkBuilder.addNode(iNode);
+				networkBuilder.addEdge(iNode, new long[]{xNode});
 				if(pos < size-1){
 					long nextINode = toNode_I(pos+1, size, label.id);
-					network.addEdge(iNode, new long[]{nextINode});
-					network.addEdge(iNode, new long[]{xNode, nextINode});
+					networkBuilder.addEdge(iNode, new long[]{nextINode});
+					networkBuilder.addEdge(iNode, new long[]{xNode, nextINode});
 				}
 				long tNode = toNode_T(pos, size, label.id);
-				network.addNode(tNode);
-				network.addEdge(tNode, new long[]{xNode});
-				network.addEdge(tNode, new long[]{iNode});
+				networkBuilder.addNode(tNode);
+				networkBuilder.addEdge(tNode, new long[]{xNode});
+				networkBuilder.addEdge(tNode, new long[]{iNode});
 				tNodes[idx] = tNode;
 			}
 			long eNode = toNode_E(pos, size);
-			network.addNode(eNode);
-			network.addEdge(eNode, tNodes);
+			networkBuilder.addNode(eNode);
+			networkBuilder.addEdge(eNode, tNodes);
 			long aNode = toNode_A(pos, size);
-			network.addNode(aNode);
+			networkBuilder.addNode(aNode);
 			if(pos < size-1){
 				long nextANode = toNode_A(pos+1, size);
-				network.addEdge(aNode, new long[]{eNode, nextANode});
+				networkBuilder.addEdge(aNode, new long[]{eNode, nextANode});
 			} else {
-				network.addEdge(aNode, new long[]{eNode});
+				networkBuilder.addEdge(aNode, new long[]{eNode});
 			}
 		}
 		
-		network.finalizeNetwork();
+		BaseNetwork network = networkBuilder.buildRudimentaryNetwork();
 		
 		this.unlabeledNetwork = network;
 		
@@ -226,7 +229,7 @@ public class MentionHypergraphNetworkCompiler extends NetworkCompiler {
 
 	@Override
 	public MentionHypergraphInstance decompile(Network net) {
-		MentionHypergraphNetwork network = (MentionHypergraphNetwork)net;
+		BaseNetwork network = (BaseNetwork)net;
 		MentionHypergraphInstance result = (MentionHypergraphInstance)network.getInstance().duplicate();
 		int size = result.size();
 		

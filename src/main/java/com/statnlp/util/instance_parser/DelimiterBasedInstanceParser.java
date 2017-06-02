@@ -4,11 +4,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
-import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.util.Pipeline;
 
 /**
@@ -19,20 +20,50 @@ public class DelimiterBasedInstanceParser extends InstanceParser implements Seri
 	
 	private static final long serialVersionUID = -4113323166917321677L;
 	
-	private GlobalNetworkParam param;
+	private boolean locked = false;
+	public final Map<String, Label> LABELS = new HashMap<String, Label>();
+	public final Map<Integer, Label> LABELS_INDEX = new HashMap<Integer, Label>();
+	
+	public Label getLabel(String form){
+		if(!LABELS.containsKey(form)){
+			if(locked){
+				throw new IllegalArgumentException("Label "+form+" is not one of the registered labels: "+LABELS.values());
+			}
+			Label label = new Label(form, LABELS.size());
+			LABELS.put(form, label);
+			LABELS_INDEX.put(label.getId(), label);
+		}
+		return LABELS.get(form);
+	}
+	
+	public Label getLabel(int id){
+		return LABELS_INDEX.get(id);
+	}
+	
+	public void lock(){
+		locked = true;
+	}
+	
+	public boolean locked(){
+		return locked;
+	}
+	
+	public void reset(){
+		LABELS.clear();
+		LABELS_INDEX.clear();
+	}
 	
 	/** The column index which should be regarded as the output label */
 	public int labelColumnIndex;
 	/** The delimiter when reading the input. This will be parsed as a regex. */
 	public String regexDelimiter;
 	
-	public DelimiterBasedInstanceParser(Pipeline pipeline){
+	public DelimiterBasedInstanceParser(Pipeline<?> pipeline){
 		this(pipeline, "[ \t]+", -1);
 	}
 
-	public DelimiterBasedInstanceParser(Pipeline pipeline, String regexDelimiter, int labelColumnIndex) {
+	public DelimiterBasedInstanceParser(Pipeline<?> pipeline, String regexDelimiter, int labelColumnIndex) {
 		super(pipeline);
-		this.param = pipeline.param;
 		this.regexDelimiter = regexDelimiter;
 		this.labelColumnIndex = labelColumnIndex;
 	}
@@ -65,7 +96,7 @@ public class DelimiterBasedInstanceParser extends InstanceParser implements Seri
 					int inputArrIdx = 0;
 					for(int i=0; i<tokens.length; i++){
 						if(i == (labelColumnIndex+tokens.length)%tokens.length){
-							Label label = param.getLabel(tokens[i]);
+							Label label = getLabel(tokens[i]);
 							labelList.add(label);
 						} else {
 							inputArr[inputArrIdx] = tokens[i];

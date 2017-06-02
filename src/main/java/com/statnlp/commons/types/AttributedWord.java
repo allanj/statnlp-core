@@ -14,14 +14,16 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.statnlp.commons;
+package com.statnlp.commons.types;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
 
-public class AttributedWord extends Word{
+import com.statnlp.commons.WordUtil;
+
+public class AttributedWord extends Word {
 	
 	private static final long serialVersionUID = -3254961188381878044L;
 	
@@ -50,7 +52,7 @@ public class AttributedWord extends Word{
 	
 	private void addNERAttributes(){
 		
-		String curr = this.getName();
+		String curr = this.getForm();
 		String type = "NER";
 		
 		if(WordUtil.isAllAlphaNumeric(curr)){
@@ -136,7 +138,7 @@ public class AttributedWord extends Word{
 	@Override
 	public String toString(){
 		StringBuilder sb = new StringBuilder();
-		sb.append(this.getName());
+		sb.append(this.getForm());
 		Iterator<String> attNames = this._attrs.keySet().iterator();
 		while(attNames.hasNext()){
 			String attName = attNames.next();

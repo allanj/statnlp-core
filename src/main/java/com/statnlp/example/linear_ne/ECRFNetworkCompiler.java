@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.example.base.BaseNetwork;
+import com.statnlp.example.base.BaseNetwork.NetworkBuilder;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
@@ -15,21 +17,11 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 
 	public enum NODE_TYPES {LEAF,NODE,ROOT};
 	public int _size;
-	public ECRFNetwork genericUnlabeledNetwork;
+	public BaseNetwork genericUnlabeledNetwork;
 	
 	public ECRFNetworkCompiler(){
 		this._size = 150;
 		this.compileUnlabeledInstancesGeneric();
-	}
-	
-	@Override
-	public ECRFNetwork compile(int networkId, Instance inst, LocalNetworkParam param) {
-		// TODO Auto-generated method stub
-		ECRFInstance lcrfInstance = (ECRFInstance)inst;
-		if(lcrfInstance.isLabeled())
-			return compileLabeledInstances(networkId, lcrfInstance, param);
-		else
-			return compileUnlabeledInstances(networkId, lcrfInstance, param);
 	}
 	
 	public long toNode_leaf(){
@@ -49,7 +41,7 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 
 	@Override
 	public ECRFInstance decompile(Network network) {
-		ECRFNetwork lcrfNetwork = (ECRFNetwork)network;
+		BaseNetwork lcrfNetwork = (BaseNetwork)network;
 		ECRFInstance lcrfInstance = (ECRFInstance)lcrfNetwork.getInstance();
 		ECRFInstance result = lcrfInstance.duplicate();
 		ArrayList<String> prediction = new ArrayList<String>();
@@ -75,8 +67,9 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 	}
 	
 
-	public ECRFNetwork compileLabeledInstances(int networkId, ECRFInstance inst, LocalNetworkParam param){
-		ECRFNetwork lcrfNetwork = new ECRFNetwork(networkId, inst,param, this);
+	public BaseNetwork compileLabeled(int networkId, Instance instance, LocalNetworkParam param){
+		ECRFInstance inst = (ECRFInstance)instance;
+		NetworkBuilder<BaseNetwork> lcrfNetwork = NetworkBuilder.builder();
 		long leaf = toNode_leaf();
 		long[] children = new long[]{leaf};
 		lcrfNetwork.addNode(leaf);
@@ -90,23 +83,23 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 		long root = toNode_root(inst.size());
 		lcrfNetwork.addNode(root);
 		lcrfNetwork.addEdge(root, children);
-		lcrfNetwork.finalizeNetwork();
-		if(!genericUnlabeledNetwork.contains(lcrfNetwork))
+		BaseNetwork network = lcrfNetwork.build(networkId, inst, param, this);
+		if(!genericUnlabeledNetwork.contains(network)){
 			System.err.println("not contains");
-		return lcrfNetwork;
+		}
+		return network;
 	}
 	
-	public ECRFNetwork compileUnlabeledInstances(int networkId, ECRFInstance inst, LocalNetworkParam param){
-		
+	public BaseNetwork compileUnlabeled(int networkId, Instance inst, LocalNetworkParam param){
 		long[] allNodes = genericUnlabeledNetwork.getAllNodes();
 		long root = toNode_root(inst.size());
 		int rootIdx = Arrays.binarySearch(allNodes, root);
-		ECRFNetwork lcrfNetwork = new ECRFNetwork(networkId, inst,allNodes,genericUnlabeledNetwork.getAllChildren() , param, rootIdx+1, this);
+		BaseNetwork lcrfNetwork = NetworkBuilder.quickBuild(networkId, inst, allNodes, genericUnlabeledNetwork.getAllChildren(), rootIdx+1, param, this);
 		return lcrfNetwork;
 	}
 	
 	public void compileUnlabeledInstancesGeneric(){
-		ECRFNetwork lcrfNetwork = new ECRFNetwork();
+		NetworkBuilder<BaseNetwork> lcrfNetwork = NetworkBuilder.builder();
 		
 		long leaf = toNode_leaf();
 		long[] children = new long[]{leaf};
@@ -155,8 +148,8 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 			children = currentNodes;
 			
 		}
-		lcrfNetwork.finalizeNetwork();
-		genericUnlabeledNetwork =  lcrfNetwork;
+		BaseNetwork network = lcrfNetwork.buildRudimentaryNetwork();
+		genericUnlabeledNetwork =  network;
 	}
 	
 	public double costAt(Network network, int parent_k, int[] child_k){

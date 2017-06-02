@@ -282,10 +282,7 @@ public class LocalNetworkParam implements Serializable{
 	public double cost(Network network, int parent_k, int[] children_k, int children_k_index, NetworkCompiler compiler){
 		// Do not cache in the first touch when parallel touch and extract only from labeled is enabled,
 		// since the local feature indices will change
-		boolean shouldCache = this.isCacheEnabled() && (!NetworkConfig.PARALLEL_FEATURE_EXTRACTION
-														|| NetworkConfig.NUM_THREADS == 1
-														|| !NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY
-														|| this._isFinalized);
+		boolean shouldCache = this.isCacheEnabled();
 		if(shouldCache){
 			if(this._costCache == null){
 				this._costCache = new Double[this._numNetworks][][];

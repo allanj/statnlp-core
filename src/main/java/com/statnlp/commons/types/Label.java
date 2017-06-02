@@ -23,9 +23,8 @@ import java.io.Serializable;
 
 /**
  * @author wei_lu
- *
  */
-public class Label implements Serializable, Comparable<Label>{
+public class Label implements Serializable, Comparable<Label>, Identifiable {
 	
 	private static final long serialVersionUID = -5006849791095171763L;
 	
@@ -58,6 +57,8 @@ public class Label implements Serializable, Comparable<Label>{
 		if(o instanceof Label){
 			Label l = (Label)o;
 			return this._form.equals(l._form);
+		} else if(o instanceof String){
+			return this._form.equals(o);
 		}
 		return false;
 	}
@@ -70,9 +71,6 @@ public class Label implements Serializable, Comparable<Label>{
 		return _form;
 	}
 
-	/* (non-Javadoc)
-	 * @see java.lang.Comparable#compareTo(java.lang.Object)
-	 */
 	@Override
 	public int compareTo(Label o) {
 		return Integer.compare(_id, o._id);

@@ -1,5 +1,6 @@
 package com.statnlp.example.tree_crf;
 
+import com.statnlp.example.base.BaseNetwork;
 import com.statnlp.example.tree_crf.TreeCRFNetworkCompiler.NodeType;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
@@ -29,7 +30,7 @@ public class TreeCRFFeatureManager extends FeatureManager {
 
 	@Override
 	protected FeatureArray extract_helper(Network net, int parent_k, int[] children_k) {
-		TreeCRFNetwork network = (TreeCRFNetwork)net;
+		BaseNetwork network = (BaseNetwork)net;
 		TreeCRFInstance instance = (TreeCRFInstance)network.getInstance();
 		String[] words = instance.input;
 		long parent = network.getNode(parent_k);

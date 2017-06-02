@@ -169,15 +169,15 @@ public class FCRFFeatureManager extends FeatureManager {
 	private void addChunkFeatures(Network network, Sentence sent, int pos, int eId, int childLabelId,
 			ArrayList<Integer> wordList, ArrayList<Integer> capList, ArrayList<Integer> transitionList, ArrayList<Integer> cascadeList,
 			ArrayList<Integer> neuralList){
-		String lw = pos > 0? sent.get(pos-1).getName(): "#STR#";
+		String lw = pos > 0? sent.get(pos-1).getForm(): "#STR#";
 		String lcaps = capsF(lw);
-		String llw = pos == 0? "#STR1#": pos==1? "#STR#" : sent.get(pos-2).getName();
+		String llw = pos == 0? "#STR1#": pos==1? "#STR#" : sent.get(pos-2).getForm();
 		String llcaps = capsF(llw);
-		String rw = pos<sent.length()-1? sent.get(pos+1).getName():"#END#";
+		String rw = pos<sent.length()-1? sent.get(pos+1).getForm():"#END#";
 		String rcaps = capsF(rw);
-		String rrw = pos == sent.length()-1? "#END1#": pos==sent.length()-2? "#END#":sent.get(pos+2).getName();
+		String rrw = pos == sent.length()-1? "#END1#": pos==sent.length()-2? "#END#":sent.get(pos+2).getForm();
 		String rrcaps = capsF(rrw);
-		String currWord = sent.get(pos).getName();
+		String currWord = sent.get(pos).getForm();
 		String currEn = Chunk.get(eId).getForm();
 		String prevEn = childLabelId == Chunk.CHUNKS.size()+Tag.TAGS.size()? "O" : Chunk.get(eId).getForm();
 		String currCaps = capsF(currWord);
@@ -223,11 +223,11 @@ public class FCRFFeatureManager extends FeatureManager {
 			ArrayList<Integer> neuralList){
 		String currTag = Tag.get(tId).getForm();
 		String prevTag = childLabelId == Chunk.CHUNKS.size()+Tag.TAGS.size()? "#STR#" : Tag.get(childLabelId).getForm();
-		String lw = pos > 0? sent.get(pos-1).getName():"#STR#";
-		String llw = pos==0? "#STR1#": pos==1? "#STR#":sent.get(pos-2).getName();
-		String rw = pos<sent.length()-1? sent.get(pos+1).getName():"#END#";
-		String rrw = pos==sent.length()-1? "#END1#": pos==sent.length()-2? "#END#":sent.get(pos+2).getName();
-		String w = sent.get(pos).getName();
+		String lw = pos > 0? sent.get(pos-1).getForm():"#STR#";
+		String llw = pos==0? "#STR1#": pos==1? "#STR#":sent.get(pos-2).getForm();
+		String rw = pos<sent.length()-1? sent.get(pos+1).getForm():"#END#";
+		String rrw = pos==sent.length()-1? "#END1#": pos==sent.length()-2? "#END#":sent.get(pos+2).getForm();
+		String w = sent.get(pos).getForm();
 		
 		String caps = capsF(w);
 		String lcaps = capsF(lw);
@@ -290,11 +290,11 @@ public class FCRFFeatureManager extends FeatureManager {
 		int jf1, jf2, jf3, jf4, jf5;  
 		int[] arr = null;
 		int nodeType = -1;
-		String lw = pos > 0? sent.get(pos-1).getName():"#STR#";
-		String llw = pos == 0? "#STR1#": pos==1? "#STR#":sent.get(pos-2).getName();
-		String rw = pos < sent.length()-1? sent.get(pos+1).getName():"#END#";
-		String rrw = pos==sent.length()-1? "#END1#": pos==sent.length()-2? "#END#":sent.get(pos+2).getName();
-		String w = sent.get(pos).getName();
+		String lw = pos > 0? sent.get(pos-1).getForm():"#STR#";
+		String llw = pos == 0? "#STR1#": pos==1? "#STR#":sent.get(pos-2).getForm();
+		String rw = pos < sent.length()-1? sent.get(pos+1).getForm():"#END#";
+		String rrw = pos==sent.length()-1? "#END1#": pos==sent.length()-2? "#END#":sent.get(pos+2).getForm();
+		String w = sent.get(pos).getForm();
 		if(!paTchildE){
 			//current it's NE structure, need to refer to Tag node.
 			nodeType = NODE_TYPES.TNODE.ordinal();

@@ -205,7 +205,7 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 					network.enableKthStructure(curr);
 					network.train();
 				}
-			}else{
+			} else {
 				network.train();
 			}
 		}

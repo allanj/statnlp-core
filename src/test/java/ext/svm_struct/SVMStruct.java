@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 import com.statnlp.commons.types.Instance;
@@ -132,7 +133,7 @@ public class SVMStruct {
 		
 		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(param, new String[]{"-features", "tag", "-forSVMStructTest"});
 		
-		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler(new ArrayList<Label>(param.LABELS.values()).subList(0, 14));
+		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler(new ArrayList<Label>(LABELS.values()).subList(0, 14));
 		NetworkModel model = DiscriminativeNetworkModel.create(fm, compiler);
 		
 		PrintStream logStream = new PrintStream(logFilename);
@@ -242,7 +243,7 @@ public class SVMStruct {
 					len = INPUT_LEN;
 				}
 				for(int wordIdx=0; wordIdx < len; wordIdx++){
-					prediction.add(param.getLabel(Integer.parseInt(outputReader.readLine())-1));
+					prediction.add(getLabel(Integer.parseInt(outputReader.readLine())-1));
 				}
 				predInstance.setPrediction(prediction);
 				predictions[i] = predInstance;
@@ -255,9 +256,9 @@ public class SVMStruct {
 			for(Instance ins: predictions){
 				@SuppressWarnings("unchecked")
 				LinearInstance<Label> instance = (LinearInstance<Label>)ins;
-				ArrayList<Label> goldLabel = instance.getOutput();
-				ArrayList<Label> actualLabel = instance.getPrediction();
-				ArrayList<String[]> words = instance.getInput();
+				List<Label> goldLabel = instance.getOutput();
+				List<Label> actualLabel = instance.getPrediction();
+				List<String[]> words = instance.getInput();
 				int len = goldLabel.size();
 				if(INPUT_LEN > 0){
 					len = INPUT_LEN;
@@ -313,7 +314,7 @@ public class SVMStruct {
 				String[] features = line.substring(0, lastSpace).split(" ");
 				words.add(features);
 				if(withLabels){
-					Label label = param.getLabel(line.substring(lastSpace+1));
+					Label label = getLabel(line.substring(lastSpace+1));
 					labels.add(label);
 				}
 			}
@@ -432,6 +433,27 @@ public class SVMStruct {
 		}
 		Collections.sort(result);
 		return result;
+	}
+	
+	public static final Map<String, Label> LABELS = new HashMap<String, Label>();
+	public static final Map<Integer, Label> LABELS_INDEX = new HashMap<Integer, Label>();
+	
+	public static Label getLabel(String form){
+		if(!LABELS.containsKey(form)){
+			Label label = new Label(form, LABELS.size());
+			LABELS.put(form, label);
+			LABELS_INDEX.put(label.getId(), label);
+		}
+		return LABELS.get(form);
+	}
+	
+	public static Label getLabel(int id){
+		return LABELS_INDEX.get(id);
+	}
+	
+	public static void reset(){
+		LABELS.clear();
+		LABELS_INDEX.clear();
 	}
 	
 	private static void printHelp(){

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.statnlp.example.weak_semi_crf;
+package com.statnlp.util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,32 +9,40 @@ import java.util.List;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
-import com.statnlp.util.GenericPipeline;
+import com.statnlp.example.weak_semi_crf.Span;
+import com.statnlp.example.weak_semi_crf.WeakSemiCRFFeatureManager;
+import com.statnlp.example.weak_semi_crf.WeakSemiCRFInstanceParser;
+import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler;
+import com.statnlp.example.weak_semi_crf.WeakSemiCRFViewer;
 
-public class WeakSemiCRFPipeline extends GenericPipeline {
+/**
+ * To test the implementation of {@link GenericPipeline} on WeakSemiCRF implementation<br>
+ * This showcases how to use the GenericPipeline with custom implementation.
+ */
+public class GenericPipelineWeakSemiCRFTest {
 	
-	public WeakSemiCRFInstanceParser initInstanceParser(){
-		if(instanceParser != null){
-			return (WeakSemiCRFInstanceParser)instanceParser;
-		}
-		return new WeakSemiCRFInstanceParser(this);
+	private static GenericPipeline pipeline;
+	
+	public static void main(String[] args){
+		pipeline = new GenericPipeline()
+				.withTrainPath("data/SMSNP/SMSNP.train.100")					// Specify the training data
+				.withTestPath("data/SMSNP/SMSNP.test.100")						// Specify the test data
+				.withModelPath("test.model")									// Specify where to save the model (if not specified no model will be written)
+				.withLogPath("test.log")										// Specify the log file
+				.withAttemptMemorySaving(true)									// Save memory and time
+				.withInstanceParser(WeakSemiCRFInstanceParser.class)			// Specify the instance parser (the one responsible to read the data)
+				.withFeatureManager(WeakSemiCRFFeatureManager.class)			// Specify the feature manager
+				.withNetworkCompiler(WeakSemiCRFNetworkCompiler.class)			// Specify the network compiler
+				.withVisualizerClass(WeakSemiCRFViewer.class)					// Specify the visualizer class
+				.withEvaluateCallback(GenericPipelineWeakSemiCRFTest::evaluate) // Specify the evaluation function
+				.addTask("train")
+				.addTasks("test", "evaluate")
+//				.addTask("visualize")
+				;
+		pipeline.execute();
 	}
 	
-	public WeakSemiCRFNetworkCompiler initNetworkCompiler(){
-		if(networkCompiler != null){
-			return (WeakSemiCRFNetworkCompiler)networkCompiler;
-		}
-		return new WeakSemiCRFNetworkCompiler(this);
-	}
-	
-	public WeakSemiCRFFeatureManager initFeatureManager(){
-		if(featureManager != null){
-			return (WeakSemiCRFFeatureManager)featureManager;
-		}
-		return new WeakSemiCRFFeatureManager(this);
-	}
-	
-	public void evaluate(Instance[] predictions){
+	public static void evaluate(Instance[] predictions){
 		int corr = 0;
 		int totalGold = 0;
 		int totalPred = 0;
@@ -93,8 +101,8 @@ public class WeakSemiCRFPipeline extends GenericPipeline {
 		return result;
 	}
 	
-	private void printScore(Instance[] instances){
-		int size = ((WeakSemiCRFInstanceParser)instanceParser).LABELS.size();
+	private static void printScore(Instance[] instances){
+		int size = ((WeakSemiCRFInstanceParser)pipeline.instanceParser).LABELS.size();
 		int[] corrects = new int[size];
 		int[] totalGold = new int[size];
 		int[] totalPred = new int[size];
@@ -122,9 +130,9 @@ public class WeakSemiCRFPipeline extends GenericPipeline {
 			double recall = (totalGold[i] == 0) ? 0.0 : 1.0*corrects[i]/totalGold[i];
 			double f1 = (precision == 0.0 || recall == 0.0) ? 0.0 : 2/((1/precision)+(1/recall));
 			avgF1 += f1;
-			System.out.println(String.format("%6s: #Corr:%2$3d, #Pred:%3$3d, #Gold:%4$3d, Pr=%5$#5.2f%% Rc=%6$#5.2f%% F1=%7$#5.2f%%", ((WeakSemiCRFInstanceParser)instanceParser).getLabel(i).getForm(), corrects[i], totalPred[i], totalGold[i], precision*100, recall*100, f1*100));
+			System.out.println(String.format("%6s: #Corr:%2$3d, #Pred:%3$3d, #Gold:%4$3d, Pr=%5$#5.2f%% Rc=%6$#5.2f%% F1=%7$#5.2f%%", ((WeakSemiCRFInstanceParser)pipeline.instanceParser).getLabel(i).getForm(), corrects[i], totalPred[i], totalGold[i], precision*100, recall*100, f1*100));
 		}
-		System.out.printf("Macro average F1: %.2f%%", 100*avgF1/size);
+		System.out.println(String.format("Macro average F1: %.2f%%", 100*avgF1/size));
 	}
 	
 	/**
@@ -146,8 +154,5 @@ public class WeakSemiCRFPipeline extends GenericPipeline {
 		}
 		return result;
 	}
-	
-	public static void main(String[] args){
-		new WeakSemiCRFPipeline().parseArgs(args).execute();
-	}
+
 }

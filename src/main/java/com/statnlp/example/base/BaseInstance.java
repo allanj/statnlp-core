@@ -1,11 +1,11 @@
 package com.statnlp.example.base;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.util.GeneralUtils;
 
 public abstract class BaseInstance<SELF extends BaseInstance<SELF, IN, OUT>, IN, OUT> extends Instance {
 	
@@ -37,34 +37,6 @@ public abstract class BaseInstance<SELF extends BaseInstance<SELF, IN, OUT>, IN,
 		result._topKPredictions = duplicateTopKPredictions();
 		return result;
 	}
-	
-	/**
-	 * Search for a constructor that can be called given the given parameters.
-	 * @param input
-	 * @param parameters
-	 * @return
-	 * @throws NoSuchMethodException
-	 */
-	private Constructor<?> getMatchingAvailableConstructor(Class<?> input, Class<?>... parameters) throws NoSuchMethodException{
-		for(Constructor<?> constructor: input.getConstructors()){
-			Class<?>[] paramTypes = constructor.getParameterTypes();
-			if(paramTypes.length != parameters.length){
-				continue;
-			}
-			boolean matching = true;
-			for(int i=0; i<parameters.length; i++){
-				Class<?> paramType = paramTypes[i];
-				if(!paramType.isAssignableFrom(parameters[i])){
-					matching = false;
-					break;
-				}
-			}
-			if(matching){
-				return constructor;
-			}
-		}
-		throw new NoSuchMethodException();
-	}
 
 	/**
 	 * Duplicate the input.<br>
@@ -74,7 +46,7 @@ public abstract class BaseInstance<SELF extends BaseInstance<SELF, IN, OUT>, IN,
 	@SuppressWarnings("unchecked")
 	public IN duplicateInput(){
 		try {
-			return this.input == null ? null : (IN)getMatchingAvailableConstructor(this.input.getClass(), this.input.getClass()).newInstance(this.input);
+			return this.input == null ? null : (IN)GeneralUtils.getMatchingAvailableConstructor(this.input.getClass(), this.input.getClass()).newInstance(this.input);
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e) {
 			throw new RuntimeException("Cannot duplicate input automatically, please override duplicateInput method.");
@@ -89,7 +61,7 @@ public abstract class BaseInstance<SELF extends BaseInstance<SELF, IN, OUT>, IN,
 	@SuppressWarnings("unchecked")
 	public OUT duplicateOutput(){
 		try {
-			return this.output == null ? null : (OUT)getMatchingAvailableConstructor(this.output.getClass(), this.output.getClass()).newInstance(this.output);
+			return this.output == null ? null : (OUT)GeneralUtils.getMatchingAvailableConstructor(this.output.getClass(), this.output.getClass()).newInstance(this.output);
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e) {
 			throw new RuntimeException("Cannot duplicate output automatically, please override duplicateOutput method.");
@@ -104,7 +76,7 @@ public abstract class BaseInstance<SELF extends BaseInstance<SELF, IN, OUT>, IN,
 	@SuppressWarnings("unchecked")
 	public OUT duplicatePrediction(){
 		try {
-			return this.prediction == null ? null : (OUT)getMatchingAvailableConstructor(this.prediction.getClass(), this.prediction.getClass()).newInstance(this.prediction);
+			return this.prediction == null ? null : (OUT)GeneralUtils.getMatchingAvailableConstructor(this.prediction.getClass(), this.prediction.getClass()).newInstance(this.prediction);
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e) {
 			throw new RuntimeException("Cannot duplicate prediction automatically, please override duplicatePrediction method.");
@@ -119,7 +91,7 @@ public abstract class BaseInstance<SELF extends BaseInstance<SELF, IN, OUT>, IN,
 	@SuppressWarnings("unchecked")
 	public List<OUT> duplicateTopKPredictions(){
 		try {
-			return this._topKPredictions == null ? null : (List<OUT>)getMatchingAvailableConstructor(this._topKPredictions.getClass(), this._topKPredictions.getClass()).newInstance(this._topKPredictions);
+			return this._topKPredictions == null ? null : (List<OUT>)GeneralUtils.getMatchingAvailableConstructor(this._topKPredictions.getClass(), this._topKPredictions.getClass()).newInstance(this._topKPredictions);
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e) {
 			throw new RuntimeException("Cannot duplicate prediction automatically, please override duplicatePrediction method.");

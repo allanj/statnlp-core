@@ -33,12 +33,6 @@ public abstract class TokenArray implements LinearChain{
 		this._tokens = tokens;
 	}
 	
-	@Deprecated
-	@Override
-	public Token get(int hIndex, int wIndex) {
-		throw new RuntimeException("This is not used.");
-	}
-	
 	@Override
 	public Token get(int index) {
 		return this._tokens[index];
