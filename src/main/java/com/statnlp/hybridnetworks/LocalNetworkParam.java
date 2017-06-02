@@ -18,9 +18,10 @@ package com.statnlp.hybridnetworks;
 
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
+
+import gnu.trove.iterator.TIntIntIterator;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 //one thread should have one such LocalFeatureMap.
 /**
@@ -49,7 +50,7 @@ public class LocalNetworkParam implements Serializable{
 	 * Mapping from global features to local features. Used when extracting features.
 	 * If cache is used, this one can be discarded after touch process completes.
 	 */
-	protected HashMap<Integer, Integer> _globalFeature2LocalFeature;
+	protected TIntIntHashMap _globalFeature2LocalFeature;
 	//check if it is finalized.
 	protected boolean _isFinalized;
 	
@@ -65,6 +66,9 @@ public class LocalNetworkParam implements Serializable{
 	//if this is true, then we bypass the local params.
 	protected boolean _globalMode;
 	
+	protected StringIndex _stringIndex;
+	protected TIntIntHashMap _localStr2Global;
+	
 	/**
 	 * For memory-optimized, map an integer array object to a feature array object
 	 * avoid creating duplicate integer array. 
@@ -78,7 +82,7 @@ public class LocalNetworkParam implements Serializable{
 		this._obj = 0.0;
 		this._fs = null;
 		//this gives you the mapping from global to local features.
-		this._globalFeature2LocalFeature = new HashMap<Integer, Integer>();
+		this._globalFeature2LocalFeature = new TIntIntHashMap();
 		this._isFinalized = false;
 		this._version = 0;
 		this._globalMode = false;
@@ -89,6 +93,8 @@ public class LocalNetworkParam implements Serializable{
 		if(NetworkConfig.NUM_THREADS == 1){
 			this._globalMode = true;
 		}
+		
+		this._stringIndex = new StringIndex();
 
 	}
 	
@@ -223,6 +229,10 @@ public class LocalNetworkParam implements Serializable{
 		return this._cacheEnabled;
 	}
 	
+	public int toInt(String str){
+		return this._stringIndex.getOrPut(str);
+	}
+	
 	/**
 	 * Extract features from the specified network at current hyperedge, specified by its parent node
 	 * index (parent_k) and its children node indices (children_k).<br>
@@ -313,9 +323,10 @@ public class LocalNetworkParam implements Serializable{
 			return;
 		}
 		this._fs = new int[this._globalFeature2LocalFeature.size()];
-		Iterator<Integer> features = this._globalFeature2LocalFeature.keySet().iterator();
+		TIntIntIterator features = this._globalFeature2LocalFeature.iterator();
 		while(features.hasNext()){
-			int f_global = features.next();
+			features.advance();
+			int f_global = features.key();
 			int f_local = this._globalFeature2LocalFeature.get(f_global);
 			this._fs[f_local] = f_global;
 		}

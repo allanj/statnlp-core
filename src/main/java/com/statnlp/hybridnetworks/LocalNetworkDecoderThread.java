@@ -169,7 +169,7 @@ public class LocalNetworkDecoderThread extends Thread{
 			}
 		}
 	}
-
+	
 	/**
 	 * This method is to restore the max array with the best prediction structure.<br>
 	 * This is used after {@link #setMaxArrayForKthPrediction(Network, ScoredIndex, NodeHypothesis)}

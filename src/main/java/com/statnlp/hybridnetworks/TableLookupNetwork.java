@@ -19,11 +19,13 @@ package com.statnlp.hybridnetworks;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
+
+import gnu.trove.iterator.TLongObjectIterator;
+import gnu.trove.map.hash.TLongIntHashMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
 
 /**
  * An extension of {@link Network} which defines more functions related to managing nodes and edges.<br>
@@ -40,7 +42,7 @@ public abstract class TableLookupNetwork extends Network{
 	
 	//temporary data structures used when constructing the network
 //	private transient HashSet<Long> _nodes_tmp;
-	private transient HashMap<Long, ArrayList<long[]>> _children_tmp;
+	private transient TLongObjectHashMap<ArrayList<long[]>> _children_tmp;
 	
 	//at each index, store the node's ID
 	protected long[] _nodes;
@@ -74,10 +76,12 @@ public abstract class TableLookupNetwork extends Network{
 	}
 	
 	public long[] getNodes_tmp(){
-		Iterator<Long> nodes_key = this._children_tmp.keySet().iterator();
+		TLongObjectIterator<ArrayList<long[]>> nodes_key = this._children_tmp.iterator();
 		long[] nodes = new long[this._children_tmp.size()];
-		for(int k = 0; k<nodes.length; k++)
-			nodes[k] = nodes_key.next();
+		for(int k = 0; k<nodes.length; k++){
+			nodes_key.advance();
+			nodes[k] = nodes_key.key();
+		}
 		return nodes;
 	}
 	
@@ -153,7 +157,7 @@ public abstract class TableLookupNetwork extends Network{
 	 */
 	public TableLookupNetwork(){
 //		this._nodes_tmp = new HashSet<Long>();
-		this._children_tmp = new HashMap<Long, ArrayList<long[]>>();
+		this._children_tmp = new TLongObjectHashMap<ArrayList<long[]>>();
 	}
 
 	/**
@@ -176,7 +180,7 @@ public abstract class TableLookupNetwork extends Network{
 	public TableLookupNetwork(int networkId, Instance inst, LocalNetworkParam param, NetworkCompiler compiler){
 		super(networkId, inst, param, compiler);
 //		this._nodes_tmp = new HashSet<Long>();
-		this._children_tmp = new HashMap<Long, ArrayList<long[]>>();
+		this._children_tmp = new TLongObjectHashMap<ArrayList<long[]>>();
 	}
 
 	/**
@@ -324,9 +328,10 @@ public abstract class TableLookupNetwork extends Network{
 		long[] nodes = new long[this.countTmpNodes_tmp()];
 		double[] validity = new double[this.countTmpNodes_tmp()];
 		int v = 0;
-		Iterator<Long> nodes_it = this._children_tmp.keySet().iterator();
+		TLongObjectIterator<ArrayList<long[]>> nodes_it = this._children_tmp.iterator();
 		while(nodes_it.hasNext()){
-			nodes[v++] = nodes_it.next();
+			nodes_it.advance();
+			nodes[v++] = nodes_it.key();
 		}
 		Arrays.sort(nodes);
 		this.checkValidityHelper(validity, nodes, this.countTmpNodes_tmp()-1);
@@ -363,14 +368,16 @@ public abstract class TableLookupNetwork extends Network{
 	 */
 	public void finalizeNetwork(){
 //		System.err.println(this._nodes_tmp.size()+"<<<");
-		Iterator<Long> node_ids = this._children_tmp.keySet().iterator();
+		//TLongObjectHashMap<ArrayList<long[]>>
+		TLongObjectIterator<ArrayList<long[]>> node_ids = this._children_tmp.iterator();
 		ArrayList<Long> values = new ArrayList<Long>();
 		while(node_ids.hasNext()){
-			values.add(node_ids.next());
+			node_ids.advance();
+			values.add(node_ids.key());
 		}
 		this._nodes = new long[this._children_tmp.keySet().size()];
 		this.isVisible = new boolean[this._nodes.length];
-		HashMap<Long, Integer> nodesValue2IdMap = new HashMap<Long, Integer>();
+		TLongIntHashMap nodesValue2IdMap = new TLongIntHashMap();
 		Collections.sort(values);
 		for(int k = 0 ; k<values.size(); k++){
 			this._nodes[k] = values.get(k);
@@ -382,10 +389,12 @@ public abstract class TableLookupNetwork extends Network{
 		}
 		
 		this._children = new int[this._nodes.length][][];
-
-		Iterator<Long> parents = this._children_tmp.keySet().iterator();
+		
+		//TLongObjectHashMap<ArrayList<long[]>>
+		TLongObjectIterator<ArrayList<long[]>> parents = this._children_tmp.iterator();
 		while(parents.hasNext()){
-			long parent = parents.next();
+			parents.advance();
+			long parent = parents.key();
 			int parent_index = nodesValue2IdMap.get(parent);
 			ArrayList<long[]> childrens = this._children_tmp.get(parent);
 			if(childrens==null){

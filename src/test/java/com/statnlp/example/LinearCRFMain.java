@@ -13,7 +13,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
-import java.util.Set;
 
 import com.statnlp.InitWeightOptimizerFactory;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
@@ -28,7 +27,12 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.hybridnetworks.StringIndex;
 import com.statnlp.neural.NeuralConfigReader;
+
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.TIntSet;
 
 public class LinearCRFMain {
 	
@@ -37,9 +41,9 @@ public class LinearCRFMain {
 		String trainPath = System.getProperty("trainPath", "data/train.data");
 		String testPath = System.getProperty("testPath", "data/test.data");
 		
-		String resultPath = System.getProperty("resultPath", "experiments/test/lcrf.result");
-		String modelPath = System.getProperty("modelPath", "experiments/test/lcrf.model");
-		String logPath = System.getProperty("logPath", "experiments/test/lcrf.log");
+		String resultPath = System.getProperty("resultPath", "lcrf.result");
+		String modelPath = System.getProperty("modelPath", "lcrf.model");
+		String logPath = System.getProperty("logPath", "lcrf.log");
 		
 		boolean writeModelText = Boolean.parseBoolean(System.getProperty("writeModelText", "false"));
 
@@ -244,19 +248,22 @@ public class LinearCRFMain {
 			GlobalNetworkParam paramG = fm.getParam_G();
 			modelTextWriter.println("Num features: "+paramG.countFeatures());
 			modelTextWriter.println("Features:");
-			HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap = paramG.getFeatureIntMap();
-			for(String featureType: sorted(featureIntMap.keySet())){
+			TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> featureIntMap = paramG.getFeatureIntMap();
+			StringIndex stringIndex = paramG.getStringIndex();
+			stringIndex.buildReverseIndex();
+			for(String featureType: sorted(stringIndex, featureIntMap.keySet())){
 				modelTextWriter.println(featureType);
-				HashMap<String, HashMap<String, Integer>> outputInputMap = featureIntMap.get(featureType);
-				for(String output: sorted(outputInputMap.keySet())){
+				TIntObjectHashMap<TIntIntHashMap> outputInputMap = featureIntMap.get(stringIndex.get(featureType));
+				for(String output: sorted(stringIndex, outputInputMap.keySet())){
 					modelTextWriter.println("\t"+output);
-					HashMap<String, Integer> inputMap = outputInputMap.get(output);
-					for(String input: sorted(inputMap.keySet())){
-						int featureId = inputMap.get(input);
+					TIntIntHashMap inputMap = outputInputMap.get(stringIndex.get(output));
+					for(String input: sorted(stringIndex, inputMap.keySet())){
+						int featureId = inputMap.get(stringIndex.get(input));
 						modelTextWriter.printf("\t\t%s %d %.17f\n", input, featureId, fm.getParam_G().getWeight(featureId));
 					}
 				}
 			}
+			stringIndex.removeReverseIndex();
 			modelTextWriter.close();
 		}
 		
@@ -345,8 +352,11 @@ public class LinearCRFMain {
 		return readCoNLLData(param, fileName, withLabels, isLabeled, -1);
 	}
 	
-	private static List<String> sorted(Set<String> coll){
-		List<String> result = new ArrayList<String>(coll);
+	private static List<String> sorted(StringIndex stringIndex, TIntSet coll){
+		List<String> result = new ArrayList<String>(coll.size());
+		for(int key: coll.toArray()){
+			result.add(stringIndex.get(key));
+		}
 		Collections.sort(result);
 		return result;
 	}

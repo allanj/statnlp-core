@@ -33,20 +33,16 @@ public class MentionHypergraphMain {
 	
 	public static void main(String[] args) throws InterruptedException, IOException, ClassNotFoundException, IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException{
 		boolean serializeModel = true;
+		boolean readModelIfAvailable = false;
 		
-		String train_filename = "data/ACE2004/data/English/mention-standard/FINE_TYPE/train.data.500";
-		String test_filename = "data/ACE2004/data/English/mention-standard/FINE_TYPE/test.data";
+		String train_filename = "data/ACE2004/data/English/mention-standard/FINE_TYPE/train.data.100";
 		
 		MentionHypergraphInstance[] trainInstances = readData(train_filename, true, true);
-		MentionHypergraphInstance[] testInstances = readData(test_filename, true, false);
 		
 		labels = new ArrayList<Label>();
-		labels.addAll(Label.LABELS.values());
+		labels.addAll(Label.LABELS.values()); 
 		int maxSize = 0;
 		for(MentionHypergraphInstance instance: trainInstances){
-			maxSize = Math.max(maxSize, instance.size());
-		}
-		for(MentionHypergraphInstance instance: testInstances){
 			maxSize = Math.max(maxSize, instance.size());
 		}
 		
@@ -54,6 +50,7 @@ public class MentionHypergraphMain {
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
 		NetworkConfig.OBJTOL = 1e-4;
+		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
 		NetworkConfig.NUM_THREADS = 4;
 		
 		int numIterations = 2500;
@@ -69,8 +66,8 @@ public class MentionHypergraphMain {
 		NetworkModel model = NetworkConfig.TRAIN_MODE_IS_GENERATIVE ? GenerativeNetworkModel.create(fm, compiler) : DiscriminativeNetworkModel.create(fm, compiler);
 		
 		if(serializeModel){
-			String modelPath = "experiments/mention/model/FINE_TYPE/ACE2004/English/aldrian.0.01.allfeatures.500data.withmp.optimal.model";
-			if(new File(modelPath).exists()){
+			String modelPath = "mentionHypergraph.model";
+			if(new File(modelPath).exists() && readModelIfAvailable){
 				System.out.println("Reading object...");
 				long startTime = System.currentTimeMillis();
 				ObjectInputStream ois = new ObjectInputStream(new FileInputStream(modelPath));
@@ -97,12 +94,20 @@ public class MentionHypergraphMain {
 		
 		int mentionPenaltyFeatureIndex = fm.getParam_G().getFeatureId(FeatureType.MENTION_PENALTY.name(), "MP", "MP");
 		
+		String test_filename = "data/ACE2004/data/English/mention-standard/FINE_TYPE/train.data.100";
+		MentionHypergraphInstance[] testInstances = readData(test_filename, true, false);
+		
+		for(MentionHypergraphInstance instance: testInstances){
+			maxSize = Math.max(maxSize, instance.size());
+		}
+		
 		for(double mentionPenalty = -0.2; mentionPenalty < 1.0; mentionPenalty += 0.2){
 			if(mentionPenalty >= 0.0){
 				fm.getParam_G().setWeight(mentionPenaltyFeatureIndex, mentionPenalty);
 			}
 			System.out.println(String.format("Mention penalty: %.1f", fm.getParam_G().getWeight(mentionPenaltyFeatureIndex)));
-			Instance[] predictions = model.decode(testInstances);
+			Instance[] predictions = model.decode(testInstances, true);
+			fm.getParam_G().setVersion(fm.getParam_G().getVersion()+1);
 			int corr = 0;
 			int totalGold = 0;
 			int totalPred = 0;

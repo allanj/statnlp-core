@@ -38,12 +38,21 @@ public class WeakSemiCRFMain {
 		boolean serializeModel = false;
 		boolean useCoNLLData = false;
 		boolean limitNumInstances = true;
-		boolean visualize = true;
+		boolean visualize = false;
 		
 		String train_filename;
 		String test_filename;
 		WeakSemiCRFInstance[] trainInstances; 
 		WeakSemiCRFInstance[] testInstances;
+		
+		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
+		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
+		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
+		NetworkConfig.OBJTOL = 1e-2;
+		NetworkConfig.NUM_THREADS = 4;
+		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
+		
+		param = new GlobalNetworkParam();
 		
 		if(useCoNLLData){
 			train_filename = "data/SMSNP/SMSNP.conll.train";
@@ -51,8 +60,8 @@ public class WeakSemiCRFMain {
 			trainInstances = readCoNLLData(train_filename, true);
 			testInstances = readCoNLLData(test_filename, false);
 		} else {
-			train_filename = "data/SMSNP/SMSNP.train";
-			test_filename = "data/SMSNP/SMSNP.test";
+			train_filename = "data/SMSNP/SMSNP.train.100";
+			test_filename = "data/SMSNP/SMSNP.test.100";
 			trainInstances = readData(train_filename, true);
 			testInstances = readData(test_filename, false);
 		}
@@ -82,20 +91,11 @@ public class WeakSemiCRFMain {
 			maxSize = Math.max(maxSize, instance.size());
 		}
 		
-		NetworkConfig.TRAIN_MODE_IS_GENERATIVE = false;
-		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
-		NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
-		NetworkConfig.OBJTOL = 1e-2;
-		NetworkConfig.NUM_THREADS = 4;
-		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
-		
 		int numIterations = 5000;
 		
 		int size = trainInstances.length;
 		
 		System.err.println("Read.."+size+" instances.");
-		
-		param = new GlobalNetworkParam();
 		
 		WeakSemiCRFFeatureManager fm = new WeakSemiCRFFeatureManager(param);
 		

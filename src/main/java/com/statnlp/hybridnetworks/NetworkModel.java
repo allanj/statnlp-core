@@ -214,6 +214,13 @@ public abstract class NetworkModel implements Serializable{
 		train(allInstances, allInstances.length, maxNumIterations);
 	}
 	
+	private void printUsedMemory(String note){
+		Runtime r = Runtime.getRuntime();
+		r.gc();
+		long usedMemory = r.totalMemory() - r.freeMemory();
+		System.out.println(String.format("Memory used %s: %.3fMB", note, usedMemory/(1024.0*1024)));
+	}
+	
 	/**
 	 * Starts training using the instances given for up to specified number of iterations.
 	 * @param allInstances The instances on which this model should be trained.
@@ -227,6 +234,7 @@ public abstract class NetworkModel implements Serializable{
 		for(int i=0; i<trainLength; i++){
 			instIds.add(i+1);
 		}
+		printUsedMemory("before compile");
 		/*
 		 * Pre-compile the networks
 		 * In mean-field, we need to pre-compile because we need the unlabeled network
@@ -236,9 +244,11 @@ public abstract class NetworkModel implements Serializable{
 		if(NetworkConfig.PRE_COMPILE_NETWORKS){
 			preCompileNetworks(insts);
 		}
+		printUsedMemory("after compile");
 		boolean keepExistingThreads = NetworkConfig.PRE_COMPILE_NETWORKS ? true : false;
 		// The first touch
 		touch(insts, keepExistingThreads);
+		printUsedMemory("after touch");
 		
 		for(int threadId=0; threadId<this._numThreads; threadId++){
 			if(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY){
@@ -254,9 +264,12 @@ public abstract class NetworkModel implements Serializable{
 		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
 			this._fm.completeType2Int(); 
 		}
+
+		printUsedMemory("after finalize");
 		
 		//finalize the features.
 		this._fm.getParam_G().lockIt();
+		printUsedMemory("after lock");
 		nnController = this._fm.getParam_G()._nnController;
 		
 		if(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY && NetworkConfig.CACHE_FEATURES_DURING_TRAINING){
@@ -326,7 +339,7 @@ public abstract class NetworkModel implements Serializable{
 					try{
 						result.get(); // To ensure any exception is thrown
 					} catch (ExecutionException e){
-						throw new RuntimeException(e);
+						throw new RuntimeException(e.getCause());
 					}
 				}
 				
@@ -425,6 +438,7 @@ public abstract class NetworkModel implements Serializable{
 				//So we merge in first feature extraction.
 				//If precompile network, we keep exisiting threads. But we still need to merge features because
 				//it is still the first touch. That's why we have the "OR" operation here.
+				this._fm._param_g.mergeStringIndex(_learners);
 				this._fm.mergeSubFeaturesToGlobalFeatures();
 			}
 		}

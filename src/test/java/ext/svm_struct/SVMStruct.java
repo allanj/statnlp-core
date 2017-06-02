@@ -16,7 +16,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
-import java.util.Set;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Label;
@@ -31,6 +30,11 @@ import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.hybridnetworks.StringIndex;
+
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.TIntSet;
 
 /**
  * The main class to run CRF++ with the same pipeline as other models<br>
@@ -394,15 +398,17 @@ public class SVMStruct {
 		}
 		PrintStream modelTextWriter = new PrintStream(filename+".features");
 		GlobalNetworkParam paramG = fm.getParam_G();
-		HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap = paramG.getFeatureIntMap();
-		for(String featureType: sorted(featureIntMap.keySet())){
+		TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> featureIntMap = paramG.getFeatureIntMap();
+		StringIndex stringIndex = paramG.getStringIndex();
+		stringIndex.buildReverseIndex();
+		for(String featureType: sorted(stringIndex, featureIntMap.keySet())){
 			modelTextWriter.println(featureType);
-			HashMap<String, HashMap<String, Integer>> outputInputMap = featureIntMap.get(featureType);
+			TIntObjectHashMap<TIntIntHashMap> outputInputMap = featureIntMap.get(stringIndex.get(featureType));
 			for(int labelId=0; labelId<numClasses; labelId++){
 				modelTextWriter.println("\t"+labelId);
-				HashMap<String, Integer> inputMap = outputInputMap.get("-1");
-				for(String input: sorted(inputMap.keySet())){
-					int emissionFeatId = inputMap.get(input);
+				TIntIntHashMap inputMap = outputInputMap.get(stringIndex.get("-1"));
+				for(String input: sorted(stringIndex, inputMap.keySet())){
+					int emissionFeatId = inputMap.get(stringIndex.get(input));
 					int featureId = emissionBaseFeatId + (labelId+1)*numEmissions + (emissionFeatId+1);
 					modelTextWriter.println("\t\t"+input+" "+String.format("%.16f", weights.getOrDefault(featureId, 0.0)));
 				}
@@ -419,8 +425,11 @@ public class SVMStruct {
 		modelTextWriter.close();
 	}
 	
-	private static List<String> sorted(Set<String> coll){
-		List<String> result = new ArrayList<String>(coll);
+	private static List<String> sorted(StringIndex stringIndex, TIntSet coll){
+		List<String> result = new ArrayList<String>(coll.size());
+		for(int key: coll.toArray()){
+			result.add(stringIndex.get(key));
+		}
 		Collections.sort(result);
 		return result;
 	}
