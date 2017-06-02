@@ -164,7 +164,6 @@ public class GlobalNetworkParam implements Serializable{
 			}
 			this._subSize = new int[NetworkConfig.NUM_THREADS];
 		}
-		_stringIndex = new StringIndex();
 	}
 	
 	public void mergeStringIndex(LocalNetworkLearnerThread[] learners){
@@ -172,18 +171,28 @@ public class GlobalNetworkParam implements Serializable{
 			return;
 		}
 		StringIndex[] stringIndexes = new StringIndex[learners.length];
-		int i=0;
 		for(LocalNetworkLearnerThread learner: learners){
-			stringIndexes[i] = learner.getLocalNetworkParam()._stringIndex;
-			learner.getLocalNetworkParam()._stringIndex = null;
+			stringIndexes[learner.getThreadId()] = learner.getLocalNetworkParam()._stringIndex;
 		}
 		this._stringIndex = StringIndex.merge(stringIndexes);
-		stringIndexes = null;
-		System.gc();
+		for(LocalNetworkLearnerThread learner: learners){
+			TIntIntHashMap localStr2Global = new TIntIntHashMap();
+			StringIndex localIndex = learner.getLocalNetworkParam()._stringIndex;
+			for(String key: stringIndexes[learner.getThreadId()].keys()){
+				localStr2Global.put(localIndex.get(key), this._stringIndex.get(key));
+			}
+			learner.getLocalNetworkParam()._localStr2Global = localStr2Global;
+			learner.getLocalNetworkParam()._stringIndex = null;
+		}
+		this._stringIndex.lock();
 	}
 	
 	public synchronized int toInt(String s){
 		return this._stringIndex.getOrPut(s);
+	}
+	
+	public StringIndex getStringIndex(){
+		return _stringIndex;
 	}
 	
 	/**
@@ -438,9 +447,9 @@ public class GlobalNetworkParam implements Serializable{
 		
 		this._version = 0;
 		if(!NetworkConfig.USE_NEURAL_FEATURES){
-			this._opt = this._optFactory.create(this._weights.length, getFeatureIntMap());
+			this._opt = this._optFactory.create(this._weights.length, getFeatureIntMap(), _stringIndex);
 		} else {
-			this._opt =  this._optFactory.create(_nnController.getNonNeuralAndInternalNeuralSize(), getFeatureIntMap());
+			this._opt =  this._optFactory.create(_nnController.getNonNeuralAndInternalNeuralSize(), getFeatureIntMap(), _stringIndex);
 		}
 		this._locked = true;
 		

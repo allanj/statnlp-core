@@ -3,8 +3,6 @@
  */
 package com.statnlp.util;
 
-import static com.statnlp.util.GeneralUtils.sorted;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -17,7 +15,6 @@ import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,11 +35,15 @@ import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.hybridnetworks.StringIndex;
 import com.statnlp.hybridnetworks.TemplateBasedFeatureManager;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 import com.statnlp.util.instance_parser.InstanceParser;
 
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.TIntSet;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Argument;
 import net.sourceforge.argparse4j.inf.ArgumentAction;
@@ -231,6 +232,49 @@ public class GenericPipeline extends Pipeline{
 		oos.close();
 		long endTime = System.currentTimeMillis();
 		LOGGER.info("Writing model...Done in %.3fs", (endTime-startTime)/1000.0);
+		if((boolean)getParameter("writeModelAsText")){
+			String modelTextPath = modelPath+".txt";
+			try{
+				LOGGER.info("["+getCurrentTask()+"]Writing model text into %s...", modelTextPath);
+				PrintStream modelTextWriter = new PrintStream(modelTextPath);
+				modelTextWriter.println(NetworkConfig.getConfig());
+				modelTextWriter.println("Labels:");
+				List<Label> labelsUsed = new ArrayList<Label>(param.LABELS.values());
+				Collections.sort(labelsUsed);
+				modelTextWriter.println(labelsUsed);
+				modelTextWriter.println("Num features: "+param.countFeatures());
+				modelTextWriter.println("Features:");
+				TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> featureIntMap = param.getFeatureIntMap();
+				StringIndex stringIndex = param.getStringIndex();
+				stringIndex.buildReverseIndex();
+				for(String featureType: sorted(stringIndex, featureIntMap.keySet())){
+					modelTextWriter.println(featureType);
+					TIntObjectHashMap<TIntIntHashMap> outputInputMap = featureIntMap.get(stringIndex.get(featureType));
+					for(String output: sorted(stringIndex, outputInputMap.keySet())){
+						modelTextWriter.println("\t"+output);
+						TIntIntHashMap inputMap = outputInputMap.get(stringIndex.get(output));
+						for(String input: sorted(stringIndex, inputMap.keySet())){
+							int featureId = inputMap.get(stringIndex.get(input));
+							modelTextWriter.printf("\t\t%s %d %.17f\n", input, featureId, param.getWeight(featureId));
+						}
+					}
+				}
+				stringIndex.removeReverseIndex();
+				modelTextWriter.close();
+			} catch (IOException e){
+				LOGGER.warn("["+getCurrentTask()+"]Cannot write model text into %s.", modelTextPath);
+				LOGGER.throwing(Level.WARN, e);
+			}
+		}
+	}
+
+	private static List<String> sorted(StringIndex stringIndex, TIntSet coll){
+		List<String> result = new ArrayList<String>(coll.size());
+		for(int key: coll.toArray()){
+			result.add(stringIndex.get(key));
+		}
+		Collections.sort(result);
+		return result;
 	}
 
 	/* (non-Javadoc)
@@ -442,49 +486,8 @@ public class GenericPipeline extends Pipeline{
 			throw LOGGER.throwing(new RuntimeException(e));
 		}
 		LOGGER.info("["+getCurrentTask()+"]Total training time: %.3fs\n", this.timer/1.0e9);
-		if((boolean)getParameter("writeModelAsText")){
-			String modelPath = getParameter("modelPath");
-			String modelTextPath = modelPath+".txt";
-			try{
-				LOGGER.info("["+getCurrentTask()+"]Writing model text into %s...", modelTextPath);
-				PrintStream modelTextWriter = new PrintStream(modelTextPath);
-				modelTextWriter.println(NetworkConfig.getConfig());
-//				modelTextWriter.println("Model path: "+modelPath);
-//				modelTextWriter.println("Train path: "+trainPath);
-//				modelTextWriter.println("Test path: "+testPath);
-//				modelTextWriter.println("#Threads: "+NetworkConfig.NUM_THREADS);
-//				modelTextWriter.println("L2 param: "+NetworkConfig.L2_REGULARIZATION_CONSTANT);
-//				modelTextWriter.println("Weight init: "+0.0);
-//				modelTextWriter.println("objtol: "+NetworkConfig.OBJTOL);
-//				modelTextWriter.println("Max iter: "+numIterations);
-//				modelTextWriter.println();
-				modelTextWriter.println("Labels:");
-				List<Label> labelsUsed = new ArrayList<Label>(param.LABELS.values());
-				Collections.sort(labelsUsed);
-				modelTextWriter.println(labelsUsed);
-				modelTextWriter.println("Num features: "+param.countFeatures());
-				modelTextWriter.println("Features:");
-//				HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap = param.getFeatureIntMap();
-//				for(String featureType: sorted(featureIntMap.keySet())){
-//					modelTextWriter.println(featureType);
-//					HashMap<String, HashMap<String, Integer>> outputInputMap = featureIntMap.get(featureType);
-//					for(String output: sorted(outputInputMap.keySet())){
-//						modelTextWriter.println("\t"+output);
-//						HashMap<String, Integer> inputMap = outputInputMap.get(output);
-//						for(String input: sorted(inputMap.keySet())){
-//							int featureId = inputMap.get(input);
-//							modelTextWriter.printf("\t\t%s %d %.17f\n", input, featureId, fm.getParam_G().getWeight(featureId));
-//						}
-//					}
-//				}
-				modelTextWriter.close();
-			} catch (IOException e){
-				LOGGER.warn("["+getCurrentTask()+"]Cannot write model text into %s.", modelTextPath);
-				LOGGER.throwing(Level.WARN, e);
-			}
-		}
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see com.statnlp.util.Pipeline#tune()
 	 */

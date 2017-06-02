@@ -62,6 +62,7 @@ public class TreeCRFMain {
 		NetworkConfig.OBJTOL = 1e-9;
 		NetworkConfig.NUM_THREADS = 4;
 		NetworkConfig.AVOID_DUPLICATE_FEATURES = true;
+		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
 		
 		int numIterations = 500;
 		

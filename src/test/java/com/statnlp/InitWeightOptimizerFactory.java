@@ -7,6 +7,11 @@ import java.util.HashMap;
 
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
+import com.statnlp.hybridnetworks.StringIndex;
+
+import gnu.trove.map.hash.TIntDoubleHashMap;
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
 
 /**
  * 
@@ -15,13 +20,24 @@ public class InitWeightOptimizerFactory extends OptimizerFactory {
 	
 	private static final long serialVersionUID = 462325492055929006L;
 	private OptimizerFactory realOptimizerFactory;
-	private HashMap<String, HashMap<String, HashMap<String, Double>>> featureWeightMap;
+	private TIntObjectHashMap<TIntObjectHashMap<TIntDoubleHashMap>> featureWeightMap;
+	private HashMap<String, HashMap<String, HashMap<String, Double>>> featureWeightMapStr;
 	
 	public InitWeightOptimizerFactory(HashMap<String, HashMap<String, HashMap<String, Double>>> featureWeightMap){
 		this(featureWeightMap, null);
 	}
 	
 	public InitWeightOptimizerFactory(HashMap<String, HashMap<String, HashMap<String, Double>>> featureWeightMap, OptimizerFactory realOptimizer){
+		super();
+		this.featureWeightMapStr = featureWeightMap;
+		this.realOptimizerFactory = realOptimizer;
+	}
+	
+	public InitWeightOptimizerFactory(TIntObjectHashMap<TIntObjectHashMap<TIntDoubleHashMap>> featureWeightMap){
+		this(featureWeightMap, null);
+	}
+	
+	public InitWeightOptimizerFactory(TIntObjectHashMap<TIntObjectHashMap<TIntDoubleHashMap>> featureWeightMap, OptimizerFactory realOptimizer){
 		super();
 		this.featureWeightMap = featureWeightMap;
 		this.realOptimizerFactory = realOptimizer;
@@ -36,16 +52,35 @@ public class InitWeightOptimizerFactory extends OptimizerFactory {
 	}
 	
 	@Override
-	public Optimizer create(int numWeights, HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap){
+	public Optimizer create(int numWeights, TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> featureIntMap, StringIndex stringIndex){
+		if(featureWeightMap == null && !stringIndex.hasReverseIndex()){
+			stringIndex.buildReverseIndex();
+		}
 		double[] initialWeights = new double[numWeights];
-		for(String type: featureIntMap.keySet()){
-			HashMap<String, HashMap<String, Integer>> outputToInputInt = featureIntMap.get(type);
-			HashMap<String, HashMap<String, Double>> outputToInputWeight = featureWeightMap.get(type);
-			for(String output: outputToInputInt.keySet()){
-				HashMap<String, Integer> inputToInt = outputToInputInt.get(output);
-				HashMap<String, Double> inputToWeight = outputToInputWeight.get(output);
-				for(String input: inputToInt.keySet()){
-					initialWeights[inputToInt.get(input)] = inputToWeight.get(input);
+		for(int type: featureIntMap.keys()){
+			TIntObjectHashMap<TIntIntHashMap> outputToInputInt = featureIntMap.get(type);
+			TIntObjectHashMap<TIntDoubleHashMap> outputToInputWeight = null;
+			HashMap<String, HashMap<String, Double>> outputToInputWeightStr = null;
+			if(featureWeightMap != null){
+				outputToInputWeight = featureWeightMap.get(type);
+			} else {
+				outputToInputWeightStr = featureWeightMapStr.get(stringIndex.get(type));
+			}
+			for(int output: outputToInputInt.keys()){
+				TIntIntHashMap inputToInt = outputToInputInt.get(output);
+				TIntDoubleHashMap inputToWeight = null;
+				HashMap<String, Double> inputToWeightStr = null;
+				if(outputToInputWeight != null){
+					inputToWeight = outputToInputWeight.get(output);
+				} else {
+					inputToWeightStr = outputToInputWeightStr.get(stringIndex.get(output));
+				}
+				for(int input: inputToInt.keys()){
+					if(inputToWeight != null){
+						initialWeights[inputToInt.get(input)] = inputToWeight.get(input);
+					} else {
+						initialWeights[inputToInt.get(input)] = inputToWeightStr.get(stringIndex.get(input));
+					}
 				}
 			}
 		}

@@ -67,6 +67,7 @@ public class LocalNetworkParam implements Serializable{
 	protected boolean _globalMode;
 	
 	protected StringIndex _stringIndex;
+	protected TIntIntHashMap _localStr2Global;
 	
 	/**
 	 * For memory-optimized, map an integer array object to a feature array object
@@ -229,8 +230,7 @@ public class LocalNetworkParam implements Serializable{
 	}
 	
 	public int toInt(String str){
-		throw new RuntimeException();
-//		return this._stringIndex.getOrPut(str);
+		return this._stringIndex.getOrPut(str);
 	}
 	
 	/**

@@ -23,7 +23,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
@@ -174,8 +173,9 @@ public abstract class FeatureManager implements Serializable{
 		this._param_g._size = 0;
 		for(int t=0;t<this._param_g._subFeatureIntMaps.size();t++){
 			//This method basically filling the _globalFeature2LocalFeature map for each thread.
-			addIntoGlobalFeatures(globalFeature2IntMap, this._param_g._subFeatureIntMaps.get(t), this._params_l[t]._globalFeature2LocalFeature);
+			addIntoGlobalFeatures(globalFeature2IntMap, this._param_g._subFeatureIntMaps.get(t), this._params_l[t]._globalFeature2LocalFeature, this._params_l[t]._localStr2Global);
 			this._param_g._subFeatureIntMaps.set(t, null);
+			this._params_l[t]._localStr2Global = null;
 		}
 		this._param_g._subSize = null;
 	}
@@ -188,34 +188,30 @@ public abstract class FeatureManager implements Serializable{
 	 * @param gf2lf The feature indices mapping from global feature indices to local feature indices.<br>
 	 * 				This is used in each local network param to get the correct local feature indices.
 	 */
-	private void addIntoGlobalFeatures(TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> globalMap, TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> localMap, TIntIntHashMap gf2lf){
-		TIntObjectIterator<TIntObjectHashMap<TIntIntHashMap>> iter1 = localMap.iterator();
-		while(iter1.hasNext()){
-			iter1.advance();
-			int localType = iter1.key();
+	private void addIntoGlobalFeatures(TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> globalMap,
+			TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> localMap, TIntIntHashMap gf2lf,
+			TIntIntHashMap ls2gs){
+		for(int localType: localMap.keys()){
 			TIntObjectHashMap<TIntIntHashMap> localOutput2input = localMap.get(localType);
+			localType = ls2gs.get(localType);
 			if(!globalMap.containsKey(localType)){
 				globalMap.put(localType, new TIntObjectHashMap<TIntIntHashMap>());
 			}
-			//this map
 			TIntObjectHashMap<TIntIntHashMap> globalOutput2input = globalMap.get(localType);
-			TIntObjectIterator<TIntIntHashMap> iter2 = localOutput2input.iterator();
-			while(iter2.hasNext()){
-				iter2.advance();
-				int localOutput = iter2.key();
+			for(int localOutput: localOutput2input.keys()){
 				TIntIntHashMap localInput2int = localOutput2input.get(localOutput);
+				localOutput = ls2gs.get(localOutput);
 				if(!globalOutput2input.containsKey(localOutput)){
 					globalOutput2input.put(localOutput, new TIntIntHashMap());
 				}
 				TIntIntHashMap globalInput2int = globalOutput2input.get(localOutput);
-				TIntIntIterator iter3 = localInput2int.iterator();
-				while(iter3.hasNext()){
-					iter3.advance();
-					int localInput = iter3.key();
+				for(int localInput: localInput2int.keys()){
+					int featureId = localInput2int.get(localInput);
+					localInput = ls2gs.get(localInput);
 					if(!globalInput2int.containsKey(localInput)){
 						globalInput2int.put(localInput, this._param_g._size++);
 					}
-					gf2lf.put(globalInput2int.get(localInput), localInput2int.get(localInput));
+					gf2lf.put(globalInput2int.get(localInput), featureId);
 				}
 			}
 		}

@@ -438,8 +438,8 @@ public abstract class NetworkModel implements Serializable{
 				//So we merge in first feature extraction.
 				//If precompile network, we keep exisiting threads. But we still need to merge features because
 				//it is still the first touch. That's why we have the "OR" operation here.
-				this._fm.mergeSubFeaturesToGlobalFeatures();
 				this._fm._param_g.mergeStringIndex(_learners);
+				this._fm.mergeSubFeaturesToGlobalFeatures();
 			}
 		}
 		saveCompiledNetworks(insts);
