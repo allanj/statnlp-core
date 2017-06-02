@@ -42,11 +42,11 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 		super();
 		this.param_G = param_G;
 		neuralFeatureIntMapList = new ArrayList<HashMap<String, HashMap<String, Integer>>>();
-		for(String featureType: param_G.getFeatureIntMap().keySet()){
-			if(featureType.startsWith("neural")){
-				neuralFeatureIntMapList.add(param_G.getFeatureIntMap().get(featureType));
-			}
-		}
+//		for(String featureType: param_G.getFeatureIntMap().keySet()){
+//			if(featureType.startsWith("neural")){
+//				neuralFeatureIntMapList.add(param_G.getFeatureIntMap().get(featureType));
+//			}
+//		}
 	}
 	
 	@Override

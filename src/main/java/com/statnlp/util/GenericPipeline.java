@@ -464,19 +464,19 @@ public class GenericPipeline extends Pipeline{
 				modelTextWriter.println(labelsUsed);
 				modelTextWriter.println("Num features: "+param.countFeatures());
 				modelTextWriter.println("Features:");
-				HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap = param.getFeatureIntMap();
-				for(String featureType: sorted(featureIntMap.keySet())){
-					modelTextWriter.println(featureType);
-					HashMap<String, HashMap<String, Integer>> outputInputMap = featureIntMap.get(featureType);
-					for(String output: sorted(outputInputMap.keySet())){
-						modelTextWriter.println("\t"+output);
-						HashMap<String, Integer> inputMap = outputInputMap.get(output);
-						for(String input: sorted(inputMap.keySet())){
-							int featureId = inputMap.get(input);
-							modelTextWriter.printf("\t\t%s %d %.17f\n", input, featureId, fm.getParam_G().getWeight(featureId));
-						}
-					}
-				}
+//				HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap = param.getFeatureIntMap();
+//				for(String featureType: sorted(featureIntMap.keySet())){
+//					modelTextWriter.println(featureType);
+//					HashMap<String, HashMap<String, Integer>> outputInputMap = featureIntMap.get(featureType);
+//					for(String output: sorted(outputInputMap.keySet())){
+//						modelTextWriter.println("\t"+output);
+//						HashMap<String, Integer> inputMap = outputInputMap.get(output);
+//						for(String input: sorted(inputMap.keySet())){
+//							int featureId = inputMap.get(input);
+//							modelTextWriter.printf("\t\t%s %d %.17f\n", input, featureId, fm.getParam_G().getWeight(featureId));
+//						}
+//					}
+//				}
 				modelTextWriter.close();
 			} catch (IOException e){
 				LOGGER.warn("["+getCurrentTask()+"]Cannot write model text into %s.", modelTextPath);

@@ -66,6 +66,8 @@ public class LocalNetworkParam implements Serializable{
 	//if this is true, then we bypass the local params.
 	protected boolean _globalMode;
 	
+	protected StringIndex _stringIndex;
+	
 	/**
 	 * For memory-optimized, map an integer array object to a feature array object
 	 * avoid creating duplicate integer array. 
@@ -90,6 +92,8 @@ public class LocalNetworkParam implements Serializable{
 		if(NetworkConfig.NUM_THREADS == 1){
 			this._globalMode = true;
 		}
+		
+		this._stringIndex = new StringIndex();
 
 	}
 	
@@ -222,6 +226,11 @@ public class LocalNetworkParam implements Serializable{
 	
 	public boolean isCacheEnabled(){
 		return this._cacheEnabled;
+	}
+	
+	public int toInt(String str){
+		throw new RuntimeException();
+//		return this._stringIndex.getOrPut(str);
 	}
 	
 	/**

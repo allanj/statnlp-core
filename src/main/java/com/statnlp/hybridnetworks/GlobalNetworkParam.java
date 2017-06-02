@@ -40,7 +40,6 @@ import gnu.trove.iterator.TIntIntIterator;
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.map.hash.TObjectIntHashMap;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
@@ -102,12 +101,12 @@ public class GlobalNetworkParam implements Serializable{
 	/** The size of each feature int maps for each local thread */
 	protected int[] _subSize;
 	
-	protected TObjectIntHashMap<String> _str2intMap;
+	protected StringIndex _stringIndex;
 	
 	protected int[][] _feature2rep;//three-dimensional array representation of the feature.
 	/** The weights parameter */
 	protected double[] _weights;
-	/** Store the best weights when using the batch sgd */
+	/** Store the best weights when using the batch SGD */
 	protected double[] _bestWeight;
 	/** A flag whether the model is discriminative */
 	protected boolean _isDiscriminative;
@@ -165,15 +164,26 @@ public class GlobalNetworkParam implements Serializable{
 			}
 			this._subSize = new int[NetworkConfig.NUM_THREADS];
 		}
-		
-		this._str2intMap = new TObjectIntHashMap<String>();
+		_stringIndex = new StringIndex();
 	}
 	
-	private synchronized int toInt(String s){
-		if(!this._str2intMap.containsKey(s)){
-			this._str2intMap.put(s, this._str2intMap.size());
+	public void mergeStringIndex(LocalNetworkLearnerThread[] learners){
+		if(_stringIndex != null){
+			return;
 		}
-		return this._str2intMap.get(s);
+		StringIndex[] stringIndexes = new StringIndex[learners.length];
+		int i=0;
+		for(LocalNetworkLearnerThread learner: learners){
+			stringIndexes[i] = learner.getLocalNetworkParam()._stringIndex;
+			learner.getLocalNetworkParam()._stringIndex = null;
+		}
+		this._stringIndex = StringIndex.merge(stringIndexes);
+		stringIndexes = null;
+		System.gc();
+	}
+	
+	public synchronized int toInt(String s){
+		return this._stringIndex.getOrPut(s);
 	}
 	
 	/**
@@ -316,14 +326,8 @@ public class GlobalNetworkParam implements Serializable{
 	private void expandFeaturesForGenerativeModelDuringTesting(){
 //		this.unlockForNewFeaturesAndFixCurrentFeatures();
 		
-		//if it is a discriminative model, then do not expand the features.
-		if(this.isDiscriminative()){
-			return;
-		}
-		
 		System.err.println("==EXPANDING THE FEATURES===");
 		System.err.println("Before expansion:"+this.size());
-		//TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>>
 		TIntObjectIterator<TIntObjectHashMap<TIntIntHashMap>> type_ids = this._featureIntMap.iterator();
 		while(type_ids.hasNext()){
 			type_ids.advance();
@@ -336,7 +340,7 @@ public class GlobalNetworkParam implements Serializable{
 				output_ids.advance();
 				Integer output_id = output_ids.key();
 				for(int input_id : input_ids){
-					this.toFeature(type_id, output_id, input_id);
+					this.toFeature(null, type_id, output_id, input_id);
 				}
 			}
 		}
@@ -345,84 +349,49 @@ public class GlobalNetworkParam implements Serializable{
 //		this.lockIt();
 	}
 	
+	/**
+	 * Lock the features but keep existing feature weights (for whatever reasons)
+	 * @deprecated Please use {@link #lockIt(boolean)} instead.
+	 */
+	@Deprecated
 	public void lockItAndKeepExistingFeatureWeights(){
-		Random r = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
-		
-		if(this.isLocked()) return;
-		
-		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
-			this.expandFeaturesForGenerativeModelDuringTesting();
-		}
-		
-		double[] weights_new = new double[this._size];
-		this._counts = new double[this._size];
-		for(int k = 0; k<this._weights.length; k++){
-			weights_new[k] = this._weights[k];
-		}
-		for(int k = this._weights.length ; k<this._size; k++){
-			weights_new[k] = NetworkConfig.RANDOM_INIT_WEIGHT ? (r.nextDouble()-.5)/10 :
-				NetworkConfig.FEATURE_INIT_WEIGHT;
-		}
-		this._weights = weights_new;
-		this.resetCountsAndObj();
-		
-		if(this._storeFeatureReps){
-			
-			//TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>>
-			
-			this._feature2rep = new int[this._size][];
-			TIntObjectIterator<TIntObjectHashMap<TIntIntHashMap>> types = this._featureIntMap.iterator();
-			while(types.hasNext()){
-				types.advance();
-				int type = types.key();
-				TIntObjectHashMap<TIntIntHashMap> output2input = this._featureIntMap.get(type);
-				TIntObjectIterator<TIntIntHashMap> outputs = output2input.iterator();
-				while(outputs.hasNext()){
-					outputs.advance();
-					int output = outputs.key();
-					TIntIntHashMap input2id = output2input.get(output);
-					TIntIntIterator inputs = input2id.iterator();
-					while(inputs.hasNext()){
-						inputs.advance();
-						int input = inputs.key();
-						int id = input2id.get(input);
-						this._feature2rep[id] = new int[]{type, output, input};
-					}
-				}
-			}
-		
-		}
-		
-		this._version = 0;
-		if(!NetworkConfig.USE_NEURAL_FEATURES)
-			this._opt = this._optFactory.create(this._weights.length, getFeatureIntMap());
-		else
-			this._opt =  this._optFactory.create(_nnController.getNonNeuralAndInternalNeuralSize(), getFeatureIntMap());
-		this._locked = true;
-		
-		System.err.println(this._size+" features.");
-		
+		lockIt(true);
 	}
-	
+
 	/**
 	 * Lock current features.
 	 * If this is locked it means no new features will be allowed.
 	 */
 	public void lockIt(){
-		
-		
+		lockIt(false);
+	}
+	
+	/**
+	 * Lock current features.
+	 * If this is locked it means no new features will be allowed.
+	 * @param keepExistingWeights Whether to keep existing weights
+	 */
+	public void lockIt(boolean keepExistingWeights){
 		Random r = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
 		
 		if(this.isLocked()) return;
 		
-		this.expandFeaturesForGenerativeModelDuringTesting();
+		if(!this.isDiscriminative()){
+			this.expandFeaturesForGenerativeModelDuringTesting();
+		}
 		
 		double[] weights_new = new double[this._size];
 		this._counts = new double[this._size];
-		for(int k = 0; k<this._fixedFeaturesSize; k++){
+		int numWeightsKept;
+		if(keepExistingWeights){
+			numWeightsKept = this._weights.length;
+		} else {
+			numWeightsKept = this._fixedFeaturesSize;
+		}
+		for(int k = 0; k<numWeightsKept; k++){
 			weights_new[k] = this._weights[k];
 		}
-		for(int k = this._fixedFeaturesSize ; k<this._size; k++){
+		for(int k = numWeightsKept ; k<this._size; k++){
 			weights_new[k] = NetworkConfig.RANDOM_INIT_WEIGHT ? (r.nextDouble()-.5)/10 :
 				NetworkConfig.FEATURE_INIT_WEIGHT;
 		}
@@ -468,10 +437,11 @@ public class GlobalNetworkParam implements Serializable{
 		/**********/
 		
 		this._version = 0;
-		if(!NetworkConfig.USE_NEURAL_FEATURES)
+		if(!NetworkConfig.USE_NEURAL_FEATURES){
 			this._opt = this._optFactory.create(this._weights.length, getFeatureIntMap());
-		else
+		} else {
 			this._opt =  this._optFactory.create(_nnController.getNonNeuralAndInternalNeuralSize(), getFeatureIntMap());
+		}
 		this._locked = true;
 		
 		System.err.println(this._size+" features.");
@@ -495,7 +465,7 @@ public class GlobalNetworkParam implements Serializable{
 	}
 	
 	/**
-	 * 
+	 * Converts a tuple of feature type, input, and output into the feature index.
 	 * @param type
 	 * @param output
 	 * @param input
@@ -506,43 +476,18 @@ public class GlobalNetworkParam implements Serializable{
 		return this.toFeature(null, type, output, input);
 	}
 	
-	
-	public int toFeature(int type_id , int output_id , int input_id){
-//		return this.toFeature(null, type, output, input);
-		
-		int threadId = -1;
-
-		TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> featureIntMap = null;
-		if(!NetworkConfig.PARALLEL_FEATURE_EXTRACTION || NetworkConfig.NUM_THREADS == 1 || this.isLocked()){
-			featureIntMap = this._featureIntMap;
-		} else {
-			if(threadId == -1){
-				throw new NetworkException("Missing network on some toFeature calls while in parallel touch.");
-			}
-			featureIntMap = this._subFeatureIntMaps.get(threadId);
-		}
-		
-		if(!featureIntMap.containsKey(type_id)){
-			featureIntMap.put(type_id, new TIntObjectHashMap<TIntIntHashMap>());
-		}
-		
-		TIntObjectHashMap<TIntIntHashMap> outputToInputToIdx = featureIntMap.get(type_id);
-		if(!outputToInputToIdx.containsKey(output_id)){
-			outputToInputToIdx.put(output_id, new TIntIntHashMap());
-		}
-		
-		TIntIntHashMap inputToIdx = outputToInputToIdx.get(output_id);
-		if(!inputToIdx.containsKey(input_id)){
-			if(!NetworkConfig.PARALLEL_FEATURE_EXTRACTION || NetworkConfig.NUM_THREADS == 1){
-				inputToIdx.put(input_id, this._size++);
-			} else {
-				inputToIdx.put(input_id, this._subSize[threadId]++);
-			}
-		}
-
-		return inputToIdx.get(input_id);
+	/**
+	 * Converts a tuple of feature type, input, and output into the feature index.
+	 * @param type_id
+	 * @param output_id
+	 * @param input_id
+	 * @return
+	 * @deprecated Please use {@link #toFeature(Network, int, int, int)} instead.
+	 */
+	@Deprecated
+	public int toFeature(int type_id, int output_id, int input_id){
+		return toFeature(null, type_id, output_id, input_id);
 	}
-	
 	
 	/**
 	 * Converts a tuple of feature type, input, and output into the feature index.
@@ -554,13 +499,24 @@ public class GlobalNetworkParam implements Serializable{
 	 * @param input The input (e.g., for emission feature in HMM this might be the word itself) 
 	 * @return
 	 */
-	public int toFeature(Network network , String type , String output , String input){ //process later , if threadId = −1, global mode.
-		
-		
-		int type_id = this.toInt(type);
-		int output_id = this.toInt(output);
-		int input_id = this.toInt(input);
-		
+	public int toFeature(Network network , String type , String output , String input){
+		int type_id = _stringIndex == null ? network._param.toInt(type) : toInt(type);
+		int output_id = _stringIndex == null ? network._param.toInt(output) : toInt(output);
+		int input_id = _stringIndex == null ? network._param.toInt(input) : toInt(input);
+		return toFeature(network, type_id, output_id, input_id);
+	}
+
+	/**
+	 * Converts a tuple of feature type, input, and output into the feature index.
+	 * @param type_id The feature type (e.g., "EMISSION", "FEATURE_1", etc.)
+	 * @param output_id The string representing output label associated with this feature. 
+	 * 				 Note that this does not have to be the surface form of the label, as
+	 * 				 any distinguishing string value will work (so, instead of "NN", "DT", 
+	 * 				 you can just as well put the indices, like "0", "1")
+	 * @param input_id The input (e.g., for emission feature in HMM this might be the word itself) 
+	 * @return
+	 */
+	public int toFeature(Network network, int type_id , int output_id , int input_id){
 		int threadId = network != null ? network.getThreadId() : -1;
 		boolean shouldNotCreateNewFeature = false;
 		try{
@@ -584,21 +540,10 @@ public class GlobalNetworkParam implements Serializable{
 			return this.getFeatureId(type_id, output_id, input_id, featureIntMap);
 		}
 		
-		if(NetworkConfig.USE_NEURAL_FEATURES){
-//			Instance inst = network.getInstance();
-//			int instId = inst.getInstanceId();
-//			boolean isTestInst = instId > 0 && !inst.isLabeled() || !inst.getLabeledInstance().isLabeled();
-//			if (isTestInst && !type.startsWith(NetworkConfig.NEURAL_FEATURE_TYPE_PREFIX)){
-//				type = DUMP_TYPE;
-//			}
-			//TODO: Raymond.
-		}
-		
 		if(!featureIntMap.containsKey(type_id)){
 			featureIntMap.put(type_id, new TIntObjectHashMap<TIntIntHashMap>());
 		}
 		
-		//TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>>
 		TIntObjectHashMap<TIntIntHashMap> outputToInputToIdx = featureIntMap.get(type_id);
 		if(!outputToInputToIdx.containsKey(output_id)){
 			outputToInputToIdx.put(output_id, new TIntIntHashMap());
@@ -642,7 +587,6 @@ public class GlobalNetworkParam implements Serializable{
 		if(!featureIntMap.containsKey(type)){
 			return -1;
 		}
-		//TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>>
 		TIntObjectHashMap<TIntIntHashMap> output2input = featureIntMap.get(type);
 		if(!output2input.containsKey(output)){
 			return -1;
@@ -932,9 +876,6 @@ public class GlobalNetworkParam implements Serializable{
 		out.writeObject("_featureIntMap");
 		out.writeObject(this._featureIntMap);
 		
-//		out.writeObject("_feature2rep");
-//		out.writeObject(this._feature2rep);
-		
 		out.writeObject("_weights");
 		out.writeObject(this._weights);
 		
@@ -967,7 +908,6 @@ public class GlobalNetworkParam implements Serializable{
 			this._featureIntMap = (TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>>)obj;
 		}
 		if(version == null){
-//			this._feature2rep = (int[][])in.readObject();
 			this._weights = (double[])in.readObject();
 			this._size = in.readInt();
 			this._fixedFeaturesSize = in.readInt();
