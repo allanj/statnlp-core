@@ -1,13 +1,16 @@
 package com.statnlp.hybridnetworks;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.statnlp.commons.ml.opt.MathsVector;
+
 
 public abstract class FeatureValueProvider {
 	
-	protected int outputIdx, numOutput;
+	protected int outputIdx, numLabels;
 	
 	protected double[] weights, gradWeights;
 	
@@ -23,13 +26,15 @@ public abstract class FeatureValueProvider {
 	
 	protected Map<Object,Double> input2score;
 	
-	public FeatureValueProvider(int numOutput) {
+	protected double scale;
+	
+	public FeatureValueProvider(int numLabels) {
 		edge2input = new HashMap<Integer, Map<Integer,Map<Integer,Object>>>();
 		edge2output = new HashMap<Integer, Map<Integer,Map<Integer,Integer>>>();
 		input2score = new HashMap<Object, Double>();
 		input2id = new LinkedHashMap<Object,Integer>();
 		testInput2id = new LinkedHashMap<Object, Integer>();
-		this.numOutput = numOutput;
+		this.numLabels = numLabels;
 	}
 	
 	public synchronized void addHyperEdge(Network network, int parent_k, int children_k_idx, Object input, int output) {
@@ -62,6 +67,8 @@ public abstract class FeatureValueProvider {
 	
 	public abstract void initializeForDecoding();
 	
+	public abstract double getScore(Network network, int parent_k, int children_k_index);
+	
 	public abstract void computeValues();
 	
 	public abstract void update(double count, Network network, int parent_k, int children_k_index);
@@ -91,8 +98,6 @@ public abstract class FeatureValueProvider {
 	public double[] getGradParams() {
 		return gradParams;
 	}
-	
-	public abstract double getScore(Network network, int parent_k, int children_k_index);
 	
 	public Object getHyperEdgeInput(Network network, int parent_k, int children_k_index) {
 		int instanceID = network.getInstance().getInstanceId();
@@ -124,5 +129,44 @@ public abstract class FeatureValueProvider {
 	
 	public void clearDecodingState() {
 		testInput2id.clear();
+	}
+	
+	public void resetGrad() {
+		Arrays.fill(gradWeights, 0.0);
+		Arrays.fill(gradParams, 0.0);
+		Arrays.fill(gradOutput, 0.0);
+	}
+	
+	public double getL2Weights() {
+		return MathsVector.square(weights);
+	}
+	
+	public double getL2Params() {
+		if (getParamSize() > 0) {
+			return MathsVector.square(params);
+		}
+		return 0.0;
+	}
+	
+	public void addL2WeightsGrad() {
+		double _kappa = NetworkConfig.L2_REGULARIZATION_CONSTANT;
+		for(int k = 0; k<gradWeights.length; k++) {
+			if(_kappa > 0) {
+				gradWeights[k] += 2 * scale * _kappa * weights[k];
+			}
+		}
+	}
+	
+	public void addL2ParamsGrad() {
+		double _kappa = NetworkConfig.L2_REGULARIZATION_CONSTANT;
+		for(int k = 0; k<gradParams.length; k++) {
+			if(_kappa > 0) {
+				gradParams[k] += 2 * scale * _kappa * params[k];
+			}
+		}
+	}
+	
+	public void setScale(double coef) {
+		scale = coef;
 	}
 }

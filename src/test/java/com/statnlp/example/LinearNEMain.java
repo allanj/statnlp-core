@@ -17,7 +17,7 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkModel;
-import com.statnlp.neural.AbstractNetwork;
+import com.statnlp.neural.NeuralNetworkFeatureValueProvider;
 import com.statnlp.neural.MultiLayerPerceptron;
 
 public class LinearNEMain {
@@ -59,15 +59,17 @@ public class LinearNEMain {
 		
 		if (DEBUG) {
 			NetworkConfig.RANDOM_INIT_WEIGHT = false;
+			NetworkConfig.FEATURE_INIT_WEIGHT = 0.1;
+			NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.0;
 		}
 		
 		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory());
 		
-		AbstractNetwork net = null;
+		NeuralNetworkFeatureValueProvider net = null;
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
-			net = new MultiLayerPerceptron("MyNet", MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size());
+			net = new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size());
 			gnp.addFeatureValueProvider(net);
 		}
 		

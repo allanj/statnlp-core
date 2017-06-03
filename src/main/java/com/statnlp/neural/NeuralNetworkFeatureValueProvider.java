@@ -4,33 +4,18 @@ import java.util.HashMap;
 
 import com.statnlp.hybridnetworks.FeatureValueProvider;
 
-public abstract class AbstractNetwork extends FeatureValueProvider {
+public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProvider {
 	
 	protected HashMap<String,Object> config;
 	
-	protected String name;
-
-	protected static int numNetworks;
-	
 	protected boolean isTraining = true;
 	
-	public AbstractNetwork(int numOutput) {
-		this(""+numNetworks, null, numOutput);
-		numNetworks++;
+	public NeuralNetworkFeatureValueProvider(int numLabels) {
+		this(null, numLabels);
 	}
 	
-	public AbstractNetwork(String name, int numOutput) {
-		this(name, null, numOutput);
-	}
-	
-	public AbstractNetwork(HashMap<String,Object> config, int numOutput) {
-		this(""+numNetworks, config, numOutput);
-		numNetworks++;
-	}
-	
-	public AbstractNetwork(String name, HashMap<String,Object> config, int numOutput) {
-		super(numOutput);
-		this.name = name;
+	public NeuralNetworkFeatureValueProvider(HashMap<String,Object> config, int numLabels) {
+		super(numLabels);
 		this.config = config;
 	}
 	
@@ -53,10 +38,6 @@ public abstract class AbstractNetwork extends FeatureValueProvider {
 	public abstract void load(String prefix);
 	
 	public abstract void cleanUp();
-	
-	public String getName() {
-		return this.name;
-	}
 	
 	public void setTraining(boolean flag) {
 		isTraining = flag;

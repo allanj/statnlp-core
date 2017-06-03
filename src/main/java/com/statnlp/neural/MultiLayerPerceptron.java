@@ -30,7 +30,7 @@ import com.sun.jna.Native;
  * The class that serves as the interface to access the neural network backend.
  * This uses TH4J and JNLua to transfer the data between the JVM and the NN backend.
  */
-public class MultiLayerPerceptron extends AbstractNetwork {
+public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	private boolean DEBUG = false;
 	
 	public static final String IN_SEP = "#IN#";
@@ -60,8 +60,8 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 
 	private SimpleMatrix weightMatrix_tran;
 
-	public MultiLayerPerceptron(String name, HashMap<String, Object> config, int numOutput) {
-		super(name, config, numOutput);
+	public MultiLayerPerceptron(HashMap<String, Object> config, int numLabels) {
+		super(config, numLabels);
 		this.optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
 		
 		configure();
@@ -149,9 +149,9 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 		}
 
 		// Weight matrix
-		this.weightMatrix = new SimpleMatrix(numOutput, getHiddenSize());
-		this.weightMatrix_tran = new SimpleMatrix(getHiddenSize(), numOutput);
-		this.gradWeightMatrix = new SimpleMatrix(numOutput, getHiddenSize());
+		this.weightMatrix = new SimpleMatrix(numLabels, getHiddenSize());
+		this.weightMatrix_tran = new SimpleMatrix(getHiddenSize(), numLabels);
+		this.gradWeightMatrix = new SimpleMatrix(numLabels, getHiddenSize());
 		DMatrixRMaj weightDMatrix = this.weightMatrix.getMatrix();
 		this.weights = weightDMatrix.data;
 		for(int i = 0; i < weights.length; i++) {
@@ -173,14 +173,14 @@ public class MultiLayerPerceptron extends AbstractNetwork {
         
         // Forward matrices
         this.outputMatrix = new SimpleMatrix(getVocabSize(), getHiddenSize());
-        this.forwardMatrix = new SimpleMatrix(getVocabSize(), numOutput);
+        this.forwardMatrix = new SimpleMatrix(getVocabSize(), numLabels);
         
         // Backward matrices
         this.gradOutputMatrix = new SimpleMatrix(getVocabSize(), getHiddenSize());
         DMatrixRMaj gradOutputDMatrix = this.gradOutputMatrix.getMatrix();
         this.gradOutput = gradOutputDMatrix.data;
-        this.countOutputMatrix = new SimpleMatrix(getVocabSize(), numOutput);
-        this.countWeightMatrix = new SimpleMatrix(numOutput, getVocabSize());
+        this.countOutputMatrix = new SimpleMatrix(getVocabSize(), numLabels);
+        this.countWeightMatrix = new SimpleMatrix(numLabels, getVocabSize());
         
         Object[] args = new Object[3];
         args[0] = config;
@@ -254,7 +254,7 @@ public class MultiLayerPerceptron extends AbstractNetwork {
         
         // Forward matrices
         this.outputMatrix = new SimpleMatrix(vocab.size(), getHiddenSize());
-        this.forwardMatrix = new SimpleMatrix(vocab.size(), numOutput);
+        this.forwardMatrix = new SimpleMatrix(vocab.size(), numLabels);
         
         Object[] args = new Object[]{config};
         Class<?>[] retTypes = new Class[]{};
@@ -283,7 +283,7 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 	@Override
 	public void forward(boolean training) {
 		if (optimizeNeural) { // update with new params
-			if (hasParams)
+			if (hasParams) 
 				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
 		}
 		
@@ -339,10 +339,13 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 			gradParams = getArray(this.gradParamsTensor);
 		}
 		
+		addL2WeightsGrad();
+		if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
+			addL2ParamsGrad();
+		}
+		
 //		Arrays.fill(gradOutput, 0.0);
-		gradOutputMatrix.set(0.0);
-		countOutputMatrix.set(0.0);
-		countWeightMatrix.set(0.0);
+		resetCount();
 	}
 	
 	@Override
@@ -475,5 +478,10 @@ public class MultiLayerPerceptron extends AbstractNetwork {
 
 	private double[] getArray(DoubleTensor t) {
 		return t.storage().getRawData().getDoubleArray(0, (int) t.nElement());
+	}
+	
+	public void resetCount() {
+		countOutputMatrix.set(0.0);
+		countWeightMatrix.set(0.0);
 	}
 }

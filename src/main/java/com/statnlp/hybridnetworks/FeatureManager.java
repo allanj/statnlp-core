@@ -26,7 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import com.statnlp.neural.AbstractNetwork;
+import com.statnlp.neural.NeuralNetworkFeatureValueProvider;
 
 /**
  * The base class for the feature manager.
@@ -387,11 +387,5 @@ public abstract class FeatureManager implements Serializable{
 	}
 	
 	public static String NEURAL_FEATURE_TYPE_PREFIX = "neural";
-	public static String NEURAL_FEATURE_TYPE_SEPARATOR = "|||";
-	public static String createNeuralFeatureType(Class<? extends AbstractNetwork> neuralClass, String networkName) {
-		return NEURAL_FEATURE_TYPE_PREFIX
-				+ NEURAL_FEATURE_TYPE_SEPARATOR + neuralClass.getName()
-				+ NEURAL_FEATURE_TYPE_SEPARATOR + networkName;
-	}
 	
 }

@@ -9,7 +9,7 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
-import com.statnlp.neural.AbstractNetwork;
+import com.statnlp.neural.NeuralNetworkFeatureValueProvider;
 import com.statnlp.neural.MultiLayerPerceptron;
 
 public class ECRFFeatureManager extends FeatureManager {
@@ -20,9 +20,9 @@ public class ECRFFeatureManager extends FeatureManager {
 	private String OUT_SEP = MultiLayerPerceptron.OUT_SEP; 
 	private String IN_SEP = MultiLayerPerceptron.IN_SEP;
 	
-	private AbstractNetwork net;
+	private NeuralNetworkFeatureValueProvider net;
 	
-	public ECRFFeatureManager(GlobalNetworkParam param_g, AbstractNetwork net) {
+	public ECRFFeatureManager(GlobalNetworkParam param_g, NeuralNetworkFeatureValueProvider net) {
 		super(param_g);
 		this.net = net;
 	}

@@ -36,7 +36,7 @@ import java.util.concurrent.Future;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
-import com.statnlp.neural.AbstractNetwork;
+import com.statnlp.neural.NeuralNetworkFeatureValueProvider;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.ui.visualize.type.VisualizerFrame;
 
@@ -313,7 +313,7 @@ public abstract class NetworkModel implements Serializable{
 				
 				// Feature value provider's ``forward''
 				this._fm.getParam_G().computeContinousScores();
-				this._fm.getParam_G().resetCountContinuous();
+				this._fm.getParam_G().resetGradContinuous();
 				
 				List<Future<Void>> results = pool.invokeAll(callables);
 				for(Future<Void> result: results){

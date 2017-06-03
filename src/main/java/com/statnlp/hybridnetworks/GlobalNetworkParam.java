@@ -800,28 +800,6 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		
-		for (FeatureValueProvider provider : this._featureValueProviders) {
-			double[] weights = provider.getWeights();
-			double[] gradWeights = provider.getGradWeights();
-			for(int k = 0; k<gradWeights.length; k++) {
-//				gradWeights[k] = 0.0; // don't zero here
-				if(this.isDiscriminative() && this._kappa > 0) {
-					gradWeights[k] += 2 * coef * this._kappa * weights[k];
-				}
-			}
-			double[] params = provider.getParams();
-			double[] gradParams = provider.getGradParams();
-			if (params == null || gradParams == null) continue;
-			for(int k = 0 ; k<params.length; k++) {
-				gradParams[k] = 0.0;
-				if(NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
-					if(this.isDiscriminative() && this._kappa > 0){
-						gradParams[k] += 2 * coef * this._kappa * params[k];
-					}
-				}
-			}
-		}
-		
 //		if (NetworkConfig.OPTIMIZE_NEURAL && NetworkConfig.USE_NEURAL_FEATURES) {
 			//reset the internal feature weights here.
 //			double[] internalNNWeights = this._nnController.getInternalNeuralWeights();
@@ -864,16 +842,15 @@ public class GlobalNetworkParam implements Serializable{
 //			} else {
 //				this._obj += - coef * this._kappa * MathsVector.square(this._weights);
 //			}
-			this._obj += - coef * this._kappa * MathsVector.square(this._weights);
+			this._obj += MathsVector.square(this._weights);
 			for (FeatureValueProvider provider : this._featureValueProviders) {
-				double[] weights = provider.getWeights();
-				this._obj += - coef * this._kappa * MathsVector.square(weights);
-				double[] params = provider.getParams();
-				if (params == null) continue;
+				provider.setScale(coef);
+				this._obj += provider.getL2Weights();
 				if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
-					this._obj += - coef * this._kappa * MathsVector.square(params);
+					this._obj += provider.getL2Params();
 				}
 			}
+			this._obj *= - coef * this._kappa;
 		}
 		//NOTES:
 		//for additional terms such as regularization terms:
@@ -927,9 +904,9 @@ public class GlobalNetworkParam implements Serializable{
 		}
 	}
 	
-	public void resetCountContinuous() {
+	public void resetGradContinuous() {
 		for (FeatureValueProvider provider : _featureValueProviders) {
-			Arrays.fill(provider.getGradWeights(), 0.0);
+			provider.resetGrad();
 		}
 	}
 	
