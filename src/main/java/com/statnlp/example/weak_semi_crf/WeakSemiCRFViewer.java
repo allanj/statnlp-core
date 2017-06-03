@@ -4,11 +4,12 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler.NodeType;
-import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.ui.visualize.type.VNode;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.ui.visualize.type.VisualizeGraph;
+import com.statnlp.util.instance_parser.InstanceParser;
 
 
 
@@ -22,21 +23,24 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 	
 	static double offset_height = 100;
 	
-	protected WeakSemiCRFInstance instance;
+	protected LinearInstance<Span> instance;
 	
 	protected String[] inputs;
 	
 	protected ArrayList<Span> outputs;
 	
-	public WeakSemiCRFViewer(GlobalNetworkParam param) {
-		super(param);
+	public WeakSemiCRFViewer(InstanceParser instanceParser) {
+		super(instanceParser);
 	}
 	
 	@SuppressWarnings("unchecked")
 	protected void initData()
 	{
-		this.instance = (WeakSemiCRFInstance)super.instance;
-		this.inputs = this.instance.getInputAsArray();
+		this.instance = (LinearInstance<Span>)super.instance;
+		this.inputs = new String[this.instance.input.size()];
+		for(int i=0; i<this.inputs.length; i++){
+			this.inputs[i] = this.instance.input.get(i)[0];
+		}
 		this.outputs = (ArrayList<Span>)super.outputs;
 		//WIDTH = instance.Length * span_width;
 	}
@@ -58,7 +62,7 @@ public class WeakSemiCRFViewer extends VisualizationViewerEngine {
 //		if(Label.get(nodeId).form.equals("O")){
 //			return inputs[pos];
 //		}
-		return param.getLabel(nodeId).toString();
+		return ((WeakSemiCRFInstanceParser)instanceParser).getLabel(nodeId).toString();
 	}
 	
 	protected void initNodeColor(VisualizeGraph vg)

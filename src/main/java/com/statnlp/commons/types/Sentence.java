@@ -41,7 +41,7 @@ public class Sentence extends TokenArray{
 		StringBuilder sb = new StringBuilder();
 		for(int k = 0; k<this._tokens.length; k++){
 			if(k!=0) sb.append(' ');
-			sb.append(this._tokens[k].getName());
+			sb.append(this._tokens[k].getForm());
 		}
 		return sb.toString();
 	}

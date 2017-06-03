@@ -16,11 +16,11 @@
  */
 package com.statnlp.commons.types;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import com.statnlp.example.base.BaseInstance;
 
-public class LinearInstance<T> extends BaseInstance<LinearInstance<T>, ArrayList<String[]>, ArrayList<T>>{
+public class LinearInstance<T> extends BaseInstance<LinearInstance<T>, List<String[]>, List<T>>{
 	
 	private static final long serialVersionUID = 3336336220436168888L;
 	
@@ -28,15 +28,15 @@ public class LinearInstance<T> extends BaseInstance<LinearInstance<T>, ArrayList
 		this(instanceId, weight, null);
 	}
 	
-	public LinearInstance(int instanceId, double weight, ArrayList<String[]> input){
+	public LinearInstance(int instanceId, double weight, List<String[]> input){
 		this(instanceId, weight, input, null, null);
 	}
 	
-	public LinearInstance(int instanceId, double weight, ArrayList<String[]> input, ArrayList<T> output){
+	public LinearInstance(int instanceId, double weight, List<String[]> input, List<T> output){
 		this(instanceId, weight, input, output, null);
 	}
 	
-	public LinearInstance(int instanceId, double weight, ArrayList<String[]> input, ArrayList<T> output, ArrayList<T> prediction){
+	public LinearInstance(int instanceId, double weight, List<String[]> input, List<T> output, List<T> prediction){
 		super(instanceId, weight);
 		this.input = input;
 		this.output = output;

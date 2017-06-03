@@ -1,7 +1,7 @@
 package com.statnlp.commons.types;
 
 
-public class WordToken extends InputToken{
+public class WordToken extends Token {
 	
 	private static final long serialVersionUID = -1296542134339296118L;
 	
@@ -83,8 +83,6 @@ public class WordToken extends InputToken{
 		return this.entity;
 	}
 	
-	
-	
 	public String getDepLabel() {
 		return depLabel;
 	}
@@ -97,20 +95,20 @@ public class WordToken extends InputToken{
 	public boolean equals(Object o) {
 		if(o instanceof WordToken){
 			WordToken w = (WordToken)o;
-			return w._name.equals(this._name) && w.tag.equals(this.tag) && (w.headIndex == this.headIndex) && w.entity.equals(this.entity);
+			return w._form.equals(this._form) && w.tag.equals(this.tag) && (w.headIndex == this.headIndex) && w.entity.equals(this.entity);
 		}
 		return false;
 	}
 	
 	@Override
 	public int hashCode() {
-		return this._name.hashCode() +this.tag.hashCode() + this.headIndex + this.entity.hashCode() + 7;
+		return this._form.hashCode() +this.tag.hashCode() + this.headIndex + this.entity.hashCode() + 7;
 	}
 	
 	@Override
 	public String toString() {
-		if(!tag.equals("")) return "Word:"+this._name+"/"+tag+","+headIndex+","+entity;
-		return "WORD:"+this._name;
+		if(!tag.equals("")) return "Word:"+this._form+"/"+tag+","+headIndex+","+entity;
+		return "WORD:"+this._form;
 	}
 	
 	public String[] getFS(){return this.fs;}

@@ -14,11 +14,9 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.statnlp.commons;
+package com.statnlp.commons.types;
 
-import com.statnlp.commons.types.Token;
-
-public class Word implements Token{
+public class Word extends Token {
 	
 	private static final long serialVersionUID = 6430618612816357597L;
 	
@@ -30,20 +28,8 @@ public class Word implements Token{
 	public static Word END = new Word("[END]");
 	public static Word UNKNOWN = new Word("[UNKNOWN]");
 	
-	private String _form;
-	
-	public Word(String form){
-//		this._form = WordUtil.normalizeDigits(form);
-		this._form = form;
-		//luwei: I don't remember why we need to do the following??
-//		StringBuilder sb = new StringBuilder();
-//		for(char ch : form.toCharArray()){
-//			if(ch=='+')
-//				sb.append("*PLUS*");
-//			else
-//				sb.append(ch);
-//		}
-//		this._form = sb.toString();
+	public Word(String name){
+		super(name);
 	}
 
 	public static Word[] toWords(String sentence){
@@ -65,25 +51,22 @@ public class Word implements Token{
 	}
 	
 	@Override
-	public int getId() {
-		return 0;
-	}
-	
-	@Override
-	public String getName(){
+	public String getForm(){
 		return this._form;
 	}
 	
 	@Override
 	public boolean equals(Object o){
-		if(o instanceof Word)
-			return this._form.equals(((Word)o)._form);
+		if(o instanceof Word){
+			Word w = (Word)o;
+			return this._form.equals(w._form);
+		}
 		return false;
 	}
 	
 	@Override
 	public int hashCode(){
-		return this._form.hashCode() + 7;
+		return this._form.hashCode();
 	}
 	
 	@Override

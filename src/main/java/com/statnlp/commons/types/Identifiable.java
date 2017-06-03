@@ -16,37 +16,9 @@
  */
 package com.statnlp.commons.types;
 
-public abstract class OutputToken implements Token{
+public interface Identifiable {
 	
-	private static final long serialVersionUID = 2101614459163211999L;
+	public int getId();
+	public void setId(int id);
 	
-	protected int _id = -1;
-	protected String _name;
-	
-	public OutputToken(String name) {
-		this._name = name;
-	}
-	
-	public void setId(int id){
-		this._id = id;
-	}
-	
-	@Override
-	public int getId(){
-		return this._id;
-	}
-
-	@Override
-	public String getName() {
-		return this._name;
-	}
-	
-	@Override
-	public abstract boolean equals(Object o);
-	
-	@Override
-	public abstract int hashCode();
-
-	@Override
-	public abstract String toString();
 }

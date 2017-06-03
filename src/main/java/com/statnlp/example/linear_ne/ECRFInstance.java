@@ -14,7 +14,6 @@ public class ECRFInstance extends BaseInstance<ECRFInstance, Sentence, ArrayList
 	protected ArrayList<String> entities;
 	protected ArrayList<String> predictons;
 	
-	
 	protected double predictionScore;
 	
 	public ECRFInstance(int instanceId, double weight, Sentence sent) {
@@ -22,13 +21,12 @@ public class ECRFInstance extends BaseInstance<ECRFInstance, Sentence, ArrayList
 		this.sentence = sent;
 	}
 	
-
 	@Override
 	public int size() {
 		return this.sentence.length();
 	}
 
-	@SuppressWarnings({ "unchecked" })
+	@SuppressWarnings({"unchecked"})
 	@Override
 	public ECRFInstance duplicate() {
 		ECRFInstance inst = new ECRFInstance(this._instanceId, this._weight,this.sentence);

@@ -42,11 +42,11 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 		super();
 		this.param_G = param_G;
 		neuralFeatureIntMapList = new ArrayList<HashMap<String, HashMap<String, Integer>>>();
-		for(String featureType: param_G.getFeatureIntMap().keySet()){
-			if(featureType.startsWith("neural")){
-				neuralFeatureIntMapList.add(param_G.getFeatureIntMap().get(featureType));
-			}
-		}
+//		for(String featureType: param_G.getFeatureIntMap().keySet()){
+//			if(featureType.startsWith("neural")){
+//				neuralFeatureIntMapList.add(param_G.getFeatureIntMap().get(featureType));
+//			}
+//		}
 	}
 	
 	@Override
@@ -205,7 +205,7 @@ public class NNCRFGlobalNetworkParam extends NNCRFInterface {
 								fieldMap.put(elements[j], fieldIdx);
 								inputDimList.set(i, inputDimList.get(i)+1);
 								if (NeuralConfig.EMBEDDING.get(i).equals("glove")
-								|| NeuralConfig.EMBEDDING.get(i).equals("polyglot") || NeuralConfig.EMBEDDING.get(i).equals("bansal") ) {
+								|| NeuralConfig.EMBEDDING.get(i).equals("polyglot") || NeuralConfig.EMBEDDING.get(i).equals("bansal")) {
 									wordList.add(elements[j]);
 								}
 							}

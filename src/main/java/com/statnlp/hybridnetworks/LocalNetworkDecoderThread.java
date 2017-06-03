@@ -62,12 +62,6 @@ public class LocalNetworkDecoderThread extends Thread{
 	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, LocalNetworkParam param, boolean cacheParam, int numPredictionsGenerated){
 		this._threadId = threadId;
 		this._param = param;
-		fm.setLocalNetworkParams(this._threadId, this._param);
-//		if(NetworkConfig._numThreads==1){
-//			System.err.println("Set to global mode??");
-////			System.exit(1);
-//			this._param.setGlobalMode();//set it to global mode
-//		}
 		this._param.setGlobalMode();//set it to global mode
 		this._instances_input = instances;
 		this._compiler = compiler;
@@ -169,7 +163,7 @@ public class LocalNetworkDecoderThread extends Thread{
 			}
 		}
 	}
-
+	
 	/**
 	 * This method is to restore the max array with the best prediction structure.<br>
 	 * This is used after {@link #setMaxArrayForKthPrediction(Network, ScoredIndex, NodeHypothesis)}

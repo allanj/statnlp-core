@@ -26,7 +26,7 @@ public class FCRFEval {
 			ArrayList<String> trueEntities = eInst.getOutput();
 			Sentence sent = eInst.getInput();
 			for(int i=0;i<sent.length();i++){
-				pw.write(sent.get(i).getName()+" "+sent.get(i).getTag()+" "+trueEntities.get(i)+" "+predEntities.get(i)+"\n");
+				pw.write(sent.get(i).getForm()+" "+sent.get(i).getTag()+" "+trueEntities.get(i)+" "+predEntities.get(i)+"\n");
 			}
 			pw.write("\n");
 		}
@@ -71,7 +71,7 @@ public class FCRFEval {
 				if(sent.get(i).getTag().equals(tPred.get(i)))
 					corr++;
 				total++;
-				pw.write(sent.get(i).getName()+" "+sent.get(i).getTag()+" "+tPred.get(i)+" "+sent.get(i).getEntity()+"\n");
+				pw.write(sent.get(i).getForm()+" "+sent.get(i).getTag()+" "+tPred.get(i)+" "+sent.get(i).getEntity()+"\n");
 			}
 			pw.write("\n");
 		}

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.statnlp.example.base.BaseNetwork;
 import com.statnlp.example.mention_hypergraph.MentionHypergraphNetworkCompiler.NodeType;
 import com.statnlp.hybridnetworks.FeatureArray;
 import com.statnlp.hybridnetworks.FeatureManager;
@@ -59,7 +60,7 @@ public class MentionHypergraphFeatureManager extends FeatureManager {
 
 	@Override
 	protected FeatureArray extract_helper(Network net, int parent_k, int[] children_k) {
-		MentionHypergraphNetwork network = (MentionHypergraphNetwork)net;
+		BaseNetwork network = (BaseNetwork)net;
 		MentionHypergraphInstance instance = (MentionHypergraphInstance)network.getInstance();
 		AttributedWord[] words = instance.input.words;
 		String[] posTags = instance.input.posTags;

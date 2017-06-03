@@ -12,8 +12,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
-import java.util.Set;
 
 import com.statnlp.InitWeightOptimizerFactory;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
@@ -28,7 +28,12 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.hybridnetworks.StringIndex;
 import com.statnlp.neural.NeuralConfigReader;
+
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.TIntSet;
 
 public class LinearCRFMain {
 	
@@ -217,14 +222,15 @@ public class LinearCRFMain {
 		int size = trainInstances.length;
 		System.err.println("Read.."+size+" instances from "+trainPath);
 		
-		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler(param.LABELS.values());
-		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(param, argsToFeatureManager);
+		LinearCRFNetworkCompiler compiler = new LinearCRFNetworkCompiler(LABELS.values());
+		LinearCRFFeatureManager fm = new LinearCRFFeatureManager(param, LABELS_INDEX, argsToFeatureManager);
 		
 		NetworkModel model = DiscriminativeNetworkModel.create(fm, compiler, outstream);
-		model.visualize(LinearCRFViewer.class, trainInstances);
+		model.visualize(new LinearCRFViewer(LABELS_INDEX), trainInstances);
 		
 		model.train(trainInstances, numIterations);
 		
+		writeModelText = true;
 		if(writeModelText){
 			PrintStream modelTextWriter = new PrintStream(modelPath+".txt");
 			modelTextWriter.println("Model path: "+modelPath);
@@ -243,19 +249,22 @@ public class LinearCRFMain {
 			GlobalNetworkParam paramG = fm.getParam_G();
 			modelTextWriter.println("Num features: "+paramG.countFeatures());
 			modelTextWriter.println("Features:");
-			HashMap<String, HashMap<String, HashMap<String, Integer>>> featureIntMap = paramG.getFeatureIntMap();
-			for(String featureType: sorted(featureIntMap.keySet())){
+			TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> featureIntMap = paramG.getFeatureIntMap();
+			StringIndex stringIndex = paramG.getStringIndex();
+			stringIndex.buildReverseIndex();
+			for(String featureType: sorted(stringIndex, featureIntMap.keySet())){
 				modelTextWriter.println(featureType);
-				HashMap<String, HashMap<String, Integer>> outputInputMap = featureIntMap.get(featureType);
-				for(String output: sorted(outputInputMap.keySet())){
+				TIntObjectHashMap<TIntIntHashMap> outputInputMap = featureIntMap.get(stringIndex.get(featureType));
+				for(String output: sorted(stringIndex, outputInputMap.keySet())){
 					modelTextWriter.println("\t"+output);
-					HashMap<String, Integer> inputMap = outputInputMap.get(output);
-					for(String input: sorted(inputMap.keySet())){
-						int featureId = inputMap.get(input);
+					TIntIntHashMap inputMap = outputInputMap.get(stringIndex.get(output));
+					for(String input: sorted(stringIndex, inputMap.keySet())){
+						int featureId = inputMap.get(stringIndex.get(input));
 						modelTextWriter.printf("\t\t%s %d %.17f\n", input, featureId, fm.getParam_G().getWeight(featureId));
 					}
 				}
 			}
+			stringIndex.removeReverseIndex();
 			modelTextWriter.close();
 		}
 		
@@ -273,10 +282,10 @@ public class LinearCRFMain {
 		for(Instance ins: predictions){
 			@SuppressWarnings("unchecked")
 			LinearInstance<Label> instance = (LinearInstance<Label>)ins;
-			ArrayList<Label> goldLabel = instance.getOutput();
-			ArrayList<Label> actualLabel = instance.getPrediction();
-			List<ArrayList<Label>> topKPredictions = instance.getTopKPredictions();
-			ArrayList<String[]> words = instance.getInput();
+			List<Label> goldLabel = instance.getOutput();
+			List<Label> actualLabel = instance.getPrediction();
+			List<List<Label>> topKPredictions = instance.getTopKPredictions();
+			List<String[]> words = instance.getInput();
 			for(int i=0; i<goldLabel.size(); i++){
 				if(goldLabel.get(i).equals(actualLabel.get(i))){
 					corr++;
@@ -331,7 +340,7 @@ public class LinearCRFMain {
 				String[] features = line.substring(0, lastSpace).split(" ");
 				words.add(features);
 				if(withLabels){
-					Label label = param.getLabel(line.substring(lastSpace+1));
+					Label label = getLabel(line.substring(lastSpace+1));
 					labels.add(label);
 				}
 			}
@@ -344,10 +353,34 @@ public class LinearCRFMain {
 		return readCoNLLData(param, fileName, withLabels, isLabeled, -1);
 	}
 	
-	private static List<String> sorted(Set<String> coll){
-		List<String> result = new ArrayList<String>(coll);
+	private static List<String> sorted(StringIndex stringIndex, TIntSet coll){
+		List<String> result = new ArrayList<String>(coll.size());
+		for(int key: coll.toArray()){
+			result.add(stringIndex.get(key));
+		}
 		Collections.sort(result);
 		return result;
+	}
+
+	public static final Map<String, Label> LABELS = new HashMap<String, Label>();
+	public static final Map<Integer, Label> LABELS_INDEX = new HashMap<Integer, Label>();
+	
+	public static Label getLabel(String form){
+		if(!LABELS.containsKey(form)){
+			Label label = new Label(form, LABELS.size());
+			LABELS.put(form, label);
+			LABELS_INDEX.put(label.getId(), label);
+		}
+		return LABELS.get(form);
+	}
+	
+	public static Label getLabel(int id){
+		return LABELS_INDEX.get(id);
+	}
+	
+	public static void reset(){
+		LABELS.clear();
+		LABELS_INDEX.clear();
 	}
 
 	private static void printHelp(){

@@ -1,7 +1,6 @@
 package com.statnlp.example.mention_hypergraph;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
 
 import com.statnlp.example.base.BaseInstance;
@@ -28,18 +27,6 @@ public class MentionHypergraphInstance extends BaseInstance<MentionHypergraphIns
 	public MentionHypergraphInstance(int instanceId, double weight){
 		super(instanceId, weight);
 	}
-	
-	public WordsAndTags duplicateInput(){
-		return input == null ? null : new WordsAndTags(input);
-	}
-	
-	public List<Span> duplicateOutput(){
-		return output == null ? null : new ArrayList<Span>(output);
-	}
-
-	public List<Span> duplicatePrediction(){
-		return prediction == null ? null : new ArrayList<Span>(prediction);
-	}
 
 	@Override
 	public int size() {
@@ -61,11 +48,5 @@ public class MentionHypergraphInstance extends BaseInstance<MentionHypergraphIns
 		}
 		return builder.toString();
 	}
-
-	public MentionHypergraphInstance duplicate(){
-		MentionHypergraphInstance result = super.duplicate();
-//		result.words = result.input.words;
-//		result.posTags = result.input.posTags;
-		return result;
-	}
+	
 }

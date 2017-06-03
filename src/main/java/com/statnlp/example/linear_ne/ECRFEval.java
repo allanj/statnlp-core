@@ -10,7 +10,6 @@ import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Sentence;
 
 public class ECRFEval {
-
 	
 	/**
 	 * 
@@ -26,7 +25,7 @@ public class ECRFEval {
 			ArrayList<String> trueEntities = eInst.getOutput();
 			Sentence sent = eInst.getInput();
 			for(int i=0;i<sent.length();i++){
-				pw.write(sent.get(i).getName()+" "+sent.get(i).getTag()+" "+trueEntities.get(i)+" "+predEntities.get(i)+"\n");
+				pw.write(sent.get(i).getForm()+" "+sent.get(i).getTag()+" "+trueEntities.get(i)+" "+predEntities.get(i)+"\n");
 			}
 			pw.write("\n");
 			
@@ -64,7 +63,7 @@ public class ECRFEval {
 			Sentence sent = eInst.getInput();
 			for(int i=0;i<sent.length();i++){
 				int headIndex = sent.get(i).getHeadIndex()+1;
-				pw.write((i+1)+" "+sent.get(i).getName()+" "+sent.get(i).getTag()+" "+trueEntities.get(i)+" "+predEntities.get(i)+" "+headIndex+"\n");
+				pw.write((i+1)+" "+sent.get(i).getForm()+" "+sent.get(i).getTag()+" "+trueEntities.get(i)+" "+predEntities.get(i)+" "+headIndex+"\n");
 			}
 			pw.write("\n");
 		}

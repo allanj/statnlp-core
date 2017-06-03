@@ -13,7 +13,7 @@ import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
  * inside-outside score, which is also a generalization to the forward-backward score.<br>
  * You might want to use {@link TableLookupNetwork} for more functions such as adding nodes and edges.
  * @see TableLookupNetwork
- * @author Wei Lu <luwei@statnlp.com>
+ * @author Wei Lu (luwei@statnlp.com)
  *
  */
 public abstract class Network implements Serializable, HyperGraph{
@@ -81,7 +81,10 @@ public abstract class Network implements Serializable, HyperGraph{
 	/** The marginal score for each node */
 	protected transient double[] _marginal;
 	
-	/** The compiler that created this network */
+	/**
+	 * The compiler that created this network.<br>
+	 * This is used to get the cost.
+	 */
 	protected NetworkCompiler _compiler;
 	/** The labeled version of this network, if exists, null otherwise */
 	private Network _labeledNetwork;
@@ -97,7 +100,11 @@ public abstract class Network implements Serializable, HyperGraph{
 	/** The current structure that the network is using*/
 	protected int currentStructure; 
 	
-	/** store the information of structure of each node in network. 0: leaf, 1: NE chain, 2 POS chain, 3: root**/
+	/** 
+	 * store the information of structure of each node in network.
+	 * the value (structure) of each node is specified by user.
+	 * Currently used for mean-field inference
+	 * **/
 	protected transient int[] structArr;
 	
 	/**
@@ -328,7 +335,8 @@ public abstract class Network implements Serializable, HyperGraph{
 	}
 
 	/**
-	 * Calculate the marginal score for all nodes 
+	 * Calculate the marginal score for all nodes
+	 * this marginal is used for mean-field inference 
 	 */
 	public void marginal(){
 		this._newMarginal = this.getNewMarginalSharedArray();
@@ -564,8 +572,9 @@ public abstract class Network implements Serializable, HyperGraph{
 		
 		this._inside[k] = inside;
 		
-		if(this._inside[k]==Double.NEGATIVE_INFINITY)
+		if(this._inside[k]==Double.NEGATIVE_INFINITY){
 			this.remove(k);
+		}
 	}
 	
 	/**

@@ -2,41 +2,32 @@ package com.statnlp.example.fcrf;
 
 import java.util.Arrays;
 
+import com.statnlp.commons.types.Instance;
+import com.statnlp.example.base.BaseNetwork;
 import com.statnlp.example.fcrf.FCRFNetworkCompiler.NODE_TYPES;
 import com.statnlp.hybridnetworks.LocalNetworkParam;
+import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
-import com.statnlp.hybridnetworks.TableLookupNetwork;
 
-public class FCRFNetwork extends TableLookupNetwork{
+public class FCRFNetwork extends BaseNetwork {
 
 	private static final long serialVersionUID = -5035676335489326537L;
 
-	int _numNodes = -1;
-	
 	int structure; 
 	
-	public FCRFNetwork(){
-		
+	public FCRFNetwork(){}
+	
+	public FCRFNetwork(int networkId, Instance inst, LocalNetworkParam param, NetworkCompiler compiler){
+		super(networkId, inst, param, compiler);
 	}
 	
-	public FCRFNetwork(int networkId, FCRFInstance inst, LocalNetworkParam param){
-		super(networkId, inst, param);
-	}
-	
-	public FCRFNetwork(int networkId, FCRFInstance inst, long[] nodes, int[][][] children, LocalNetworkParam param, int numNodes){
-		super(networkId, inst,nodes, children, param);
-		this._numNodes = numNodes;
+	public FCRFNetwork(int networkId, Instance inst, long[] nodes, int[][][] children, int numNodes, LocalNetworkParam param, NetworkCompiler compiler){
+		super(networkId, inst, nodes, children, numNodes, param, compiler);
 		this.isVisible = new boolean[nodes.length];
 		if (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD)
 			this.structArr = new int[nodes.length];
 		Arrays.fill(isVisible, true);
-	}
-	
-	public int countNodes(){
-		if(this._numNodes==-1)
-			return super.countNodes();
-		else return this._numNodes;
 	}
 	
 	public void remove(int k){

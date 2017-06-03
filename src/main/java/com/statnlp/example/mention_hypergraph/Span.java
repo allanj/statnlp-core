@@ -27,6 +27,10 @@ public class Span implements Comparable<Span>{
 		}
 		return false;
 	}
+	
+	public int hashCode(){
+		return Integer.hashCode(start) ^ Integer.hashCode(end);
+	}
 
 	@Override
 	public int compareTo(Span o) {

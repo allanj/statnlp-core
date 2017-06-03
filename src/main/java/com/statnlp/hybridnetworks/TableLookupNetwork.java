@@ -20,11 +20,14 @@ package com.statnlp.hybridnetworks;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
+
+import gnu.trove.iterator.TLongIterator;
+import gnu.trove.iterator.TLongObjectIterator;
+import gnu.trove.map.hash.TLongIntHashMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
 
 /**
  * An extension of {@link Network} which defines more functions related to managing nodes and edges.<br>
@@ -39,9 +42,12 @@ public abstract class TableLookupNetwork extends Network{
 	
 	private static final long serialVersionUID = -7250820762892368213L;
 	
-	//temporary data structures used when constructing the network
-//	private transient HashSet<Long> _nodes_tmp;
-	private transient HashMap<Long, ArrayList<long[]>> _children_tmp;
+	/**
+	 * The temporary data structures while creating partial network.
+	 * @deprecated The temporary data structures are moved to NetworkBuilder.
+	 */
+	@Deprecated
+	private transient TLongObjectHashMap<ArrayList<long[]>> _children_tmp;
 	
 	//at each index, store the node's ID
 	protected long[] _nodes;
@@ -70,36 +76,14 @@ public abstract class TableLookupNetwork extends Network{
 		return nodes;
 	}
 	
-	public ArrayList<long[]> getChildren_tmp(long node){
-		return this._children_tmp.get(node);
-	}
-	
-	public long[] getNodes_tmp(){
-		Iterator<Long> nodes_key = this._children_tmp.keySet().iterator();
-		long[] nodes = new long[this._children_tmp.size()];
-		for(int k = 0; k<nodes.length; k++)
-			nodes[k] = nodes_key.next();
-		return nodes;
-	}
-	
-	public boolean remove_tmp(long node){
-		if(!this._children_tmp.containsKey(node))
-			return false;
-		this._children_tmp.remove(node);
-		return true;
-	}
-	
 	/**
 	 * A convenience method to check whether a network is contained in (is a subgraph of) another network 
 	 * @param network
 	 * @return
 	 */
 	public boolean contains(TableLookupNetwork network){
-//		if (true)
-//		return true;
-		
 		if(this.countNodes() < network.countNodes()){
-			System.err.println("size of this is less than the size of network."+this.countNodes()+"\t"+network.countNodes());
+			System.err.println(String.format("Size of this network (%d) is less than the size of the input network (%d)", this.countNodes(), network.countNodes()));
 			return false;
 		}
 		int start = 0;
@@ -111,7 +95,6 @@ public abstract class TableLookupNetwork extends Network{
 				long node2 = this.getNode(k);
 				int[][] children2 = this.getChildren(k);
 				if(node1==node2){
-					
 					for(int[] child1 : children1){
 						long[] child1_nodes = network.toNodes(child1);
 						boolean child_found = false;
@@ -128,8 +111,7 @@ public abstract class TableLookupNetwork extends Network{
 							}
 							System.err.println(node1+"\t"+Arrays.toString(NetworkIDMapper.toHybridNodeArray(node1)));
 							System.err.println(node2+"\t"+Arrays.toString(NetworkIDMapper.toHybridNodeArray(node2)));
-							throw new RuntimeException("does not contain!");
-//							return false;
+							return false;
 						}
 					}
 					
@@ -139,7 +121,7 @@ public abstract class TableLookupNetwork extends Network{
 				}
 			}
 			if(!found){
-				System.err.println("NOT FOUND:"+Arrays.toString(NetworkIDMapper.toHybridNodeArray(node1)));
+				System.err.println(String.format("The node (%s) in input network not found in this network.", Arrays.toString(NetworkIDMapper.toHybridNodeArray(node1))));
 				return false;
 			}
 		}
@@ -153,8 +135,7 @@ public abstract class TableLookupNetwork extends Network{
 	 * @see #TableLookupNetwork(int, Instance, LocalNetworkParam)
 	 */
 	public TableLookupNetwork(){
-//		this._nodes_tmp = new HashSet<Long>();
-		this._children_tmp = new HashMap<Long, ArrayList<long[]>>();
+		this._children_tmp = new TLongObjectHashMap<ArrayList<long[]>>();
 	}
 
 	/**
@@ -162,7 +143,9 @@ public abstract class TableLookupNetwork extends Network{
 	 * @param networkId
 	 * @param inst
 	 * @param param
+	 * @deprecated Use {@link #TableLookupNetwork(int, Instance, LocalNetworkParam, NetworkCompiler)} instead.
 	 */
+	@Deprecated
 	public TableLookupNetwork(int networkId, Instance inst, LocalNetworkParam param){
 		this(networkId, inst, param, null);
 	}
@@ -176,8 +159,7 @@ public abstract class TableLookupNetwork extends Network{
 	 */
 	public TableLookupNetwork(int networkId, Instance inst, LocalNetworkParam param, NetworkCompiler compiler){
 		super(networkId, inst, param, compiler);
-//		this._nodes_tmp = new HashSet<Long>();
-		this._children_tmp = new HashMap<Long, ArrayList<long[]>>();
+		this._children_tmp = new TLongObjectHashMap<ArrayList<long[]>>();
 	}
 
 	/**
@@ -189,7 +171,9 @@ public abstract class TableLookupNetwork extends Network{
 	 * @param nodes
 	 * @param children
 	 * @param param
+	 * @deprecated Use {@link #TableLookupNetwork(int, Instance, long[], int[][][], LocalNetworkParam, NetworkCompiler)} instead.
 	 */
+	@Deprecated
 	public TableLookupNetwork(int networkId, Instance inst, long[] nodes, int[][][] children, LocalNetworkParam param){
 		this(networkId, inst, nodes, children, param, null);
 	}
@@ -221,10 +205,6 @@ public abstract class TableLookupNetwork extends Network{
 		return this._children[k];
 	}
 	
-	public int countTmpNodes_tmp(){
-		return this._children_tmp.size();
-	}
-	
 	public long[] getAllNodes(){
 		return this._nodes;
 	}
@@ -240,22 +220,23 @@ public abstract class TableLookupNetwork extends Network{
 	
 	/**
 	 * Remove the node k from the network.
-	 * allan change to isVisible
 	 */
 	public void remove(int k){
+//		if(this.isVisible == null){
+//			this.isVisible = new boolean[this.countNodes()];
+//			Arrays.fill(this.isVisible, true);
+//		}
 		this.isVisible[k] = false;
-		if (this._inside!=null){
-			this._inside[k] = Double.NEGATIVE_INFINITY;
-		}
-		if (this._outside!=null){
-			this._outside[k] = Double.NEGATIVE_INFINITY;
-		}
 	}
 	
 	/**
 	 * Check if the node k is removed from the network.
 	 */
 	public boolean isRemoved(int k){
+//		if(this.isVisible == null){
+//			this.isVisible = new boolean[this.countNodes()];
+//			Arrays.fill(this.isVisible, true);
+//		}
 		return !this.isVisible[k];
 	}
 	
@@ -266,211 +247,8 @@ public abstract class TableLookupNetwork extends Network{
 		this.isVisible[k] = true;
 	}
 	
-	/**
-	 * Check if the node is present in this network.
-	 */
-	public boolean contains(long node){
-		return this._children_tmp.containsKey(node);
-	}
-	
 	public int getNodeIndex(long node){
 		return Arrays.binarySearch(this._nodes, node);
-	}
-	
-	/**
-	 * Add one node to the network.
-	 * @param node The node to be added
-	 * @return
-	 */
-	public boolean addNode(long node){
-//		if(node==901360616258948L){
-//			throw new RuntimeException("s");
-//		}
-		if(this._children_tmp.containsKey(node))
-			return false;
-//			throw new NetworkException("The node is already added:"+node);
-		this._children_tmp.put(node, null);
-		return true;
-	}
-	
-	public int numNodes_tmp(){
-		return this._children_tmp.size();
-	}
-	
-//	public ArrayList<Long> getAllChildren(long node){
-//		ArrayList<Long> nodes = new ArrayList<Long>();
-//		HashMap<Long, ArrayList<Long>> node2allchildren = new HashMap<Long, ArrayList<Long>>();
-//		this.getAllChildrenHelper(node, nodes, node2allchildren);
-//		return nodes;
-//	}
-//	
-//	private ArrayList<Long> getAllChildrenHelper(long node, HashMap<Long, ArrayList<Long>> node2allchildren){
-//		if(node2allchildren.containsKey(node)){
-//			return node2allchildren.get(node);
-//		}
-//		ArrayList<Long> allchildren = new ArrayList<Long>();
-//		ArrayList<long[]> children = this.getChildren_tmp(node);
-//		for(long[] child : children){
-//			for(long c : child){
-//				
-//			}
-//		}
-//	}
-	
-	/**
-	 * Remove all such nodes that is not a descendent of the root<br>
-	 * This is a useful method to reduce the number of nodes and edges during network creation.
-	 */
-	public void checkValidNodesAndRemoveUnused(){
-		long[] nodes = new long[this.countTmpNodes_tmp()];
-		double[] validity = new double[this.countTmpNodes_tmp()];
-		int v = 0;
-		Iterator<Long> nodes_it = this._children_tmp.keySet().iterator();
-		while(nodes_it.hasNext()){
-			nodes[v++] = nodes_it.next();
-		}
-		Arrays.sort(nodes);
-		this.checkValidityHelper(validity, nodes, this.countTmpNodes_tmp()-1);
-		for(int k = 0; k<validity.length; k++){
-			if(validity[k]==0){
-				this.remove_tmp(nodes[k]);
-			}
-		}
-	}
-	
-	private void checkValidityHelper(double[] validity, long[] nodes, int node_k){
-		if(validity[node_k]==1){
-			return;
-		}
-		
-		validity[node_k] = 1;
-		ArrayList<long[]> children = this.getChildren_tmp(nodes[node_k]);
-		if(children==null){
-			return;
-		}
-		for(long[] child : children){
-			for(long c : child){
-				int c_k = Arrays.binarySearch(nodes, c);
-				if(c_k<0)
-					throw new RuntimeException("Can not find this node? Position:"+c_k+",value:"+c);
-				this.checkValidityHelper(validity, nodes, c_k);
-			}
-		}
-	}
-	
-	/**
-	 * Finalize this network, by converting the temporary arrays for nodes and edges into the finalized one.<br>
-	 * This method must be called before this network can be used.
-	 */
-	public void finalizeNetwork(){
-//		System.err.println(this._nodes_tmp.size()+"<<<");
-		Iterator<Long> node_ids = this._children_tmp.keySet().iterator();
-		ArrayList<Long> values = new ArrayList<Long>();
-		while(node_ids.hasNext()){
-			values.add(node_ids.next());
-		}
-		this._nodes = new long[this._children_tmp.keySet().size()];
-		this.isVisible = new boolean[this._nodes.length];
-		HashMap<Long, Integer> nodesValue2IdMap = new HashMap<Long, Integer>();
-		Collections.sort(values);
-		for(int k = 0 ; k<values.size(); k++){
-			this._nodes[k] = values.get(k);
-			this.isVisible[k] = true;
-			nodesValue2IdMap.put(this._nodes[k], k);
-		}
-		if (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD) {
-			this.structArr = new int[this._nodes.length];
-		}
-		
-		this._children = new int[this._nodes.length][][];
-
-		Iterator<Long> parents = this._children_tmp.keySet().iterator();
-		while(parents.hasNext()){
-			long parent = parents.next();
-			int parent_index = nodesValue2IdMap.get(parent);
-			ArrayList<long[]> childrens = this._children_tmp.get(parent);
-			if(childrens==null){
-				this._children[parent_index] = new int[1][0];
-			} else {
-				this._children[parent_index] = new int[childrens.size()][];
-				for(int k = 0 ; k <this._children[parent_index].length; k++){
-					long[] children = childrens.get(k);
-					int[] children_index = new int[children.length];
-					for(int m = 0; m<children.length; m++){
-						if(children[m] < 0){
-							children_index[m] = (int)children[m];
-						} else {
-							children_index[m] = nodesValue2IdMap.get(children[m]);
-						}
-					}
-					this._children[parent_index][k] = children_index;
-				}
-			}
-		}
-		// If any node has no child edge, assume there is one edge with no child node
-		// This is done so that every node is visited in the feature extraction step
-		// This is consistent with what's written in http://portal.acm.org/citation.cfm?doid=1654494.1654500
-		// See Definition 3 on "source vertex"
-		for(int k = 0 ; k<this._children.length; k++){
-			if(this._children[k]==null){
-				this._children[k] = new int[1][0];
-			}
-		}
-		this._children_tmp = null;
-	}
-	
-	private void checkLinkValidity(long parent, long[] children){
-		/**/
-		for(long child : children){
-			if(child < 0){
-				// A negative child_k is not a reference to a node, it's just a number associated with this edge
-				continue;
-			}
-			if(child >= parent){
-				System.err.println(Arrays.toString(NetworkIDMapper.toHybridNodeArray(parent)));
-				System.err.println(Arrays.toString(NetworkIDMapper.toHybridNodeArray(children[0])));
-				System.err.println();
-				throw new NetworkException("This link seems to be invalid:"+parent+"\t"+Arrays.toString(children));
-			}
-		}
-		/**/
-		
-		this.checkNodeValidity(parent);
-		for(long child : children){
-			if(child < 0){
-				// A negative child_k is not a reference to a node, it's just a number associated with this edge
-				continue;
-			}
-			this.checkNodeValidity(child);
-		}
-	}
-	
-	private void checkNodeValidity(long node){
-		if(!this._children_tmp.containsKey(node)){
-			throw new NetworkException("This node seems to be invalid:"+Arrays.toString(NetworkIDMapper.toHybridNodeArray(node)));
-		}
-	}
-	
-	/**
-	 * Add an edge to this network. Only do this after the respective nodes are added.
-	 * @param parent The parent node
-	 * @param children The child nodes of a SINGLE hyperedge. Note that this only add one edge, 
-	 * 				   with the parent as the root and the children as the leaves in the hyperedge.
-	 * 				   To add multiple edges, multiple calls to this method is necessary.
-	 * @throws NetworkException If the edge is already added
-	 */
-	public void addEdge(long parent, long[] children){
-		this.checkLinkValidity(parent, children);
-		if(!this._children_tmp.containsKey(parent) || this._children_tmp.get(parent)==null){
-			this._children_tmp.put(parent, new ArrayList<long[]>());
-		}
-		ArrayList<long[]> existing_children = this._children_tmp.get(parent);
-		for(int k = 0; k<existing_children.size(); k++){
-			if(Arrays.equals(existing_children.get(k), children)){
-				throw new NetworkException("This children is already added. Add again???");
-			}
-		}
-		existing_children.add(children);
 	}
 	
 	@Override
@@ -490,7 +268,7 @@ public abstract class TableLookupNetwork extends Network{
 	 * Count the number of invalid nodes
 	 * @return
 	 */
-	public int countInValidNodes(){
+	public int countInvalidNodes(){
 		int count = 0;
 		for(int k = 0; k<this._nodes.length; k++){
 			if(this._inside[k]==Double.NEGATIVE_INFINITY || this._outside[k]==Double.NEGATIVE_INFINITY){
@@ -543,6 +321,274 @@ public abstract class TableLookupNetwork extends Network{
 		sb.append('\n');
 		
 		return sb.toString();
+	}
+	
+	/* Below are methods which have been moved to NetworkBuilder */
+	
+	/**
+	 * Returns the temporary data structure
+	 * @param node
+	 * @return
+	 * @deprecated This method has been moved into NetworkBuilder
+	 */
+	@Deprecated
+	public ArrayList<long[]> getChildren_tmp(long node){
+		return this._children_tmp.get(node);
+	}
+
+	/**
+	 * Returns the current list of nodes.
+	 * @return
+	 * @deprecated This method has been moved into NetworkBuilder
+	 */
+	@Deprecated
+	public long[] getNodes_tmp(){
+		TLongIterator nodes_key = this._children_tmp.keySet().iterator();
+		long[] nodes = new long[this._children_tmp.size()];
+		for(int k = 0; k<nodes.length; k++)
+			nodes[k] = nodes_key.next();
+		return nodes;
+	}
+
+	/**
+	 * Removes the specified node from this network.
+	 * @param node
+	 * @return
+	 * @deprecated This method has been moved into NetworkBuilder
+	 */
+	@Deprecated
+	public boolean remove_tmp(long node){
+		if(!this._children_tmp.containsKey(node))
+			return false;
+		this._children_tmp.remove(node);
+		return true;
+	}
+
+	/**
+	 * Returns the number of nodes in the current network
+	 * @return
+	 * @deprecated This method has been moved into NetworkBuilder
+	 */
+	@Deprecated
+	public int countTmpNodes_tmp(){
+		return this._children_tmp.size();
+	}
+	
+	/**
+	 * Check if the node is present in this network.
+	 * @return
+	 * @deprecated This method has been moved into NetworkBuilder
+	 */
+	@Deprecated
+	public boolean contains(long node){
+		return this._children_tmp.containsKey(node);
+	}
+	
+	/**
+	 * Check if the edge is present in this network.
+	 * @param parent
+	 * @param child
+	 * @return
+	 * @deprecated This method has been moved into NetworkBuilder
+	 */
+	@Deprecated
+	public boolean contains(long parent, long[] child){
+		if(!this._children_tmp.containsKey(parent)){
+			return false;
+		}
+		ArrayList<long[]> children = this._children_tmp.get(parent);
+		for(long[] presentChild: children){
+			if(Arrays.equals(presentChild, child)){
+				return true;
+			}
+		}
+		return false;
+	}
+
+	
+	/**
+	 * Add one node to the network.
+	 * @param node The node to be added
+	 * @return true if the node was successfully added, false if the node was previously present.
+	 * @deprecated This method has been moved into NetworkBuilder
+	 */
+	@Deprecated
+	public boolean addNode(long node){
+		if(this._children_tmp.containsKey(node)){
+			return false;
+		}
+		this._children_tmp.put(node, null);
+		return true;
+	}
+	
+	/**
+	 * Remove all such nodes that is not a descendent of the root<br>
+	 * This is a useful method to reduce the number of nodes and edges during network creation.
+	 * @deprecated This method has been moved into NetworkBuilder
+	 */
+	@Deprecated
+	public void checkValidNodesAndRemoveUnused(){
+		long[] nodes = new long[this.countTmpNodes_tmp()];
+		double[] validity = new double[this.countTmpNodes_tmp()];
+		int v = 0;
+		TLongObjectIterator<ArrayList<long[]>> nodes_it = this._children_tmp.iterator();
+		while(nodes_it.hasNext()){
+			nodes_it.advance();
+			nodes[v++] = nodes_it.key();
+		}
+		Arrays.sort(nodes);
+		this.checkValidityHelper(validity, nodes, this.countTmpNodes_tmp()-1);
+		for(int k = 0; k<validity.length; k++){
+			if(validity[k]==0){
+				this.remove_tmp(nodes[k]);
+			}
+		}
+	}
+
+	@Deprecated
+	private void checkValidityHelper(double[] validity, long[] nodes, int node_k){
+		if(validity[node_k]==1){
+			return;
+		}
+		
+		validity[node_k] = 1;
+		ArrayList<long[]> children = this.getChildren_tmp(nodes[node_k]);
+		if(children==null){
+			return;
+		}
+		for(long[] child : children){
+			for(long c : child){
+				int c_k = Arrays.binarySearch(nodes, c);
+				if(c_k<0)
+					throw new RuntimeException("Can not find this node? Position:"+c_k+",value:"+c);
+				this.checkValidityHelper(validity, nodes, c_k);
+			}
+		}
+	}
+	
+	/**
+	 * Finalize this network, by converting the temporary arrays for nodes and edges into the finalized one.<br>
+	 * This method must be called before this network can be used.
+	 * @deprecated This method has been moved into NetworkBuilder
+	 */
+	@Deprecated
+	public void finalizeNetwork(){
+		TLongObjectIterator<ArrayList<long[]>> node_ids = this._children_tmp.iterator();
+		ArrayList<Long> values = new ArrayList<Long>();
+		while(node_ids.hasNext()){
+			node_ids.advance();
+			values.add(node_ids.key());
+		}
+		this._nodes = new long[this._children_tmp.keySet().size()];
+		this.isVisible = new boolean[this._nodes.length];
+		TLongIntHashMap nodesValue2IdMap = new TLongIntHashMap();
+		Collections.sort(values);
+		for(int k = 0 ; k<values.size(); k++){
+			this._nodes[k] = values.get(k);
+			this.isVisible[k] = true;
+			nodesValue2IdMap.put(this._nodes[k], k);
+		}
+		if (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD) {
+			this.structArr = new int[this._nodes.length];
+		}
+		
+		this._children = new int[this._nodes.length][][];
+		
+		//TLongObjectHashMap<ArrayList<long[]>>
+		TLongObjectIterator<ArrayList<long[]>> parents = this._children_tmp.iterator();
+		while(parents.hasNext()){
+			parents.advance();
+			long parent = parents.key();
+			int parent_index = nodesValue2IdMap.get(parent);
+			ArrayList<long[]> childrens = this._children_tmp.get(parent);
+			if(childrens==null){
+				this._children[parent_index] = new int[1][0];
+			} else {
+				this._children[parent_index] = new int[childrens.size()][];
+				for(int k = 0 ; k <this._children[parent_index].length; k++){
+					long[] children = childrens.get(k);
+					int[] children_index = new int[children.length];
+					for(int m = 0; m<children.length; m++){
+						if(children[m] < 0){
+							children_index[m] = (int)children[m];
+						} else {
+							children_index[m] = nodesValue2IdMap.get(children[m]);
+						}
+					}
+					this._children[parent_index][k] = children_index;
+				}
+			}
+		}
+		// If any node has no child edge, assume there is one edge with no child node
+		// This is done so that every node is visited in the feature extraction step
+		// This is consistent with what's written in http://portal.acm.org/citation.cfm?doid=1654494.1654500
+		// See Definition 3 on "source vertex"
+		for(int k = 0 ; k<this._children.length; k++){
+			if(this._children[k]==null){
+				this._children[k] = new int[1][0];
+			}
+		}
+		this._children_tmp = null;
+	}
+
+	@Deprecated
+	private void checkLinkValidity(long parent, long[] children) throws NetworkException {
+		for(long child : children){
+			if(child < 0){
+				// A negative child_k is not a reference to a node, it's just a number associated with this edge
+				continue;
+			}
+			if(child >= parent){
+				System.err.println(Arrays.toString(NetworkIDMapper.toHybridNodeArray(parent)));
+				System.err.println(Arrays.toString(NetworkIDMapper.toHybridNodeArray(child)));
+				System.err.println();
+				throw new NetworkException("In an edge, the parent needs to have larger node ID in order to "
+						+ "have a proper schedule for inference. Violation: "+parent+"\t"+Arrays.toString(children));
+			}
+		}
+		/**/
+		
+		this.checkNodeValidity(parent);
+		for(long child : children){
+			if(child < 0){
+				// A negative child_k is not a reference to a node, it's just a number associated with this edge
+				continue;
+			}
+			this.checkNodeValidity(child);
+		}
+	}
+
+	@Deprecated
+	private void checkNodeValidity(long node) throws NetworkException {
+		if(!this._children_tmp.containsKey(node)){
+			throw new NetworkException("Node not found:"+Arrays.toString(NetworkIDMapper.toHybridNodeArray(node)));
+		}
+	}
+	
+	/**
+	 * Add an edge to this network. Only do this after the respective nodes are added.
+	 * @param parent The parent node
+	 * @param child The child nodes of a SINGLE hyperedge. Note that this only add one edge, 
+	 * 				   with the parent as the root and the children as the leaves in the hyperedge.
+	 * 				   To add multiple edges, multiple calls to this method is necessary.
+	 * @return true if the edge was added successfully, false if the edge was previously present in the network.
+	 * @throws NetworkException If the edge is already added
+	 * @deprecated This method has been moved into NetworkBuilder
+	 */
+	@Deprecated
+	public boolean addEdge(long parent, long[] child){
+		this.checkLinkValidity(parent, child);
+		if(!this._children_tmp.containsKey(parent) || this._children_tmp.get(parent)==null){
+			this._children_tmp.put(parent, new ArrayList<long[]>());
+		}
+		ArrayList<long[]> existing_children = this._children_tmp.get(parent);
+		for(int k = 0; k<existing_children.size(); k++){
+			if(Arrays.equals(existing_children.get(k), child)){
+				return false;
+			}
+		}
+		existing_children.add(child);
+		return true;
 	}
 	
 }

@@ -18,6 +18,8 @@ public class BinaryTree implements Serializable{
 	
 	public LabeledWord[] leaves;
 	public String[] words;
+	
+	public static final BinaryTree EMPTY = new BinaryTree();
 
 	public BinaryTree() {}
 	
@@ -78,18 +80,35 @@ public class BinaryTree implements Serializable{
 	}
 	
 	public String toString(int level){
+		if(value == null && (left == null || right == null)){
+			return "-NULL-";
+		}
 		StringBuilder builder = new StringBuilder();
 		if(left == null){
 			for(int i=0; i<level; i++) builder.append("  ");
-			builder.append("("+value.label.form+" "+value.word+")");
+			if(value == null){
+				builder.append("-NULL-");
+			} else {
+				builder.append("("+value.label.form+" "+value.word+")");
+			}
 		} else {
 			for(int i=0; i<level; i++) builder.append("  ");
 			builder.append("(");
 			builder.append(value.label.form);
 			builder.append("\n");
-			builder.append(left.toString(level+1));
+			if(left == null){
+				for(int i=0; i<level+1; i++) builder.append("  ");
+				builder.append("-NULL-");
+			} else {
+				builder.append(left.toString(level+1));
+			}
 			builder.append("\n");
-			builder.append(right.toString(level+1));
+			if(right == null){
+				for(int i=0; i<level+1; i++) builder.append("  ");
+				builder.append("-NULL-");
+			} else {
+				builder.append(right.toString(level+1));
+			}
 			builder.append(")");
 		}
 		return builder.toString();

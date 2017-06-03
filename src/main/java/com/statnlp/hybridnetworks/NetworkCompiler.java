@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.statnlp.commons.types.Instance;
+import com.statnlp.util.Pipeline;
 
 /**
  * The base class for network compiler, a class to convert a problem representation between 
@@ -33,6 +34,21 @@ import com.statnlp.commons.types.Instance;
  *
  */
 public abstract class NetworkCompiler implements Serializable{
+	
+	/**
+	 * Creates an empty network compiler
+	 */
+	public NetworkCompiler(){
+		
+	}
+	
+	/**
+	 * A constructor taking a Pipeline object as an input
+	 * @param pipeline
+	 */
+	public NetworkCompiler(Pipeline<?> pipeline){
+		
+	}
 	
 	/**
 	 * A class to store information about a single instance (both labeled and unlabeled versions)
@@ -92,14 +108,44 @@ public abstract class NetworkCompiler implements Serializable{
 	 * Convert an instance into the network representation.<br>
 	 * This process is also called the encoding part (e.g., to create the trellis network 
 	 * of POS tags for a given sentence)<br>
-	 * Subclasses might want to split this method into two, one for labeled instance, and 
-	 * another for unlabeled instance.
 	 * @param networkId
 	 * @param inst
 	 * @param param
 	 * @return
 	 */
-	public abstract Network compile(int networkId, Instance inst, LocalNetworkParam param);
+	public Network compile(int networkId, Instance inst, LocalNetworkParam param){
+		if(inst.isLabeled()){
+			return compileLabeled(networkId, inst, param);
+		} else {
+			return compileUnlabeled(networkId, inst, param);
+		}
+	}
+	
+	/**
+	 * Compile a labeled network.<br>
+	 * A labeled network is a network which shows only the correct path in the graph.<br>
+	 * A correct implementation of a labeled network should make it a sub-graph of the corresponding 
+	 * unlabeled network when passed in the same arguments.
+	 * @param networkId
+	 * @param inst
+	 * @param param
+	 * @return
+	 * @see #compileUnlabeled(int, Instance, LocalNetworkParam)
+	 */
+	public abstract Network compileLabeled(int networkId, Instance inst, LocalNetworkParam param);
+	
+	/**
+	 * Compile an unlabeled network.<br>
+	 * An unlabeled network is a network which shows all possible path in the graph.<br>
+	 * A correct implementation of an unlabeled network should make it a super-graph of the corresponding 
+	 * labeled network when passed in the same arguments.
+	 * @param networkId
+	 * @param inst
+	 * @param param
+	 * @return
+	 * @see #compileLabeled(int, Instance, LocalNetworkParam)
+	 */
+	public abstract Network compileUnlabeled(int networkId, Instance inst, LocalNetworkParam param);
 	
 	/**
 	 * Convert a network into an instance, the surface form.<br>

@@ -11,21 +11,22 @@ import com.statnlp.util.Pipeline;
  * This InstanceParser class is used to parse training data and arguments and build instance and parameters for network compiler and feature manager
  * Users can override the {@link #buildInstances()} function to customize its own method for a specific algorithm
  * @author Li Hao
+ * @author Aldrian Obaja (aldrianobaja.m@gmail.com)
  *
  */
 public abstract class InstanceParser implements Serializable{
 	
 	private static final long serialVersionUID = 5352091663516161611L;
 	
-	protected transient Pipeline pipeline;
+	protected transient Pipeline<?> pipeline;
 	/**
 	 * The parameters that might be associated with this parser.<br>
 	 */
 	private Map<String, Object> parameters;
 
-	public InstanceParser(Pipeline pipeline) {
+	public InstanceParser(Pipeline<?> pipeline) {
 		this.pipeline = pipeline;
-		this.parameters = pipeline.parameters.getAttrs();
+		this.parameters = pipeline.parameters;
 	}
 	
 	public abstract Instance[] buildInstances(String... sources) throws FileNotFoundException;
