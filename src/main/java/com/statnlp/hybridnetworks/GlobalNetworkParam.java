@@ -387,7 +387,7 @@ public class GlobalNetworkParam implements Serializable{
 			
 //		}
 		
-		initializeProvider();
+		initializeProvider(true);
 		
 		/** Must prepare the feature map before reset counts and obj
 		 * The reset will use feature2rep.
@@ -862,15 +862,10 @@ public class GlobalNetworkParam implements Serializable{
 		this._featureValueProviders.add(provider);
 	}
 	
-	public void initializeProvider() {
+	public void initializeProvider(boolean isTraining) {
 		for (FeatureValueProvider provider : _featureValueProviders) {
+			provider.setTraining(isTraining);
 			provider.initialize();
-		}
-	}
-	
-	public void initializeProviderForDecoding() {
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.initializeForDecoding();
 		}
 	}
 	

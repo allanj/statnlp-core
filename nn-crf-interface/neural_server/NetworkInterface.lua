@@ -1,7 +1,7 @@
 require 'nn'
 require 'optim'
 
-include 'nn-crf-interface/neural_server/AbstractNetwork.lua'
+include 'nn-crf-interface/neural_server/AbstractNeuralNetwork.lua'
 include 'nn-crf-interface/neural_server/MultiLayerPerceptron.lua'
 include 'nn-crf-interface/neural_server/OneHot.lua'
 include 'nn-crf-interface/neural_server/Utils.lua'
@@ -34,15 +34,18 @@ local net
 function initialize(javadata, ...)
     local timer = torch.Timer()
 
-    -- re-seed
-    torch.manualSeed(SEED)
-    if gpuid >= 0 then cutorch.manualSeed(SEED) end
+    local isTraining = javadata:get("isTraining")
+    if isTraining then
+        -- re-seed
+        torch.manualSeed(SEED)
+        if gpuid >= 0 then cutorch.manualSeed(SEED) end
 
-    local networkClass = javadata:get("class")
-    if networkClass == "MultiLayerPerceptron" then
-        net = MultiLayerPerceptron(false, gpuid)
-    else
-        error("Unsupported network class " .. networkClass)
+        local networkClass = javadata:get("class")
+        if networkClass == "MultiLayerPerceptron" then
+            net = MultiLayerPerceptron(false, gpuid)
+        else
+            error("Unsupported network class " .. networkClass)
+        end
     end
     local outputAndGradOutputPtr = {... }
     local paramsPtr, gradParamsPtr = net:initialize(javadata, unpack(outputAndGradOutputPtr))
@@ -52,14 +55,6 @@ function initialize(javadata, ...)
         return paramsPtr, gradParamsPtr
     end
 end
-
-function initializeForDecoding(javadata)
-    local timer = torch.Timer()
-    net:initializeForDecoding(javadata)
-    local time = timer:time().real
-    print(string.format("Init for decoding took %.4fs", time))
-end
-
 
 function forward(training)
     local timer = torch.Timer()

@@ -39,7 +39,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	// Torch NN server information
 	private LuaState L;
 	private DoubleTensor paramsTensor, gradParamsTensor;
-	private DoubleTensor outputTensorBuffer, gradTensorBuffer;
+	private DoubleTensor outputTensorBuffer, gradOutputTensorBuffer;
 	
 	private SimpleMatrix weightMatrix, gradWeightMatrix;
 	private SimpleMatrix outputMatrix, gradOutputMatrix;
@@ -47,15 +47,13 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	private SimpleMatrix countWeightMatrix, countOutputMatrix;
 	
 	private boolean optimizeNeural;
-	private boolean hasParams;
 	
-	private List<String> embedding;
+	private List<String> embeddingList;
 	private int vocabSize;
 	private int hiddenSize, numLayer;
 	private int totalInputDim;
 	
-	private List<Integer> inputDimList;
-	private List<String> wordList;
+	private List<Integer> numInputList, inputDimList;
 	private List<HashMap<String,Integer>> token2idxList;
 
 	private SimpleMatrix weightMatrix_tran;
@@ -92,17 +90,90 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	
 	@SuppressWarnings("unchecked")
 	public void initialize() {
-		Random r = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
-		this.embedding = (List<String>) config.get("embedding");
-		this.hiddenSize = (int) config.get("hiddenSize");
-		this.numLayer = (int) config.get("numLayer");
+		if (isTraining) {
+			this.embeddingList = (List<String>) config.get("embedding");
+			this.hiddenSize = (int) config.get("hiddenSize");
+			this.numLayer = (int) config.get("numLayer");
+			this.numInputList = new ArrayList<Integer>();
+			this.inputDimList = new ArrayList<Integer>();
+			this.token2idxList = new ArrayList<HashMap<String,Integer>>();
+		}
+		makeVocab();
 		
-		List<Integer> numInputList = new ArrayList<Integer>();
-		this.inputDimList = new ArrayList<Integer>();
-		this.wordList = new ArrayList<String>();
+		Random rng = null;
+		if (isTraining) {
+			totalInputDim = 0;
+			List<Integer> embSizeList = (List<Integer>) config.get("embSizeList");
+			for (int i = 0; i < token2idxList.size(); i++) {
+				if (embSizeList.get(i) != 0) {
+					totalInputDim += embSizeList.get(i);
+				} else {
+					totalInputDim += token2idxList.get(i).size();
+				}
+			}
+			// Initialize weight matrix
+			rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
+			
+			this.weightMatrix = new SimpleMatrix(numLabels, getHiddenSize());
+			this.weightMatrix_tran = new SimpleMatrix(getHiddenSize(), numLabels);
+			this.gradWeightMatrix = new SimpleMatrix(numLabels, getHiddenSize());
+			DMatrixRMaj weightDMatrix = this.weightMatrix.getMatrix();
+			this.weights = weightDMatrix.data;
+			
+			for(int i = 0; i < weights.length; i++) {
+				weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
+					NetworkConfig.FEATURE_INIT_WEIGHT;
+			}
+			DMatrixRMaj gradWeightDMatrix = this.gradWeightMatrix.getMatrix();
+			this.gradWeights = gradWeightDMatrix.data;
+			
+			// Pointer to Torch tensors
+	        this.outputTensorBuffer = new DoubleTensor(getVocabSize(), getHiddenSize());
+	        this.gradOutputTensorBuffer = new DoubleTensor(getVocabSize(), getHiddenSize());
+	        
+	        // Backward matrices
+	        this.gradOutputMatrix = new SimpleMatrix(getVocabSize(), getHiddenSize());
+	        DMatrixRMaj gradOutputDMatrix = this.gradOutputMatrix.getMatrix();
+	        this.gradOutput = gradOutputDMatrix.data;
+	        this.countOutputMatrix = new SimpleMatrix(getVocabSize(), numLabels);
+	        this.countWeightMatrix = new SimpleMatrix(numLabels, getVocabSize());
+		}
+		
+        // Forward matrices
+        this.outputMatrix = new SimpleMatrix(getVocabSize(), getHiddenSize());
+        this.forwardMatrix = new SimpleMatrix(getVocabSize(), numLabels);
+        
+        config.put("isTraining", isTraining);
+        
+        Object[] args = new Object[3];
+        args[0] = config;
+        args[1] = this.outputTensorBuffer;
+        args[2] = this.gradOutputTensorBuffer;
+        Class<?>[] retTypes;
+        if (optimizeNeural && isTraining) {
+        	retTypes = new Class[]{DoubleTensor.class,DoubleTensor.class};
+        } else {
+        	retTypes = new Class[]{};
+        }
+        Object[] outputs = LuaFunctionHelper.execLuaFunction(this.L, "initialize", args, retTypes);
+        
+		if(optimizeNeural && isTraining) {
+			this.paramsTensor = (DoubleTensor) outputs[0];
+			this.gradParamsTensor = (DoubleTensor) outputs[1];
+			if (this.paramsTensor.nElement() > 0) {
+				this.params = getArray(this.paramsTensor);
+				for(int i = 0; i < this.params.length; i++) {
+					this.params[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
+						NetworkConfig.FEATURE_INIT_WEIGHT;
+				}
+				this.gradParams = getArray(this.gradParamsTensor);
+			}
+		}
+	}
+	
+	private void makeVocab() {
+		List<String> wordList = new ArrayList<String>();
 		List<List<Integer>> vocab = new ArrayList<List<Integer>>();
-		this.token2idxList = new ArrayList<HashMap<String,Integer>>();
-		List<String> embeddingList = getEmbeddingList();
 		boolean first = true;
 		for (Object obj : input2id.keySet()) {
 			String input = (String) obj;
@@ -110,7 +181,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 			List<Integer> entry = new ArrayList<Integer>();
 			for (int i = 0; i < inputPerType.length; i++) {
 				String[] tokens = inputPerType[i].split(IN_SEP);
-				if (first) {
+				if (first && isTraining) {
 					numInputList.add(tokens.length);
 					inputDimList.add(0);
 					token2idxList.add(new HashMap<String, Integer>());
@@ -137,140 +208,20 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 			vocab.add(entry);
 			first = false;
 		}
-		
-		totalInputDim = 0;
-		List<Integer> embSizeList = (List<Integer>) config.get("embSizeList");
-		for (int i = 0; i < token2idxList.size(); i++) {
-			if (embSizeList.get(i) != 0) {
-				totalInputDim += embSizeList.get(i);
-			} else {
-				totalInputDim += token2idxList.get(i).size();
-			}
-		}
-
-		// Weight matrix
-		this.weightMatrix = new SimpleMatrix(numLabels, getHiddenSize());
-		this.weightMatrix_tran = new SimpleMatrix(getHiddenSize(), numLabels);
-		this.gradWeightMatrix = new SimpleMatrix(numLabels, getHiddenSize());
-		DMatrixRMaj weightDMatrix = this.weightMatrix.getMatrix();
-		this.weights = weightDMatrix.data;
-		for(int i = 0; i < weights.length; i++) {
-			weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (r.nextDouble()-.5)/10 :
-				NetworkConfig.FEATURE_INIT_WEIGHT;
-		}
-		DMatrixRMaj gradWeightDMatrix = this.gradWeightMatrix.getMatrix();
-		this.gradWeights = gradWeightDMatrix.data;
-		
 		config.put("numInputList", numInputList);
         config.put("inputDimList", inputDimList);
         config.put("wordList", wordList);
         config.put("vocab", vocab);
-        this.vocabSize = ((List<?>) config.get("vocab")).size();
-        
-        // 2D buffer array to be used by backward()
-        this.outputTensorBuffer = new DoubleTensor(getVocabSize(), getHiddenSize());
-        this.gradTensorBuffer = new DoubleTensor(getVocabSize(), getHiddenSize());
-        
-        // Forward matrices
-        this.outputMatrix = new SimpleMatrix(getVocabSize(), getHiddenSize());
-        this.forwardMatrix = new SimpleMatrix(getVocabSize(), numLabels);
-        
-        // Backward matrices
-        this.gradOutputMatrix = new SimpleMatrix(getVocabSize(), getHiddenSize());
-        DMatrixRMaj gradOutputDMatrix = this.gradOutputMatrix.getMatrix();
-        this.gradOutput = gradOutputDMatrix.data;
-        this.countOutputMatrix = new SimpleMatrix(getVocabSize(), numLabels);
-        this.countWeightMatrix = new SimpleMatrix(numLabels, getVocabSize());
-        
-        Object[] args = new Object[3];
-        args[0] = config;
-        args[1] = this.outputTensorBuffer;
-        args[2] = this.gradTensorBuffer;
-        Class<?>[] retTypes;
-        if (optimizeNeural) {
-        	retTypes = new Class[]{DoubleTensor.class,DoubleTensor.class};
-        } else {
-        	retTypes = new Class[]{};
-        }
-        Object[] outputs = LuaFunctionHelper.execLuaFunction(this.L, "initialize", args, retTypes);
-        
-		if(optimizeNeural) {
-			this.paramsTensor = (DoubleTensor) outputs[0];
-			this.gradParamsTensor = (DoubleTensor) outputs[1];
-			if (this.paramsTensor.nElement() > 0) {
-				this.params = getArray(this.paramsTensor);
-				for(int i = 0; i < this.params.length; i++) {
-					this.params[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (r.nextDouble()-.5)/10 :
-						NetworkConfig.FEATURE_INIT_WEIGHT;
-				}
-				this.gradParams = getArray(this.gradParamsTensor);
-				this.hasParams = true;
-			}
-		}
-	}
-	
-	@Override
-	public void initializeForDecoding() {
-		setTraining(false);
-		List<String> wordList = new ArrayList<String>(this.wordList);
-		List<Integer> inputDimList = new ArrayList<Integer>(this.inputDimList);
-		List<List<Integer>> vocab = new ArrayList<List<Integer>>();
-		List<HashMap<String,Integer>> token2idxList = new ArrayList<HashMap<String,Integer>>();
-		for (int i = 0; i < this.token2idxList.size(); i++) {
-			token2idxList.add(new HashMap<String, Integer>(this.token2idxList.get(i)));
-		}
-		List<String> embeddingList = getEmbeddingList();
-		for (Object obj : testInput2id.keySet()) {
-			String input = (String) obj;
-			String[] inputPerType = input.split(OUT_SEP);
-			List<Integer> entry = new ArrayList<Integer>();
-			for (int i = 0; i < inputPerType.length; i++) {
-				String[] tokens = inputPerType[i].split(IN_SEP);
-				HashMap<String,Integer> token2idx = token2idxList.get(i);
-				for (int j = 0; j < tokens.length; j++) {
-					String token = tokens[j];
-					if (!token2idx.containsKey(token)) {
-						inputDimList.set(i, inputDimList.get(i)+1);
-						int idx = NetworkConfig.IS_INDEXED_NEURAL_FEATURES? Integer.parseInt(token):token2idx.size();
-						token2idx.put(token, idx);
-						if (embeddingList.get(i).equals("glove")
-							|| embeddingList.get(i).equals("polyglot")) {
-							wordList.add(token);
-						}
-					}
-					int idx = token2idx.get(token);
-					if (NetworkConfig.NEURAL_BACKEND.startsWith("torch")) { // 1-indexing
-						idx++;
-					}
-					entry.add(idx);
-				}
-			}
-			vocab.add(entry);
-		}
-		
-		config.put("inputDimList", inputDimList);
-        config.put("wordList", wordList);
-        config.put("vocab", vocab);
-        
-        // Forward matrices
-        this.outputMatrix = new SimpleMatrix(vocab.size(), getHiddenSize());
-        this.forwardMatrix = new SimpleMatrix(vocab.size(), numLabels);
-        
-        Object[] args = new Object[]{config};
-        Class<?>[] retTypes = new Class[]{};
-        LuaFunctionHelper.execLuaFunction(this.L, "initializeForDecoding", args, retTypes);
+        vocabSize = vocab.size();
 	}
 	
 	@Override
 	public double getScore(Network network, int parent_k, int children_k_index) {
 		double val = 0.0;
 		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		int instanceID = network.getInstance().getInstanceId();
-		boolean isTest = instanceID > 0 && !network.getInstance().isLabeled();
 		if (input != null) {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			int H = getHiddenSize();
-			Map<Object,Integer> input2id = isTest ? this.testInput2id : this.input2id;
+//			int H = getHiddenSize();
 			int id = input2id.get(input);
 //			for (int i = 0; i < H; i++) {
 //				val += weights[outputLabel*H+i] * output[id*H+i];
@@ -283,8 +234,9 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	@Override
 	public void forward(boolean training) {
 		if (optimizeNeural) { // update with new params
-			if (hasParams) 
+			if (getParamSize() > 0) {
 				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
+			}
 		}
 		
 		Object[] args = new Object[]{training};
@@ -305,7 +257,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
 		if (input != null) {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			int H = getHiddenSize();
+//			int H = getHiddenSize();
 			int id = input2id.get(input);
 			synchronized (countOutputMatrix) {
 				double countOutput = countOutputMatrix.get(id, outputLabel);
@@ -326,7 +278,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	
 	@Override
 	public void backward() {
-		gradTensorBuffer.storage().copy(gradOutput);
+		gradOutputTensorBuffer.storage().copy(gradOutput);
 		
 		CommonOps_DDRM.mult(countOutputMatrix.getMatrix(), weightMatrix.getMatrix(), gradOutputMatrix.getMatrix());
 		CommonOps_DDRM.mult(countWeightMatrix.getMatrix(), outputMatrix.getMatrix(), gradWeightMatrix.getMatrix());
@@ -335,7 +287,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		Class<?>[] retTypes = new Class[0];
 		LuaFunctionHelper.execLuaFunction(this.L, "backward", args, retTypes);
 		
-		if(optimizeNeural && hasParams) { // copy gradParams computed by Torch
+		if(optimizeNeural && getParamSize() > 0) { // copy gradParams computed by Torch
 			gradParams = getArray(this.gradParamsTensor);
 		}
 		
@@ -457,7 +409,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	}
 	
 	public List<String> getEmbeddingList() {
-		return embedding;
+		return embeddingList;
 	}
 	
 	public int getVocabSize() {

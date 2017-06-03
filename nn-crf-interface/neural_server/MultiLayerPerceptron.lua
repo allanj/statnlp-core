@@ -1,4 +1,4 @@
-local MultiLayerPerceptron, parent = torch.class('MultiLayerPerceptron', 'AbstractNetwork')
+local MultiLayerPerceptron, parent = torch.class('MultiLayerPerceptron', 'AbstractNeuralNetwork')
 
 function MultiLayerPerceptron:__init(doOptimization, gpuid)
     parent.__init(self, doOptimization)
@@ -9,24 +9,11 @@ end
 function MultiLayerPerceptron:initialize(javadata, ...)
     local gpuid = self.gpuid
 
-    local outputAndGradOutputPtr = {... }
-
-    self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
-    self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
-
-    -- for i=1,#outputAndGradOutputPtr do
-    --     local ptr = outputAndGradOutputPtr[i]
-    --     if i <= #outputAndGradOutputPtr/2 then
-    --         table.insert(self.outputPtr, torch.pushudata(ptr, "torch.DoubleTensor"))
-    --     else    
-    --         table.insert(self.gradOutputPtr, torch.pushudata(ptr, "torch.DoubleTensor"))
-    --     end
-    -- end
-
     -- numInputList, inputDimList, embSizeList, outputDim,
     -- numLayer, hiddenSize, activation, dropout
     -- vocab
 
+    self.data = {}
     local data = self.data
     data.vocab = listToTable2D(javadata:get("vocab"))
     data.numInputList = listToTable(javadata:get("numInputList"))
@@ -41,17 +28,51 @@ function MultiLayerPerceptron:initialize(javadata, ...)
     data.dropout = javadata:get("dropout")
     data.optimizer = javadata:get("optimizer")
 
+    local isTraining = javadata:get("isTraining")
+    local outputAndGradOutputPtr = {... }
+    if isTraining then
+        self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
+        self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
+    end
+
     -- what to forward
     self.x = self:prepare_input()
     self.fixEmbedding = data.fixEmbedding
     self.wordList = data.wordList
-    self.word2idx = {}
+    if isTraining then self.word2idx = {} end
     local wordList = self.wordList
     local word2idx = self.word2idx
     for i=1,#wordList do
-        word2idx[wordList[i]] = i
+        if word2idx[wordList[i]] == nil then
+            word2idx[wordList[i]] = #word2idx+1
+        end
     end
     self.numInput = self.x[1]:size(1)
+
+    if isTraining then
+        self:createNetwork()
+        if data.fixEmbedding then print(self.inputLayer) end
+        print(self.net)
+
+        self.params, self.gradParams = self.net:getParameters()
+        if doOptimization then
+            self:createOptimizer()
+            -- no return array if optim is done here
+        else
+            self.params:retain()
+            self.paramsPtr = torch.pointer(self.params)
+            self.gradParams:retain()
+            self.gradParamsPtr = torch.pointer(self.gradParams)
+            return self.paramsPtr, self.gradParamsPtr
+        end
+    else
+        self:createDecoderNetwork()
+    end
+end
+
+function MultiLayerPerceptron:createNetwork()
+    local data = self.data
+    local gpuid = self.gpuid
 
     -- input layer
     local pt = nn.ParallelTable()
@@ -101,68 +122,76 @@ function MultiLayerPerceptron:initialize(javadata, ...)
         mlp:add(jt)
     end
    
-    -- self.outputDimList = data.outputDimList
-    -- local ct = nn.ConcatTable()
-    -- self.numNetworks = #outputDimList
-    -- for n=1,numNetworks do
-        -- local middleLayers = nn.Sequential()
-        local middleLayers = mlp
-        -- hidden layer
-        for i=1,data.numLayer do
-            if data.dropout ~= nil and data.dropout > 0 then
-                middleLayers:add(nn.Dropout(data.dropout))
-            end
-
-            local ll
-            if i == 1 then
-                ll = nn.Linear(totalDim, data.hiddenSize)
-            else
-                ll = nn.Linear(data.hiddenSize, data.hiddenSize)
-            end
-            middleLayers:add(ll)
-
-            local act
-            if data.activation == nil or data.activation == "relu" then
-                act = nn.ReLU()
-            elseif data.activation == "tanh" then
-                act = nn.Tanh()
-            elseif data.activation == "hardtanh" then
-                act = nn.HardTanh()
-            elseif data.activation == "identity" then
-                -- do nothing
-            else
-                error("activation " .. activation .. " not supported")
-            end
-            if act ~= nil then
-                middleLayers:add(act)
-            end
+    -- hidden layer
+    for i=1,data.numLayer do
+        if data.dropout ~= nil and data.dropout > 0 then
+            mlp:add(nn.Dropout(data.dropout))
         end
 
-        -- if data.dropout ~= nil and data.dropout > 0 then
-        --     middleLayers:add(nn.Dropout(data.dropout))
-        -- end
+        local ll
+        if i == 1 then
+            ll = nn.Linear(totalDim, data.hiddenSize)
+        else
+            ll = nn.Linear(data.hiddenSize, data.hiddenSize)
+        end
+        mlp:add(ll)
 
-        -- output layer (passed to CRF)
-        -- local outputDim = data.outputDimList[n]
-        -- local lastInputDim
-        -- if data.numLayer == 0 then
-        --     lastInputDim = totalDim
-        -- else
-        --     lastInputDim = data.hiddenSize
-        -- end
-        -- if data.useOutputBias then
-        --     middleLayers:add(nn.Linear(lastInputDim, outputDim))
-        -- else
-        --     middleLayers:add(nn.Linear(lastInputDim, outputDim):noBias())
-        -- end
-        -- ct:add(middleLayers)
-    -- end
-    -- mlp:add(ct)
+        local act
+        if data.activation == nil or data.activation == "relu" then
+            act = nn.ReLU()
+        elseif data.activation == "tanh" then
+            act = nn.Tanh()
+        elseif data.activation == "hardtanh" then
+            act = nn.HardTanh()
+        elseif data.activation == "identity" then
+            -- do nothing
+        else
+            error("activation " .. activation .. " not supported")
+        end
+        if act ~= nil then
+            mlp:add(act)
+        end
+    end
 
     if gpuid >= 0 then
         if data.fixEmbedding then inputLayer:cuda() end
         mlp:cuda()
     end
+end
+
+function MultiLayerPerceptron:createDecoderNetwork()
+    local data = self.data
+
+    -- Handling of unseen tokens
+    if self.fixEmbedding then
+        self.decoderInputLayer = self.inputLayer:clone()
+    end
+    self.decoderNet = self.net:clone()
+    for i=1,#data.inputDimList do
+        local inputDim = data.inputDimList[i]
+        local lt, nnView        
+        -- for now just get the first LookupTable (commonly word)
+        if self.fixEmbedding then
+            lt = self.decoderInputLayer:get(1):get(i):get(1)
+            nnView = self.decoderInputLayer:get(1):get(i):get(2)
+        else
+            lt = self.decoderNet:get(1):get(i):get(1)
+            nnView = self.decoderNet:get(1):get(i):get(2)
+        end
+        if data.embSizeList[i] == 0 then
+            lt._eye:resize(inputDim, lt.outputSize)
+        else
+            local lt_W = lt.weight
+            if lt_W:size(1) < inputDim then
+                lt_W:resize(inputDim, lt_W:size(2))
+            end
+        end
+        nnView:resetSize(self.numInput,-1)
+    end
+end
+
+function MultiLayerPerceptron:createOptimizer()
+    local data = self.data
 
     -- set optimizer. If nil, optimization is done by caller.
     print(string.format("Optimizer: %s", data.optimizer))
@@ -185,74 +214,12 @@ function MultiLayerPerceptron:initialize(javadata, ...)
             self.optimState = {tolFun=10e-10, tolX=10e-16}
         end
     end
-
-    self.params, self.gradParams = mlp:getParameters()
-
-    if data.fixEmbedding then print(self.inputLayer) end
-    print(mlp)
-
-    if not doOptimization then -- no return array if optim is done here
-        self.params:retain()
-        self.paramsPtr = torch.pointer(self.params)
-        self.gradParams:retain()
-        self.gradParamsPtr = torch.pointer(self.gradParams)
-        return self.paramsPtr, self.gradParamsPtr    
-    end
-end
-
-function MultiLayerPerceptron:initializeForDecoding(javadata)
-    self.test_data = {}
-    local data = self.test_data
-    data.vocab = listToTable2D(javadata:get("vocab"))
-    data.wordList = listToTable(javadata:get("wordList"))
-    data.inputDimList = listToTable(javadata:get("inputDimList"))
-
-    -- what to forward
-    self.test_x = self:prepare_test_input()
-    self.test_wordList = data.wordList
-    self.test_word2idx = {}
-    local wordList = self.test_wordList
-    local word2idx = self.test_word2idx
-    for i=1,#wordList do
-        if self.word2idx[wordList[i]] ~= nil then
-            word2idx[wordList[i]] = self.word2idx[wordList[i]]
-        else
-            word2idx[wordList[i]] = #word2idx+1
-        end
-    end
-    self.test_numInput = self.test_x[1]:size(1)
-
-    -- Handling of unseen tokens
-    if self.fixEmbedding then
-        self.test_inputLayer = self.inputLayer:clone()
-    end
-    self.test_net = self.net:clone()
-    for i=1,#data.inputDimList do
-        local inputDim = data.inputDimList[i]
-        local lt, nnView        
-        -- for now just get the first LookupTable (commonly word)
-        if self.fixEmbedding then
-            lt = self.test_inputLayer:get(1):get(i):get(1)
-            nnView = self.test_inputLayer:get(1):get(i):get(2)
-        else
-            lt = self.test_net:get(1):get(i):get(1)
-            nnView = self.test_net:get(1):get(i):get(2)
-        end
-        if self.data.embSizeList[i] == 0 then
-            lt._eye:resize(inputDim, lt.outputSize)
-        else
-            local lt_W = lt.weight
-            if lt_W:size(1) < inputDim then
-                lt_W:resize(inputDim, lt_W:size(2))
-            end
-        end
-        nnView:resetSize(self.test_numInput,-1)
-    end
 end
 
 function MultiLayerPerceptron:prepare_input()
     local gpuid = self.gpuid
     local data = self.data
+
     local vocab = data.vocab
     local numInputList = data.numInputList
     local embSizeList = data.embSizeList
@@ -271,39 +238,18 @@ function MultiLayerPerceptron:prepare_input()
     return result
 end
 
-function MultiLayerPerceptron:prepare_test_input()
-    local gpuid = self.gpuid
-    local vocab = self.test_data.vocab
-    local numInputList = self.data.numInputList
-    local embSizeList = self.data.embSizeList
-    local result = {}
-    local startIdx = 0
-    for i=1,#numInputList do
-        table.insert(result, torch.Tensor(#vocab, numInputList[i]))
-        for j=1,#vocab do
-            for k=1,numInputList[i] do
-                result[i][j][k] = vocab[j][startIdx+k]
-            end
-        end
-        startIdx = startIdx + numInputList[i]
-        if gpuid >= 0 then result[i] = result[i]:cuda() end
-    end
-    return result
-end
-
 function MultiLayerPerceptron:forward(isTraining)
-    local mlp, x, inputLayer
+    local mlp, inputLayer
     if isTraining then
         mlp = self.net
         inputLayer = self.inputLayer
         mlp:training()
-        x = self.x
     else
-        mlp = self.test_net
-        inputLayer = self.test_inputLayer
+        mlp = self.decoderNet
+        inputLayer = self.decoderInputLayer
         mlp:evaluate()
-        x = self.test_x
     end
+    local x = self.x
     local input_x = x
     if self.fixEmbedding then
         input_x = inputLayer:forward(x)
@@ -316,14 +262,13 @@ function MultiLayerPerceptron:forward(isTraining)
 end
 
 function MultiLayerPerceptron:backward()
-    local mlp = self.net
     self.gradParams:zero()
     local x = self.x
     local input_x = x
     if self.fixEmbedding then
         input_x = self.inputLayer:forward(x)
     end
-    if #mlp > 0 then
+    if #self.net > 0 then
         self.net:backward(input_x, self.gradOutputPtr)
     end
     if self.doOptimization then

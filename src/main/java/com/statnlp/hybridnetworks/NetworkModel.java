@@ -513,7 +513,7 @@ public abstract class NetworkModel implements Serializable{
 		
 		long time = System.currentTimeMillis();
 		
-		this._fm.getParam_G().initializeProviderForDecoding();
+		this._fm.getParam_G().initializeProvider(false);
 		this._fm.getParam_G().computeContinousScores();
 		
 		for(int threadId = 0; threadId<this._numThreads; threadId++){

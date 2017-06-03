@@ -8,8 +8,6 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	
 	protected HashMap<String,Object> config;
 	
-	protected boolean isTraining = true;
-	
 	public NeuralNetworkFeatureValueProvider(int numLabels) {
 		this(null, numLabels);
 	}
@@ -38,12 +36,4 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	public abstract void load(String prefix);
 	
 	public abstract void cleanUp();
-	
-	public void setTraining(boolean flag) {
-		isTraining = flag;
-	}
-	
-	public boolean isTraining() {
-		return isTraining;
-	}
 }

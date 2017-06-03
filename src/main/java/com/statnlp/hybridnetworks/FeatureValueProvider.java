@@ -22,24 +22,24 @@ public abstract class FeatureValueProvider {
 	
 	protected Map<Integer,Map<Integer,Map<Integer,Integer>>> edge2output;
 	
-	protected Map<Object,Integer> input2id, testInput2id;
+	protected Map<Object,Integer> input2id;
 	
 	protected Map<Object,Double> input2score;
 	
 	protected double scale;
+	
+	protected boolean isTraining = true;
 	
 	public FeatureValueProvider(int numLabels) {
 		edge2input = new HashMap<Integer, Map<Integer,Map<Integer,Object>>>();
 		edge2output = new HashMap<Integer, Map<Integer,Map<Integer,Integer>>>();
 		input2score = new HashMap<Object, Double>();
 		input2id = new LinkedHashMap<Object,Integer>();
-		testInput2id = new LinkedHashMap<Object, Integer>();
 		this.numLabels = numLabels;
 	}
 	
 	public synchronized void addHyperEdge(Network network, int parent_k, int children_k_idx, Object input, int output) {
 		int instanceID = network.getInstance().getInstanceId();
-		boolean isTest = instanceID > 0 && !network.getInstance().isLabeled();
 		if ( ! edge2input.containsKey(instanceID)) {
 			edge2input.put(instanceID, new HashMap<Integer, Map<Integer,Object>>());
 			edge2output.put(instanceID, new HashMap<Integer, Map<Integer,Integer>>());
@@ -52,20 +52,12 @@ public abstract class FeatureValueProvider {
 			edge2input.get(instanceID).get(parent_k).put(children_k_idx, input);
 			edge2output.get(instanceID).get(parent_k).put(children_k_idx, output);
 		}
-		if (!isTest) {
-			if ( ! input2id.containsKey(input)) {
-				input2id.put(input, input2id.size());
-			}
-		} else {
-			if ( ! testInput2id.containsKey(input)) {
-				testInput2id.put(input, testInput2id.size());
-			}
+		if ( ! input2id.containsKey(input)) {
+			input2id.put(input, input2id.size());
 		}
 	}
 	
 	public abstract void initialize();
-	
-	public abstract void initializeForDecoding();
 	
 	public abstract double getScore(Network network, int parent_k, int children_k_index);
 	
@@ -127,14 +119,16 @@ public abstract class FeatureValueProvider {
 		return output;
 	}
 	
-	public void clearDecodingState() {
-		testInput2id.clear();
+	public void clearInput() {
+		input2id.clear();
 	}
 	
 	public void resetGrad() {
 		Arrays.fill(gradWeights, 0.0);
-		Arrays.fill(gradParams, 0.0);
 		Arrays.fill(gradOutput, 0.0);
+		if (getParamSize() > 0) {
+			Arrays.fill(gradParams, 0.0);
+		}
 	}
 	
 	public double getL2Weights() {
@@ -158,15 +152,25 @@ public abstract class FeatureValueProvider {
 	}
 	
 	public void addL2ParamsGrad() {
-		double _kappa = NetworkConfig.L2_REGULARIZATION_CONSTANT;
-		for(int k = 0; k<gradParams.length; k++) {
-			if(_kappa > 0) {
-				gradParams[k] += 2 * scale * _kappa * params[k];
+		if (getParamSize() > 0) {
+			double _kappa = NetworkConfig.L2_REGULARIZATION_CONSTANT;
+			for(int k = 0; k<gradParams.length; k++) {
+				if(_kappa > 0) {
+					gradParams[k] += 2 * scale * _kappa * params[k];
+				}
 			}
 		}
 	}
 	
 	public void setScale(double coef) {
 		scale = coef;
+	}
+	
+	public void setTraining(boolean flag) {
+		isTraining = flag;
+	}
+	
+	public boolean isTraining() {
+		return isTraining;
 	}
 }

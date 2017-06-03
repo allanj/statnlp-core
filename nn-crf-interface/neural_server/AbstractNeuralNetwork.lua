@@ -1,6 +1,6 @@
-local AbstractNetwork = torch.class('AbstractNetwork')
+local AbstractNeuralNetwork = torch.class('AbstractNeuralNetwork')
 
-function AbstractNetwork:__init(doOptimization)
+function AbstractNeuralNetwork:__init(doOptimization)
     self.outputPtr = {}
     self.gradOutputPtr = {}
     self.net = nil
@@ -17,7 +17,7 @@ function AbstractNetwork:__init(doOptimization)
     -- You may initialize other member attributes here
 end
 
-function AbstractNetwork:initialize(data, ...)
+function AbstractNeuralNetwork:initialize(data, ...)
     -- Define the network here according to supplied data
     local outputAndGradOutputPtr = {... }
     -- In practice, this should point to the Tensor in the Java program
@@ -35,21 +35,12 @@ function AbstractNetwork:initialize(data, ...)
     end
 end
 
-function AbstractNetwork:initializeForDecoding(data)
-    self.test_net = self.net
-    self:prepare_test_input()
-end
-
-function AbstractNetwork:prepare_input()
+function AbstractNeuralNetwork:prepare_input()
     -- Set the batch input ``x'' accordingly
     self.x = torch.Tensor()
 end
 
-function AbstractNetwork:prepare_test_input()
-    self.test_x = self.x
-end
-
-function AbstractNetwork:forward(isTraining)
+function AbstractNeuralNetwork:forward(isTraining)
     -- Implement forward computation.
     self.isTraining = isTraining
     local output = self.net:forward(self.x)
@@ -57,7 +48,7 @@ function AbstractNetwork:forward(isTraining)
     self.outputPtr:copy(output)
 end
 
-function AbstractNetwork:backward()
+function AbstractNeuralNetwork:backward()
     -- Implement backward computation.
     -- gradOutput is assumed to be set externally in the Java program
     self.gradParams:zero()
@@ -67,10 +58,10 @@ function AbstractNetwork:backward()
     end
 end
 
-function AbstractNetwork:save_model(path)
+function AbstractNeuralNetwork:save_model(path)
     torch.save(path,self.net)
 end
 
-function AbstractNetwork:load_model(path)
+function AbstractNeuralNetwork:load_model(path)
     self.net = torch.load(path)
 end
