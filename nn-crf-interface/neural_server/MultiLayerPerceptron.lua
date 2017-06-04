@@ -19,7 +19,7 @@ function MultiLayerPerceptron:initialize(javadata, ...)
     data.numInputList = listToTable(javadata:get("numInputList"))
     data.embedding = listToTable(javadata:get("embedding"))
     data.embSizeList = listToTable(javadata:get("embSizeList"))
-    data.fixEmbedding = javadata:get("fixEmbedding")
+    data.fixInputLayer = javadata:get("fixInputLayer")
     data.wordList = listToTable(javadata:get("wordList"))
     data.inputDimList = listToTable(javadata:get("inputDimList"))
     data.numLayer = javadata:get("numLayer")
@@ -37,7 +37,7 @@ function MultiLayerPerceptron:initialize(javadata, ...)
 
     -- what to forward
     self.x = self:prepare_input()
-    self.fixEmbedding = data.fixEmbedding
+    self.fixInputLayer = data.fixInputLayer
     self.wordList = data.wordList
     if isTraining then self.word2idx = {} end
     local wordList = self.wordList
@@ -51,7 +51,7 @@ function MultiLayerPerceptron:initialize(javadata, ...)
 
     if isTraining then
         self:createNetwork()
-        if data.fixEmbedding then print(self.inputLayer) end
+        if data.fixInputLayer then print(self.inputLayer) end
         print(self.net)
 
         self.params, self.gradParams = self.net:getParameters()
@@ -102,7 +102,7 @@ function MultiLayerPerceptron:createNetwork()
             end
             totalDim = totalDim + data.numInputList[i] * data.embSizeList[i]
         end
-        if data.fixEmbedding then
+        if data.fixInputLayer then
             lt.accGradParameters = function() end
         end
         pt:add(nn.Sequential():add(lt):add(nn.View(self.numInput,-1)))
@@ -113,7 +113,7 @@ function MultiLayerPerceptron:createNetwork()
 
     self.net = nn.Sequential()
     local mlp = self.net
-    if data.fixEmbedding then
+    if data.fixInputLayer then
         self.inputLayer = nn.Sequential()
         self.inputLayer:add(pt)
         self.inputLayer:add(jt)
@@ -154,7 +154,7 @@ function MultiLayerPerceptron:createNetwork()
     end
 
     if gpuid >= 0 then
-        if data.fixEmbedding then inputLayer:cuda() end
+        if data.fixInputLayer then inputLayer:cuda() end
         mlp:cuda()
     end
 end
@@ -163,7 +163,7 @@ function MultiLayerPerceptron:createDecoderNetwork()
     local data = self.data
 
     -- Handling of unseen tokens
-    if self.fixEmbedding then
+    if self.fixInputLayer then
         self.decoderInputLayer = self.inputLayer:clone()
     end
     self.decoderNet = self.net:clone()
@@ -171,7 +171,7 @@ function MultiLayerPerceptron:createDecoderNetwork()
         local inputDim = data.inputDimList[i]
         local lt, nnView        
         -- for now just get the first LookupTable (commonly word)
-        if self.fixEmbedding then
+        if self.fixInputLayer then
             lt = self.decoderInputLayer:get(1):get(i):get(1)
             nnView = self.decoderInputLayer:get(1):get(i):get(2)
         else
@@ -251,7 +251,7 @@ function MultiLayerPerceptron:forward(isTraining)
     end
     local x = self.x
     local input_x = x
-    if self.fixEmbedding then
+    if self.fixInputLayer then
         input_x = inputLayer:forward(x)
     end
     local output = mlp:forward(input_x)
@@ -265,7 +265,7 @@ function MultiLayerPerceptron:backward()
     self.gradParams:zero()
     local x = self.x
     local input_x = x
-    if self.fixEmbedding then
+    if self.fixInputLayer then
         input_x = self.inputLayer:forward(x)
     end
     if #self.net > 0 then

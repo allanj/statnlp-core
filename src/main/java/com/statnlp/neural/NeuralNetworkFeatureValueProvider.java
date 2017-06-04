@@ -6,6 +6,9 @@ import com.statnlp.hybridnetworks.FeatureValueProvider;
 
 public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProvider {
 	
+	/**
+	 * The configuration of this neural network
+	 */
 	protected HashMap<String,Object> config;
 	
 	public NeuralNetworkFeatureValueProvider(int numLabels) {
@@ -18,8 +21,8 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	}
 	
 	@Override
-	public void computeValues() {
-		forward(isTraining);
+	public void initializeScores() {
+		forward();
 	}
 	
 	@Override
@@ -27,13 +30,30 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		backward();
 	}
 	
-	public abstract void forward(boolean training);
+	/**
+	 * Neural network's forward
+	 */
+	public abstract void forward();
 	
+	/**
+	 * Neural network's backpropagation
+	 */
 	public abstract void backward();
 	
+	/**
+	 * Save the trained model
+	 * @param prefix
+	 */
 	public abstract void save(String prefix);
 	
+	/**
+	 * Load a model from disk
+	 * @param prefix
+	 */
 	public abstract void load(String prefix);
 	
+	/**
+	 * Clean up resources
+	 */
 	public abstract void cleanUp();
 }

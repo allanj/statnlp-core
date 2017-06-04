@@ -26,8 +26,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import com.statnlp.neural.NeuralNetworkFeatureValueProvider;
-
 /**
  * The base class for the feature manager.
  * The only function to be implemented is the {@link #extract_helper(Network, int, int[])} method.

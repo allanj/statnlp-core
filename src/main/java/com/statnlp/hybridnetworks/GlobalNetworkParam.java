@@ -97,8 +97,6 @@ public class GlobalNetworkParam implements Serializable{
 	/** The total number of instances for the coefficient the batch SGD regularization term*/
 	protected int totalNumInsts;
 	
-	/** Neural CRF socket server controller  */
-//	protected NNCRFGlobalNetworkParam _nnController;	
 	/** The weights that some of them will be replaced by neural net if NNCRF is enabled. */
 	private transient double[] concatWeights, concatCounts;
 	
@@ -367,25 +365,6 @@ public class GlobalNetworkParam implements Serializable{
 				NetworkConfig.FEATURE_INIT_WEIGHT;
 		}
 		this._weights = weights_new;
-		
-		// initialize NN params and gradParams
-//		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			
-//			_nnController = new NNCRFGlobalNetworkParam(this);
-//			AbstractNetwork backendNN = null;
-//			if (NetworkConfig.NEURAL_BACKEND.equals("torch")) {
-//				backendNN = new RemoteNN(NetworkConfig.OPTIMIZE_NEURAL);
-//			} else if (NetworkConfig.NEURAL_BACKEND.equals("torch-jni")) {
-//				backendNN = new TorchNN(NetworkConfig.OPTIMIZE_NEURAL);
-//			}
-//			_nnController.setAbstractNetwork(backendNN);
-//			_nnController.initializeInternalNeuralWeights();
-		
-//			if(NeuralConfig.NUM_LAYER == 0 && NeuralConfig.EMBEDDING_SIZE.get(0)==0){
-//				_nnController.setInternalNeuralWeights(_weights);
-//			}
-			
-//		}
 		
 		initializeProvider(true);
 		
@@ -673,12 +652,13 @@ public class GlobalNetworkParam implements Serializable{
 	protected boolean updateDiscriminative(){
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
 			if (concatWeights == null) {
-//				int concatDim = _nnController.getNonNeuralAndInternalNeuralSize();
 				int concatDim = getFeatureSize();
 				concatWeights = new double[concatDim];
 				concatCounts = new double[concatDim];
 			}
-//			_nnController.getNonNeuralAndInternalNeuralWeights(concatWeights, concatCounts);
+			
+			// Concatenate discrete weights+continuous weights+provider params
+			// and similarly for their gradient vectors.
 			int ptr = 0;
 			System.arraycopy(_weights, 0, concatWeights, ptr, _weights.length);
 			System.arraycopy(_counts, 0, concatCounts, ptr, _counts.length);
@@ -744,7 +724,7 @@ public class GlobalNetworkParam implements Serializable{
     	}
     	
     	if (NetworkConfig.USE_NEURAL_FEATURES) {
-//    		_nnController.updateNonNeuralAndInternalNeuralWeights(concatWeights);
+    		// De-concatenate into their corresponding weight vectors 
     		int ptr = 0;
     		System.arraycopy(concatWeights, ptr, _weights, 0, _weights.length);
     		ptr += _weights.length;
@@ -794,25 +774,10 @@ public class GlobalNetworkParam implements Serializable{
 			this._counts[k] = 0.0;
 			//for regularization
 			if(this.isDiscriminative() && this._kappa > 0 && k>=this._fixedFeaturesSize){
-//				if (NetworkConfig.USE_NEURAL_FEATURES && _nnController.isNNFeature(k))
-//					continue; //this weight is not really a parameter as it is provided from NN
 				this._counts[k] += 2 * coef * this._kappa * this._weights[k];
 			}
 		}
 		
-//		if (NetworkConfig.OPTIMIZE_NEURAL && NetworkConfig.USE_NEURAL_FEATURES) {
-			//reset the internal feature weights here.
-//			double[] internalNNWeights = this._nnController.getInternalNeuralWeights();
-//			double[] internalNNCounts = this._nnController.getInternalNeuralGradients();
-//			for(int k = 0 ; k<internalNNWeights.length; k++) {
-//				internalNNCounts[k] = 0.0;
-//				if(NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
-//					if(this.isDiscriminative() && this._kappa > 0){
-//						internalNNCounts[k] += 2 * coef * this._kappa * internalNNWeights[k];
-//					}
-//				}
-//			}
-//		}
 		if (NetworkConfig.USE_NEURAL_FEATURES){
 			for(int k = 0; k < this._size; k++) {
 				if(_feature2rep[k][0].equals(DUMP_TYPE)) {
@@ -826,22 +791,6 @@ public class GlobalNetworkParam implements Serializable{
 		this._obj = 0.0;
 		//for regularization
 		if(this.isDiscriminative() && this._kappa > 0){
-//			if (NetworkConfig.USE_NEURAL_FEATURES) {
-//				if(NetworkConfig.OPTIMIZE_NEURAL && NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
-//					this._obj += MathsVector.square(this._nnController.getInternalNeuralWeights());
-//					for (FeatureValueProvider nn : this._featureValueProviders) {
-//						double[] params = nn.getParams();
-//						if (params == null) continue;
-//						this._obj += MathsVector.square(params);
-//					}
-//				}
-//				for (int k = 0; k < _weights.length; k++) {
-//					this._obj += this._weights[k] * this._weights[k];
-//				}
-//				this._obj *= - coef * this._kappa; 
-//			} else {
-//				this._obj += - coef * this._kappa * MathsVector.square(this._weights);
-//			}
 			this._obj += MathsVector.square(this._weights);
 			for (FeatureValueProvider provider : this._featureValueProviders) {
 				provider.setScale(coef);
@@ -858,10 +807,18 @@ public class GlobalNetworkParam implements Serializable{
 		//always add to _counts the NEGATION of the term g(x)'s gradient.
 	}
 	
+	/**
+	 * Add a feature value provider  
+	 * @param provider
+	 */
 	public void addFeatureValueProvider(FeatureValueProvider provider) {
 		this._featureValueProviders.add(provider);
 	}
 	
+	/**
+	 * Initialize each provider in the list in training/decoding mode
+	 * @param isTraining
+	 */
 	public void initializeProvider(boolean isTraining) {
 		for (FeatureValueProvider provider : _featureValueProviders) {
 			provider.setTraining(isTraining);
@@ -869,22 +826,40 @@ public class GlobalNetworkParam implements Serializable{
 		}
 	}
 	
+	/**
+	 * Get the list of providers
+	 * @return
+	 */
 	public List<FeatureValueProvider> getFeatureValueProviders() {
 		return this._featureValueProviders;
 	}
 	
+	/**
+	 * Pre-compute continuous scores for all hyper-edges
+	 */
 	public void computeContinousScores() {
 		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.computeValues();
+			provider.initializeScores();
 		}
 	}
 	
+	/**
+	 * Compute gradient once counts from all hyper-edges are accumulated
+	 */
 	public void updateContinuous() {
 		for (FeatureValueProvider provider : _featureValueProviders) {
 			provider.update();
 		}
 	}
 	
+	/**
+	 * Sum the provider scores for a given hyper-edge
+	 * @param network
+	 * @param parent_k
+	 * @param children_k
+	 * @param children_k_index
+	 * @return
+	 */
 	public double getContinuousScore(Network network, int parent_k, int[] children_k, int children_k_index) {
 		double score = 0.0;
 		for (FeatureValueProvider provider : _featureValueProviders) {
@@ -893,12 +868,22 @@ public class GlobalNetworkParam implements Serializable{
 		return score;
 	}
 	
+	/**
+	 * Send the count information for a given hyper-edge to each provider
+	 * @param count
+	 * @param network
+	 * @param parent_k
+	 * @param children_k_index
+	 */
 	public void setContinuousCount(double count, Network network, int parent_k, int children_k_index) {
 		for (FeatureValueProvider provider : _featureValueProviders) {
 			provider.update(count, network, parent_k, children_k_index);
 		}
 	}
 	
+	/**
+	 * Reset accumulated gradient in each provider
+	 */
 	public void resetGradContinuous() {
 		for (FeatureValueProvider provider : _featureValueProviders) {
 			provider.resetGrad();
@@ -922,6 +907,7 @@ public class GlobalNetworkParam implements Serializable{
 		out.writeInt(this._size);
 		out.writeInt(this._fixedFeaturesSize);
 		out.writeBoolean(this._locked);
+		out.writeObject(this._featureValueProviders);
 	}
 	
 	@SuppressWarnings("unchecked")

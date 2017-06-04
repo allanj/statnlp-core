@@ -9,7 +9,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
 
 import org.ejml.data.DMatrixRMaj;
@@ -31,50 +30,114 @@ import com.sun.jna.Native;
  * This uses TH4J and JNLua to transfer the data between the JVM and the NN backend.
  */
 public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
-	private boolean DEBUG = false;
 	
+	/**
+	 * Special delimiters for the input.
+	 * e.g., w1#IN#w2#IN#w3#OUT#t1#IN#t2#IN#t3
+	 */
 	public static final String IN_SEP = "#IN#";
 	public static final String OUT_SEP = "#OUT#";
 	
-	// Torch NN server information
+	/**
+	 * A LuaState instance for loading Lua scripts
+	 */
 	private LuaState L;
+	
+	/**
+	 * Corresponding Torch tensors for params and gradParams
+	 */
 	private DoubleTensor paramsTensor, gradParamsTensor;
+	
+	/**
+	 * Corresponding Torch tensors for output and gradOutput
+	 */
 	private DoubleTensor outputTensorBuffer, gradOutputTensorBuffer;
 	
+	/**
+	 * CRF weight and gradient matrices.
+	 * Shape: (numLabels x embeddingDimension)
+	 */
 	private SimpleMatrix weightMatrix, gradWeightMatrix;
+	
+	/**
+	 * Neural network output and gradient matrices.
+	 * Shape: (vocabSize x embeddingDimension)
+	 */
 	private SimpleMatrix outputMatrix, gradOutputMatrix;
+	
+	/**
+	 * Result of outputMatrix * weightMatrix^T
+	 * Shape: (vocabSize x numLabels)
+	 */
 	private SimpleMatrix forwardMatrix;
+	
+	/**
+	 * The transposed weight matrix that will be multiplied with outputMatrix
+	 */
+	private SimpleMatrix weightMatrix_tran;
+	
+	/**
+	 * Accumulated counts for CRF weights and neural network output.
+	 * Count is typically computed by inside-outside.
+	 */
 	private SimpleMatrix countWeightMatrix, countOutputMatrix;
 	
+	/**
+	 * Whether CRF optimizes this neural network,
+	 * same as defined by NetworkConfig.OPTIMIZE_NEURAL
+	 */
 	private boolean optimizeNeural;
 	
+	/**
+	 * List of word embedding to be used,
+	 * e.g., "polyglot", "glove"
+	 */
 	private List<String> embeddingList;
+	
+	/**
+	 * Number of unique inputs to this neural network 
+	 */
 	private int vocabSize;
+	
+	/**
+	 * Number of hidden units and layers
+	 */
 	private int hiddenSize, numLayer;
+	
+	/**
+	 * Total dimension of the input layers,
+	 * i.e., sum of embedding size for each input type
+	 */
 	private int totalInputDim;
 	
-	private List<Integer> numInputList, inputDimList;
+	/**
+	 * Window size for each input type
+	 */
+	private List<Integer> numInputList;
+	
+	/**
+	 * Number of unique tokens for each input type
+	 */
+	private List<Integer> inputDimList;
+	
+	/**
+	 * List of token2idx mappings.
+	 * One for each input type (word, tag, etc.)
+	 */
 	private List<HashMap<String,Integer>> token2idxList;
-
-	private SimpleMatrix weightMatrix_tran;
 
 	public MultiLayerPerceptron(HashMap<String, Object> config, int numLabels) {
 		super(config, numLabels);
 		this.optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
 		
-		configure();
-		this.L = new LuaState();
-		this.L.openLibs();
-		
-		try {
-			this.L.load(Files.newInputStream(Paths.get("nn-crf-interface/neural_server/NetworkInterface.lua")),"NetworkInterface.lua");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		this.L.call(0,0);
+		configureJNLua();
 	}
 	
-	private void configure() {
+	/**
+	 * Configure paths for JNLua and create a new LuaState instance
+	 * for loading the backend Torch/Lua script
+	 */
+	private void configureJNLua() {
 		System.setProperty("jna.library.path","./nativeLib");
 		System.setProperty("java.library.path", "./nativeLib:" + System.getProperty("java.library.path"));
 		Field fieldSysPath = null;
@@ -86,6 +149,16 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 			e.printStackTrace();
 		}
 		Native.loadLibrary("libjnlua5.1.jnilib", Library.class);
+		
+		this.L = new LuaState();
+		this.L.openLibs();
+		
+		try {
+			this.L.load(Files.newInputStream(Paths.get("nn-crf-interface/neural_server/NetworkInterface.lua")),"NetworkInterface.lua");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		this.L.call(0,0);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -111,7 +184,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 					totalInputDim += token2idxList.get(i).size();
 				}
 			}
-			// Initialize weight matrix
+			
 			rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
 			
 			this.weightMatrix = new SimpleMatrix(numLabels, getHiddenSize());
@@ -120,6 +193,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 			DMatrixRMaj weightDMatrix = this.weightMatrix.getMatrix();
 			this.weights = weightDMatrix.data;
 			
+			// Initialize weight matrix
 			for(int i = 0; i < weights.length; i++) {
 				weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
 					NetworkConfig.FEATURE_INIT_WEIGHT;
@@ -171,6 +245,11 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		}
 	}
 	
+	/**
+	 * Helper method to convert the input from String form
+	 * (e.g., w1#IN#w2#IN#w3#OUT#t1#IN#t2#IN#t3) to integer indices
+	 * and gather input information (numInputList, inputDimList).
+	 */
 	private void makeVocab() {
 		List<String> wordList = new ArrayList<String>();
 		List<List<Integer>> vocab = new ArrayList<List<Integer>>();
@@ -221,25 +300,21 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
 		if (input != null) {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-//			int H = getHiddenSize();
 			int id = input2id.get(input);
-//			for (int i = 0; i < H; i++) {
-//				val += weights[outputLabel*H+i] * output[id*H+i];
-//			}
 			val = forwardMatrix.get(id, outputLabel);
 		}
 		return val;
 	}
 	
 	@Override
-	public void forward(boolean training) {
+	public void forward() {
 		if (optimizeNeural) { // update with new params
 			if (getParamSize() > 0) {
 				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
 			}
 		}
 		
-		Object[] args = new Object[]{training};
+		Object[] args = new Object[]{isTraining};
 		Class<?>[] retTypes = new Class[0];
 		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, retTypes);
 		
@@ -257,7 +332,6 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
 		if (input != null) {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-//			int H = getHiddenSize();
 			int id = input2id.get(input);
 			synchronized (countOutputMatrix) {
 				double countOutput = countOutputMatrix.get(id, outputLabel);
@@ -267,12 +341,6 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 				double countWeight = countWeightMatrix.get(outputLabel, id);
 				countWeightMatrix.set(outputLabel, id, countWeight-count);
 			}
-//			for (int i = 0; i < H; i++) {
-//				gradOutput[id*H+i] += count * weights[outputLabel*H+i];
-//			}
-//			for (int i = 0; i < H; i++) {
-//				gradWeights[outputLabel*H+i] -= count * output[id*H+i];
-//			}
 		}
 	}
 	
@@ -296,7 +364,6 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 			addL2ParamsGrad();
 		}
 		
-//		Arrays.fill(gradOutput, 0.0);
 		resetCount();
 	}
 	
@@ -314,36 +381,26 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		L.close();
 	}
 	
-	/*
-	public static void main(String[] args) {
-		MultiLayerPerceptron nn = new MultiLayerPerceptron(true);
-		List<Integer> numInputList = Arrays.asList(1);
-		List<Integer> inputDimList = Arrays.asList(5);
-		List<String> wordList = Arrays.asList("a","b","c","d","e");
-		List<String> embeddingList = Arrays.asList("none");
-		List<Integer> embSizeList = Arrays.asList(3);
-		List<Integer> outputDimList = Arrays.asList(2);
-		List<List<Integer>> vocab = new ArrayList<List<Integer>>();
-		for (int i = 1; i <= 5; i++) {
-			vocab.add(Arrays.asList(i));
-		}
-		try {
-			NeuralConfigReader.readConfig("nn-crf-interface/neural_server/neural.basic.config");
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		nn.initNetwork(numInputList, inputDimList, wordList, "en", embeddingList, embSizeList, outputDimList, vocab);
-		nn.forwardNetwork(true);
-		nn.backwardNetwork();
-	}
-	*/
-	
+	/**
+	 * Convenience method to generate a config Map for this neural network
+	 * @param lang
+	 * @param embeddingList
+	 * @param embSizeList
+	 * @param numLayer
+	 * @param hiddenSize
+	 * @param activation
+	 * @param dropout
+	 * @param optimizer
+	 * @param learningRate
+	 * @param fixInputLayer
+	 * @param useOutputBias
+	 * @return
+	 */
 	public static HashMap<String, Object> createConfig(
 			String lang, List<String> embeddingList, List<Integer> embSizeList,
 			int numLayer, int hiddenSize, String activation,
 			double dropout, String optimizer, double learningRate,
-			boolean fixEmbedding, boolean useOutputBias) {
+			boolean fixInputLayer, boolean useOutputBias) {
 		HashMap<String, Object> config = new HashMap<String, Object>();
 		config.put("class", "MultiLayerPerceptron");
         config.put("lang", lang);
@@ -355,10 +412,16 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
         config.put("dropout", dropout);
         config.put("optimizer", optimizer);
         config.put("learningRate", learningRate);
-        config.put("fixEmbedding", fixEmbedding);
+        config.put("fixInputLayer", fixInputLayer);
 		return config;
 	}
 	
+	/**
+	 * Convenience method to generate a config Map from file
+	 * @param filename
+	 * @return
+	 * @throws FileNotFoundException
+	 */
 	public static HashMap<String, Object> createConfigFromFile(String filename) throws FileNotFoundException {
 		Scanner scan = new Scanner(new File(filename));
 		HashMap<String, Object> config = new HashMap<String, Object>();
@@ -398,7 +461,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 			} else if(info[0].equals("learningRate")) {
 				config.put("learningRate", Double.parseDouble(info[1]));
 			} else if(info[0].equals("fixEmbedding")) {
-				config.put("fixEmbedding", Boolean.parseBoolean(info[1]));
+				config.put("fixInputLayer", Boolean.parseBoolean(info[1]));
 			} else if(info[0].equals("useOutputBias")) {
 			} else {
 				System.err.println("Unrecognized option: " + line);
@@ -407,6 +470,10 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		scan.close();
 		return config;
 	}
+	
+	/**
+	 * Setters and Getters
+	 */
 	
 	public List<String> getEmbeddingList() {
 		return embeddingList;
@@ -428,12 +495,12 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		return numLayer;
 	}
 
-	private double[] getArray(DoubleTensor t) {
-		return t.storage().getRawData().getDoubleArray(0, (int) t.nElement());
-	}
-	
 	public void resetCount() {
 		countOutputMatrix.set(0.0);
 		countWeightMatrix.set(0.0);
+	}
+	
+	private double[] getArray(DoubleTensor t) {
+		return t.storage().getRawData().getDoubleArray(0, (int) t.nElement());
 	}
 }
