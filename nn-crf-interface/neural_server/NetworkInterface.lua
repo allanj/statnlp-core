@@ -1,5 +1,6 @@
 require 'nn'
 require 'optim'
+stringx = require 'pl.stringx'
 
 include 'nn-crf-interface/neural_server/AbstractNeuralNetwork.lua'
 include 'nn-crf-interface/neural_server/MultiLayerPerceptron.lua'
@@ -43,6 +44,8 @@ function initialize(javadata, ...)
         local networkClass = javadata:get("class")
         if networkClass == "MultiLayerPerceptron" then
             net = MultiLayerPerceptron(false, gpuid)
+        elseif networkClass == "BidirectionalLSTM" then
+            net = BidirectionalLSTM(false, gpuid)
         else
             error("Unsupported network class " .. networkClass)
         end
