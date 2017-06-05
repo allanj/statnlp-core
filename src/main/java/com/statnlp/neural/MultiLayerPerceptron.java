@@ -460,7 +460,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 				config.put("optimizer", info[1]);
 			} else if(info[0].equals("learningRate")) {
 				config.put("learningRate", Double.parseDouble(info[1]));
-			} else if(info[0].equals("fixEmbedding")) {
+			} else if(info[0].equals("fixInputLayer")) {
 				config.put("fixInputLayer", Boolean.parseBoolean(info[1]));
 			} else if(info[0].equals("useOutputBias")) {
 			} else {

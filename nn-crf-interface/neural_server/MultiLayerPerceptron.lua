@@ -27,6 +27,7 @@ function MultiLayerPerceptron:initialize(javadata, ...)
     data.activation = javadata:get("activation")
     data.dropout = javadata:get("dropout")
     data.optimizer = javadata:get("optimizer")
+    data.lang = javadata:get("lang")
 
     local isTraining = javadata:get("isTraining")
     local outputAndGradOutputPtr = {... }
@@ -154,7 +155,7 @@ function MultiLayerPerceptron:createNetwork()
     end
 
     if gpuid >= 0 then
-        if data.fixInputLayer then inputLayer:cuda() end
+        if data.fixInputLayer then self.inputLayer:cuda() end
         mlp:cuda()
     end
 end

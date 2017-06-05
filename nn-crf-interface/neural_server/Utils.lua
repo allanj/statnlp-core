@@ -86,7 +86,7 @@ end
 
 function loadPolyglot(wordList, lang)
     if polyglot == nil then
-        polyglot = require 'polyglot/polyglot'
+        polyglot = require 'nn-crf-interface/neural_server/polyglot/polyglot'
     end
     polyglot:load(lang)
     ltw = nn.LookupTable(#wordList, 64)
