@@ -1,10 +1,11 @@
 package com.statnlp.hybridnetworks;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.map.hash.TObjectDoubleHashMap;
+
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 
 import com.statnlp.commons.ml.opt.MathsVector;
 
@@ -36,17 +37,17 @@ public abstract class FeatureValueProvider {
 	/**
 	 * Maps a hyper-edge tuple (instance ID,parent node ID,child index) to an input-output pair
 	 */
-	protected Map<Integer,Map<Integer,Map<Integer,SimpleImmutableEntry<Object,Integer>>>> edge2io;
+	protected TIntObjectHashMap<TIntObjectHashMap<TIntObjectHashMap<SimpleImmutableEntry<Object,Integer>>>> edge2io;
 	
 	/**
 	 * Maps an input to a corresponding index
 	 */
-	protected Map<Object,Integer> input2id;
+	protected LinkedHashMap<Object,Integer> input2id;
 	
 	/**
 	 * Maps an input to a corresponding value
 	 */
-	protected Map<Object,Double> input2score;
+	protected TObjectDoubleHashMap<Object> input2score;
 	
 	/**
 	 * The coefficient used for regularization, i.e., batchSize/totalInstNum.
@@ -59,8 +60,8 @@ public abstract class FeatureValueProvider {
 	protected boolean isTraining = true;
 	
 	public FeatureValueProvider(int numLabels) {
-		edge2io = new HashMap<Integer,Map<Integer,Map<Integer,SimpleImmutableEntry<Object,Integer>>>>();
-		input2score = new HashMap<Object,Double>();
+		edge2io = new TIntObjectHashMap<TIntObjectHashMap<TIntObjectHashMap<SimpleImmutableEntry<Object,Integer>>>>();
+		input2score = new TObjectDoubleHashMap<Object>();
 		input2id = new LinkedHashMap<Object,Integer>();
 		this.numLabels = numLabels;
 	}
@@ -76,10 +77,10 @@ public abstract class FeatureValueProvider {
 	public synchronized void addHyperEdge(Network network, int parent_k, int children_k_idx, Object input, int output) {
 		int instanceID = network.getInstance().getInstanceId();
 		if ( ! edge2io.containsKey(instanceID)) {
-			edge2io.put(instanceID, new HashMap<Integer,Map<Integer,SimpleImmutableEntry<Object,Integer>>>());
+			edge2io.put(instanceID, new TIntObjectHashMap<TIntObjectHashMap<SimpleImmutableEntry<Object,Integer>>>());
 		}
 		if ( ! edge2io.get(instanceID).containsKey(parent_k)) {
-			edge2io.get(instanceID).put(parent_k, new HashMap<Integer,SimpleImmutableEntry<Object,Integer>>());
+			edge2io.get(instanceID).put(parent_k, new TIntObjectHashMap<SimpleImmutableEntry<Object,Integer>>());
 		}
 		if ( ! edge2io.get(instanceID).get(parent_k).containsKey(children_k_idx)) {
 			edge2io.get(instanceID).get(parent_k).put(children_k_idx, new SimpleImmutableEntry<Object,Integer>(input,output));
@@ -133,11 +134,11 @@ public abstract class FeatureValueProvider {
 	 */
 	public Object getHyperEdgeInput(Network network, int parent_k, int children_k_index) {
 		int instanceID = network.getInstance().getInstanceId();
-		Map<Integer,Map<Integer,SimpleImmutableEntry<Object,Integer>>> tmp = edge2io.get(instanceID);
+		TIntObjectHashMap<TIntObjectHashMap<SimpleImmutableEntry<Object, Integer>>> tmp = edge2io.get(instanceID);
 		if (tmp == null)
 			return null;
 		
-		Map<Integer,SimpleImmutableEntry<Object,Integer>> tmp2 = tmp.get(parent_k);
+		TIntObjectHashMap<SimpleImmutableEntry<Object, Integer>> tmp2 = tmp.get(parent_k);
 		if (tmp2 == null)
 			return null;
 		
@@ -154,11 +155,11 @@ public abstract class FeatureValueProvider {
 	 */
 	public int getHyperEdgeOutput(Network network, int parent_k, int children_k_index) {
 		int instanceID = network.getInstance().getInstanceId();
-		Map<Integer,Map<Integer,SimpleImmutableEntry<Object,Integer>>> tmp = edge2io.get(instanceID);
+		TIntObjectHashMap<TIntObjectHashMap<SimpleImmutableEntry<Object, Integer>>> tmp = edge2io.get(instanceID);
 		if (tmp == null)
 			return -1;
 		
-		Map<Integer,SimpleImmutableEntry<Object,Integer>> tmp2 = tmp.get(parent_k);
+		TIntObjectHashMap<SimpleImmutableEntry<Object, Integer>> tmp2 = tmp.get(parent_k);
 		if (tmp2 == null)
 			return -1;
 		
