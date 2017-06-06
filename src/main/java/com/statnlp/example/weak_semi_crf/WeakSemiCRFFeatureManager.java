@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.commons.types.Span;
 import com.statnlp.example.base.BaseNetwork;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler.NodeType;
 import com.statnlp.hybridnetworks.FeatureArray;

@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.util.Pipeline;
 
 /**
  * A default feature extractor that is based on a template.
@@ -49,6 +50,18 @@ public class TemplateBasedFeatureManager extends FeatureManager {
 			});
 	private List<String> featureTemplates;
 	private Map<String, int[][]> compiledFeatureTemplates;
+	
+	public TemplateBasedFeatureManager(Pipeline<?> pipeline) {
+		this(pipeline.param, DEFAULT_FEATURE_TEMPLATES);
+	}
+	
+	public TemplateBasedFeatureManager(Pipeline<?> pipeline, String templateFilePath){
+		this(pipeline.param, readTemplate(templateFilePath));
+	}
+	
+	public TemplateBasedFeatureManager(Pipeline<?> pipeline, List<String> featureTemplates){
+		this(pipeline.param, featureTemplates);
+	}
 
 	/**
 	 * @param param_g

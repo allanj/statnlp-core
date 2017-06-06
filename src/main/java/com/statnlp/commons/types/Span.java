@@ -1,8 +1,6 @@
-package com.statnlp.example.weak_semi_crf;
+package com.statnlp.commons.types;
 
 import java.io.Serializable;
-
-import com.statnlp.commons.types.Label;
 
 public class Span implements Comparable<Span>, Serializable{
 	
