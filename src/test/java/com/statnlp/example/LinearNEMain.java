@@ -1,10 +1,12 @@
 package com.statnlp.example;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
+import com.statnlp.commons.types.Sentence;
 import com.statnlp.example.linear_ne.ECRFEval;
 import com.statnlp.example.linear_ne.ECRFFeatureManager;
 import com.statnlp.example.linear_ne.ECRFInstance;
@@ -17,12 +19,13 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.neural.BidirectionalLSTM;
 import com.statnlp.neural.NeuralNetworkFeatureValueProvider;
 import com.statnlp.neural.MultiLayerPerceptron;
 
 public class LinearNEMain {
 	
-	public static boolean DEBUG = true;
+	public static boolean DEBUG = false;
 
 	public static int trainNumber = -100;
 	public static int testNumber = -100;
@@ -69,7 +72,14 @@ public class LinearNEMain {
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
-			net = new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size());
+			if (NetworkConfig.NEURAL_TYPE.equals("lstm")) {
+				HashMap<String,Object> lstm_config = new HashMap<String,Object>();
+				int hiddenSize = 50;
+				String optimizer = "none";
+				net = new BidirectionalLSTM(BidirectionalLSTM.createConfig(hiddenSize, optimizer), Entity.Entities.size());
+			} else {
+				net = new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size());
+			}
 			gnp.addFeatureValueProvider(net);
 		}
 		
@@ -121,12 +131,13 @@ public class LinearNEMain {
 					case "-batch": NetworkConfig.USE_BATCH_TRAINING = true;
 									NetworkConfig.BATCH_SIZE = Integer.valueOf(args[i+1]); break;
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;
-					case "-neural": if(args[i+1].equals("true")){ 
-											NetworkConfig.USE_NEURAL_FEATURES = true; 
+					case "-neural": if(args[i+1].equals("mlp") || args[i+1].equals("lstm")){ 
+											NetworkConfig.USE_NEURAL_FEATURES = true;
+											NetworkConfig.NEURAL_TYPE = args[i+1];
 											NetworkConfig.OPTIMIZE_NEURAL = true;  //false: optimize in neural network
 											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
 											NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
-										}
+									}
 									break;
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;
 					case "-lr": adagrad_learningRate = Double.valueOf(args[i+1]); break;

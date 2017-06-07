@@ -9,10 +9,6 @@ end
 function BidirectionalLSTM:initialize(javadata, ...)
     local gpuid = self.gpuid
 
-    -- numInputList, inputDimList, embSizeList, outputDim,
-    -- numLayer, hiddenSize, activation, dropout
-    -- vocab
-
     self.data = {}
     local data = self.data
     data.sentences = listToTable(javadata:get("sentences"))
@@ -20,6 +16,7 @@ function BidirectionalLSTM:initialize(javadata, ...)
     data.optimizer = javadata:get("optimizer")
 
     local isTraining = javadata:get("isTraining")
+    self.isTraining = isTraining
     local outputAndGradOutputPtr = {... }
     if isTraining then
         self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
@@ -27,14 +24,20 @@ function BidirectionalLSTM:initialize(javadata, ...)
     end
 
     -- what to forward
-    if isTraining then self.word2idx = {} end
+    if isTraining then
+        self.idx2word = {}
+        self.word2idx = {}
+    end
     self.x = self:prepare_input()
+    self.numSent = #data.sentences
 
     if isTraining then
         self:createNetwork()
         print(self.net)
 
         self.params, self.gradParams = self.net:getParameters()
+        print("Number of parameters: " .. self.params:nElement())
+
         if doOptimization then
             self:createOptimizer()
             -- no return array if optim is done here
@@ -45,8 +48,6 @@ function BidirectionalLSTM:initialize(javadata, ...)
             self.gradParamsPtr = torch.pointer(self.gradParams)
             return self.paramsPtr, self.gradParamsPtr
         end
-    else
-        self:createDecoderNetwork()
     end
 end
 
@@ -56,7 +57,7 @@ function BidirectionalLSTM:createNetwork()
 
     local hiddenSize = data.hiddenSize
 
-    local sharedLookupTable = nn.LookupTableMaskZero(#(self.word2idx), hiddenSize)
+    local sharedLookupTable = nn.LookupTableMaskZero(self.vocabSize, hiddenSize)
 
     -- forward rnn
     local fwd = nn.Sequential()
@@ -85,6 +86,7 @@ function BidirectionalLSTM:createNetwork()
        :add(parallel)
        :add(nn.ZipTable())
        :add(mergeSeq)
+    self.net = brnn
 end
 
 function MultiLayerPerceptron:createOptimizer()
@@ -113,41 +115,68 @@ function MultiLayerPerceptron:createOptimizer()
     end
 end
 
+function BidirectionalLSTM:forward(isTraining)
+    local output_table = self.net:forward(self.x)
+    local output = torch.cat(output_table, 1)
+    if not self.outputPtr:isSameSizeAs(output) then
+        self.outputPtr:resizeAs(output)
+    end
+    self.outputPtr:copy(output)
+end
+
+function BidirectionalLSTM:backward()
+    self.gradParams:zero()
+    self.net:backward(self.x, self.gradOutputPtr:split(self.numSent))
+    if self.doOptimization then
+        self.optimizer(self.feval, self.params, self.optimState)
+    end
+end
+
 function BidirectionalLSTM:prepare_input()
     local gpuid = self.gpuid
     local data = self.data
 
     local sentences = data.sentences
+    local sentence_toks = {}
     local maxLen = 0
     for i=1,#sentences do
-        local len = #(stringx.split(sentences[i]," "))
-        if len > maxLen then
-            maxLen = len
+        local tokens = stringx.split(sentences[i]," ")
+        table.insert(sentence_toks, tokens)
+        if #tokens > maxLen then
+            maxLen = #tokens
         end
     end
 
-    local sentence_toks = {}
     if self.isTraining then
+        self.word2idx['<PAD>'] = 0
+        self.idx2word[0] = '<PAD>'
         self.word2idx['<UNK>'] = 1
+        self.idx2word[1] = '<UNK>'
+        self.vocabSize = 2
         for i=1,#sentences do
-            local tokens = stringx.split(sentences[j]," ")
-            table.insert(sentence_toks, tokens)
+            local tokens = sentence_toks[i]
             for j=1,#tokens do
                 local tok = tokens[j]
-                self.word2idx[tok] = #(self.word2idx)+1
+                local tok_id = self.word2idx[tok]
+                if tok_id == nil then
+                    self.vocabSize = self.vocabSize+1
+                    self.word2idx[tok] = self.vocabSize
+                    self.idx2word[self.vocabSize] = tok
+                end
             end
         end
     end
 
-    local inputs, inputs_rev
+    local inputs = {}
+    local inputs_rev = {}
     for step=1,maxLen do
         inputs[step] = torch.LongTensor(#sentences)
         for j=1,#sentences do
-            local tokens = sentences_toks[j]
+            local tokens = sentence_toks[j]
             if step > #tokens then
                 inputs[step][j] = 0
             else
-                local tok = sentences_toks[j][step]
+                local tok = sentence_toks[j][step]
                 local tok_id = self.word2idx[tok]
                 if tok_id == nil then
                     tok_id = self.word2idx['<UNK>']
@@ -156,10 +185,11 @@ function BidirectionalLSTM:prepare_input()
             end
         end
     end
+
     for step=1,maxLen do
         inputs_rev[step] = torch.LongTensor(#sentences)
         for j=1,#sentences do
-            local tokens = sentences_toks[j]
+            local tokens = sentence_toks[j]
             if step <= #tokens then
                 inputs_rev[step][j] = inputs[#tokens-step+1][j]
             else

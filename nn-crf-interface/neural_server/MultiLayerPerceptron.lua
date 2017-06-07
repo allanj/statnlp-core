@@ -44,9 +44,7 @@ function MultiLayerPerceptron:initialize(javadata, ...)
     local wordList = self.wordList
     local word2idx = self.word2idx
     for i=1,#wordList do
-        if word2idx[wordList[i]] == nil then
-            word2idx[wordList[i]] = #word2idx+1
-        end
+        word2idx[wordList[i]] = i
     end
     self.numInput = self.x[1]:size(1)
 

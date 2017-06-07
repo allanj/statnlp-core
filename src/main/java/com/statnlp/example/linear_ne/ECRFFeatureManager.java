@@ -1,5 +1,6 @@
 package com.statnlp.example.linear_ne;
 
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 
 import com.statnlp.commons.types.Sentence;
@@ -9,8 +10,9 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
-import com.statnlp.neural.NeuralNetworkFeatureValueProvider;
+import com.statnlp.neural.BidirectionalLSTM;
 import com.statnlp.neural.MultiLayerPerceptron;
+import com.statnlp.neural.NeuralNetworkFeatureValueProvider;
 
 public class ECRFFeatureManager extends FeatureManager {
 
@@ -71,9 +73,14 @@ public class ECRFFeatureManager extends FeatureManager {
 //			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+
 //										llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt));
 
-			String input = llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt;
-//			String input = currWord;
-			net.addHyperEdge(network, parent_k, children_k_index, input, eId); // todo: add the label!
+			Object input = null;
+			if(NetworkConfig.NEURAL_TYPE.equals("lstm")) {
+				input = new SimpleImmutableEntry<String, Integer>(sent.toString(), pos);
+			} else {
+				input = llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt;
+//				input = currWord;
+			}
+			net.addHyperEdge(network, parent_k, children_k_index, input, eId);
 			
 //			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw));
 		} else {
