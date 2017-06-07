@@ -52,6 +52,8 @@ public class GradientDescentOptimizer implements Optimizer{
 	private double bestSqGradients[];
 	private double bestDelta[];
 	
+	private static final double C = 1e-5;
+	
 	/**
 	 * The number of iterations without improvement before the trigger is activated.<br>
 	 * A trigger can be a decaying parameter or change of adaptive method
@@ -170,7 +172,7 @@ public class GradientDescentOptimizer implements Optimizer{
 		this.bestIterNum = 0;
 		this.bestObj = Double.MAX_VALUE;
 		Arrays.fill(this.prevGradients, 0.0);
-		Arrays.fill(this.prevSqGradients, 0.0);
+		Arrays.fill(this.prevSqGradients, C);
 		Arrays.fill(this.prevDelta, 0.0);
 		Arrays.fill(this.bestX, 0.0);
 		Arrays.fill(this.bestGradients, 0.0);
@@ -263,11 +265,9 @@ public class GradientDescentOptimizer implements Optimizer{
 				
 			} else if(currentAdaptiveMethod == AdaptiveMethod.ADAGRAD) { // based on http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf
 				prevSqGradients[k] += Math.pow(this._g[k], 2);
-				double updateCoef = this.learningRate;
-				if(prevSqGradients[k]!=0.0){
-					updateCoef /= Math.sqrt(prevSqGradients[k]);
-				}
-				this._x[k] -= updateCoef * this._g[k];
+				double s = Math.sqrt(prevSqGradients[k]);
+				double updateCoef = this.learningRate*C + s;
+				this._x[k] = (this._x[k] * s - this.learningRate*this._g[k])/updateCoef;
 				
 			} else if (currentAdaptiveMethod == AdaptiveMethod.ADADELTA){ // based on http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
 				prevGradients[k] = adadeltaGradDecay*prevGradients[k] + (1-adadeltaGradDecay)*this._g[k]; // An attempt to reduce high jumps

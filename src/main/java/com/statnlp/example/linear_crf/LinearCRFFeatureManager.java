@@ -232,8 +232,9 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		features.add(param_g.toFeature(network, "LENGTH_ALLISUPPER", label+"", ""+length+"_"+allIsUpper));
 		features.add(param_g.toFeature(network, "LENGTH_FIRSTISUPPER", label+"", ""+length+"_"+firstIsUpper));
 		features.add(param_g.toFeature(network, "LENGTH_PERIOD", label+"", ""+length+"_"+containsPeriod));
-		FeatureArray nodeFeatures = createFeatureArray(network, features);
-		return createFeatureArray(network, new int[]{param_g.toFeature(network, "TRANS", childLabel+"_"+label, "")}, nodeFeatures);
+		FeatureArray featureArr = createFeatureArray(network, features);
+		featureArr = createFeatureArray(network, new int[]{param_g.toFeature(network, "TRANS", childLabel+"_"+label, "")}, featureArr);
+		return featureArr;
 	}
 
 }

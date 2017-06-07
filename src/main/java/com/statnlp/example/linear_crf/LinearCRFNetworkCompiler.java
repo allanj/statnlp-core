@@ -291,7 +291,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		return nodeArray[0]-1;
 	}
 	
-	public Integer getOutputForNode(int[] nodeArray){
+	public Label getOutputForNode(int[] nodeArray){
 		Label label =_labels.get(nodeArray[1]);
 		if(label == null){
 			return null;
@@ -299,7 +299,7 @@ public class LinearCRFNetworkCompiler extends NetworkCompiler{
 		if(nodeArray[4] == NODE_TYPES.LEAF.ordinal()){
 			return null;
 		}
-		return nodeArray[1];
+		return _labels.get(nodeArray[1]);
 	}
 
 }

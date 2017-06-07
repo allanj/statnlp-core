@@ -56,7 +56,7 @@ public class NetworkConfig {
 	/**
 	 * Whether to initialize the weight vector randomly or fixed to {@link #FEATURE_INIT_WEIGHT}.
 	 */
-	public static boolean RANDOM_INIT_WEIGHT = true;
+	public static boolean RANDOM_INIT_WEIGHT = false;
 	/**
 	 * The seed for random weight vector initialization (for reproducibility)
 	 */

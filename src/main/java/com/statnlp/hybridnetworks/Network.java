@@ -900,7 +900,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			}
 			this._hypotheses[k] = new NodeHypothesis(k, childrenOfThisNodeHypothesis);
 			ScoredIndex bestPath = this._hypotheses[k].getKthBestHypothesis(0);
-//			System.out.println("Node: "+this._hypotheses[k]);
+//			System.out.println("Node: "+getOutputForNode(getNodeArray(this._hypotheses[k].nodeIndex)));
 //			System.out.println("Edges: "+Arrays.toString(childrenOfThisNodeHypothesis));
 //			System.out.println(bestPath);
 			EdgeHypothesis edge = this._hypotheses[k].children()[bestPath.index[0]];

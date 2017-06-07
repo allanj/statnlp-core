@@ -351,10 +351,11 @@ public abstract class NetworkModel implements Serializable{
 		long epochStartTime = System.nanoTime();
 		try{
 			int batchId = 0;
-			int epochNum = 0;
+			int epochNum = 1;
 			double epochObj = 0.0;
 			int size = Math.min(NetworkConfig.BATCH_SIZE, instIds.size());
 			int offset = 0;
+//			System.out.println(Arrays.toString(asFloat(_fm._param_g._weights)));
 			for(int it = 0; it<=maxNumIterations; it++){
 				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
 				if(NetworkConfig.USE_BATCH_TRAINING){
@@ -408,6 +409,7 @@ public abstract class NetworkModel implements Serializable{
 					epochObj = 0.0;
 					epochStartTime = System.nanoTime();
 				}
+//				System.out.println(Arrays.toString(asFloat(_fm._param_g._weights)));
 				if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE && it>1 && obj<obj_old && Math.abs(obj-obj_old)>1E-5){
 					throw new RuntimeException("Error:\n"+obj_old+"\n>\n"+obj);
 				}
@@ -433,6 +435,14 @@ public abstract class NetworkModel implements Serializable{
 			pool.shutdown();
 		}
 	}
+	
+//	private float[] asFloat(double[] weights){
+//		float[] result = new float[weights.length];
+//		for(int i=0; i<result.length; i++){
+//			result[i] = (float)weights[i];
+//		}
+//		return result;
+//	}
 
 	private Instance[][] prepareInstanceForCompilation(Instance[] allInstances, int trainLength) {
 		this._numThreads = NetworkConfig.NUM_THREADS;
