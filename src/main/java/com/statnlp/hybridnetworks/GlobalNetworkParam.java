@@ -164,8 +164,8 @@ public class GlobalNetworkParam implements Serializable{
 		this._stringIndex.lock();
 	}
 	
-	public synchronized int toInt(String s){
-		return this._stringIndex.getOrPut(s);
+	public int toInt(String s){
+		return this._stringIndex.get(s);
 	}
 	
 	public StringIndex getStringIndex(){

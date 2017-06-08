@@ -6,6 +6,7 @@ package com.statnlp.hybridnetworks;
 import java.io.Serializable;
 import java.util.Set;
 
+import gnu.trove.impl.Constants;
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
@@ -25,7 +26,7 @@ public class StringIndex implements Serializable {
 	 * Creates an empty StringIndex with default capacity.
 	 */
 	public StringIndex(){
-		index = new TObjectIntHashMap<String>();
+		index = new TObjectIntHashMap<String>(Constants.DEFAULT_CAPACITY, Constants.DEFAULT_LOAD_FACTOR, -1);
 		locked = false;
 	}
 
@@ -34,7 +35,7 @@ public class StringIndex implements Serializable {
 	 * @param capacity
 	 */
 	public StringIndex(int capacity) {
-		index = new TObjectIntHashMap<String>(capacity);
+		index = new TObjectIntHashMap<String>(capacity, Constants.DEFAULT_LOAD_FACTOR, -1);
 		locked = false;
 	}
 	
@@ -99,9 +100,6 @@ public class StringIndex implements Serializable {
 	 * @return
 	 */
 	public int get(String str){
-		if(!index.containsKey(str)){
-			return -1;
-		}
 		return index.get(str);
 	}
 	
