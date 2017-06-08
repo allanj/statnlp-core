@@ -54,7 +54,6 @@ function MultiLayerPerceptron:initialize(javadata, ...)
         print(self.net)
 
         self.params, self.gradParams = self.net:getParameters()
-        self.params:fill(0.1)
         if doOptimization then
             self:createOptimizer()
             -- no return array if optim is done here
@@ -169,23 +168,13 @@ function MultiLayerPerceptron:createDecoderNetwork()
     self.decoderNet = self.net:clone()
     for i=1,#data.inputDimList do
         local inputDim = data.inputDimList[i]
-        local lt, nnView        
-        -- for now just get the first LookupTable (commonly word)
+        local nnView
         if self.fixInputLayer then
-            lt = self.decoderInputLayer:get(1):get(i):get(1)
             nnView = self.decoderInputLayer:get(1):get(i):get(2)
         else
-            lt = self.decoderNet:get(1):get(i):get(1)
             nnView = self.decoderNet:get(1):get(i):get(2)
         end
-        if data.embSizeList[i] == 0 then
-            lt._eye:resize(inputDim, lt.outputSize)
-        else
-            local lt_W = lt.weight
-            if lt_W:size(1) < inputDim then
-                lt_W:resize(inputDim, lt_W:size(2))
-            end
-        end
+        -- adjust the number of inputs
         nnView:resetSize(self.numInput,-1)
     end
 end
@@ -268,7 +257,7 @@ function MultiLayerPerceptron:backward()
     if self.fixInputLayer then
         input_x = self.inputLayer:forward(x)
     end
-    if #self.net > 0 then
+    if self.data.numLayer > 0 then
         self.net:backward(input_x, self.gradOutputPtr)
     end
     if self.doOptimization then

@@ -7,16 +7,15 @@ import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 
 import org.ejml.data.DMatrixRMaj;
 import org.ejml.dense.row.CommonOps_DDRM;
 import org.ejml.simple.SimpleMatrix;
 
-import scala.util.Random;
 import th4j.Tensor.DoubleTensor;
 
 import com.naef.jnlua.LuaState;
@@ -38,6 +37,11 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	 */
 	public static final String IN_SEP = "#IN#";
 	public static final String OUT_SEP = "#OUT#";
+	
+	/**
+	 * A special identifier for unknown input
+	 */
+	private static final Integer UNKNOWN = -1;
 	
 	/**
 	 * A LuaState instance for loading Lua scripts
@@ -126,7 +130,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	 * One for each input type (word, tag, etc.)
 	 */
 	private List<HashMap<String,Integer>> token2idxList;
-
+	
 	public MultiLayerPerceptron(HashMap<String, Object> config, int numLabels) {
 		super(config, numLabels);
 		this.optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
@@ -258,6 +262,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		List<List<Integer>> vocab = new ArrayList<List<Integer>>();
 		boolean first = true;
 		for (Object obj : input2id.keySet()) {
+			boolean isUnknown = false;
 			String input = (String) obj;
 			String[] inputPerType = input.split(OUT_SEP);
 			List<Integer> entry = new ArrayList<Integer>();
@@ -272,12 +277,29 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 				for (int j = 0; j < tokens.length; j++) {
 					String token = tokens[j];
 					if (!token2idx.containsKey(token)) {
-						inputDimList.set(i, inputDimList.get(i)+1);
-						int idx = NetworkConfig.IS_INDEXED_NEURAL_FEATURES? Integer.parseInt(token):token2idx.size();
-						token2idx.put(token, idx);
-						if (embeddingList.get(i).equals("glove")
-							|| embeddingList.get(i).equals("polyglot")) {
-							wordList.add(token);
+						if (isTraining) {
+							inputDimList.set(i, inputDimList.get(i)+1);
+							int idx = NetworkConfig.IS_INDEXED_NEURAL_FEATURES? Integer.parseInt(token):token2idx.size();
+							token2idx.put(token, idx);
+							if (embeddingList.get(i).equals("glove")
+								|| embeddingList.get(i).equals("polyglot")) {
+								wordList.add(token);
+							}
+						} else {
+							// Unseen
+							input2id.put(input, UNKNOWN);
+							boolean startDecrement = false;
+							for (Object _obj : input2id.keySet()) {
+								String _input = (String) _obj;
+								if (startDecrement) {
+									input2id.put(_input, input2id.get(_input)-1);
+								}
+								if (_input.equals(input)) {
+									startDecrement = true;
+								}
+							}
+							isUnknown = true;
+							break;
 						}
 					}
 					int idx = token2idx.get(token);
@@ -286,8 +308,13 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 					}
 					entry.add(idx);
 				}
+				if (isUnknown) {
+					break;
+				}
 			}
-			vocab.add(entry);
+			if (!isUnknown) {
+				vocab.add(entry);
+			}
 			first = false;
 		}
 		config.put("numInputList", numInputList);
@@ -304,7 +331,9 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		if (input != null) {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
 			int id = input2id.get(input);
-			val = forwardMatrix.get(id, outputLabel);
+			if (id != UNKNOWN) {
+				val = forwardMatrix.get(id, outputLabel);
+			}
 		}
 		return val;
 	}
@@ -353,22 +382,6 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		CommonOps_DDRM.mult(countOutputMatrix.getMatrix(), weightMatrix.getMatrix(), gradOutputMatrix.getMatrix());
 		// numLabel x inputSize * inputSize x hiddenSize
 		CommonOps_DDRM.mult(countWeightMatrix.getMatrix(), outputMatrix.getMatrix(), gradWeightMatrix.getMatrix());
-		
-//		double ds[] = new double[numLabels*vocabSize];
-		double ds[] = new double[vocabSize*hiddenSize];
-		int ptr = 0;
-		for(int i = 0; i < vocabSize; i++) {
-			for (int j = 0; j < hiddenSize; j++) {
-				ds[ptr++]=outputMatrix.get(i,j);
-			}
-		}
-		Arrays.sort(ds);
-		ptr = 1;
-		for(double d : ds) {
-			System.out.println(ptr+":"+d);
-			ptr++;
-		}
-		
 		gradOutputTensorBuffer.storage().copy(gradOutput);
 		
 		Object[] args = new Object[0];
