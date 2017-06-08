@@ -35,8 +35,8 @@ import com.statnlp.hybridnetworks.LocalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
-import com.statnlp.hybridnetworks.NodeHypothesis;
-import com.statnlp.hybridnetworks.ScoredIndex;
+import com.statnlp.hybridnetworks.decoding.NodeHypothesis;
+import com.statnlp.hybridnetworks.decoding.ScoredIndex;
 import com.statnlp.util.Pipeline;
 import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 

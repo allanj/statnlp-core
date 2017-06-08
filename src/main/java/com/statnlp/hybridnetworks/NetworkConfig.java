@@ -18,6 +18,8 @@ package com.statnlp.hybridnetworks;
 
 import java.lang.reflect.Field;
 
+import com.statnlp.hybridnetworks.decoding.Hypothesis;
+
 public class NetworkConfig {
 	
 	/**

@@ -23,13 +23,13 @@ import org.apache.logging.log4j.message.Message;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.example.base.TemplateBasedFeatureManager;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.NetworkModel.TrainingIterationInformation;
 import com.statnlp.hybridnetworks.StringIndex;
-import com.statnlp.hybridnetworks.TemplateBasedFeatureManager;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 import com.statnlp.util.instance_parser.InstanceParser;

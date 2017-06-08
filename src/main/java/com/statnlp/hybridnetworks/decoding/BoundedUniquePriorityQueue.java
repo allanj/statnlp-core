@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.statnlp.hybridnetworks;
+package com.statnlp.hybridnetworks.decoding;
 
 import java.util.Collection;
 import java.util.Comparator;

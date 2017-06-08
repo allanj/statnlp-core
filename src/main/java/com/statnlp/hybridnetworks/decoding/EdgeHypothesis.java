@@ -1,4 +1,4 @@
-package com.statnlp.hybridnetworks;
+package com.statnlp.hybridnetworks.decoding;
 
 import java.util.Arrays;
 

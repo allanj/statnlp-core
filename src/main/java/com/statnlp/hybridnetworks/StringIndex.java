@@ -11,7 +11,7 @@ import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
 /**
- * A class to store string indexes<br>
+ * A class to store string as integers<br>
  * This class is not thread-safe.
  * @author Aldrian Obaja (aldrianobaja.m@gmail.com)
  */

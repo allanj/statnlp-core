@@ -1,11 +1,13 @@
 /**
  * 
  */
-package com.statnlp.hybridnetworks;
+package com.statnlp.hybridnetworks.decoding;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+
+import com.statnlp.hybridnetworks.NetworkConfig;
 
 /**
  * This class represents a (possibly partial) hypothesis of
