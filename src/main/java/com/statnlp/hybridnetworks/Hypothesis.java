@@ -37,7 +37,7 @@ public abstract class Hypothesis {
 	 * Since this is a priority queue, the next best child is the one in front of the queue.<br>
 	 * This priority queue will always contains unique elements.
 	 */
-	protected Queue<ScoredIndex> nextBestChildQueue;
+	protected IUniquePriorityQueue<ScoredIndex> nextBestChildQueue;
 	/**
 	 * The cache to store the list of best children, which will contain the list of 
 	 * best children up to the highest k on which {@link #getKthBestHypothesis(int)} has been called.
