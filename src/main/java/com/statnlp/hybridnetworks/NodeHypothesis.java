@@ -57,7 +57,7 @@ public class NodeHypothesis extends Hypothesis{
 			// lastBestIndex[0].node_k and this NodeHypothesis, e is represented by this.children()[newIndex[0]],
 			// and j is represented by e.bestChildList.get(newIndex[1])
 			ScoredIndex nextBestCandidate = ScoredIndex.get(lastBestIndex.node_k, newIndex, (NodeHypothesis)this);
-			if(nextBestCandidate != null && !nextBestChildQueue.contains(nextBestCandidate)){
+			if(nextBestCandidate != null){
 				nextBestChildQueue.offer(nextBestCandidate);
 			}
 		}

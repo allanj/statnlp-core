@@ -4,6 +4,8 @@
 package com.statnlp.hybridnetworks;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
 
 /**
  * This class represents a (possibly partial) hypothesis of
@@ -31,24 +33,32 @@ public abstract class Hypothesis {
 	 */
 	protected boolean hasMoreHypothesis;
 	/**
-	 * The priority queue storing the possible next best child.
-	 * Since this is a priority queue, the next best child is the one in front of the queue.
+	 * The priority queue storing the possible next best child.<br>
+	 * Since this is a priority queue, the next best child is the one in front of the queue.<br>
+	 * This priority queue will always contains unique elements.
 	 */
-	protected BoundedPrioritySet<ScoredIndex> nextBestChildQueue;
+	protected Queue<ScoredIndex> nextBestChildQueue;
 	/**
 	 * The cache to store the list of best children, which will contain the list of 
 	 * best children up to the highest k on which {@link #getKthBestHypothesis(int)} has been called.
 	 */
-	protected ArrayList<ScoredIndex> bestChildrenList;
+	protected List<ScoredIndex> bestChildrenList;
 
 	protected void init() {
-		nextBestChildQueue = new BoundedPrioritySet<ScoredIndex>();
+		if(NetworkConfig.PRIORITY_QUEUE_SIZE_LIMIT > 0){
+			// Create a bounded priority queue
+			nextBestChildQueue = new BoundedUniquePriorityQueue<ScoredIndex>(NetworkConfig.PRIORITY_QUEUE_SIZE_LIMIT);
+		} else {
+			nextBestChildQueue = new UniquePriorityQueue<ScoredIndex>(1);
+		}
 		bestChildrenList = new ArrayList<ScoredIndex>();
 		hasMoreHypothesis = true;
 	}
 	
 	/**
-	 * Returns the k-th best path at this hypothesis.
+	 * Returns the k-th best path at this hypothesis.<br>
+	 * Note that k is 0-based, so having k=0 will give the best prediction,
+	 * k=1 will give the second best prediction, and so on.
 	 * @param k
 	 * @return
 	 */
@@ -109,7 +119,7 @@ public abstract class Hypothesis {
 		return bestChildrenList.get(bestChildrenList.size()-1);
 	}
 
-	public ArrayList<ScoredIndex> bestChildrenList() {
+	public List<ScoredIndex> bestChildrenList() {
 		return bestChildrenList;
 	}
 
@@ -117,11 +127,11 @@ public abstract class Hypothesis {
 		this.bestChildrenList = bestChildrenList;
 	}
 
-	public BoundedPrioritySet<ScoredIndex> nextBestChildQueue() {
+	public Queue<ScoredIndex> nextBestChildQueue() {
 		return nextBestChildQueue;
 	}
 
-	public void setNextBestChildQueue(BoundedPrioritySet<ScoredIndex> nextBestChildQueue) {
+	public void setNextBestChildQueue(BoundedUniquePriorityQueue<ScoredIndex> nextBestChildQueue) {
 		this.nextBestChildQueue = nextBestChildQueue;
 	}
 

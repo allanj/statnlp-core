@@ -73,7 +73,7 @@ public class EdgeHypothesis extends Hypothesis{
 				int[] newIndex = Arrays.copyOf(lastBestIndex.index, lastBestIndex.index.length);
 				newIndex[i] += 1;
 				ScoredIndex nextBestChildCandidate = ScoredIndex.get(nodeIndex, newIndex, (EdgeHypothesis)this);
-				if(nextBestChildCandidate != null && !nextBestChildQueue.contains(nextBestChildCandidate)){
+				if(nextBestChildCandidate != null){
 					nextBestChildQueue.offer(nextBestChildCandidate);
 				}
 			}

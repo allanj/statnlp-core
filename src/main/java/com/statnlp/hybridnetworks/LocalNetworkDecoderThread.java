@@ -141,7 +141,7 @@ public class LocalNetworkDecoderThread extends Thread{
 				// Try calling the implementation for top-K decompiler (not decoding)
 				return this._compiler.decompile(network, numPredictionsGenerated);
 			} catch (UnsupportedOperationException e){
-				// If not implemented, then do a hack by changing the max array into the k-th best prediction
+				// If not implemented, then do a workaround by changing the max array into the k-th best prediction
 				// Then call decompile to get the k-th best structure.
 				Instance result = this._compiler.decompile(network);
 				List<Object> topKPredictions = new ArrayList<>();

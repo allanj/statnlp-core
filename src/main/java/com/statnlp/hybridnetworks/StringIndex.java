@@ -131,10 +131,8 @@ public class StringIndex implements Serializable {
 	 */
 	public void buildReverseIndex(){
 		array = new String[index.size()];
-		TObjectIntIterator<String> iter = index.iterator();
-		while(iter.hasNext()){
-			iter.advance();
-			array[iter.value()] = iter.key();
+		for(Object key: index.keys()){
+			array[index.get(key)] = (String)key;
 		}
 	}
 	
