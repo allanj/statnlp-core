@@ -93,7 +93,7 @@ public class LocalNetworkParam implements Serializable{
 			this._globalMode = true;
 		}
 		
-		this._stringIndex = new StringIndex();
+		this._stringIndex = new StringIndex(numNetworks*100);
 
 	}
 	

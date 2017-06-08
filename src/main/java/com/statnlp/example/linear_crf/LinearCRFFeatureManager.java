@@ -138,6 +138,10 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		}
 	}
 
+	public LinearCRFFeatureManager(Pipeline<?> pipeline){
+		this(pipeline.param, pipeline.instanceParser);
+	}
+
 	/**
 	 * Enables the specified feature type.
 	 * @param featureType
@@ -163,10 +167,6 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		return featureTypes.get(featureType);
 	}
 	
-	public LinearCRFFeatureManager(Pipeline<?> pipeline){
-		this(pipeline.param, pipeline.instanceParser);
-	}
-
 	@Override
 	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k) {
 		GlobalNetworkParam param_g = this._param_g;

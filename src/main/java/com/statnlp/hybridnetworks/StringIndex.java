@@ -196,8 +196,8 @@ public class StringIndex implements Serializable {
 	 */
 	public static StringIndex merge(StringIndex... indexes){
 		int totalSize = 0;
-		for(StringIndex index: indexes){
-			totalSize += index.size();
+		for(int i=0; i<indexes.length; i++){
+			totalSize += indexes[i].size(); // Usually there are not much overlap
 		}
 		StringIndex result = new StringIndex(totalSize);
 		for(StringIndex index: indexes){
