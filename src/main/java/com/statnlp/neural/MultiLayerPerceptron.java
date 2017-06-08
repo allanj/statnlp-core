@@ -184,9 +184,9 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 			List<Integer> embSizeList = (List<Integer>) config.get("embSizeList");
 			for (int i = 0; i < token2idxList.size(); i++) {
 				if (embSizeList.get(i) != 0) {
-					totalInputDim += embSizeList.get(i);
+					totalInputDim += embSizeList.get(i) * numInputList.get(i);
 				} else {
-					totalInputDim += token2idxList.get(i).size();
+					totalInputDim += token2idxList.get(i).size() * numInputList.get(i);
 				}
 			}
 			
