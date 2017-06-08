@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
+import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 import com.statnlp.util.GenericPipeline;
@@ -18,7 +20,6 @@ import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 public class LinearCRFMain {
 	
 	public static void main(String args[]) throws IOException, InterruptedException{
-		Thread.sleep(2000);
 		GenericPipeline pipeline = new GenericPipeline();
 		DelimiterBasedInstanceParser parser = new DelimiterBasedInstanceParser(pipeline){
 			private static final long serialVersionUID = -6995904257432947531L;
@@ -41,11 +42,13 @@ public class LinearCRFMain {
 		parser.getLabel("I-ORG");
 		pipeline.withTrainPath("data/CoNLL2003/eng.train")
 				.withNumTrain(1000)
+//				.withDevPath("data/CoNLL2003/eng.testa")
+//				.withNumDev(100)
 				.withTestPath("data/CoNLL2003/eng.testb")
 				.withNumTest(100)
-//				.withDevPath("data/CoNLL2003/eng.train")
-//				.withNumDev(1)
 				.withInstanceParser(parser)
+				.withNetworkCompiler(LinearCRFNetworkCompiler.class)
+				.withFeatureManager(LinearCRFFeatureManager.class)
 				.withModelPath("test.model")
 				.withLogPath("test.log")
 				.withL2(0.0001)
@@ -63,7 +66,6 @@ public class LinearCRFMain {
 				.withWriteModelAsText(true)
 				.addTask("train")
 				.addTasks("test", "evaluate")
-//				.addTask("visualize")
 				;
 		pipeline.execute();
 		return;
