@@ -7,6 +7,7 @@ import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
@@ -194,9 +195,15 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 			this.weights = weightDMatrix.data;
 			
 			// Initialize weight matrix
+			double stdv = 1.0/Math.sqrt(getHiddenSize());
 			for(int i = 0; i < weights.length; i++) {
-				weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
-					NetworkConfig.FEATURE_INIT_WEIGHT;
+				if (NetworkConfig.NEURAL_RANDOM_TYPE.equals("xavier")) {
+					weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? -stdv + 2 * stdv * rng.nextDouble() :
+						NetworkConfig.FEATURE_INIT_WEIGHT;
+				} else {
+					weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
+						NetworkConfig.FEATURE_INIT_WEIGHT;
+				}
 			}
 			DMatrixRMaj gradWeightDMatrix = this.gradWeightMatrix.getMatrix();
 			this.gradWeights = gradWeightDMatrix.data;
@@ -236,10 +243,6 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 			this.gradParamsTensor = (DoubleTensor) outputs[1];
 			if (this.paramsTensor.nElement() > 0) {
 				this.params = getArray(this.paramsTensor);
-				for(int i = 0; i < this.params.length; i++) {
-					this.params[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
-						NetworkConfig.FEATURE_INIT_WEIGHT;
-				}
 				this.gradParams = getArray(this.gradParamsTensor);
 			}
 		}
@@ -346,10 +349,27 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	
 	@Override
 	public void backward() {
-		gradOutputTensorBuffer.storage().copy(gradOutput);
-		
+		// inputSize x numLabel * numLabel x hiddenSize
 		CommonOps_DDRM.mult(countOutputMatrix.getMatrix(), weightMatrix.getMatrix(), gradOutputMatrix.getMatrix());
+		// numLabel x inputSize * inputSize x hiddenSize
 		CommonOps_DDRM.mult(countWeightMatrix.getMatrix(), outputMatrix.getMatrix(), gradWeightMatrix.getMatrix());
+		
+//		double ds[] = new double[numLabels*vocabSize];
+		double ds[] = new double[vocabSize*hiddenSize];
+		int ptr = 0;
+		for(int i = 0; i < vocabSize; i++) {
+			for (int j = 0; j < hiddenSize; j++) {
+				ds[ptr++]=outputMatrix.get(i,j);
+			}
+		}
+		Arrays.sort(ds);
+		ptr = 1;
+		for(double d : ds) {
+			System.out.println(ptr+":"+d);
+			ptr++;
+		}
+		
+		gradOutputTensorBuffer.storage().copy(gradOutput);
 		
 		Object[] args = new Object[0];
 		Class<?>[] retTypes = new Class[0];

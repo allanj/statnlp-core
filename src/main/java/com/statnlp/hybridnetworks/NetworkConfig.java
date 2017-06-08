@@ -216,6 +216,8 @@ public class NetworkConfig {
 	/** Randomly choose the batch at every iteration. (false may give better result) */
 	public static boolean RANDOM_BATCH = false;
 	
+	public static String NEURAL_RANDOM_TYPE = "default";
+	
 	/***
 	 * Mean field-related flags.
 	 */

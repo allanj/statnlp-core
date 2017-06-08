@@ -54,6 +54,7 @@ function MultiLayerPerceptron:initialize(javadata, ...)
         print(self.net)
 
         self.params, self.gradParams = self.net:getParameters()
+        self.params:fill(0.1)
         if doOptimization then
             self:createOptimizer()
             -- no return array if optim is done here

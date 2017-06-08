@@ -25,7 +25,7 @@ import com.statnlp.neural.MultiLayerPerceptron;
 
 public class LinearNEMain {
 	
-	public static boolean DEBUG = false;
+	public static boolean DEBUG = true;
 
 	public static int trainNumber = -100;
 	public static int testNumber = -100;
@@ -63,7 +63,6 @@ public class LinearNEMain {
 		if (DEBUG) {
 			NetworkConfig.RANDOM_INIT_WEIGHT = false;
 			NetworkConfig.FEATURE_INIT_WEIGHT = 0.1;
-			NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.0;
 		}
 		
 		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory());
