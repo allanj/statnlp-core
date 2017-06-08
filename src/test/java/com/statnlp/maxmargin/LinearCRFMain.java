@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
+import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 import com.statnlp.util.GenericPipeline;

@@ -615,6 +615,7 @@ public abstract class NetworkModel implements Serializable{
 		
 		System.err.println("Okay. Decoding started.");
 		
+		printUsedMemory("before decode");
 		long time = System.currentTimeMillis();
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
 			this._decoders[threadId].start();
@@ -622,6 +623,7 @@ public abstract class NetworkModel implements Serializable{
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
 			this._decoders[threadId].join();
 		}
+		printUsedMemory("after decode");
 		
 		System.err.println("Okay. Decoding done.");
 		time = System.currentTimeMillis() - time;

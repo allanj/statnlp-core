@@ -49,7 +49,10 @@ public abstract class Hypothesis {
 			// Create a bounded priority queue
 			nextBestChildQueue = new BoundedUniquePriorityQueue<ScoredIndex>(NetworkConfig.PRIORITY_QUEUE_SIZE_LIMIT);
 		} else {
-			nextBestChildQueue = new UniquePriorityQueue<ScoredIndex>(1);
+			// Create a priority queue
+			// Initialized with size 2 since most applications only need 1-best
+			// And based on experiments, somehow initializing with size 2 uses less memory compared to size 1.
+			nextBestChildQueue = new UniquePriorityQueue<ScoredIndex>(2);
 		}
 		bestChildrenList = new ArrayList<ScoredIndex>();
 		hasMoreHypothesis = true;
