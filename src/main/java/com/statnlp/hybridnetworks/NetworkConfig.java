@@ -18,6 +18,8 @@ package com.statnlp.hybridnetworks;
 
 import java.lang.reflect.Field;
 
+import com.statnlp.hybridnetworks.decoding.Hypothesis;
+
 public class NetworkConfig {
 	
 	/**
@@ -197,15 +199,27 @@ public class NetworkConfig {
 	/** Decoding the max-marginal for each node as well. if set to true */
 	public static boolean MAX_MARGINAL_DECODING = false;
 	
+	/**
+	 * Enumerates the supported inference type
+	 */
 	public static enum InferenceType {
 		MEAN_FIELD,
-		FORWARD_BACKWARD;
-		private InferenceType(){
-			
-		}
+		FORWARD_BACKWARD
+		;
 	}
 	
+	/**
+	 * The inference type of the model.
+	 */
 	public static InferenceType INFERENCE = InferenceType.FORWARD_BACKWARD;
+	
+	/**
+	 * Limit the size of the priority queue used in {@link Hypothesis} class when decoding.<br>
+	 * Setting this to 0 will remove the limit, making the data structure slightly faster.<br>
+	 * The size limit of the priority queue will also affect the highest supported k in top-k decoding,
+	 * with <br>
+	 */
+	public static int PRIORITY_QUEUE_SIZE_LIMIT = 0;
 	
 	/***
 	 * Neural network related flags.

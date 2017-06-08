@@ -23,13 +23,13 @@ import org.apache.logging.log4j.message.Message;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.example.base.TemplateBasedFeatureManager;
 import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.NetworkModel.TrainingIterationInformation;
 import com.statnlp.hybridnetworks.StringIndex;
-import com.statnlp.hybridnetworks.TemplateBasedFeatureManager;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 import com.statnlp.util.instance_parser.InstanceParser;
@@ -599,7 +599,7 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 
 	}
 
-	protected Instance[] getInstancesForTraining(){
+	public Instance[] getInstancesForTraining(){
 		if(hasParameter("trainInstances")){
 			return getParameter("trainInstances");
 		}
@@ -622,7 +622,7 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 		}
 	}
 
-	protected Instance[] getInstancesForTuning(){
+	public Instance[] getInstancesForTuning(){
 		if(hasParameter("devInstances")){
 			return getParameter("devInstances");
 		}
@@ -645,7 +645,7 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 		}
 	}
 
-	protected Instance[] getInstancesForTesting(){
+	public Instance[] getInstancesForTesting(){
 		if(hasParameter("testInstances")){
 			return getParameter("testInstances");
 		}
@@ -672,15 +672,15 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 	 * @see com.statnlp.util.Pipeline#getInstancesForEvaluation()
 	 */
 	@Override
-	protected Instance[] getInstancesForEvaluation() {
-		return getParameter("testInstances");
+	public Instance[] getInstancesForEvaluation() {
+		return getInstancesForTesting();
 	}
 
 	/* (non-Javadoc)
 	 * @see com.statnlp.util.Pipeline#getInstancesForEvaluation()
 	 */
 	@Override
-	protected Instance[] getInstancesForVisualization() {
+	public Instance[] getInstancesForVisualization() {
 		Instance[] result = getParameter("trainInstances");
 		if(result == null){
 			result = getParameter("devInstances");
@@ -749,7 +749,7 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 	protected void test(Instance[] testInstances) {
 		long duration = System.nanoTime();
 		try {
-			Instance[] instanceWithPredictions = networkModel.decode(testInstances);
+			Instance[] instanceWithPredictions = networkModel.decode(testInstances, (int)getParameter("predictTopK"));
 			duration = System.nanoTime() - duration;
 			setParameter("testInstances", instanceWithPredictions);
 		} catch (InterruptedException e) {
@@ -770,7 +770,8 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 			try{
 				corr += linInstance.countNumCorrectlyPredicted();
 			} catch (IndexOutOfBoundsException e){
-				throw new RuntimeException("This is usually caused by different number of predictions "
+				throw new RuntimeException("IndexOutOfBoundsException occurred. "
+						+ "This is usually caused by different number of predictions "
 						+ "compared to gold. The default evaluation procedure assumes tagging task, "
 						+ "with the same number of predictions. You can create custom evaluation procedure "
 						+ "by either overriding the evaluate(Instance[]) function in a subclass of GenericPipeline, "

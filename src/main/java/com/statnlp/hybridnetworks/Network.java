@@ -7,6 +7,9 @@ import java.util.NoSuchElementException;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
+import com.statnlp.hybridnetworks.decoding.EdgeHypothesis;
+import com.statnlp.hybridnetworks.decoding.NodeHypothesis;
+import com.statnlp.hybridnetworks.decoding.ScoredIndex;
 
 /**
  * The base class for representing networks. This class is equipped with algorithm to calculate the 
@@ -320,8 +323,8 @@ public abstract class Network implements Serializable, HyperGraph{
 		try{
 			EdgeHypothesis edge = node.children()[bestPath.index[0]];
 			ScoredIndex score = edge.getKthBestHypothesis(bestPath.index[1]);
-			ScoredIndex[] result = new ScoredIndex[edge.children.length];
-			for(int i=0; i<edge.children.length; i++){
+			ScoredIndex[] result = new ScoredIndex[edge.children().length];
+			for(int i=0; i<edge.children().length; i++){
 				result[i] = edge.children()[i].getKthBestHypothesis(score.index[i]);
 			}
 			return result;
@@ -904,8 +907,8 @@ public abstract class Network implements Serializable, HyperGraph{
 //			System.out.println("Edges: "+Arrays.toString(childrenOfThisNodeHypothesis));
 //			System.out.println(bestPath);
 			EdgeHypothesis edge = this._hypotheses[k].children()[bestPath.index[0]];
-			this._max_paths[k] = new int[edge.children.length];
-			for(int i=0; i<edge.children.length; i++){
+			this._max_paths[k] = new int[edge.children().length];
+			for(int i=0; i<edge.children().length; i++){
 				this._max_paths[k][i] = edge.children()[i].nodeIndex();
 			}
 			this._max[k] = bestPath.score;

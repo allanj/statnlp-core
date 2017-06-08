@@ -34,8 +34,6 @@ import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.neural.RemoteNN;
 
-import gnu.trove.iterator.TIntIntIterator;
-import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
@@ -164,8 +162,8 @@ public class GlobalNetworkParam implements Serializable{
 		this._stringIndex.lock();
 	}
 	
-	public synchronized int toInt(String s){
-		return this._stringIndex.getOrPut(s);
+	public int toInt(String s){
+		return this._stringIndex.get(s);
 	}
 	
 	public StringIndex getStringIndex(){
@@ -314,17 +312,11 @@ public class GlobalNetworkParam implements Serializable{
 		
 		System.err.println("==EXPANDING THE FEATURES===");
 		System.err.println("Before expansion:"+this.size());
-		TIntObjectIterator<TIntObjectHashMap<TIntIntHashMap>> type_ids = this._featureIntMap.iterator();
-		while(type_ids.hasNext()){
-			type_ids.advance();
-			Integer type_id = type_ids.key();
+		for(int type_id: this._featureIntMap.keys()){
 			TIntObjectHashMap<TIntIntHashMap> outputId2inputId = this._featureIntMap.get(type_id);
 			ArrayList<Integer> input_ids = this._type2inputMap.get(type_id);
 			System.err.println("Feature of type "+type_id+" has "+input_ids.size()+" possible inputs.");
-			TIntObjectIterator<TIntIntHashMap> output_ids = outputId2inputId.iterator();
-			while(output_ids.hasNext()){
-				output_ids.advance();
-				Integer output_id = output_ids.key();
+			for(int output_id: outputId2inputId.keys()){
 				for(int input_id : input_ids){
 					this.toFeature(null, type_id, output_id, input_id);
 				}
@@ -404,20 +396,11 @@ public class GlobalNetworkParam implements Serializable{
 		 * **/
 		if(this._storeFeatureReps){
 			this._feature2rep = new int[this._size][];
-			TIntObjectIterator<TIntObjectHashMap<TIntIntHashMap>> types = this._featureIntMap.iterator();
-			while(types.hasNext()){
-				types.advance();
-				int type = types.key();
+			for(int type: this._featureIntMap.keys()){
 				TIntObjectHashMap<TIntIntHashMap> output2input = this._featureIntMap.get(type);
-				TIntObjectIterator<TIntIntHashMap> outputs = output2input.iterator();
-				while(outputs.hasNext()){
-					outputs.advance();
-					int output = outputs.key();
+				for(int output: output2input.keys()){
 					TIntIntHashMap input2id = output2input.get(output);
-					TIntIntIterator inputs = input2id.iterator();
-					while(inputs.hasNext()){
-						inputs.advance();
-						int input = inputs.key();
+					for(int input: input2id.keys()){
 						int id = input2id.get(input);
 						this._feature2rep[id] = new int[]{type, output, input};
 					}
@@ -617,63 +600,22 @@ public class GlobalNetworkParam implements Serializable{
 	 * 		   is less than {@link NetworkConfig#objtol}, false otherwise.
 	 */
 	private boolean updateGenerative(){
-		
-		TIntObjectIterator<TIntObjectHashMap<TIntIntHashMap>> types = this._featureIntMap.iterator();
-		while(types.hasNext()){
-			types.advance();
-			int type = types.key();
+		for(int type: this._featureIntMap.keys()){
 			TIntObjectHashMap<TIntIntHashMap> output2input = this._featureIntMap.get(type);
-			
-			TIntObjectIterator<TIntIntHashMap> outputs = output2input.iterator();
-			while(outputs.hasNext()){
-				outputs.advance();
-				Integer output = outputs.key();
-				
+			for(int output: output2input.keys()){
 				TIntIntHashMap input2feature;
-				TIntIntIterator inputs;
-				
 				double sum = 0;
 				input2feature = output2input.get(output);
-				inputs = input2feature.iterator();
-				while(inputs.hasNext()){
-					inputs.advance();
-					Integer input = inputs.key();
+				for(int input: input2feature.keys()){
 					int feature = input2feature.get(input);
 					sum += this.getCount(feature);
-					
-//					if(output.indexOf("*n:PlaceName -> ({ ' death valley ' })")!=-1){
-//						System.err.println(Arrays.toString(this.getFeatureRep(feature))+"\t"+Math.exp(this.getWeight(feature)));
-//					}
-					
-//					if(type.equals("emission")){
-//						if(!word2count.containsKey(input)){
-//							word2count.put(input, 0.0);
-//						}
-//						double oldCount = word2count.get(input);
-//						word2count.put(input, oldCount+this.getCount(feature));
-//					}
 				}
 				
-//				if(Math.abs(1-sum)>1E-12){
-//					System.err.println("sum="+sum+"\t"+type+"\t"+output);
-//				}
-				
 				input2feature = output2input.get(output);
-				inputs = input2feature.iterator();
-				while(inputs.hasNext()){
-					inputs.advance();
-					Integer input = inputs.key();
+				for(int input: input2feature.keys()){
 					int feature = input2feature.get(input);
 					double value = sum != 0 ? this.getCount(feature)/sum : 1.0/input2feature.size();
 					this.setWeight(feature, Math.log(value));
-					
-//					if(value>1E-15)
-//					{
-//						String s = Arrays.toString(this.getFeatureRep(feature));
-//						if(s.indexOf("transition")!=-1 && s.indexOf("low_point_1")!=-1){
-//							System.err.println(s+"\t"+value);
-//						}
-//					}
 					
 					if(Double.isNaN(Math.log(value))){
 						throw new RuntimeException("x"+value+"\t"+this.getCount(feature)+"/"+sum+"\t"+input2feature.size());

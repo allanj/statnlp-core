@@ -24,7 +24,6 @@ import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
 
 import gnu.trove.iterator.TLongIterator;
-import gnu.trove.iterator.TLongObjectIterator;
 import gnu.trove.map.hash.TLongIntHashMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
 
@@ -430,10 +429,8 @@ public abstract class TableLookupNetwork extends Network{
 		long[] nodes = new long[this.countTmpNodes_tmp()];
 		double[] validity = new double[this.countTmpNodes_tmp()];
 		int v = 0;
-		TLongObjectIterator<ArrayList<long[]>> nodes_it = this._children_tmp.iterator();
-		while(nodes_it.hasNext()){
-			nodes_it.advance();
-			nodes[v++] = nodes_it.key();
+		for(long node: this._children_tmp.keys()){
+			nodes[v++] = node;
 		}
 		Arrays.sort(nodes);
 		this.checkValidityHelper(validity, nodes, this.countTmpNodes_tmp()-1);
@@ -472,18 +469,16 @@ public abstract class TableLookupNetwork extends Network{
 	 */
 	@Deprecated
 	public void finalizeNetwork(){
-		TLongObjectIterator<ArrayList<long[]>> node_ids = this._children_tmp.iterator();
-		ArrayList<Long> values = new ArrayList<Long>();
-		while(node_ids.hasNext()){
-			node_ids.advance();
-			values.add(node_ids.key());
+		ArrayList<Long> nodes = new ArrayList<Long>();
+		for(long node: this._children_tmp.keys()){
+			nodes.add(node);
 		}
-		this._nodes = new long[this._children_tmp.keySet().size()];
+		Collections.sort(nodes);
+		this._nodes = new long[this._children_tmp.size()];
 		this.isVisible = new boolean[this._nodes.length];
 		TLongIntHashMap nodesValue2IdMap = new TLongIntHashMap();
-		Collections.sort(values);
-		for(int k = 0 ; k<values.size(); k++){
-			this._nodes[k] = values.get(k);
+		for(int k = 0 ; k<this._nodes.length; k++){
+			this._nodes[k] = nodes.get(k);
 			this.isVisible[k] = true;
 			nodesValue2IdMap.put(this._nodes[k], k);
 		}
@@ -494,13 +489,14 @@ public abstract class TableLookupNetwork extends Network{
 		this._children = new int[this._nodes.length][][];
 		
 		//TLongObjectHashMap<ArrayList<long[]>>
-		TLongObjectIterator<ArrayList<long[]>> parents = this._children_tmp.iterator();
-		while(parents.hasNext()){
-			parents.advance();
-			long parent = parents.key();
+		for(long parent: this._children_tmp.keys()){
 			int parent_index = nodesValue2IdMap.get(parent);
 			ArrayList<long[]> childrens = this._children_tmp.get(parent);
 			if(childrens==null){
+				// If any node has no child edge, assume there is one edge with no child node
+				// This is done so that every node is visited in the feature extraction step
+				// This is consistent with what's written in http://portal.acm.org/citation.cfm?doid=1654494.1654500
+				// See Definition 3 on "source vertex"
 				this._children[parent_index] = new int[1][0];
 			} else {
 				this._children[parent_index] = new int[childrens.size()][];
@@ -516,15 +512,6 @@ public abstract class TableLookupNetwork extends Network{
 					}
 					this._children[parent_index][k] = children_index;
 				}
-			}
-		}
-		// If any node has no child edge, assume there is one edge with no child node
-		// This is done so that every node is visited in the feature extraction step
-		// This is consistent with what's written in http://portal.acm.org/citation.cfm?doid=1654494.1654500
-		// See Definition 3 on "source vertex"
-		for(int k = 0 ; k<this._children.length; k++){
-			if(this._children[k]==null){
-				this._children[k] = new int[1][0];
 			}
 		}
 		this._children_tmp = null;

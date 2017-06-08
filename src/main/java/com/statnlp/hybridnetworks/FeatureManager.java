@@ -28,8 +28,6 @@ import java.util.Iterator;
 import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.util.instance_parser.InstanceParser;
 
-import gnu.trove.iterator.TIntIntIterator;
-import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
@@ -257,24 +255,15 @@ public abstract class FeatureManager implements Serializable{
 	protected void completeType2Int(){
 		TIntObjectHashMap<TIntObjectHashMap<TIntIntHashMap>> globalMap = this._param_g._featureIntMap;
 		TIntObjectHashMap<ArrayList<Integer>> type2Input = this._param_g._type2inputMap;
-		TIntObjectIterator<TIntObjectHashMap<TIntIntHashMap>> iterType = globalMap.iterator();
-		while(iterType.hasNext()){
-			iterType.advance();
-			int type = iterType.key();
+		for(int type: globalMap.keys()){
 			if(!type2Input.containsKey(type)){
 				type2Input.put(type, new ArrayList<Integer>());
 			}
+			ArrayList<Integer> inputs = type2Input.get(type);
 			TIntObjectHashMap<TIntIntHashMap> output2input  = globalMap.get(type);
-			TIntObjectIterator<TIntIntHashMap> iterOutput = output2input.iterator();
-			while(iterOutput.hasNext()){
-				iterOutput.advance();
-				int output = iterOutput.key();
+			for(int output: output2input.keys()){
 				TIntIntHashMap input2int = output2input.get(output);
-				TIntIntIterator iterInput = input2int.iterator();
-				while(iterInput.hasNext()){
-					iterInput.advance();
-					int input = iterInput.key();
-					ArrayList<Integer> inputs = type2Input.get(type);
+				for(int input: input2int.keys()){
 					int index = Collections.binarySearch(inputs, input);
 					if(index<0){
 						inputs.add(-1-index, input);

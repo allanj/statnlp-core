@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.statnlp.hybridnetworks;
+package com.statnlp.example.base;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -13,6 +13,10 @@ import java.util.Map;
 import java.util.Scanner;
 
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.hybridnetworks.FeatureArray;
+import com.statnlp.hybridnetworks.FeatureManager;
+import com.statnlp.hybridnetworks.GlobalNetworkParam;
+import com.statnlp.hybridnetworks.Network;
 import com.statnlp.util.Pipeline;
 
 /**

@@ -529,19 +529,57 @@ public abstract class NetworkModel implements Serializable{
 		}
 	}
 	
-	public Instance[] decode(Instance[] allInstances) throws InterruptedException {
-		return decode(allInstances, false);
+	/**
+	 * Decodes the instances based on the learned parameters.<br>
+	 * The predictions can be obtained through {@link Instance#getPrediction()}.
+	 * @param instances The instances to be decoded.
+	 * @return The same instance array, with the {@code prediction} field assigned.
+	 * @throws InterruptedException
+	 */
+	public Instance[] decode(Instance[] instances) throws InterruptedException {
+		return decode(instances, false);
 	}
-	
-	public Instance[] decode(Instance[] allInstances, boolean cacheFeatures) throws InterruptedException{
-		return decode(allInstances, cacheFeatures, 1);
+
+	/**
+	 * Decodes the instances based on the learned parameters, caching the features extracted.<br>
+	 * The caching is useful if one needs to decode the instances multiple times after changing some 
+	 * of the parameters (e.g., for tuning).<br>
+	 * The predictions can be obtained through {@link Instance#getPrediction()}.
+	 * @param instances The instances to be decoded.
+	 * @param cacheFeatures Whether to cache the features from the instances.
+	 * @return The same instance array, with the {@code prediction} field assigned.
+	 * @throws InterruptedException
+	 */
+	public Instance[] decode(Instance[] instances, boolean cacheFeatures) throws InterruptedException{
+		return decode(instances, cacheFeatures, 1);
 	}
-	
-	public Instance[] decode(Instance[] allInstances, int numPredictionsGenerated) throws InterruptedException {
-		return decode(allInstances, false, numPredictionsGenerated);
+
+	/**
+	 * Decodes the instances based on the learned parameters, taking the top-k structures.<br>
+	 * The best predictions can be obtained through {@link Instance#getPrediction()},
+	 * while the top-k predictions can be obtained through {@link Instance#getTopKPredictions()}.
+	 * @param instances The instances to be decoded.
+	 * @param numPredictionsGenerated The number of top-k structures to be decoded.
+	 * @return The same instance array, with the {@code prediction} field assigned.
+	 * @throws InterruptedException
+	 */
+	public Instance[] decode(Instance[] instances, int numPredictionsGenerated) throws InterruptedException {
+		return decode(instances, false, numPredictionsGenerated);
 	}
-	
-	public Instance[] decode(Instance[] allInstances, boolean cacheFeatures, int numPredictionsGenerated) throws InterruptedException{
+
+	/**
+	 * Decodes the instances based on the learned parameters, taking the top-k structures, caching the features extracted.<br>
+	 * The caching is useful if one needs to decode the instances multiple times after changing some 
+	 * of the parameters (e.g., for tuning).<br>
+	 * The best predictions can be obtained through {@link Instance#getPrediction()},
+	 * while the top-k predictions can be obtained through {@link Instance#getTopKPredictions()}.
+	 * @param instances The instances to be decoded.
+	 * @param cacheFeatures Whether to cache the features from the instances.
+	 * @param numPredictionsGenerated The number of top-k structures to be decoded.
+	 * @return The same instance array, with the {@code prediction} field assigned.
+	 * @throws InterruptedException
+	 */
+	public Instance[] decode(Instance[] instances, boolean cacheFeatures, int numPredictionsGenerated) throws InterruptedException{
 		
 //		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
 //			this._fm.getParam_G().expandFeaturesForGenerativeModelDuringTesting();
@@ -550,17 +588,17 @@ public abstract class NetworkModel implements Serializable{
 		this._numThreads = NetworkConfig.NUM_THREADS;
 		System.err.println("#threads:"+this._numThreads);
 		
-		Instance[] results = new Instance[allInstances.length];
+		Instance[] results = new Instance[instances.length];
 		
 		//all the instances.
-		this._allInstances = allInstances;
+		this._allInstances = instances;
 		
 		//create the threads.
 		if(this._decoders == null || !cacheFeatures){
 			this._decoders = new LocalNetworkDecoderThread[this._numThreads];
 		}
 		
-		Instance[][] insts = this.splitInstancesForTest(allInstances);
+		Instance[][] insts = this.splitInstancesForTest(instances);
 		
 		//distribute the works into different threads.
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
@@ -577,6 +615,7 @@ public abstract class NetworkModel implements Serializable{
 		
 		System.err.println("Okay. Decoding started.");
 		
+		printUsedMemory("before decode");
 		long time = System.currentTimeMillis();
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
 			this._decoders[threadId].start();
@@ -584,6 +623,7 @@ public abstract class NetworkModel implements Serializable{
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
 			this._decoders[threadId].join();
 		}
+		printUsedMemory("after decode");
 		
 		System.err.println("Okay. Decoding done.");
 		time = System.currentTimeMillis() - time;
