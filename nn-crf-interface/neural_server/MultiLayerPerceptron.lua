@@ -243,7 +243,6 @@ function MultiLayerPerceptron:forward(isTraining)
     if self.fixInputLayer then
         input_x = inputLayer:forward(x)
     end
-    for i=1,#input_x do print(input_x[i]) end
     local output = mlp:forward(input_x)
     if not self.outputPtr:isSameSizeAs(output) then
         self.outputPtr:resizeAs(output)
@@ -258,8 +257,9 @@ function MultiLayerPerceptron:backward()
     if self.fixInputLayer then
         input_x = self.inputLayer:forward(x)
     end
-    for i=1,#input_x do print(input_x[i]) end
-    self.net:backward(input_x, self.gradOutputPtr)
+    if self.net:get(1) ~= nil then
+        self.net:backward(input_x, self.gradOutputPtr)
+    end
     if self.doOptimization then
         self.optimizer(self.feval, self.params, self.optimState)
     end

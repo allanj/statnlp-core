@@ -367,7 +367,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 			int id = input2id.get(input);
 			synchronized (countOutputMatrix) {
 				double countOutput = countOutputMatrix.get(id, outputLabel);
-				countOutputMatrix.set(id, outputLabel, countOutput+count);
+				countOutputMatrix.set(id, outputLabel, countOutput-count);
 			}
 			synchronized (countWeightMatrix) {
 				double countWeight = countWeightMatrix.get(outputLabel, id);
