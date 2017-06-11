@@ -274,7 +274,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 			int row = sentAndPos.getValue()*numSent+sentID; 
 			synchronized (countOutputMatrix) {
 				double countOutput = countOutputMatrix.get(row, outputLabel);
-				countOutputMatrix.set(row, outputLabel, countOutput+count);
+				countOutputMatrix.set(row, outputLabel, countOutput-count);
 			}
 			synchronized (countWeightMatrix) {
 				double countWeight = countWeightMatrix.get(outputLabel, row);
@@ -285,12 +285,11 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 
 	@Override
 	public void backward() {
-		gradOutputTensorBuffer.storage().copy(gradOutput);
-		
 		// (vocabSize x numLabels) * (numLabels x hiddenSize)
 		CommonOps_DDRM.mult(countOutputMatrix.getMatrix(), weightMatrix.getMatrix(), gradOutputMatrix.getMatrix());
 		// (numLabels x vocabSize) * (vocabSize x hiddenSize)
 		CommonOps_DDRM.mult(countWeightMatrix.getMatrix(), outputMatrix.getMatrix(), gradWeightMatrix.getMatrix());
+		gradOutputTensorBuffer.storage().copy(gradOutput);
 		
 		Object[] args = new Object[]{};
 		Class<?>[] retTypes = new Class[0];
