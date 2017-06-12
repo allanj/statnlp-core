@@ -14,6 +14,7 @@ function BidirectionalLSTM:initialize(javadata, ...)
     data.sentences = listToTable(javadata:get("sentences"))
     data.hiddenSize = javadata:get("hiddenSize")
     data.optimizer = javadata:get("optimizer")
+    self.isForwardOnly = javadata:get("isForwardOnly")
 
     local isTraining = javadata:get("isTraining")
     self.isTraining = isTraining
@@ -68,10 +69,13 @@ function BidirectionalLSTM:createNetwork()
     local fwdSeq = nn.Sequencer(fwd)
 
     -- backward rnn (will be applied in reverse order of input sequence)
-    local bwd = nn.Sequential()
-       :add(sharedLookupTable:sharedClone())
-       :add(nn.FastLSTM(hiddenSize, hiddenSize):maskZero(1))
-    local bwdSeq = nn.Sequencer(bwd)
+    local bwd, bwdSeq
+    if not self.isForwardOnly then
+        bwd = nn.Sequential()
+           :add(sharedLookupTable:sharedClone())
+           :add(nn.FastLSTM(hiddenSize, hiddenSize):maskZero(1))
+        bwdSeq = nn.Sequencer(bwd)
+    end
 
     -- merges the output of one time-step of fwd and bwd rnns.
     -- You could also try nn.AddTable(), nn.Identity(), etc.
@@ -81,7 +85,10 @@ function BidirectionalLSTM:createNetwork()
     -- Assume that two input sequences are given (original and reverse, both are right-padded).
     -- Instead of ConcatTable, we use ParallelTable here.
     local parallel = nn.ParallelTable()
-    parallel:add(fwdSeq):add(bwdSeq)
+    parallel:add(fwdSeq)
+    if not self.isForwardOnly then
+        parallel:add(bwdSeq)
+    end
     local brnn = nn.Sequential()
        :add(parallel)
        :add(nn.ZipTable())
@@ -186,6 +193,11 @@ function BidirectionalLSTM:prepare_input()
         end
     end
 
+    -- only forward
+    if self.isForwardOnly then
+        return {inputs}
+    end
+
     for step=1,maxLen do
         inputs_rev[step] = torch.LongTensor(#sentences)
         for j=1,#sentences do
@@ -199,4 +211,12 @@ function BidirectionalLSTM:prepare_input()
     end
 
     return {inputs, inputs_rev}
+end
+
+function BidirectionalLSTM:save_model(path)
+    torch.save(path,self.net)
+end
+
+function BidirectionalLSTM:load_model(path)
+    self.net = torch.load(path)
 end

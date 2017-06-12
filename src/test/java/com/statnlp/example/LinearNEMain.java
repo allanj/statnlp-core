@@ -75,7 +75,8 @@ public class LinearNEMain {
 				HashMap<String,Object> lstm_config = new HashMap<String,Object>();
 				int hiddenSize = 50;
 				String optimizer = "none";
-				net = new BidirectionalLSTM(BidirectionalLSTM.createConfig(hiddenSize, optimizer), Entity.Entities.size());
+				boolean isForwardOnly = true;
+				net = new BidirectionalLSTM(BidirectionalLSTM.createConfig(hiddenSize, isForwardOnly, optimizer), Entity.Entities.size());
 			} else {
 				net = new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size());
 			}

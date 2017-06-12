@@ -99,6 +99,11 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	 */
 	private TObjectIntHashMap<String> sentence2id;
 
+	/**
+	 * Whether it is unidirectional
+	 */
+	private boolean isForwardOnly;
+
 	public BidirectionalLSTM(HashMap<String, Object> config, int numLabels) {
 		super(config, numLabels);
 		this.optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
@@ -137,8 +142,12 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	
 	@Override
 	public void initialize() {
+		this.isForwardOnly = (boolean) config.get("isForwardOnly");
 		if (isTraining) {
-			this.hiddenSize = (int) config.get("hiddenSize") * 2; // since bidirectional
+			this.hiddenSize = (int) config.get("hiddenSize");
+			if (! this.isForwardOnly) { // since bidirectional
+				this.hiddenSize *= 2;
+			}
 		}
 		makeInput();
 		int vocabSize = numSent*maxSentLen;
@@ -309,14 +318,12 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 
 	@Override
 	public void save(String prefix) {
-		// TODO Auto-generated method stub
-
+		LuaFunctionHelper.execLuaFunction(this.L, "save_model", new Object[]{prefix}, new Class[]{});
 	}
 
 	@Override
 	public void load(String prefix) {
-		// TODO Auto-generated method stub
-
+		LuaFunctionHelper.execLuaFunction(this.L, "load_model", new Object[]{prefix}, new Class[]{});
 	}
 
 	@Override
@@ -324,10 +331,11 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		L.close();
 	}
 
-	public static HashMap<String, Object> createConfig(int hiddenSize, String optimizer) {
+	public static HashMap<String, Object> createConfig(int hiddenSize, boolean isForwardOnly, String optimizer) {
 		HashMap<String, Object> config = new HashMap<String, Object>();
 		config.put("class", "BidirectionalLSTM");
         config.put("hiddenSize", hiddenSize);
+        config.put("isForwardOnly", isForwardOnly);
         config.put("optimizer", optimizer);
 		return config;
 	}
