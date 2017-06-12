@@ -203,8 +203,6 @@ public class NetworkConfig {
 	 */
 	/** If enable the neural CRF model, set it true.  */
 	public static boolean USE_NEURAL_FEATURES = false;
-	/** MLP or LSTM */
-	public static String NEURAL_TYPE = "mlp";
 	/** "torch" (socket) or "torch-jni" (TH4J + JNLua) */
 	public static String NEURAL_BACKEND = "torch";
 	/** Regularized the neural features in CRF or not. set to false then can be done by dropout***/

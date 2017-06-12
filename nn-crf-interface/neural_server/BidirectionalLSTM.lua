@@ -74,7 +74,10 @@ function BidirectionalLSTM:createNetwork()
         bwd = nn.Sequential()
            :add(sharedLookupTable:sharedClone())
            :add(nn.FastLSTM(hiddenSize, hiddenSize):maskZero(1))
-        bwdSeq = nn.Sequencer(bwd)
+           
+        bwdSeq = nn.Sequential()
+            :add(nn.Sequencer(bwd))
+            :add(nn.ReverseTable())
     end
 
     -- merges the output of one time-step of fwd and bwd rnns.
@@ -96,7 +99,7 @@ function BidirectionalLSTM:createNetwork()
     self.net = brnn
 end
 
-function MultiLayerPerceptron:createOptimizer()
+function BidirectionalLSTM:createOptimizer()
     local data = self.data
 
     -- set optimizer. If nil, optimization is done by caller.
@@ -202,6 +205,7 @@ function BidirectionalLSTM:prepare_input()
         inputs_rev[step] = torch.LongTensor(#sentences)
         for j=1,#sentences do
             local tokens = sentence_toks[j]
+            inputs_rev[step][j] = inputs[maxLen-step+1][j]
             if step <= #tokens then
                 inputs_rev[step][j] = inputs[#tokens-step+1][j]
             else

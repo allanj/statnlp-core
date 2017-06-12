@@ -108,7 +108,11 @@ public class GlobalNetworkParam implements Serializable{
 		this(OptimizerFactory.getLBFGSFactory());
 	}
 	
-	public GlobalNetworkParam(OptimizerFactory optimizerFactory){
+	public GlobalNetworkParam(OptimizerFactory optimizerFactory) {
+		this(optimizerFactory, new ArrayList<FeatureValueProvider>());
+	}
+	
+	public GlobalNetworkParam(OptimizerFactory optimizerFactory, List<FeatureValueProvider> featureValueProviders){
 		this._locked = false;
 		this._version = -1;
 		this._size = 0;
@@ -130,7 +134,7 @@ public class GlobalNetworkParam implements Serializable{
 			}
 			this._subSize = new int[NetworkConfig.NUM_THREADS];
 		}
-		this._featureValueProviders = new ArrayList<FeatureValueProvider>();
+		this._featureValueProviders = featureValueProviders;
 	}
 	
 	/**

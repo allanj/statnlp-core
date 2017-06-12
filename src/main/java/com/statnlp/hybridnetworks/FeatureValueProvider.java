@@ -179,7 +179,9 @@ public abstract class FeatureValueProvider {
 	 */
 	public void resetGrad() {
 		Arrays.fill(gradWeights, 0.0);
-		Arrays.fill(gradOutput, 0.0);
+		if (gradOutput != null) {
+			Arrays.fill(gradOutput, 0.0);
+		}
 		if (getParamSize() > 0) {
 			Arrays.fill(gradParams, 0.0);
 		}

@@ -1,12 +1,14 @@
 package com.statnlp.example;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Sentence;
+import com.statnlp.example.linear_ne.ECRFContinuousProviderExample;
 import com.statnlp.example.linear_ne.ECRFEval;
 import com.statnlp.example.linear_ne.ECRFFeatureManager;
 import com.statnlp.example.linear_ne.ECRFInstance;
@@ -15,6 +17,7 @@ import com.statnlp.example.linear_ne.EConfig;
 import com.statnlp.example.linear_ne.EReader;
 import com.statnlp.example.linear_ne.Entity;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
+import com.statnlp.hybridnetworks.FeatureValueProvider;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
@@ -41,6 +44,7 @@ public class LinearNEMain {
 //	public static String testFile = "nn-crf-interface/nlp-from-scratch/debug/debug.train.txt";
 	public static String nerOut = "nn-crf-interface/nlp-from-scratch/me/output/ner_out.txt";
 	public static String neural_config = "nn-crf-interface/neural_server/neural.debug.config";
+	public static String neuralType = "mlp";
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 		
@@ -65,23 +69,22 @@ public class LinearNEMain {
 			NetworkConfig.FEATURE_INIT_WEIGHT = 0.1;
 		}
 		
-		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory());
-		
-		NeuralNetworkFeatureValueProvider net = null;
+		List<FeatureValueProvider> nets = new ArrayList<FeatureValueProvider>();
 		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
-			if (NetworkConfig.NEURAL_TYPE.equals("lstm")) {
+			if (neuralType.equals("lstm")) {
 				HashMap<String,Object> lstm_config = new HashMap<String,Object>();
 				int hiddenSize = 50;
 				String optimizer = "none";
-				boolean isForwardOnly = true;
-				net = new BidirectionalLSTM(BidirectionalLSTM.createConfig(hiddenSize, isForwardOnly, optimizer), Entity.Entities.size());
+				boolean isForwardOnly = false;
+				nets.add(new BidirectionalLSTM(BidirectionalLSTM.createConfig(hiddenSize, isForwardOnly, optimizer), Entity.Entities.size()));
 			} else {
-				net = new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size());
+				nets.add(new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size()));
 			}
-			gnp.addFeatureValueProvider(net);
+//			nets.add(new ECRFContinuousProviderExample(Entity.Entities.size()));
 		}
+		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory(), nets);
 		
 		System.err.println("[Info] "+Entity.Entities.size()+" entities: "+Entity.Entities.toString());
 		
@@ -97,7 +100,7 @@ public class LinearNEMain {
             all_instances[i].setUnlabeled();
         }
 		
-		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, net);
+		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, neuralType);
 		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler();
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
 		ECRFInstance[] ecrfs = trainInstances.toArray(new ECRFInstance[trainInstances.size()]);
@@ -133,7 +136,7 @@ public class LinearNEMain {
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;
 					case "-neural": if(args[i+1].equals("mlp") || args[i+1].equals("lstm")){ 
 											NetworkConfig.USE_NEURAL_FEATURES = true;
-											NetworkConfig.NEURAL_TYPE = args[i+1];
+											neuralType = args[i+1];
 											NetworkConfig.OPTIMIZE_NEURAL = true;  //false: optimize in neural network
 											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
 											NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
