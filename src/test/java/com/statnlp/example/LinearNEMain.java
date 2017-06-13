@@ -74,15 +74,13 @@ public class LinearNEMain {
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
 			if (neuralType.equals("lstm")) {
-				HashMap<String,Object> lstm_config = new HashMap<String,Object>();
-				int hiddenSize = 50;
+				int hiddenSize = 100;
 				String optimizer = "none";
 				boolean isForwardOnly = false;
 				nets.add(new BidirectionalLSTM(BidirectionalLSTM.createConfig(hiddenSize, isForwardOnly, optimizer), Entity.Entities.size()));
 			} else {
 				nets.add(new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size()));
 			}
-//			nets.add(new ECRFContinuousProviderExample(Entity.Entities.size()));
 		}
 		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory(), nets);
 		
@@ -104,11 +102,6 @@ public class LinearNEMain {
 		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler();
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
 		ECRFInstance[] ecrfs = trainInstances.toArray(new ECRFInstance[trainInstances.size()]);
-//		if(NetworkConfig.USE_NEURAL_FEATURES){
-//			model.train(all_instances, trainInstances.size(), numIteration);
-//		}else{
-//			model.train(ecrfs, numIteration);
-//		}
 		model.train(ecrfs, numIteration);
 		Instance[] predictions = model.decode(testInstances.toArray(new ECRFInstance[testInstances.size()]));
 		ECRFEval.evalNER(predictions, nerOut);
@@ -145,6 +138,7 @@ public class LinearNEMain {
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;
 					case "-lr": adagrad_learningRate = Double.valueOf(args[i+1]); break;
 					case "-backend": NetworkConfig.NEURAL_BACKEND = args[i+1]; break;
+					case "-os": NetworkConfig.OS = args[i+1]; break; // for Lua native lib, "osx" or "linux" 
 					default: System.err.println("Invalid arguments, please check usage."); System.exit(0);
 				}
 			}

@@ -23,13 +23,13 @@ public class ECRFFeatureManager extends FeatureManager {
 	private String IN_SEP = MultiLayerPerceptron.IN_SEP;
 	
 	private NeuralNetworkFeatureValueProvider net;
-//	private ECRFContinuousProviderExample wordLengthProvider;
 	private String neuralType;
 	
 	public ECRFFeatureManager(GlobalNetworkParam param_g, String neuralType) {
 		super(param_g);
-		this.net = (NeuralNetworkFeatureValueProvider) param_g.getFeatureValueProviders().get(0);
-//		this.wordLengthProvider = (ECRFContinuousProviderExample) param_g.getFeatureValueProviders().get(1);
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			this.net = (NeuralNetworkFeatureValueProvider) param_g.getFeatureValueProviders().get(0);
+		}
 		this.neuralType = neuralType;
 	}
 	
@@ -81,11 +81,10 @@ public class ECRFFeatureManager extends FeatureManager {
 			if(neuralType.equals("lstm")) {
 				input = new SimpleImmutableEntry<String, Integer>(sent.toString(), pos);
 			} else {
-				input = llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt;
-//				input = currWord;
+//				input = llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt;
+				input = currWord;
 			}
 			net.addHyperEdge(network, parent_k, children_k_index, input, eId);
-//			wordLengthProvider.addHyperEdge(network, parent_k, children_k_index, currWord, eId);
 			
 //			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw));
 		} else {

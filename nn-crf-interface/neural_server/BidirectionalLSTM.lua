@@ -206,11 +206,6 @@ function BidirectionalLSTM:prepare_input()
         for j=1,#sentences do
             local tokens = sentence_toks[j]
             inputs_rev[step][j] = inputs[maxLen-step+1][j]
-            if step <= #tokens then
-                inputs_rev[step][j] = inputs[#tokens-step+1][j]
-            else
-                inputs_rev[step][j] = 0
-            end
         end
     end
 

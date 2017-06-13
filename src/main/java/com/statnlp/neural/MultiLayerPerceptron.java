@@ -153,7 +153,11 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		Native.loadLibrary("libjnlua5.1.jnilib", Library.class);
+		if (NetworkConfig.OS.equals("osx")) {
+			Native.loadLibrary("libjnlua5.1.jnilib", Library.class);
+		} else {
+			Native.loadLibrary("libjnlua5.1.so", Library.class);
+		}
 		
 		this.L = new LuaState();
 		this.L.openLibs();
