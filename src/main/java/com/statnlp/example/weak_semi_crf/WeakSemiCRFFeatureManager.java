@@ -53,7 +53,7 @@ public class WeakSemiCRFFeatureManager extends FeatureManager {
 	}
 	
 	@Override
-	protected FeatureArray extract_helper(Network net, int parent_k, int[] children_k) {
+	protected FeatureArray extract_helper(Network net, int parent_k, int[] children_k, int children_k_index) {
 		BaseNetwork network = (BaseNetwork)net;
 		@SuppressWarnings("unchecked")
 		LinearInstance<Span> instance = (LinearInstance<Span>)network.getInstance();

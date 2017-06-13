@@ -30,7 +30,6 @@ import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
 import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.StringIndex;
-import com.statnlp.neural.NeuralConfigReader;
 import com.statnlp.util.GenericPipeline;
 
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -126,9 +125,6 @@ public class LinearCRFMain {
 		
 		int numIterations = Integer.parseInt(System.getProperty("numIter", "1000"));
 		
-		if(NetworkConfig.USE_NEURAL_FEATURES){
-			NeuralConfigReader.readConfig("nn-crf-interface/neural_server/neural.config");
-		}
 		int argIndex = 0;
 		boolean shouldStop = false;
 		while(argIndex < args.length && !shouldStop){

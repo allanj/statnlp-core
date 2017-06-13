@@ -65,16 +65,19 @@ public class FeatureBox implements Serializable {
 	
 	@Override
 	public int hashCode() {
-		return Arrays.hashCode(_fs);
+		int hash = 1;
+		int a = Arrays.hashCode(_fs);
+		hash = hash * 17 + a;
+		return hash;
 	}
 
 	@Override
 	public boolean equals(Object obj) {
 		if(obj instanceof FeatureBox){
 			FeatureBox other = (FeatureBox)obj;
-			return Arrays.equals(_fs, other._fs);
+			boolean isEqual = Arrays.equals(_fs, other._fs);
+			return isEqual;
 		}
 		return false;
 	}
-	
 }

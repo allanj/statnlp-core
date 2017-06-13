@@ -1,5 +1,6 @@
 package com.statnlp.example.linear_ne;
 
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 
 import com.statnlp.commons.types.Sentence;
@@ -9,22 +10,30 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
-import com.statnlp.neural.NeuralConfig;
+import com.statnlp.neural.MultiLayerPerceptron;
+import com.statnlp.neural.NeuralNetworkFeatureValueProvider;
 
 public class ECRFFeatureManager extends FeatureManager {
 
 	private static final long serialVersionUID = 376931974939202432L;
 
 	public enum FEATYPE {local,entity, neural};
-	private String OUT_SEP = NeuralConfig.OUT_SEP; 
-	private String IN_SEP = NeuralConfig.IN_SEP;
+	private String OUT_SEP = MultiLayerPerceptron.OUT_SEP; 
+	private String IN_SEP = MultiLayerPerceptron.IN_SEP;
 	
-	public ECRFFeatureManager(GlobalNetworkParam param_g) {
+	private NeuralNetworkFeatureValueProvider net;
+	private String neuralType;
+	
+	public ECRFFeatureManager(GlobalNetworkParam param_g, String neuralType) {
 		super(param_g);
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			this.net = (NeuralNetworkFeatureValueProvider) param_g.getFeatureValueProviders().get(0);
+		}
+		this.neuralType = neuralType;
 	}
 	
 	@Override
-	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k) {
+	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k, int children_k_index) {
 		
 		//the tag in the sentence is actually the caps id.
 		
@@ -47,14 +56,24 @@ public class ECRFFeatureManager extends FeatureManager {
 		int childEId = child[1];
 //		int childPos = child[0]-1;
 		
-		String lw = pos>0? sent.get(pos-1).getForm():"1738";
-		String llw = pos==0? "1738": pos==1? "1738":sent.get(pos-2).getForm();
-		String llt = pos==0? "0": pos==1? "0":sent.get(pos-2).getTag();
-		String lt = pos>0? sent.get(pos-1).getTag():"0";
-		String rw = pos<sent.length()-1? sent.get(pos+1).getForm():"1738";
-		String rt = pos<sent.length()-1? sent.get(pos+1).getTag():"0";
-		String rrw = pos==sent.length()-1? "1738": pos==sent.length()-2? "1738":sent.get(pos+2).getForm();
-		String rrt = pos==sent.length()-1? "0": pos==sent.length()-2? "0":sent.get(pos+2).getTag();
+		String lw = null;
+		String llw = null;
+		String llt = null;
+		String lt = null;
+		String rw = null;
+		String rt = null;
+		String rrw = null;
+		String rrt = null;
+		if(neuralType.equalsIgnoreCase("mlp")){
+			lw = pos>0? sent.get(pos-1).getForm():"1738";
+			llw = pos==0? "1738": pos==1? "1738":sent.get(pos-2).getForm();
+			llt = pos==0? "0": pos==1? "0":sent.get(pos-2).getTag();
+			lt = pos>0? sent.get(pos-1).getTag():"0";
+			rw = pos<sent.length()-1? sent.get(pos+1).getForm():"1738";
+			rt = pos<sent.length()-1? sent.get(pos+1).getTag():"0";
+			rrw = pos==sent.length()-1? "1738": pos==sent.length()-2? "1738":sent.get(pos+2).getForm();
+			rrt = pos==sent.length()-1? "0": pos==sent.length()-2? "0":sent.get(pos+2).getTag();
+		}
 		
 		String currWord = inst.getInput().get(pos).getForm();
 		String currTag = inst.getInput().get(pos).getTag();
@@ -64,37 +83,49 @@ public class ECRFFeatureManager extends FeatureManager {
 		String currEn = Entity.get(eId).getForm();
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 //			featureList.add(this._param_g.toFeature(network,FEATYPE.neural.name(), currEn,  currWord));
-			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+
-										llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt));
-//			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw));
-		}
-		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), currEn,  	currWord));
-		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ET",	currEn+":"+currTag));
-		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELW",	currEn+":"+lw));
-		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELT",	currEn+":"+lt));
-		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ERW",	currEn+":"+rw));
-		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ERT",	currEn+":"+rt));
-		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELT-T",	currEn+":"+lt+","+currTag));
-		/****Add some prefix features******/
-		for(int plen = 1;plen<=6;plen++){
-			if(currWord.length()>=plen){
-				String suff = currWord.substring(currWord.length()-plen, currWord.length());
-				featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "E-PATTERN-SUFF-"+plen, currEn+":"+suff));
-				String pref = currWord.substring(0,plen);
-				featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "E-PATTERN-PREF-"+plen, currEn+":"+pref));
-			}
-		}
-		String prevEntity = Entity.get(childEId).getForm();
+//			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+
+//										llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt));
 
+			Object input = null;
+			if(neuralType.equals("lstm")) {
+				input = new SimpleImmutableEntry<String, Integer>(sent.toString(), pos);
+			} else if(neuralType.equals("mlp")){
+				input = llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt;
+			} else {
+				input = currWord;
+			}
+			net.addHyperEdge(network, parent_k, children_k_index, input, eId);
+			
+//			featureList.add(this._param_g.toFeature(network, FEATYPE.neural.name(), currEn, llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw));
+		} else {
+			featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), currEn,  	currWord));
+		}
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ET",	currEn+":"+currTag));
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELW",	currEn+":"+lw));
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELT",	currEn+":"+lt));
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ERW",	currEn+":"+rw));
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ERT",	currEn+":"+rt));
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "ELT-T",	currEn+":"+lt+","+currTag));
+//		/****Add some prefix features******/
+//		for(int plen = 1;plen<=6;plen++){
+//			if(currWord.length()>=plen){
+//				String suff = currWord.substring(currWord.length()-plen, currWord.length());
+//				featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "E-PATTERN-SUFF-"+plen, currEn+":"+suff));
+//				String pref = currWord.substring(0,plen);
+//				featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), "E-PATTERN-PREF-"+plen, currEn+":"+pref));
+//			}
+//		}
+		String prevEntity = Entity.get(childEId).getForm();
+//
 		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), currEn,  prevEntity));
-		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "currW-prevE-currE",currWord+":"+prevEntity+":"+currEn));
-		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "prevW-prevE-currE",lw+":"+prevEntity+":"+currEn));
-		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "nextW-prevE-currE",rw+":"+prevEntity+":"+currEn));
-		
-		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "currT-prevE-currE",currTag+":"+prevEntity+":"+currEn));
-		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "prevT-prevE-currE",lt+":"+prevEntity+":"+currEn));
-		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "nextT-prevE-currE",rt+":"+prevEntity+":"+currEn));
-		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "prevT-currT-prevE-currE",lt+":"+currTag+":"+prevEntity+":"+currEn));
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "currW-prevE-currE",currWord+":"+prevEntity+":"+currEn));
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "prevW-prevE-currE",lw+":"+prevEntity+":"+currEn));
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "nextW-prevE-currE",rw+":"+prevEntity+":"+currEn));
+//		
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "currT-prevE-currE",currTag+":"+prevEntity+":"+currEn));
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "prevT-prevE-currE",lt+":"+prevEntity+":"+currEn));
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "nextT-prevE-currE",rt+":"+prevEntity+":"+currEn));
+//		featureList.add(this._param_g.toFeature(network,FEATYPE.entity.name(), "prevT-currT-prevE-currE",lt+":"+currTag+":"+prevEntity+":"+currEn));
 		
 		ArrayList<Integer> finalList = new ArrayList<Integer>();
 		for(int i=0;i<featureList.size();i++){
@@ -108,6 +139,4 @@ public class ECRFFeatureManager extends FeatureManager {
 		
 		return fa;
 	}
-	
-
 }

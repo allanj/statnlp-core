@@ -114,7 +114,7 @@ public class TemplateBasedFeatureManager extends FeatureManager {
 	 * @see com.statnlp.hybridnetworks.FeatureManager#extract_helper(com.statnlp.hybridnetworks.Network, int, int[])
 	 */
 	@Override
-	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k) {
+	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k, int children_k_index) {
 //		if (true){
 //			FeatureArray fa = extract_helper2(network, parent_k, children_k);
 //			System.out.println(Arrays.toString(fa.getCurrent()));

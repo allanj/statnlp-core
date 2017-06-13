@@ -25,7 +25,6 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
 import com.statnlp.hybridnetworks.NetworkModel;
-import com.statnlp.neural.NeuralConfig;
 
 public class FCRFExampleMain {
 
@@ -62,6 +61,7 @@ public class FCRFExampleMain {
 	public static double l2val = 0.01;
 	public static boolean isWndowsOS = false;
 	public static String optionalOutputSuffix = "";
+	public static int hiddenSize = 10;
 	
 	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException{
 		
@@ -159,6 +159,7 @@ public class FCRFExampleMain {
 //		NeuralConfig.HIDDEN_SIZE = 200;
 		/****/
 		
+		// TODO: Update the GlobalNetworkParam with the respective FeatureValueProvider from NeuralNetwork
 		GlobalNetworkParam param_g = null; 
 		if(useExistingModel){
 			ObjectInputStream in = new ObjectInputStream(new FileInputStream(modelFile));
@@ -300,7 +301,7 @@ public class FCRFExampleMain {
 					case "-multitouch": parallelFeatureExtraction = args[i+1].equals("true")? true:false; break;
 					case "-dataset": dataset = args[i+1]; break;
 					case "-optsuffix" : optionalOutputSuffix = args[i+1]; break;
-					case "-hidden": NeuralConfig.HIDDEN_SIZE = Integer.valueOf(args[i+1]); break;
+					case "-hidden": hiddenSize = Integer.valueOf(args[i+1]); break;
 					default: System.err.println("Invalid arguments :"+args[i]+", please check usage."); System.exit(0);
 				}
 			}

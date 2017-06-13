@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 
-import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.util.instance_parser.InstanceParser;
 
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -67,11 +66,6 @@ public abstract class FeatureManager implements Serializable{
 	protected boolean _cacheEnabled = false;
 	
 	protected int _numThreads;
-	
-	/**
-	 * The communication controller for Neural CRF.
-	 */
-	private NNCRFGlobalNetworkParam nnController;
 	
 	public FeatureManager(GlobalNetworkParam param_g){
 		this(param_g, null);
@@ -125,12 +119,9 @@ public abstract class FeatureManager implements Serializable{
 			this._param_g._obj_old = this._param_g._obj;
 			return false;
 		}
-		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			if (nnController == null) {
-				nnController = this._param_g._nnController;
-			}
-			nnController.backwardNetwork();
-		}
+		
+		this._param_g.updateContinuous();
+		
 		boolean done = this._param_g.update();
 
 		if(NetworkConfig.NUM_THREADS != 1){
@@ -306,7 +297,7 @@ public abstract class FeatureManager implements Serializable{
 			}
 		}
 		
-		FeatureArray fa = this.extract_helper(network, parent_k, children_k);
+		FeatureArray fa = this.extract_helper(network, parent_k, children_k, children_k_index);
 		
 		if(shouldCache){
 			this._cache[network.getNetworkId()][parent_k][children_k_index] = fa;
@@ -324,7 +315,7 @@ public abstract class FeatureManager implements Serializable{
 	 * @param children_k The node indices of the children of a SINGLE hyperedge
 	 * @return
 	 */
-	protected abstract FeatureArray extract_helper(Network network, int parent_k, int[] children_k);
+	protected abstract FeatureArray extract_helper(Network network, int parent_k, int[] children_k, int children_k_index);
 
 	/**
 	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate
@@ -402,5 +393,7 @@ public abstract class FeatureManager implements Serializable{
 		this._numThreads = ois.readInt();
 		this._params_l = new LocalNetworkParam[NetworkConfig.NUM_THREADS];
 	}
+	
+	public static String NEURAL_FEATURE_TYPE_PREFIX = "neural";
 	
 }

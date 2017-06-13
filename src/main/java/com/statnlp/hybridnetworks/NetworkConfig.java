@@ -227,6 +227,8 @@ public class NetworkConfig {
 	 */
 	/** If enable the neural CRF model, set it true.  */
 	public static boolean USE_NEURAL_FEATURES = false;
+	/** "torch" (socket) or "torch-jni" (TH4J + JNLua) */
+	public static String NEURAL_BACKEND = "torch";
 	/** Regularized the neural features in CRF or not. set to false then can be done by dropout***/
 	public static boolean REGULARIZE_NEURAL_FEATURES = false;
 	/** If true: Optimized the neural net in CRF. optimizer in neural config must be set to none **/
@@ -236,7 +238,9 @@ public class NetworkConfig {
 	/** Randomly choose the batch at every iteration. (false may give better result) */
 	public static boolean RANDOM_BATCH = false;
 	
-	public static String NEURAL_FEATURE_TYPE_PREFIX = "neural";
+	public static String NEURAL_RANDOM_TYPE = "default";
+	
+	public static String OS = "osx"; // for Lua native library
 	
 	/***
 	 * Mean field-related flags.
@@ -263,4 +267,6 @@ public class NetworkConfig {
 		}
 		return builder.toString();
 	}
+	
+	public static final boolean FEATURE_TOUCH_TEST = true;
 }
