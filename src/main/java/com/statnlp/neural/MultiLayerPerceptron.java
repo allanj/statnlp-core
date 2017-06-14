@@ -16,6 +16,7 @@ import org.ejml.data.DMatrixRMaj;
 import org.ejml.dense.row.CommonOps_DDRM;
 import org.ejml.simple.SimpleMatrix;
 
+import scala.collection.Iterator;
 import th4j.Tensor.DoubleTensor;
 
 import com.naef.jnlua.LuaState;
@@ -550,7 +551,12 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		if (buf == null || buf.length != t.nElement()) {
 			buf = new double[(int) t.nElement()];
 		}
-		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
+//		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
+		Iterator<Object> iter = t.iterator();
+		int ptr = 0;
+		while (iter.hasNext()) { // manual iteration like this is actually slow
+			buf[ptr++] = (double) iter.next(); 
+		}
 		return buf;
 	}
 }
