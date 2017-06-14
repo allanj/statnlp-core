@@ -346,8 +346,8 @@ public abstract class Network implements Serializable, HyperGraph{
 		//Arrays.fill(this._newMarginal, Double.NEGATIVE_INFINITY);
 		for(int k=0; k<this.countNodes(); k++){
 			//for mean-field, only need to gather the marginal from the unlabeled network
-			if(NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD && !this.getInstance().isLabeled()
-					&& !this.isRemoved(k)){
+			if( NetworkConfig.MAX_MARGINAL_DECODING || (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD && !this.getInstance().isLabeled()
+					&& !this.isRemoved(k)) ){
 				this.marginal(k);
 				this._newMarginal[k] = Math.exp(this._newMarginal[k]);
 			}
