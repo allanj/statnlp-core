@@ -833,7 +833,7 @@ public class GlobalNetworkParam implements Serializable{
 	/**
 	 * Pre-compute continuous scores for all hyper-edges
 	 */
-	public void computeContinousScores() {
+	public void computeContinuousScores() {
 		for (FeatureValueProvider provider : _featureValueProviders) {
 			provider.initializeScores();
 		}

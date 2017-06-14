@@ -28,6 +28,8 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 
 public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
+	
+	public static String LUA_VERSION = "5.2";
 
 	/**
 	 * A LuaState instance for loading Lua scripts
@@ -119,6 +121,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	private void configureJNLua() {
 		System.setProperty("jna.library.path","./nativeLib");
 		System.setProperty("java.library.path", "./nativeLib:" + System.getProperty("java.library.path"));
+		System.out.println(System.getProperty("java.library.path"));
 		Field fieldSysPath = null;
 		try {
 			fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
@@ -127,17 +130,24 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		if (NetworkConfig.OS.equals("osx")) {
-			Native.loadLibrary("libjnlua5.1.jnilib", Library.class);
-		} else {
-			Native.loadLibrary("libjnlua5.1.so", Library.class);
+		String jnluaLib = null;
+		if (LUA_VERSION.equals("5.2")) {
+			jnluaLib = "libjnlua52";
+		} else if (LUA_VERSION.equals("5.1")) {
+			jnluaLib = "libjnlua5.1";
 		}
+		if (NetworkConfig.OS.equals("osx")) {
+			jnluaLib += ".jnilib";
+		} else if (NetworkConfig.OS.equals("linux")) {
+			jnluaLib += ".so";
+		}
+		Native.loadLibrary(jnluaLib, Library.class);
 		
 		this.L = new LuaState();
 		this.L.openLibs();
 		
 		try {
-			this.L.load(Files.newInputStream(Paths.get("nn-crf-interface/neural_server/NetworkInterface.lua")),"NetworkInterface.lua");
+			this.L.load(Files.newInputStream(Paths.get("nn-crf-interface/neural_server/NetworkInterface.lua")),"NetworkInterface.lua","bt");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -207,12 +217,12 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 			this.paramsTensor = (DoubleTensor) outputs[0];
 			this.gradParamsTensor = (DoubleTensor) outputs[1];
 			if (this.paramsTensor.nElement() > 0) {
-				this.params = getArray(this.paramsTensor);
+				this.params = getArray(this.paramsTensor, this.params);
 				for(int i = 0; i < this.params.length; i++) {
 					this.params[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
 						NetworkConfig.FEATURE_INIT_WEIGHT;
 				}
-				this.gradParams = getArray(this.gradParamsTensor);
+				this.gradParams = getArray(this.gradParamsTensor, this.gradParams);
 			}
 		}
 	}
@@ -268,7 +278,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, retTypes);
 		
 		// output is a tensor of size (maxLen x numSent) x hiddenSize
-		output = getArray(outputTensorBuffer);
+		output = getArray(outputTensorBuffer, output);
 		DMatrixRMaj outputData = this.outputMatrix.getMatrix();
 		outputData.data = output;
 		
@@ -309,7 +319,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		LuaFunctionHelper.execLuaFunction(this.L, "backward", args, retTypes);
 		
 		if(optimizeNeural && getParamSize() > 0) { // copy gradParams computed by Torch
-			gradParams = getArray(this.gradParamsTensor);
+			gradParams = getArray(this.gradParamsTensor, gradParams);
 		}
 		
 		addL2WeightsGrad();
@@ -349,7 +359,11 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		countWeightMatrix.set(0.0);
 	}
 	
-	private double[] getArray(DoubleTensor t) {
-		return t.storage().getRawData().getDoubleArray(0, (int) t.nElement());
+	private double[] getArray(DoubleTensor t, double[] buf) {
+		if (buf == null || buf.length != t.nElement()) {
+			buf = new double[(int) t.nElement()];
+		}
+		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
+		return buf;
 	}
 }
