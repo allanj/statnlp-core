@@ -9,3 +9,6 @@ cd jnlua-0.9.6/src/main/c/Linux && make
 cd $CURRENT_DIR
 cp jnlua-0.9.6/src/main/c/Linux/libjnlua5.1.so $STATNLP_DIR/nativeLib
 cp $HOME/torch/install/lib/libTH.dylib $STATNLP_DIR/nativeLib
+luarocks install torch
+luarocks install nn
+luarocks install rnn

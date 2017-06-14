@@ -372,7 +372,7 @@ public abstract class NetworkModel implements Serializable{
 				long time = System.nanoTime();
 				
 				// Feature value provider's ``forward''
-				this._fm.getParam_G().computeContinousScores();
+				this._fm.getParam_G().computeContinuousScores();
 				this._fm.getParam_G().resetGradContinuous();
 				
 				List<Future<Void>> results = pool.invokeAll(callables);
@@ -410,7 +410,7 @@ public abstract class NetworkModel implements Serializable{
 				}
 				obj_old = obj;
 				if (lastIter || done) {
-					this._fm.getParam_G().computeContinousScores();
+					this._fm.getParam_G().computeContinuousScores();
 				}
 				if(endOfIterCallback != null){
 					endOfIterCallback.accept(new TrainingIterationInformation(it, epochNum, done, lastIter, obj));
@@ -627,7 +627,7 @@ public abstract class NetworkModel implements Serializable{
 		long time = System.nanoTime();
 		
 		this._fm.getParam_G().initializeProvider(false);
-		this._fm.getParam_G().computeContinousScores();
+		this._fm.getParam_G().computeContinuousScores();
 		
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
 			this._decoders[threadId] = this._decoders[threadId].copyThread(this._fm);

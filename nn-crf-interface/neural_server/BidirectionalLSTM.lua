@@ -32,6 +32,9 @@ function BidirectionalLSTM:initialize(javadata, ...)
     self.x = self:prepare_input()
     self.numSent = #data.sentences
 
+    self.output = torch.Tensor()
+    self.gradOutput = {}
+
     if isTraining then
         self:createNetwork()
         print(self.net)
@@ -127,16 +130,17 @@ end
 
 function BidirectionalLSTM:forward(isTraining)
     local output_table = self.net:forward(self.x)
-    local output = torch.cat(output_table, 1)
-    if not self.outputPtr:isSameSizeAs(output) then
-        self.outputPtr:resizeAs(output)
+    self.output = torch.cat(self.output, output_table, 1)
+    if not self.outputPtr:isSameSizeAs(self.output) then
+        self.outputPtr:resizeAs(self.output)
     end
-    self.outputPtr:copy(output)
+    self.outputPtr:copy(self.output)
 end
 
 function BidirectionalLSTM:backward()
     self.gradParams:zero()
-    self.net:backward(self.x, self.gradOutputPtr:split(self.numSent))
+    torch.split(self.gradOutput, self.gradOutputPtr, self.numSent, 1)
+    self.net:backward(self.x, self.gradOutput)
     if self.doOptimization then
         self.optimizer(self.feval, self.params, self.optimState)
     end
