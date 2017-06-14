@@ -657,6 +657,27 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 				.help("The L2 regularization value."));
 		
 		// Testing settings
+		argParserObjects.put("--touchTestSeparately", argParser.addArgument("--touchTestSeparately")
+				.type(Boolean.class)
+				.setDefault(false)
+				.action(new ArgumentAction(){
+
+					@Override
+					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+							Object value) throws ArgumentParserException {
+						withTouchTestSeparately((boolean)value);
+					}
+
+					@Override
+					public void onAttach(Argument arg) {}
+
+					@Override
+					public boolean consumeArgument() {
+						return true;
+					}
+					
+				})
+				.help("Whether to extract features from all test data before decoding any instance."));
 		argParserObjects.put("--predictTopK", argParser.addArgument("--predictTopK")
 				.type(Integer.class)
 				.setDefault(1)
@@ -1003,6 +1024,19 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 	 */
 	public THIS withL2(double l2){
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
+		return getThis();
+	}
+	
+	/**
+	 * Whether to extract features from all test data before decoding any instance.<br>
+	 * By default it's true, to support neural network feature extractor.<br>
+	 * If false, the features will be extracted as needed. Due to the code flow, setting this
+	 * to false makes overall decoding decoding slightly faster.
+	 * @param flag
+	 * @return
+	 */
+	public THIS withTouchTestSeparately(boolean flag){
+		NetworkConfig.FEATURE_TOUCH_TEST = flag;
 		return getThis();
 	}
 

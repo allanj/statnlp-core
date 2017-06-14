@@ -597,7 +597,7 @@ public abstract class NetworkModel implements Serializable{
 		
 		//distribute the works into different threads.
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
-			if(cacheFeatures){
+			if(cacheFeatures || NetworkConfig.FEATURE_TOUCH_TEST){
 				if(this._decoders[threadId] != null){
 					this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, this._decoders[threadId].getParam(), true, numPredictionsGenerated);
 				} else {
@@ -607,7 +607,9 @@ public abstract class NetworkModel implements Serializable{
 				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, false, numPredictionsGenerated);
 			}
 		}
-		
+
+		printUsedMemory("before decode");
+		this._compiler.reset();
 		if (NetworkConfig.FEATURE_TOUCH_TEST) {
 			System.err.println("Touching test set.");
 			
@@ -623,7 +625,6 @@ public abstract class NetworkModel implements Serializable{
 		
 		System.err.println("Okay. Decoding started.");
 		
-		printUsedMemory("before decode");
 		long time = System.nanoTime();
 		
 		this._fm.getParam_G().initializeProvider(false);
