@@ -10,6 +10,7 @@ import java.util.Map;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.commons.types.Span;
 import com.statnlp.example.base.BaseNetwork;
 import com.statnlp.example.base.BaseNetwork.NetworkBuilder;
 import com.statnlp.hybridnetworks.LocalNetworkParam;

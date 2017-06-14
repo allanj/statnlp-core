@@ -27,9 +27,9 @@ import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
+import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 import com.statnlp.hybridnetworks.NetworkModel;
 import com.statnlp.hybridnetworks.StringIndex;
-import com.statnlp.neural.NeuralConfigReader;
 import com.statnlp.util.GenericPipeline;
 
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -39,30 +39,60 @@ import gnu.trove.set.TIntSet;
 public class LinearCRFMain {
 	
 	public static void main(String args[]) throws IOException, InterruptedException{
-		args = ("--linearModelClass com.statnlp.example.linear_crf.LinearCRF "
-				+ "--trainPath data/CoNLL2003/eng.train "
-				+ "--numTrain 1000 "
-				+ "--testPath data/CoNLL2003/eng.testb "
-				+ "--numTest 100 "
-				+ "--modelPath test.model "
-				+ "--logPath test.log "
-				+ "--l2 0.01 "
-				+ "--weightInit 0.0 "
-				+ "--modelType CRF "
-				+ "--margin 1.0 "
-				+ "--nodeMismatchCost 1.0 "
-				+ "--edgeMismatchCost 0.0 "
-				+ "--useBatchTraining "
-				+ "--batchSize 11 "
-				+ "--stoppingCriteria MAX_ITERATION_REACHED "
-				+ "--maxIter 1000 "
-				+ "--evaluateEvery 0 "
-				+ "train test evaluate visualize").split(" ");
-		GenericPipeline pipeline = new GenericPipeline();
-		pipeline.parseArgs(args);
+		runPipeline(args);
+//		runOldPipeline(args);
+	}
+	
+	public static void runPipeline(String[] args){
+		GenericPipeline pipeline = new GenericPipeline()
+				.withTrainPath("data/train.data")
+				.withTestPath("data/test.data")
+				.withModelPath("test.model")
+				.withLogPath("test.log")
+				.withL2(0.01)
+				.withWeightInit(0.0)
+				.withModelType(ModelType.CRF)
+//				.withUseBatchTraining(true)
+//				.withBatchSize(1)
+				.withStoppingCriteria(StoppingCriteria.SMALL_RELATIVE_CHANGE)
+				.withMaxIter(1000)
+				.withEvaluateEvery(0)
+				.withWriteModelAsText(true)
+				.withEvaluateCallback(LinearCRFMain::evaluate)
+				.withPredictTopK(10)
+				.addTask("train")
+				.addTasks("test", "evaluate")
+//				.addTask("visualize")
+				;
 		pipeline.execute();
-		System.exit(0);
-
+		return;
+	}
+	
+	public static void evaluate(Instance[] instances){
+		int countCorrect = 0;
+		int countGold = 0;
+		int count = 0;
+		for(Instance instance: instances){
+			LinearInstance<?> inst = (LinearInstance<?>)instance;
+			countCorrect += inst.countNumCorrectlyPredicted();
+			countGold += inst.size();
+			if(inst.size() > 5 && count < 5){
+				for(String[] input: inst.input){
+					System.out.print(input[0]+" ");
+				}
+				System.out.println();
+				System.out.println(inst.output);
+				for(int i=0; i<10; i++){
+					System.out.println(inst.getTopKPredictions().get(i));
+				}
+				count += 1;
+			}
+		}
+		System.out.println("Correct/Gold: "+countCorrect+"/"+countGold);
+		System.out.println(String.format("Accuracy: %.3f%%", 100.0*countCorrect/countGold));
+	}
+	
+	public static void runOldPipeline(String[] args) throws IOException, InterruptedException{
 		String trainPath = System.getProperty("trainPath", "data/train.data");
 		String testPath = System.getProperty("testPath", "data/test.data");
 		
@@ -95,9 +125,6 @@ public class LinearCRFMain {
 		
 		int numIterations = Integer.parseInt(System.getProperty("numIter", "1000"));
 		
-		if(NetworkConfig.USE_NEURAL_FEATURES){
-			NeuralConfigReader.readConfig("nn-crf-interface/neural_server/neural.config");
-		}
 		int argIndex = 0;
 		boolean shouldStop = false;
 		while(argIndex < args.length && !shouldStop){

@@ -7,6 +7,9 @@ import java.util.NoSuchElementException;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
+import com.statnlp.hybridnetworks.decoding.EdgeHypothesis;
+import com.statnlp.hybridnetworks.decoding.NodeHypothesis;
+import com.statnlp.hybridnetworks.decoding.ScoredIndex;
 
 /**
  * The base class for representing networks. This class is equipped with algorithm to calculate the 
@@ -320,8 +323,8 @@ public abstract class Network implements Serializable, HyperGraph{
 		try{
 			EdgeHypothesis edge = node.children()[bestPath.index[0]];
 			ScoredIndex score = edge.getKthBestHypothesis(bestPath.index[1]);
-			ScoredIndex[] result = new ScoredIndex[edge.children.length];
-			for(int i=0; i<edge.children.length; i++){
+			ScoredIndex[] result = new ScoredIndex[edge.children().length];
+			for(int i=0; i<edge.children().length; i++){
 				result[i] = edge.children()[i].getKthBestHypothesis(score.index[i]);
 			}
 			return result;
@@ -343,8 +346,8 @@ public abstract class Network implements Serializable, HyperGraph{
 		//Arrays.fill(this._newMarginal, Double.NEGATIVE_INFINITY);
 		for(int k=0; k<this.countNodes(); k++){
 			//for mean-field, only need to gather the marginal from the unlabeled network
-			if(NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD && !this.getInstance().isLabeled()
-					&& !this.isRemoved(k)){
+			if( NetworkConfig.MAX_MARGINAL_DECODING || (NetworkConfig.INFERENCE == InferenceType.MEAN_FIELD && !this.getInstance().isLabeled()
+					&& !this.isRemoved(k)) ){
 				this.marginal(k);
 				this._newMarginal[k] = Math.exp(this._newMarginal[k]);
 			}
@@ -525,6 +528,9 @@ public abstract class Network implements Serializable, HyperGraph{
 			 	if(NetworkConfig.MODEL_TYPE.USE_COST){
 					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
+			 	
+			 	score += this._param._fm.getParam_G().getContinuousScore(this, k, children_k, children_k_index);
+			 	
 				for(int child_k : children_k){
 					if(child_k < 0){
 						// A negative child_k is not a reference to a node, it's just a number associated with this edge
@@ -560,6 +566,9 @@ public abstract class Network implements Serializable, HyperGraph{
  			if(NetworkConfig.MODEL_TYPE.USE_COST){
 				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 			}
+ 			
+ 			score += this._param._fm.getParam_G().getContinuousScore(this, k, children_k, children_k_index);
+ 			
 			for(int child_k : children_k){
 				if(child_k < 0){
 					// A negative child_k is not a reference to a node, it's just a number associated with this edge
@@ -617,6 +626,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			if(NetworkConfig.MODEL_TYPE.USE_COST){
 				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 			}
+			score += this._param._fm.getParam_G().getContinuousScore(this, k, children_k, children_k_index);
 			score += this._outside[k];
 			for(int child_k : children_k){
 				if(child_k < 0){
@@ -694,6 +704,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				if(NetworkConfig.MODEL_TYPE.USE_COST){
 					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
+			 	score += this._param._fm.getParam_G().getContinuousScore(this, k, children_k, children_k_index);
 				score += this._outside[k];  // beta(s')
 				for(int child_k : children_k){
 					if(child_k < 0){
@@ -716,6 +727,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				fa.update_MF_Version(this._param, count, this.getUnlabeledNetwork().getMarginalSharedArray());
 			}else{
 				fa.update(this._param, count);
+				this._param._fm.getParam_G().setContinuousCount(count, this, k, children_k_index); // todo
 			}
 			if(!NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 				for(int child_k: children_k){
@@ -791,6 +803,7 @@ public abstract class Network implements Serializable, HyperGraph{
 							System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 						}
 					}
+					score += this._param._fm.getParam_G().getContinuousScore(this, k, children_k, children_k_index);
 					for(int child_k : children_k){
 						if(child_k < 0){
 							// A negative child_k is not a reference to a node, it's just a number associated with this edge
@@ -834,6 +847,7 @@ public abstract class Network implements Serializable, HyperGraph{
 						System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 					}
 				}
+				score += this._param._fm.getParam_G().getContinuousScore(this, k, children_k, children_k_index);
 				for(int child_k : children_k){
 					if(child_k < 0){
 						// A negative child_k is not a reference to a node, it's just a number associated with this edge
@@ -881,6 +895,7 @@ public abstract class Network implements Serializable, HyperGraph{
 						System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 					}
 				}
+				score += this._param._fm.getParam_G().getContinuousScore(this, k, children_k, children_k_index);
 //				for(int child_k : children_k){
 //					score += this._max[child_k];
 //				}
@@ -904,8 +919,8 @@ public abstract class Network implements Serializable, HyperGraph{
 //			System.out.println("Edges: "+Arrays.toString(childrenOfThisNodeHypothesis));
 //			System.out.println(bestPath);
 			EdgeHypothesis edge = this._hypotheses[k].children()[bestPath.index[0]];
-			this._max_paths[k] = new int[edge.children.length];
-			for(int i=0; i<edge.children.length; i++){
+			this._max_paths[k] = new int[edge.children().length];
+			for(int i=0; i<edge.children().length; i++){
 				this._max_paths[k][i] = edge.children()[i].nodeIndex();
 			}
 			this._max[k] = bestPath.score;

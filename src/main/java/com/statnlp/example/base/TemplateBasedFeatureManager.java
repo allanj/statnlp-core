@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.statnlp.hybridnetworks;
+package com.statnlp.example.base;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -13,6 +13,11 @@ import java.util.Map;
 import java.util.Scanner;
 
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.hybridnetworks.FeatureArray;
+import com.statnlp.hybridnetworks.FeatureManager;
+import com.statnlp.hybridnetworks.GlobalNetworkParam;
+import com.statnlp.hybridnetworks.Network;
+import com.statnlp.util.Pipeline;
 
 /**
  * A default feature extractor that is based on a template.
@@ -49,6 +54,18 @@ public class TemplateBasedFeatureManager extends FeatureManager {
 			});
 	private List<String> featureTemplates;
 	private Map<String, int[][]> compiledFeatureTemplates;
+	
+	public TemplateBasedFeatureManager(Pipeline<?> pipeline) {
+		this(pipeline.param, DEFAULT_FEATURE_TEMPLATES);
+	}
+	
+	public TemplateBasedFeatureManager(Pipeline<?> pipeline, String templateFilePath){
+		this(pipeline.param, readTemplate(templateFilePath));
+	}
+	
+	public TemplateBasedFeatureManager(Pipeline<?> pipeline, List<String> featureTemplates){
+		this(pipeline.param, featureTemplates);
+	}
 
 	/**
 	 * @param param_g
@@ -97,7 +114,7 @@ public class TemplateBasedFeatureManager extends FeatureManager {
 	 * @see com.statnlp.hybridnetworks.FeatureManager#extract_helper(com.statnlp.hybridnetworks.Network, int, int[])
 	 */
 	@Override
-	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k) {
+	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k, int children_k_index) {
 //		if (true){
 //			FeatureArray fa = extract_helper2(network, parent_k, children_k);
 //			System.out.println(Arrays.toString(fa.getCurrent()));

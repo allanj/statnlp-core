@@ -534,6 +534,29 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					
 				})
 				.help("The L2 regularization value."));
+		
+		// Testing settings
+		argParserObjects.put("--predictTopK", argParser.addArgument("--predictTopK")
+				.type(Integer.class)
+				.setDefault(1)
+				.action(new ArgumentAction(){
+
+					@Override
+					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+							Object value) throws ArgumentParserException {
+						withPredictTopK((int)value);
+					}
+
+					@Override
+					public void onAttach(Argument arg) {}
+
+					@Override
+					public boolean consumeArgument() {
+						return true;
+					}
+					
+				})
+				.help("The number of predictions to be made during testing."));
 
 		// Threading Settings
 		argParserObjects.put("--numThreads", argParser.addArgument("--numThreads")
@@ -861,6 +884,16 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
 		return getThis();
 	}
+
+	/**
+	 * With the specified number of predictions made during testing.
+	 * @param k
+	 * @return
+	 */
+	public THIS withPredictTopK(int k){
+		setParameter("predictTopK", k);
+		return getThis();
+	}
 	
 	/**
 	 * With the specified number of threads used when training and testing.
@@ -1086,11 +1119,11 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 	 */
 	protected abstract void initVisualization();
 	
-	protected abstract Instance[] getInstancesForTraining();
-	protected abstract Instance[] getInstancesForTuning();
-	protected abstract Instance[] getInstancesForTesting();
-	protected abstract Instance[] getInstancesForEvaluation();
-	protected abstract Instance[] getInstancesForVisualization();
+	public abstract Instance[] getInstancesForTraining();
+	public abstract Instance[] getInstancesForTuning();
+	public abstract Instance[] getInstancesForTesting();
+	public abstract Instance[] getInstancesForEvaluation();
+	public abstract Instance[] getInstancesForVisualization();
 	
 	/**
 	 * Train the model on the given training instances

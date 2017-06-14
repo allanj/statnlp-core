@@ -14,7 +14,7 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
-import com.statnlp.neural.NeuralConfig;
+import com.statnlp.neural.MultiLayerPerceptron;
 
 public class FCRFFeatureManager extends FeatureManager {
 
@@ -22,7 +22,9 @@ public class FCRFFeatureManager extends FeatureManager {
 
 	private boolean useJointFeatures;
 	//private String OUT_SEP = NeuralConfig.OUT_SEP; 
-	private String IN_SEP = NeuralConfig.IN_SEP;
+	private String IN_SEP = MultiLayerPerceptron.IN_SEP;
+	private MultiLayerPerceptron net;
+	// TODO: Update the extract_helper to use net
 	
 	private static HashSet<String> others = new HashSet<>(Arrays.asList("#STR#", "#END#", "#STR1#", "#END1#", "#str#", "#end#", "#str1#", "#end1#"));
 	
@@ -68,6 +70,9 @@ public class FCRFFeatureManager extends FeatureManager {
 	public FCRFFeatureManager(GlobalNetworkParam param_g, boolean useJointFeatures, boolean cascade, TASK task, int windowSize, boolean iobes,
 			boolean removeChunkNeural, boolean removePOSNeural, boolean removeJointNeural) {
 		super(param_g);
+		if(NetworkConfig.USE_NEURAL_FEATURES){
+			net = (MultiLayerPerceptron)param_g.getFeatureValueProviders().get(0);
+		}
 		this.useJointFeatures = useJointFeatures; 
 		this.cascade = cascade;
 		this.task = task;
@@ -79,7 +84,7 @@ public class FCRFFeatureManager extends FeatureManager {
 	}
 
 	@Override
-	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k) {
+	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k, int children_k_index) {
 		FCRFInstance inst = ((FCRFInstance)network.getInstance());
 		Sentence sent = inst.getInput();
 		long node = network.getNode(parent_k);

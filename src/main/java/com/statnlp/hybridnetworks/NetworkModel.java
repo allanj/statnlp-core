@@ -37,7 +37,6 @@ import java.util.function.Consumer;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
-import com.statnlp.neural.NNCRFGlobalNetworkParam;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.ui.visualize.type.VisualizerFrame;
 import com.statnlp.util.instance_parser.InstanceParser;
@@ -63,8 +62,6 @@ public abstract class NetworkModel implements Serializable{
 	private transient LocalNetworkLearnerThread[] _learners;
 	//the local decoder.
 	private transient LocalNetworkDecoderThread[] _decoders;
-	//neuralCRF/SSVM socket controller
-	private NNCRFGlobalNetworkParam nnController;
 	private transient PrintStream[] outstreams = new PrintStream[]{System.out};
 	private transient Consumer<TrainingIterationInformation> endOfIterCallback;
 	
@@ -320,7 +317,6 @@ public abstract class NetworkModel implements Serializable{
 		//finalize the features.
 		this._fm.getParam_G().lockIt();
 		printUsedMemory("after lock");
-		nnController = this._fm.getParam_G()._nnController;
 		
 		if(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY && NetworkConfig.CACHE_FEATURES_DURING_TRAINING){
 			touch(insts, true); // Touch again to cache the features, both in labeled and unlabeled
@@ -374,9 +370,11 @@ public abstract class NetworkModel implements Serializable{
 					else learner.setTrainInstanceIdSet(new HashSet<Integer>(instIds));
 				}
 				long time = System.nanoTime();
-				if (NetworkConfig.USE_NEURAL_FEATURES) {
-					nnController.forwardNetwork(true);
-				}
+				
+				// Feature value provider's ``forward''
+				this._fm.getParam_G().computeContinousScores();
+				this._fm.getParam_G().resetGradContinuous();
+				
 				List<Future<Void>> results = pool.invokeAll(callables);
 				for(Future<Void> result: results){
 					try{
@@ -385,6 +383,7 @@ public abstract class NetworkModel implements Serializable{
 						throw new RuntimeException(e.getCause());
 					}
 				}
+				
 				boolean done = true;
 				boolean lastIter = (it == maxNumIterations);
 				if(lastIter){
@@ -410,10 +409,8 @@ public abstract class NetworkModel implements Serializable{
 					throw new RuntimeException("Error:\n"+obj_old+"\n>\n"+obj);
 				}
 				obj_old = obj;
-				if (NetworkConfig.USE_NEURAL_FEATURES) {
-					if (lastIter || done) {
-						nnController.forwardNetwork(false);
-					}
+				if (lastIter || done) {
+					this._fm.getParam_G().computeContinousScores();
 				}
 				if(endOfIterCallback != null){
 					endOfIterCallback.accept(new TrainingIterationInformation(it, epochNum, done, lastIter, obj));
@@ -426,7 +423,6 @@ public abstract class NetworkModel implements Serializable{
 					print("Training completes. No significant progress (<objtol) after "+it+" iterations.", outstreams);
 					break;
 				}
-				
 			}
 		} finally {
 			pool.shutdown();
@@ -528,19 +524,57 @@ public abstract class NetworkModel implements Serializable{
 		}
 	}
 	
-	public Instance[] decode(Instance[] allInstances) throws InterruptedException {
-		return decode(allInstances, false);
+	/**
+	 * Decodes the instances based on the learned parameters.<br>
+	 * The predictions can be obtained through {@link Instance#getPrediction()}.
+	 * @param instances The instances to be decoded.
+	 * @return The same instance array, with the {@code prediction} field assigned.
+	 * @throws InterruptedException
+	 */
+	public Instance[] decode(Instance[] instances) throws InterruptedException {
+		return decode(instances, false);
 	}
-	
-	public Instance[] decode(Instance[] allInstances, boolean cacheFeatures) throws InterruptedException{
-		return decode(allInstances, cacheFeatures, 1);
+
+	/**
+	 * Decodes the instances based on the learned parameters, caching the features extracted.<br>
+	 * The caching is useful if one needs to decode the instances multiple times after changing some 
+	 * of the parameters (e.g., for tuning).<br>
+	 * The predictions can be obtained through {@link Instance#getPrediction()}.
+	 * @param instances The instances to be decoded.
+	 * @param cacheFeatures Whether to cache the features from the instances.
+	 * @return The same instance array, with the {@code prediction} field assigned.
+	 * @throws InterruptedException
+	 */
+	public Instance[] decode(Instance[] instances, boolean cacheFeatures) throws InterruptedException{
+		return decode(instances, cacheFeatures, 1);
 	}
-	
-	public Instance[] decode(Instance[] allInstances, int numPredictionsGenerated) throws InterruptedException {
-		return decode(allInstances, false, numPredictionsGenerated);
+
+	/**
+	 * Decodes the instances based on the learned parameters, taking the top-k structures.<br>
+	 * The best predictions can be obtained through {@link Instance#getPrediction()},
+	 * while the top-k predictions can be obtained through {@link Instance#getTopKPredictions()}.
+	 * @param instances The instances to be decoded.
+	 * @param numPredictionsGenerated The number of top-k structures to be decoded.
+	 * @return The same instance array, with the {@code prediction} field assigned.
+	 * @throws InterruptedException
+	 */
+	public Instance[] decode(Instance[] instances, int numPredictionsGenerated) throws InterruptedException {
+		return decode(instances, false, numPredictionsGenerated);
 	}
-	
-	public Instance[] decode(Instance[] allInstances, boolean cacheFeatures, int numPredictionsGenerated) throws InterruptedException{
+
+	/**
+	 * Decodes the instances based on the learned parameters, taking the top-k structures, caching the features extracted.<br>
+	 * The caching is useful if one needs to decode the instances multiple times after changing some 
+	 * of the parameters (e.g., for tuning).<br>
+	 * The best predictions can be obtained through {@link Instance#getPrediction()},
+	 * while the top-k predictions can be obtained through {@link Instance#getTopKPredictions()}.
+	 * @param instances The instances to be decoded.
+	 * @param cacheFeatures Whether to cache the features from the instances.
+	 * @param numPredictionsGenerated The number of top-k structures to be decoded.
+	 * @return The same instance array, with the {@code prediction} field assigned.
+	 * @throws InterruptedException
+	 */
+	public Instance[] decode(Instance[] instances, boolean cacheFeatures, int numPredictionsGenerated) throws InterruptedException{
 		
 //		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
 //			this._fm.getParam_G().expandFeaturesForGenerativeModelDuringTesting();
@@ -549,17 +583,17 @@ public abstract class NetworkModel implements Serializable{
 		this._numThreads = NetworkConfig.NUM_THREADS;
 		System.err.println("#threads:"+this._numThreads);
 		
-		Instance[] results = new Instance[allInstances.length];
+		Instance[] results = new Instance[instances.length];
 		
 		//all the instances.
-		//this._allInstances = allInstances;
+		this._allInstances = instances;
 		
 		//create the threads.
 		if(this._decoders == null || !cacheFeatures){
 			this._decoders = new LocalNetworkDecoderThread[this._numThreads];
 		}
 		
-		Instance[][] insts = this.splitInstancesForTest(allInstances);
+		Instance[][] insts = this.splitInstancesForTest(instances);
 		
 		//distribute the works into different threads.
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
@@ -574,19 +608,39 @@ public abstract class NetworkModel implements Serializable{
 			}
 		}
 		
+		if (NetworkConfig.FEATURE_TOUCH_TEST) {
+			System.err.println("Touching test set.");
+			
+			for(int threadId = 0; threadId<this._numThreads; threadId++){
+				this._decoders[threadId].setTouch();
+				this._decoders[threadId].start();
+			}
+			for(int threadId = 0; threadId<this._numThreads; threadId++){
+				this._decoders[threadId].join();
+				this._decoders[threadId].setUnTouch();
+			}
+		}
+		
 		System.err.println("Okay. Decoding started.");
 		
-		long time = System.currentTimeMillis();
+		printUsedMemory("before decode");
+		long time = System.nanoTime();
+		
+		this._fm.getParam_G().initializeProvider(false);
+		this._fm.getParam_G().computeContinousScores();
+		
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
+			this._decoders[threadId] = this._decoders[threadId].copyThread(this._fm);
 			this._decoders[threadId].start();
 		}
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
 			this._decoders[threadId].join();
 		}
+		printUsedMemory("after decode");
 		
 		System.err.println("Okay. Decoding done.");
-		time = System.currentTimeMillis() - time;
-		System.err.println("Overall decoding time = "+ time/1000.0 +" secs.");
+		time = System.nanoTime() - time;
+		System.err.println("Overall decoding time = "+ time/1.0e9 +" secs.");
 		
 		int k = 0;
 		for(int threadId = 0; threadId<this._numThreads; threadId++){

@@ -1,4 +1,4 @@
-torch.setdefaulttensortype('torch.FloatTensor')
+torch.setdefaulttensortype('torch.DoubleTensor')
 
 -- opt = {
 --     binfilename = 'polyglot/polyglot-en.txt',
@@ -13,7 +13,7 @@ local Polyglot = {}
 -- end
 
 Polyglot.load = function (self,lang)
-    local polyglotFile = 'polyglot/polyglot-' .. lang .. '.t7'
+    local polyglotFile = 'nn-crf-interface/neural_server/polyglot/polyglot-' .. lang .. '.t7'
     if not paths.filep(polyglotFile) then
         error('Please run bintot7.lua to preprocess Polyglot data!')
     else

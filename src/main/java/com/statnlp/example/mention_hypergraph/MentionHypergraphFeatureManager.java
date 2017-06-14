@@ -59,7 +59,7 @@ public class MentionHypergraphFeatureManager extends FeatureManager {
 	}
 
 	@Override
-	protected FeatureArray extract_helper(Network net, int parent_k, int[] children_k) {
+	protected FeatureArray extract_helper(Network net, int parent_k, int[] children_k, int children_k_index) {
 		BaseNetwork network = (BaseNetwork)net;
 		MentionHypergraphInstance instance = (MentionHypergraphInstance)network.getInstance();
 		AttributedWord[] words = instance.input.words;

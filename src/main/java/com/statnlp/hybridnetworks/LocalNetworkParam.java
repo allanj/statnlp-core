@@ -20,7 +20,6 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Map;
 
-import gnu.trove.iterator.TIntIntIterator;
 import gnu.trove.map.hash.TIntIntHashMap;
 
 //one thread should have one such LocalFeatureMap.
@@ -94,7 +93,7 @@ public class LocalNetworkParam implements Serializable{
 			this._globalMode = true;
 		}
 		
-		this._stringIndex = new StringIndex();
+		this._stringIndex = new StringIndex(numNetworks*100);
 
 	}
 	
@@ -320,10 +319,7 @@ public class LocalNetworkParam implements Serializable{
 			return;
 		}
 		this._fs = new int[this._globalFeature2LocalFeature.size()];
-		TIntIntIterator features = this._globalFeature2LocalFeature.iterator();
-		while(features.hasNext()){
-			features.advance();
-			int f_global = features.key();
+		for(int f_global: this._globalFeature2LocalFeature.keys()){
 			int f_local = this._globalFeature2LocalFeature.get(f_global);
 			this._fs[f_local] = f_global;
 		}

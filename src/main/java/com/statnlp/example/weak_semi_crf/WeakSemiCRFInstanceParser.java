@@ -18,6 +18,7 @@ import java.util.Map;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
+import com.statnlp.commons.types.Span;
 import com.statnlp.util.Pipeline;
 import com.statnlp.util.instance_parser.InstanceParser;
 

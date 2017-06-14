@@ -33,7 +33,7 @@ import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
-import com.statnlp.neural.NeuralConfig;
+import com.statnlp.neural.MultiLayerPerceptron;
 import com.statnlp.util.Pipeline;
 import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 import com.statnlp.util.instance_parser.InstanceParser;
@@ -45,6 +45,10 @@ public class LinearCRFFeatureManager extends FeatureManager{
 
 	private static final long serialVersionUID = -4880581521293400351L;
 	
+	private String IN_SEP = MultiLayerPerceptron.IN_SEP;
+	private String OUT_SEP = MultiLayerPerceptron.OUT_SEP;
+	// TODO: Update the extract_helper with the net
+	
 	private static final boolean CHEAT = false;
 	
 	public int wordHalfWindowSize = 1;
@@ -52,9 +56,6 @@ public class LinearCRFFeatureManager extends FeatureManager{
 	public boolean productWithOutput = true;
 	public Map<Integer, Label> labels;
 	public Map<FeatureType, Boolean> featureTypes;
-	
-	private String OUT_SEP = NeuralConfig.OUT_SEP; 
-	private String IN_SEP = NeuralConfig.IN_SEP; 
 	
 	public enum FeatureType {
 		WORD(true),
@@ -138,6 +139,10 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		}
 	}
 
+	public LinearCRFFeatureManager(Pipeline<?> pipeline){
+		this(pipeline.param, pipeline.instanceParser);
+	}
+
 	/**
 	 * Enables the specified feature type.
 	 * @param featureType
@@ -163,12 +168,8 @@ public class LinearCRFFeatureManager extends FeatureManager{
 		return featureTypes.get(featureType);
 	}
 	
-	public LinearCRFFeatureManager(Pipeline<?> pipeline){
-		this(pipeline.param, pipeline.instanceParser);
-	}
-
 	@Override
-	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k) {
+	protected FeatureArray extract_helper(Network network, int parent_k, int[] children_k, int children_k_index) {
 		GlobalNetworkParam param_g = this._param_g;
 		
 		BaseNetwork net = (BaseNetwork)network;

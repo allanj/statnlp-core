@@ -37,7 +37,7 @@ public class FeatureArray implements Serializable{
 	private FeatureBox _fb;
 	/** The flag signifying the scope of the feature indices, whether local (per thread) or global (combined feature map). */
 	protected boolean _isLocal = false;
-
+	
 	/** An empty feature array */
 	public static final FeatureArray EMPTY = new FeatureArray(new int[0]);
 	/** A feature with very negative score, used to signify that the hyperpath containing this feature should not be selected */
@@ -78,7 +78,8 @@ public class FeatureArray implements Serializable{
 	 * @see #FeatureArray(int[], FeatureArray)
 	 */
 	public FeatureArray(FeatureBox fb) {
-		this(fb, null);
+		this._fb = fb;
+		this._next = null;
 		this._isLocal = false;
 	}
 
@@ -95,11 +96,11 @@ public class FeatureArray implements Serializable{
 		this._next = next;
 		this._isLocal = false;
 	}
-
+	
 	private FeatureArray(double score) {
 		this._totalScore = score;
 	}
-
+	
 	public void setAlwaysChange(boolean alwaysChange){
 		this._fb._alwaysChange = alwaysChange;
 	}
@@ -137,11 +138,12 @@ public class FeatureArray implements Serializable{
 			} else {
 				fs_local[localIdx] = this._fb.get(k);
 			}
+			
 			if(fs_local[localIdx]==-1){
 				throw new RuntimeException("The local feature got an id of -1 for " + this._fb.get(k));
 			}
 		}
-
+		
 		FeatureArray fa;
 		if (this._next != null){
 			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, param), this._next.toLocal(param)); //saving memory
@@ -249,6 +251,7 @@ public class FeatureArray implements Serializable{
 	/**
 	 * Compute the score using the parameter and the feature array
 	 * @param param
+	 * @param instance 
 	 * @param fs
 	 * @return
 	 */
@@ -256,7 +259,7 @@ public class FeatureArray implements Serializable{
 		if(!this._isLocal != param.isGlobalMode()) {
 			throw new RuntimeException("This FeatureArray is local? "+this._isLocal+"; The param is "+param.isGlobalMode());
 		}
-
+		
 		double score = 0.0;
 		for(int f : fs){
 			if(f!=-1){
@@ -265,6 +268,7 @@ public class FeatureArray implements Serializable{
 				
 			}
 		}
+		
 		return score;
 	}
 

@@ -21,6 +21,9 @@ import java.util.List;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
+import com.statnlp.hybridnetworks.decoding.EdgeHypothesis;
+import com.statnlp.hybridnetworks.decoding.NodeHypothesis;
+import com.statnlp.hybridnetworks.decoding.ScoredIndex;
 
 public class LocalNetworkDecoderThread extends Thread{
 	
@@ -36,6 +39,7 @@ public class LocalNetworkDecoderThread extends Thread{
 	private NetworkCompiler _compiler;
 	private boolean _cacheParam = true;
 	private int numPredictionsGenerated = 1;
+	private boolean isTouching;
 	
 	//please make sure the threadId is 0-indexed.
 	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler){
@@ -58,8 +62,12 @@ public class LocalNetworkDecoderThread extends Thread{
 		this(threadId, fm, instances, compiler, param, cacheParam, 1);
 	}
 	
-	//please make sure the threadId is 0-indexed.
 	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, LocalNetworkParam param, boolean cacheParam, int numPredictionsGenerated){
+		this(threadId, fm, instances, compiler, param, cacheParam, numPredictionsGenerated, false);
+	}
+	
+	//please make sure the threadId is 0-indexed.
+	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, LocalNetworkParam param, boolean cacheParam, int numPredictionsGenerated, boolean isTouching){
 		this._threadId = threadId;
 		this._param = param;
 		this._param.setGlobalMode();//set it to global mode
@@ -67,6 +75,12 @@ public class LocalNetworkDecoderThread extends Thread{
 		this._compiler = compiler;
 		this._cacheParam = cacheParam;
 		this.numPredictionsGenerated = numPredictionsGenerated;
+		this.isTouching = isTouching;
+	}
+	
+	public LocalNetworkDecoderThread copyThread(FeatureManager fm) {
+		return new LocalNetworkDecoderThread(_threadId, fm, _instances_input, 
+				_compiler, _param, _cacheParam, numPredictionsGenerated, isTouching);
 	}
 	
 	public LocalNetworkParam getParam(){
@@ -75,7 +89,11 @@ public class LocalNetworkDecoderThread extends Thread{
 	
 	@Override
 	public void run(){
-		this.max();
+		if(!isTouching){
+    		this.max();
+    	} else {
+    		this.touch();
+    	}
 	}
 	
 	public void max(){
@@ -128,7 +146,7 @@ public class LocalNetworkDecoderThread extends Thread{
 			}
 			return inst;
 		}else if(NetworkConfig.MAX_MARGINAL_DECODING){
-			network.marginal();
+			network.inference(true);
 			network.renewCurrentMarginalMap();
 		}else{
 			network.max();
@@ -141,7 +159,7 @@ public class LocalNetworkDecoderThread extends Thread{
 				// Try calling the implementation for top-K decompiler (not decoding)
 				return this._compiler.decompile(network, numPredictionsGenerated);
 			} catch (UnsupportedOperationException e){
-				// If not implemented, then do a hack by changing the max array into the k-th best prediction
+				// If not implemented, then do a workaround by changing the max array into the k-th best prediction
 				// Then call decompile to get the k-th best structure.
 				Instance result = this._compiler.decompile(network);
 				List<Object> topKPredictions = new ArrayList<>();
@@ -179,11 +197,11 @@ public class LocalNetworkDecoderThread extends Thread{
 			ScoredIndex bestPath = node.getKthBestHypothesis(0);
 			EdgeHypothesis edge = node.children()[bestPath.index[0]];
 			ScoredIndex score = edge.getKthBestHypothesis(bestPath.index[1]);
-			int nodeIndex = node.nodeIndex;
+			int nodeIndex = node.nodeIndex();
 			if(network._max_paths[nodeIndex].length != edge.children().length){
 				network._max_paths[nodeIndex] = new int[edge.children().length];
 			}
-			for(int i=0; i<edge.children.length; i++){
+			for(int i=0; i<edge.children().length; i++){
 				network._max_paths[nodeIndex][i] = edge.children()[i].nodeIndex();
 			}
 			network._max[nodeIndex] = score.score;
@@ -203,16 +221,16 @@ public class LocalNetworkDecoderThread extends Thread{
 		int nodeIndex = nodeHypothesis.nodeIndex();
 		EdgeHypothesis edge = nodeHypothesis.children()[kthPrediction.index[0]];
 		ScoredIndex score = edge.getKthBestHypothesis(kthPrediction.index[1]);
-		ScoredIndex[] nextPath = new ScoredIndex[edge.children.length];
+		ScoredIndex[] nextPath = new ScoredIndex[edge.children().length];
 		if(network._max_paths[nodeIndex].length != edge.children().length){
 			network._max_paths[nodeIndex] = new int[edge.children().length];
 		}
-		for(int i=0; i<edge.children.length; i++){
+		for(int i=0; i<edge.children().length; i++){
 			nextPath[i] = edge.children()[i].getKthBestHypothesis(score.index[i]);
 			network._max_paths[nodeIndex][i] = edge.children()[i].nodeIndex();
 		}
 		network._max[nodeIndex] = kthPrediction.score;
-		for(int i=0; i<edge.children.length; i++){
+		for(int i=0; i<edge.children().length; i++){
 			setMaxArrayForKthPrediction(network, nextPath[i], edge.children()[i]);
 		}
 	}
@@ -221,4 +239,29 @@ public class LocalNetworkDecoderThread extends Thread{
 		return this._instances_output;
 	}
 	
+	/**
+     * Go through all networks to know the possible features, 
+     * and caching the networks if {@link #_cacheNetworks} is true.
+     */
+	public void touch(){
+		long time = System.currentTimeMillis();
+		//extract the features..
+		for(int networkId = 0; networkId< this._instances_input.length; networkId++){
+			if(networkId%100==0)
+				System.err.print('.');
+			Network network = this._compiler.compileAndStore(networkId, this._instances_input[networkId], this._param);
+			network.touch();
+		}
+		System.err.println();
+		time = System.currentTimeMillis() - time;
+		System.out.println("Thread "+this._threadId + " touch time: "+ time/1000.0+" secs.");
+	}
+	
+	public void setTouch(){
+		this.isTouching = true;
+	}
+
+	public void setUnTouch(){
+		this.isTouching = false;
+	}
 }

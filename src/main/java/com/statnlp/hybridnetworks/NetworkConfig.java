@@ -18,6 +18,8 @@ package com.statnlp.hybridnetworks;
 
 import java.lang.reflect.Field;
 
+import com.statnlp.hybridnetworks.decoding.Hypothesis;
+
 public class NetworkConfig {
 	
 	/**
@@ -197,15 +199,27 @@ public class NetworkConfig {
 	/** Decoding the max-marginal for each node as well. if set to true */
 	public static boolean MAX_MARGINAL_DECODING = false;
 	
+	/**
+	 * Enumerates the supported inference type
+	 */
 	public static enum InferenceType {
 		MEAN_FIELD,
-		FORWARD_BACKWARD;
-		private InferenceType(){
-			
-		}
+		FORWARD_BACKWARD
+		;
 	}
 	
+	/**
+	 * The inference type of the model.
+	 */
 	public static InferenceType INFERENCE = InferenceType.FORWARD_BACKWARD;
+	
+	/**
+	 * Limit the size of the priority queue used in {@link Hypothesis} class when decoding.<br>
+	 * Setting this to 0 will remove the limit, making the data structure slightly faster.<br>
+	 * The size limit of the priority queue will also affect the highest supported k in top-k decoding,
+	 * with <br>
+	 */
+	public static int PRIORITY_QUEUE_SIZE_LIMIT = 0;
 	
 	/***
 	 * Neural network related flags.
@@ -213,6 +227,8 @@ public class NetworkConfig {
 	 */
 	/** If enable the neural CRF model, set it true.  */
 	public static boolean USE_NEURAL_FEATURES = false;
+	/** "torch" (socket) or "torch-jni" (TH4J + JNLua) */
+	public static String NEURAL_BACKEND = "torch";
 	/** Regularized the neural features in CRF or not. set to false then can be done by dropout***/
 	public static boolean REGULARIZE_NEURAL_FEATURES = false;
 	/** If true: Optimized the neural net in CRF. optimizer in neural config must be set to none **/
@@ -222,7 +238,9 @@ public class NetworkConfig {
 	/** Randomly choose the batch at every iteration. (false may give better result) */
 	public static boolean RANDOM_BATCH = false;
 	
-	public static String NEURAL_FEATURE_TYPE_PREFIX = "neural";
+	public static String NEURAL_RANDOM_TYPE = "default";
+	
+	public static String OS = "osx"; // for Lua native library
 	
 	/***
 	 * Mean field-related flags.
@@ -249,4 +267,6 @@ public class NetworkConfig {
 		}
 		return builder.toString();
 	}
+	
+	public static final boolean FEATURE_TOUCH_TEST = true;
 }

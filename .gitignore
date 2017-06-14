@@ -7,3 +7,6 @@ nn-crf-interface/neural_server/*.config
 data/*
 .gitignore
 data/*
+*.jar
+ner_out.txt
+jnlua-0.9.6*

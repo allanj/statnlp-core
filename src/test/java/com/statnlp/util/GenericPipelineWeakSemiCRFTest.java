@@ -9,7 +9,7 @@ import java.util.List;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
-import com.statnlp.example.weak_semi_crf.Span;
+import com.statnlp.commons.types.Span;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFFeatureManager;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFInstanceParser;
 import com.statnlp.example.weak_semi_crf.WeakSemiCRFNetworkCompiler;

@@ -1,12 +1,11 @@
 /**
  * 
  */
-package com.statnlp.hybridnetworks;
+package com.statnlp.hybridnetworks.decoding;
 
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.NoSuchElementException;
-import java.util.Queue;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -23,8 +22,9 @@ import java.util.TreeSet;
  * <li>{@link #contains(Object)} - O(log n)</li>
  * <li>{@link #element(E)}/{@link #peek(E)} - O(1)</li>
  * </ul>
+ * The underlying implementation of this queue is a {@link TreeSet}.
  */
-public class BoundedPrioritySet<E> extends TreeSet<E> implements Queue<E>{
+public class BoundedUniquePriorityQueue<E> extends TreeSet<E> implements IUniquePriorityQueue<E>{
 
 	private static final long serialVersionUID = -1713861356866461868L;
 	private int limit;
@@ -32,7 +32,7 @@ public class BoundedPrioritySet<E> extends TreeSet<E> implements Queue<E>{
 	/**
 	 * Creates an unbounded min-priority queue with unique elements.
 	 */
-	public BoundedPrioritySet(){
+	public BoundedUniquePriorityQueue(){
 		this(0);
 	}
 
@@ -40,7 +40,7 @@ public class BoundedPrioritySet<E> extends TreeSet<E> implements Queue<E>{
 	 * Creates a min-priority queue with unique elements and the specified maximum size.
 	 * @param limit
 	 */
-    public BoundedPrioritySet(final int limit) {
+    public BoundedUniquePriorityQueue(final int limit) {
         super();
         this.limit = limit;
     }
@@ -50,7 +50,7 @@ public class BoundedPrioritySet<E> extends TreeSet<E> implements Queue<E>{
      * @param limit
      * @param c
      */
-    public BoundedPrioritySet(final int limit, final Collection<? extends E> c) {
+    public BoundedUniquePriorityQueue(final int limit, final Collection<? extends E> c) {
         this(limit);
         addAll(c);
     }
@@ -60,7 +60,7 @@ public class BoundedPrioritySet<E> extends TreeSet<E> implements Queue<E>{
      * @param limit
      * @param c
      */
-    public BoundedPrioritySet(final int limit, final Comparator<? super E> comparator) {
+    public BoundedUniquePriorityQueue(final int limit, final Comparator<? super E> comparator) {
         super(comparator);
         this.limit = limit;
     }
@@ -70,7 +70,7 @@ public class BoundedPrioritySet<E> extends TreeSet<E> implements Queue<E>{
      * @param limit
      * @param c
      */
-    public BoundedPrioritySet(final int limit, final SortedSet<E> s) {
+    public BoundedUniquePriorityQueue(final int limit, final SortedSet<E> s) {
     	this(limit);
     	addAll(s);
     }
@@ -121,8 +121,9 @@ public class BoundedPrioritySet<E> extends TreeSet<E> implements Queue<E>{
      * element e2 such that e.equals(e2).
      * If this set already contains the element, the call leaves the set unchanged and returns false.<br>
      * This method will also return false when the size limit is reached and it is
-     * greater than the greatest element in the set.
-     * @return true if the set changes as the result of this operation
+     * greater than the greatest element in the queue.
+     * @param e The element to be added into the queue
+     * @return true if the queue changes as the result of this operation
      * @throws ClassCastException if the specified object cannot be compared with the elements currently in this set
      * @throws NullPointerException if the specified object is null
      */
@@ -165,10 +166,10 @@ public class BoundedPrioritySet<E> extends TreeSet<E> implements Queue<E>{
 	 * @param newLimit
 	 * @return
 	 */
-	public boolean resize(int newLimit){
+	public boolean resize(final int newLimit){
 		boolean result = true;
 		if(newLimit > 0 && newLimit < this.limit){
-			while(size() > 0 && size() > newLimit){
+			while(size() > newLimit){
 				pollLast();
 			}
 		}
