@@ -17,6 +17,7 @@ import org.ejml.data.DMatrixRMaj;
 import org.ejml.dense.row.CommonOps_DDRM;
 import org.ejml.simple.SimpleMatrix;
 
+import scala.collection.Iterator;
 import scala.util.Random;
 import th4j.Tensor.DoubleTensor;
 
@@ -121,7 +122,6 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	private void configureJNLua() {
 		System.setProperty("jna.library.path","./nativeLib");
 		System.setProperty("java.library.path", "./nativeLib:" + System.getProperty("java.library.path"));
-		System.out.println(System.getProperty("java.library.path"));
 		Field fieldSysPath = null;
 		try {
 			fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
@@ -363,7 +363,12 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		if (buf == null || buf.length != t.nElement()) {
 			buf = new double[(int) t.nElement()];
 		}
-		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
+//		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
+		Iterator<Object> iter = t.iterator();
+		int ptr = 0;
+		while (iter.hasNext()) { // manual iteration like this is actually slow
+			buf[ptr++] = (double) iter.next(); 
+		}
 		return buf;
 	}
 }
