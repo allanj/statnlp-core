@@ -162,8 +162,7 @@ public class FCRFFeatureManager extends FeatureManager {
 			for(int i = 0; i < fs.length; i++) fs[i] = finalList.get(i);
 			FeatureArray curr = new FeatureArray(FeatureBox.getFeatureBox(fs, this.getParams_L()[threadId]));
 			if (setAlwaysChange) { //means this is the joint feature
-				curr.setAlwaysChange(true);
-				assert(dstNodes.length==fs.length);
+				curr.setJoint();
 				curr.setDstNodes(dstNodes);
 			}
 			fa.next(curr);

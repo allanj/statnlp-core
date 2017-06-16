@@ -101,11 +101,24 @@ public class FeatureArray implements Serializable{
 		this._totalScore = score;
 	}
 	
-	public void setAlwaysChange(boolean alwaysChange){
-		this._fb._alwaysChange = alwaysChange;
+	/**
+	 * Call this for those joint feature (array) in mean field inference. <br>
+	 * It will make sure the score for those features (value) always update. <br>
+	 * Usually if the version (i.e., weights) is same, the score won't be calculated again.<br>
+	 * But in mean field inference, the joint feature value often changes which makes the score change although the version (i.e., weights) doesn't change.  
+	 * @param alwaysChange
+	 */
+	public void setJoint(){
+		this._fb._alwaysChange = true;
 	}
 	
+	/**
+	 * Call this for those joint feature (array) in mean field inference. <br>
+	 * It specify the destination node (the current node joint to) in the other structure.
+	 * @param dstNodes: for each feature index, it will joint to one node. The size should be same as feature box size.
+	 */
 	public void setDstNodes(int[] dstNodes) {
+		assert(dstNodes.length == this._fb._fs.length);
 		this.dstNodes = dstNodes;
 	}
 	
