@@ -41,6 +41,7 @@ public class LinearNEMain {
 	public static String nerOut = "nn-crf-interface/nlp-from-scratch/me/output/ner_out.txt";
 	public static String neural_config = "nn-crf-interface/neural_server/neural.debug.config";
 	public static String neuralType = "mlp";
+	public static boolean iobes = true;
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 
@@ -66,7 +67,6 @@ public class LinearNEMain {
 		}
 		
 		List<FeatureValueProvider> nets = new ArrayList<FeatureValueProvider>();
-		
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
 			if (neuralType.equals("lstm")) {
@@ -94,8 +94,8 @@ public class LinearNEMain {
             all_instances[i].setUnlabeled();
         }
 		
-		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, neuralType);
-		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler();
+		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, neuralType, false);
+		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler(iobes);
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
 		ECRFInstance[] ecrfs = trainInstances.toArray(new ECRFInstance[trainInstances.size()]);
 		model.train(ecrfs, numIteration);

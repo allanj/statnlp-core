@@ -18,14 +18,16 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 	public enum NODE_TYPES {LEAF,NODE,ROOT};
 	public int _size;
 	public BaseNetwork genericUnlabeledNetwork;
+	private boolean iobes;
 	
-	public ECRFNetworkCompiler(){
+	public ECRFNetworkCompiler(boolean iobes){
 		this._size = 150;
+		this.iobes = iobes;
 		this.compileUnlabeledInstancesGeneric();
 	}
 	
 	public long toNode_leaf(){
-		int[] arr = new int[]{0,Entity.get("O").getId(), 0,0,NODE_TYPES.LEAF.ordinal()};
+		int[] arr = new int[]{0, Entity.Entities.size(), 0,0,NODE_TYPES.LEAF.ordinal()};
 		return NetworkIDMapper.toHybridNodeID(arr);
 	}
 	
@@ -35,7 +37,7 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 	}
 	
 	public long toNode_root(int size){
-		int[] arr = new int[]{size+1,Entity.Entities.size(),0,0,NODE_TYPES.ROOT.ordinal()};
+		int[] arr = new int[]{size+1, Entity.Entities.size(), 0, 0, NODE_TYPES.ROOT.ordinal()};
 		return NetworkIDMapper.toHybridNodeID(arr);
 	}
 
@@ -114,7 +116,7 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 				for(long child: children){
 					if(child==-1) continue;
 					int[] childArr = NetworkIDMapper.toHybridNodeArray(child);
-					String childEntity = Entity.get(childArr[1]).getForm();
+					String childEntity = i!=0 ? Entity.get(childArr[1]).getForm() : "O";
 					
 					
 					if( (childEntity.startsWith("B-") || childEntity.startsWith("I-")  ) 
@@ -142,7 +144,16 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 			lcrfNetwork.addNode(root);
 			for(long child:currentNodes){
 				if(child==-1) continue;
-				lcrfNetwork.addEdge(root, new long[]{child});
+				int[] childArr = NetworkIDMapper.toHybridNodeArray(child);
+				String childEntity = Entity.get(childArr[1]).getForm();
+				if (iobes) {
+					if(!childEntity.startsWith("B-")&&  !childEntity.startsWith("I-")) {
+						lcrfNetwork.addEdge(root, new long[]{child});
+					}
+				} else {
+					lcrfNetwork.addEdge(root, new long[]{child});
+				}
+				
 			}
 				
 			children = currentNodes;
