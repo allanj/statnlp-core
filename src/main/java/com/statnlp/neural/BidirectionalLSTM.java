@@ -363,12 +363,12 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		if (buf == null || buf.length != t.nElement()) {
 			buf = new double[(int) t.nElement()];
 		}
-//		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
-		Iterator<Object> iter = t.iterator();
-		int ptr = 0;
-		while (iter.hasNext()) { // manual iteration like this is actually slow
-			buf[ptr++] = (double) iter.next(); 
-		}
+		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
+//		Iterator<Object> iter = t.iterator();
+//		int ptr = 0;
+//		while (iter.hasNext()) { // manual iteration like this is actually slow
+//			buf[ptr++] = (double) iter.next(); 
+//		}
 		return buf;
 	}
 }

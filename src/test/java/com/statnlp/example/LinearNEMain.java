@@ -10,7 +10,6 @@ import com.statnlp.example.linear_ne.ECRFEval;
 import com.statnlp.example.linear_ne.ECRFFeatureManager;
 import com.statnlp.example.linear_ne.ECRFInstance;
 import com.statnlp.example.linear_ne.ECRFNetworkCompiler;
-import com.statnlp.example.linear_ne.EConfig;
 import com.statnlp.example.linear_ne.EReader;
 import com.statnlp.example.linear_ne.Entity;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
@@ -119,7 +118,7 @@ public class LinearNEMain {
 					case "-iter": numIteration = Integer.valueOf(args[i+1]); break;   //default:100;
 					case "-thread": numThreads = Integer.valueOf(args[i+1]); break;   //default:5
 					case "-testFile": testFile = args[i+1]; break;        
-					case "-windows":EConfig.windows = true; break;            //default: false (is using windows system to run the evaluation script)
+					case "-windows":ECRFEval.windows = true; break;            //default: false (is using windows system to run the evaluation script)
 					case "-batch": NetworkConfig.USE_BATCH_TRAINING = true;
 									NetworkConfig.BATCH_SIZE = Integer.valueOf(args[i+1]); break;
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;

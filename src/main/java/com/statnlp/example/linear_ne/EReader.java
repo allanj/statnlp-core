@@ -42,7 +42,7 @@ public class EReader {
 				words.toArray(wordsArr);
 				Sentence sent = new Sentence(wordsArr);
 				ECRFInstance inst = new ECRFInstance(index++,1.0,sent);
-				inst.entities = es;
+				inst.output = es;
 //				System.err.println(es.toString());
 				if(!encoding.equals("NONE")) setEncoding(inst, encoding);
 //				System.err.println(inst.entities.toString());

@@ -7,4 +7,8 @@ experiments/*
 data/*
 *.jar
 ner_out.txt
+jnlua-1.0.4*
 jnlua-0.9.6*
+nativeLib/*
+
+

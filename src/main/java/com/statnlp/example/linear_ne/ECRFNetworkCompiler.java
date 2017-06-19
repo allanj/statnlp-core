@@ -64,7 +64,6 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 		}
 		
 		result.setPrediction(prediction);
-		result.setPredictionScore(lcrfNetwork.getMax());
 		return result;
 	}
 	
