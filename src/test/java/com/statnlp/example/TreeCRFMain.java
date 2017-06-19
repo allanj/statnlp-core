@@ -97,21 +97,21 @@ public class TreeCRFMain {
 		}
 		
 		System.out.println("Number of rules: "+rules.size());
-		int k = 256;
+		int k = 1;
 		Instance[] predictions = model.decode(testInstances, k);
+		evaluate(predictions);
+	}
+
+	public static void evaluate(Instance[] predictions) {
 		int corr = 0;
 		int totalGold = 0;
 		int totalPred = 0;
 		for(Instance inst: predictions){
 			TreeCRFInstance instance = (TreeCRFInstance)inst;
-			List<BinaryTree> topKPreds = instance.getTopKPredictions();
 			System.out.println("Gold:");
 			System.out.println(instance.output);
 			System.out.println("Prediction:");
 			System.out.println(instance.prediction);
-			System.out.println("Size: "+topKPreds.size());
-			System.out.println("K-th prediction:");
-			System.out.println(topKPreds.get(topKPreds.size()-1));
 			System.out.println();
 			List<String> goldConstituents = instance.output.getConstituents();
 			List<String> predConstituents = instance.prediction.getConstituents();

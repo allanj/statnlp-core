@@ -1,5 +1,6 @@
 package com.statnlp.example.tree_crf;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -15,12 +16,15 @@ import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkCompiler;
 import com.statnlp.hybridnetworks.NetworkException;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
+import com.statnlp.util.Pipeline;
+import com.statnlp.util.instance_parser.TreebankInstanceParser;
 
 public class TreeCRFNetworkCompiler extends NetworkCompiler {
 
 	private static final long serialVersionUID = -1057312710562009755L;
 	
 	public static final boolean DEBUG = false;
+	public static final int DEFAULT_MAX_SIZE = 100;
 	
 	public enum NodeType{
 		SINK,
@@ -39,7 +43,17 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		this.labels = labels;
 		this.rules = rules;
 		this.rootLabel = rootLabel;
-		this.maxSize = 100;
+		this.maxSize = DEFAULT_MAX_SIZE;
+		Collections.sort(this.labels);
+		buildUnlabeled();
+	}
+	
+	public TreeCRFNetworkCompiler(Pipeline<?> pipeline){
+		TreebankInstanceParser parser = (TreebankInstanceParser)pipeline.instanceParser;
+		this.labels = new ArrayList<Label>(parser.labels);
+		this.rules = parser.rules;
+		this.rootLabel = parser.rootLabel;
+		this.maxSize = DEFAULT_MAX_SIZE;
 		Collections.sort(this.labels);
 		buildUnlabeled();
 	}

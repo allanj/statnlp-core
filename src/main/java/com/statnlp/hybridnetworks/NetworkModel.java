@@ -401,7 +401,7 @@ public abstract class NetworkModel implements Serializable{
 					batchId = 0;
 					// this means one epoch
 					time = System.nanoTime();
-					print(String.format("Epoch %d: Obj=%-18.12f Time=%.3fs Total time: %.3fs", epochNum++, multiplier*epochObj*instIds.size()/(size+offset), (time-epochStartTime)/1.0e9, (time-startTime)/1.0e9), outstreams);
+					print(String.format("Epoch %d: Obj=%-18.12f Time=%.3fs Total time: %.3fs", ++epochNum, multiplier*epochObj*instIds.size()/(size+offset), (time-epochStartTime)/1.0e9, (time-startTime)/1.0e9), outstreams);
 					epochObj = 0.0;
 					epochStartTime = System.nanoTime();
 				}

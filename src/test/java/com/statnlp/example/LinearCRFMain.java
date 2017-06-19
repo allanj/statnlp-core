@@ -50,10 +50,10 @@ public class LinearCRFMain {
 				.withModelPath("test.model")
 				.withLogPath("test.log")
 				.withL2(0.01)
-				.withWeightInit(0.0)
-				.withModelType(ModelType.CRF)
-//				.withUseBatchTraining(true)
-//				.withBatchSize(1)
+				.withWeightInit(0.0)			// or "random"
+				.withModelType(ModelType.CRF)	// STRUCTURED_PERCEPTRON, SSVM, or SOFTMAX_MARGIN
+				.withUseBatchTraining(true)
+				.withBatchSize(1)
 				.withStoppingCriteria(StoppingCriteria.SMALL_RELATIVE_CHANGE)
 				.withMaxIter(1000)
 				.withEvaluateEvery(0)
@@ -62,9 +62,12 @@ public class LinearCRFMain {
 				.withPredictTopK(10)
 				.addTask("train")
 				.addTasks("test", "evaluate")
-//				.addTask("visualize")
+				.addTask("visualize")
 				;
 		pipeline.execute();
+		Instance[] instances = pipeline.getInstancesForEvaluation();
+		
+		instances[0] = null;
 		return;
 	}
 	

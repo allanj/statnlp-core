@@ -7,6 +7,7 @@ import com.statnlp.hybridnetworks.FeatureManager;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkIDMapper;
+import com.statnlp.util.Pipeline;
 
 public class TreeCRFFeatureManager extends FeatureManager {
 
@@ -26,6 +27,10 @@ public class TreeCRFFeatureManager extends FeatureManager {
 
 	public TreeCRFFeatureManager(GlobalNetworkParam param_g) {
 		super(param_g);
+	}
+	
+	public TreeCRFFeatureManager(Pipeline<?> pipeline){
+		this(pipeline.param);
 	}
 
 	@Override
