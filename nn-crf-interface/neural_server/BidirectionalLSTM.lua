@@ -16,6 +16,7 @@ function BidirectionalLSTM:initialize(javadata, ...)
     data.optimizer = javadata:get("optimizer")
     self.bidirection = javadata:get("bidirection")
     self.numLabels = javadata:get("numLabels")
+    
 
     local isTraining = javadata:get("isTraining")
     self.isTraining = isTraining
@@ -24,7 +25,7 @@ function BidirectionalLSTM:initialize(javadata, ...)
         self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
         self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
     end
-
+    
     -- what to forward
     if isTraining then
         self.idx2word = {}
@@ -86,23 +87,26 @@ function BidirectionalLSTM:createNetwork()
 
     -- merges the output of one time-step of fwd and bwd rnns.
     -- You could also try nn.AddTable(), nn.Identity(), etc.
-    local merge = nn.JoinTable(1, 1) 
-    local mergeSeq = nn.Sequencer(merge)
+    local merge = nn.JoinTable(1, 1)
+    local mergeHiddenSize = hiddenSize
+    if self.bidirection then
+        mergeHiddenSize = 2 * hiddenSize
+    end
+    local mergeLayer = nn.Sequential():add(merge):add(nn.Linear(mergeHiddenSize, self.numLabels):noBias()) 
+    local mergeSeq = nn.Sequencer(mergeLayer)
 
     -- Assume that two input sequences are given (original and reverse, both are right-padded).
     -- Instead of ConcatTable, we use ParallelTable here.
     local parallel = nn.ParallelTable()
     parallel:add(fwdSeq)
-    local mergeHiddenSize = hiddenSize
+    
     if self.bidirection then
         parallel:add(bwdSeq)
-        mergeHiddenSize = 2 * hiddenSize
     end
-
     local brnn = nn.Sequential()
        :add(parallel)
        :add(nn.ZipTable())
-       :add(mergeSeq):add(nn.Linear(mergeHiddenSize, numLabels):noBias()) 
+       :add(mergeSeq)
        --- we can use  nn.LinearNoBias()
        --- if have bias, just remove the nobias.  
     self.net = brnn
@@ -135,8 +139,16 @@ function BidirectionalLSTM:createOptimizer()
 end
 
 function BidirectionalLSTM:forward(isTraining)
+    --print("before forward")
     local output_table = self.net:forward(self.x)
+   --- print("after forward, before torch cat. ")
+    ---if self.output:dim() ~= 0 then
+    ---    print (self.output:size(1) .." ".. self.output:size(2))
+        --print (output_table:size(1) .." ".. output_table:size(2))
+    ---end
+    ---print(output_table)
     self.output = torch.cat(self.output, output_table, 1)
+    --print("after torch cat.. "..self.output:size(1).." "..self.output:size(2))
     if not self.outputPtr:isSameSizeAs(self.output) then
         self.outputPtr:resizeAs(self.output)
     end

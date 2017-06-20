@@ -197,14 +197,14 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
         this.outputMatrix = new SimpleMatrix(inputSize, this.numLabels);
 		
 		config.put("isTraining", isTraining);
-        
+		
         Object[] args = new Object[3];
         args[0] = config;
         args[1] = this.outputTensorBuffer;
         args[2] = this.countOutputTensorBuffer;
         Class<?>[] retTypes;
         if (optimizeNeural && isTraining) {
-        	retTypes = new Class[]{DoubleTensor.class,DoubleTensor.class};
+        	retTypes = new Class[]{DoubleTensor.class, DoubleTensor.class};
         } else {
         	retTypes = new Class[]{};
         }
