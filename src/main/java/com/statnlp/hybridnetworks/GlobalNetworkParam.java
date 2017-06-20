@@ -685,7 +685,10 @@ public class GlobalNetworkParam implements Serializable{
     		// The _weights parameters will be updated inside this optimize method.
     		// This is possible since the _weights array is passed to the optimizer above,
     		// and the optimizer will set the weights directly, as arrays are passed by reference
+    		long time = System.nanoTime();
         	done = this._opt.optimize();
+        	long end = System.nanoTime();
+        	System.out.println(String.format("Time to optimize: %.3fs", (end-time)/1.0e9));
     	} catch(ExceptionWithIflag e){
     		throw new NetworkException("Exception with Iflag:"+e.getMessage());
     	}

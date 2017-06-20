@@ -383,6 +383,8 @@ public abstract class NetworkModel implements Serializable{
 						throw new RuntimeException(e.getCause());
 					}
 				}
+				long endCalculate = System.nanoTime();
+				print(String.format("Time to calculate obj and grad: %.3fs", (endCalculate-time)/1.0e9));
 				
 				boolean done = true;
 				boolean lastIter = (it == maxNumIterations);

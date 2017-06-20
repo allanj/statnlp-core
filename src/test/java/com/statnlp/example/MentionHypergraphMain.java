@@ -12,15 +12,16 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.example.mention_hypergraph.AttributedWord;
 import com.statnlp.example.mention_hypergraph.Label;
 import com.statnlp.example.mention_hypergraph.MentionHypergraphFeatureManager;
+import com.statnlp.example.mention_hypergraph.MentionHypergraphFeatureManager.FeatureType;
 import com.statnlp.example.mention_hypergraph.MentionHypergraphInstance;
+import com.statnlp.example.mention_hypergraph.MentionHypergraphInstance.WordsAndTags;
 import com.statnlp.example.mention_hypergraph.MentionHypergraphNetworkCompiler;
 import com.statnlp.example.mention_hypergraph.Span;
-import com.statnlp.example.mention_hypergraph.MentionHypergraphFeatureManager.FeatureType;
-import com.statnlp.example.mention_hypergraph.MentionHypergraphInstance.WordsAndTags;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.GenerativeNetworkModel;
 import com.statnlp.hybridnetworks.GlobalNetworkParam;
@@ -35,7 +36,7 @@ public class MentionHypergraphMain {
 		boolean serializeModel = true;
 		boolean readModelIfAvailable = false;
 		
-		String train_filename = "data/ACE2004/data/English/mention-standard/FINE_TYPE/train.data.100";
+		String train_filename = "data/ACE2004/data/English/mention-standard/FINE_TYPE/train.data.1000";
 		
 		MentionHypergraphInstance[] trainInstances = readData(train_filename, true, true);
 		
@@ -59,7 +60,7 @@ public class MentionHypergraphMain {
 		
 		System.err.println("Read.."+size+" instances.");
 		
-		MentionHypergraphFeatureManager fm = new MentionHypergraphFeatureManager(new GlobalNetworkParam());
+		MentionHypergraphFeatureManager fm = new MentionHypergraphFeatureManager(new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(0.01)));
 		
 		MentionHypergraphNetworkCompiler compiler = new MentionHypergraphNetworkCompiler(labels.toArray(new Label[labels.size()]), maxSize);
 		
