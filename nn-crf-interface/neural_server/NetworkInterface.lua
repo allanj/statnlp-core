@@ -6,6 +6,7 @@ stringx = require 'pl.stringx'
 include 'nn-crf-interface/neural_server/AbstractNeuralNetwork.lua'
 include 'nn-crf-interface/neural_server/MultiLayerPerceptron.lua'
 include 'nn-crf-interface/neural_server/BidirectionalLSTM.lua'
+include 'nn-crf-interface/neural_server/ContinuousFeature.lua'
 include 'nn-crf-interface/neural_server/OneHot.lua'
 include 'nn-crf-interface/neural_server/Utils.lua'
 
@@ -48,6 +49,8 @@ function initialize(javadata, ...)
             net = MultiLayerPerceptron(false, gpuid)
         elseif networkClass == "BidirectionalLSTM" then
             net = BidirectionalLSTM(false, gpuid)
+        elseif networkClass == "ContinuousFeature" then
+            net = ContinuousFeature(false, gpuid)
         else
             error("Unsupported network class " .. networkClass)
         end

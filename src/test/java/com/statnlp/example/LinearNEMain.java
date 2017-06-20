@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
+import com.statnlp.example.linear_ne.ECRFContinuousFeatureValueProvider;
 import com.statnlp.example.linear_ne.ECRFEval;
 import com.statnlp.example.linear_ne.ECRFFeatureManager;
 import com.statnlp.example.linear_ne.ECRFInstance;
@@ -65,19 +66,23 @@ public class LinearNEMain {
 			NetworkConfig.FEATURE_INIT_WEIGHT = 0.1;
 		}
 		
-		List<FeatureValueProvider> nets = new ArrayList<FeatureValueProvider>();
+		List<FeatureValueProvider> fvps = new ArrayList<FeatureValueProvider>();
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
 			if (neuralType.equals("lstm")) {
 				int hiddenSize = 100;
 				String optimizer = "none";
 				boolean bidirection = true;
-				nets.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size()));
+				fvps.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size()));
+			} else if (neuralType.equals("continuous")) {
+				fvps.add(new ECRFContinuousFeatureValueProvider(Entity.Entities.size()));
+			} else if (neuralType.equals("mlp")) {
+				fvps.add(new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size()));
 			} else {
-				nets.add(new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size()));
+				throw new RuntimeException("Unknown neural type: " + neuralType);
 			}
-		}
-		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory(), nets);
+		} 
+		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory(), fvps);
 		
 		System.err.println("[Info] "+Entity.Entities.size()+" entities: "+Entity.Entities.toString());
 		
@@ -122,7 +127,7 @@ public class LinearNEMain {
 					case "-batch": NetworkConfig.USE_BATCH_TRAINING = true;
 									NetworkConfig.BATCH_SIZE = Integer.valueOf(args[i+1]); break;
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;
-					case "-neural": if(args[i+1].equals("mlp") || args[i+1].equals("lstm")){ 
+					case "-neural": if(args[i+1].equals("mlp") || args[i+1].equals("lstm")|| args[i+1].equals("continuous")){ 
 											NetworkConfig.USE_NEURAL_FEATURES = true;
 											neuralType = args[i+1];
 											NetworkConfig.OPTIMIZE_NEURAL = true;  //false: optimize in neural network

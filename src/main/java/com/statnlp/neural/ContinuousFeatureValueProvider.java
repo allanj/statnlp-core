@@ -4,13 +4,8 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 import com.naef.jnlua.LuaState;
 import com.statnlp.hybridnetworks.Network;
@@ -19,71 +14,30 @@ import com.statnlp.neural.util.LuaFunctionHelper;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 
-import gnu.trove.map.hash.TObjectIntHashMap;
 import scala.util.Random;
 import th4j.Tensor.DoubleTensor;
 
-public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
-	
+public abstract class ContinuousFeatureValueProvider extends NeuralNetworkFeatureValueProvider {
+
 	public static String LUA_VERSION = "5.2";
-
-	/**
-	 * A LuaState instance for loading Lua scripts
-	 */
 	private LuaState L;
-
 	protected HashMap<String,Object> config;
 	
-	/**
-	 * Number of unique input sentences
-	 */
-	private int numSent;
+	protected int numFeatureValues;
 	
-	/**
-	 * Maximum sentence length
-	 */
-	private int maxSentLen;
-	
-	/**
-	 * Whether CRF optimizes this neural network,
-	 * same as defined by NetworkConfig.OPTIMIZE_NEURAL
-	 */
-	private boolean optimizeNeural;
-
-	/**
-	 * Map input sentence to index
-	 */
-	private TObjectIntHashMap<String> sentence2id;
-
-	public BidirectionalLSTM(int numLabels) {
-		this(100, true, "none", numLabels);
+	public ContinuousFeatureValueProvider(int numLabels) {
+		this(1, numLabels);
 	}
 	
-	public BidirectionalLSTM(int hiddenSize, int numLabels) {
-		this(hiddenSize, true, "none", numLabels);
-	}
-	
-	public BidirectionalLSTM(int hiddenSize, String optimizer, int numLabels) {
-		this(hiddenSize, true, optimizer, numLabels);
-	}
-	
-	public BidirectionalLSTM(int hiddenSize, boolean bidirection, String optimizer, int numLabels) {
+	public ContinuousFeatureValueProvider(int numFeatureValues ,int numLabels) {
 		super(numLabels);
-		this.optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
-		this.sentence2id = new TObjectIntHashMap<String>();
-		config = new HashMap<>();
-		config.put("class", "BidirectionalLSTM");
-        config.put("hiddenSize", hiddenSize);
-        config.put("bidirection", bidirection);
-        config.put("optimizer", optimizer);
-        config.put("numLabels", numLabels);
 		configureJNLua();
+		this.numFeatureValues = numFeatureValues;
+		config = new HashMap<>();
+		config.put("class", "ContinuousFeature");
+		config.put("numLabels", numLabels);
 	}
 
-	/**
-	 * Configure paths for JNLua and create a new LuaState instance
-	 * for loading the backend Torch/Lua script
-	 */
 	private void configureJNLua() {
 		System.setProperty("jna.library.path","./nativeLib");
 		System.setProperty("java.library.path", "./nativeLib:" + System.getProperty("java.library.path"));
@@ -121,34 +75,33 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	
 	@Override
 	public void initialize() {
-		makeInput();
-		int inputSize = numSent*maxSentLen;
+		DoubleTensor inputs = makeInput();
+		int inputSize = input2id.size();
 		if (isTraining) {
 			this.countOutput = new double[inputSize * this.numLabels];
 			// Pointer to Torch tensors
 	        this.outputTensorBuffer = new DoubleTensor(inputSize, this.numLabels);
 	        this.countOutputTensorBuffer = new DoubleTensor(inputSize, this.numLabels);
 		}
-		
 		// Forward matrices
-        this.output = new double[inputSize * this.numLabels];
+		this.output = new double[inputSize * this.numLabels];
 		
 		config.put("isTraining", isTraining);
 		
-        Object[] args = new Object[3];
+        Object[] args = new Object[4];
         args[0] = config;
         args[1] = this.outputTensorBuffer;
         args[2] = this.countOutputTensorBuffer;
+        args[3] = inputs;
         Class<?>[] retTypes;
-        if (optimizeNeural && isTraining) {
+        if (isTraining) {
         	retTypes = new Class[]{DoubleTensor.class, DoubleTensor.class};
         } else {
         	retTypes = new Class[]{};
         }
         Object[] outputs = LuaFunctionHelper.execLuaFunction(this.L, "initialize", args, retTypes);
-        
-		if(optimizeNeural && isTraining) {
-			this.paramsTensor = (DoubleTensor) outputs[0];
+        if(isTraining) {
+        	this.paramsTensor = (DoubleTensor) outputs[0];
 			this.gradParamsTensor = (DoubleTensor) outputs[1];
 			Random rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
 			if (this.paramsTensor.nElement() > 0) {
@@ -162,50 +115,10 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		}
 	}
 	
-	public void makeInput() {
-		Set<String> sentenceSet = new HashSet<String>();
-		for (Object obj : input2id.keySet()) {
-			@SuppressWarnings("unchecked")
-			SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) obj;
-			String sent = sentAndPos.getKey();
-			sentenceSet.add(sent);
-			int sentLen = sent.split(" ").length;
-			if (sentLen > this.maxSentLen) {
-				this.maxSentLen = sentLen;
-			}
-		}
-		List<String> sentences = new ArrayList<String>(sentenceSet);
-		for (int i = 0; i < sentences.size(); i++) {
-			String sent = sentences.get(i);
-			sentence2id.put(sent, i);
-		}
-		config.put("sentences", sentences);
-		this.numSent = sentences.size();
-		System.out.println("maxLen="+maxSentLen);
-		System.out.println("#sent="+numSent);
-	}
-
-	@Override
-	public double getScore(Network network, int parent_k, int children_k_index) {
-		double val = 0.0;
-		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		if (input != null) {
-			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			@SuppressWarnings("unchecked")
-			SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) input;
-			int sentID = sentence2id.get(sentAndPos.getKey());
-			int row = sentAndPos.getValue()*numSent+sentID; 
-			val = output[row * numLabels + outputLabel];
-		}
-		return val;
-	}
-	
 	@Override
 	public void forward() {
-		if (optimizeNeural) { // update with new params
-			if (getParamSize() > 0) {
-				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
-			}
+		if (getParamSize() > 0) {
+			this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
 		}
 		Object[] args = new Object[]{isTraining};
 		Class<?>[] retTypes = new Class[]{DoubleTensor.class};
@@ -213,24 +126,43 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		output = getArray(outputTensorBuffer, output);
 	}
 	
+	public abstract double getFeatureValue(Object input);
+	
+	public DoubleTensor makeInput() { 
+		double[][] featureValues = new double[input2id.size()][1];
+		for (Object input : input2id.keySet()) {
+			double featureValue = this.getFeatureValue(input);
+			featureValues[input2id.get(input)][0] = featureValue;
+			//input2value.put(input, featureValue);
+		}
+		DoubleTensor dt = new DoubleTensor(featureValues);
+		return dt;
+	}
+
+	public double getScore(Network network, int parent_k, int children_k_index) {
+		double val = 0.0;
+		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
+		if (input != null) {
+			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
+			int inputId = input2id.get(input);
+			val = output[inputId * this.numLabels + outputLabel];
+		}
+		return val;
+	}
+
 	@Override
 	public void update(double count, Network network, int parent_k, int children_k_index) {
 		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
 		if (input != null) {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			@SuppressWarnings("unchecked")
-			SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) input;
-			int sentID = sentence2id.get(sentAndPos.getKey());
-			int row = sentAndPos.getValue()*numSent+sentID; 
-			
-			
+			int inputId = input2id.get(input);
 			synchronized (countOutput) {
-				int idx = row * this.numLabels + outputLabel;
+				int idx = inputId * this.numLabels + outputLabel;
 				countOutput[idx] -= count;
 			}
 		}
 	}
-
+	
 	@Override
 	public void backward() {
 		countOutputTensorBuffer.storage().copy(this.countOutput);
@@ -239,7 +171,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		Class<?>[] retTypes = new Class[0];
 		LuaFunctionHelper.execLuaFunction(this.L, "backward", args, retTypes);
 		
-		if(optimizeNeural && getParamSize() > 0) { // copy gradParams computed by Torch
+		if(getParamSize() > 0) { // copy gradParams computed by Torch
 			gradParams = getArray(this.gradParamsTensor, gradParams);
 		}
 		if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
@@ -274,4 +206,5 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
 		return buf;
 	}
+
 }

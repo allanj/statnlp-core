@@ -1,7 +1,6 @@
 package com.statnlp.hybridnetworks;
 
 import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.map.hash.TObjectDoubleHashMap;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
@@ -45,11 +44,6 @@ public abstract class FeatureValueProvider {
 	protected LinkedHashMap<Object,Integer> input2id;
 	
 	/**
-	 * Maps an input to a corresponding value
-	 */
-	protected TObjectDoubleHashMap<Object> input2score;
-	
-	/**
 	 * The coefficient used for regularization, i.e., batchSize/totalInstNum.
 	 */
 	protected double scale;
@@ -61,7 +55,6 @@ public abstract class FeatureValueProvider {
 	
 	public FeatureValueProvider(int numLabels) {
 		edge2io = new TIntObjectHashMap<TIntObjectHashMap<TIntObjectHashMap<SimpleImmutableEntry<Object,Integer>>>>();
-		input2score = new TObjectDoubleHashMap<Object>();
 		input2id = new LinkedHashMap<Object,Integer>();
 		this.numLabels = numLabels;
 	}
@@ -181,7 +174,7 @@ public abstract class FeatureValueProvider {
 		if (countOutput != null) {
 			Arrays.fill(countOutput, 0.0);
 		}
-		if (getParamSize() > 0) {
+		if (gradParams != null && getParamSize() > 0) {
 			Arrays.fill(gradParams, 0.0);
 		}
 	}

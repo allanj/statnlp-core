@@ -2,13 +2,23 @@ package com.statnlp.neural;
 
 import com.statnlp.hybridnetworks.FeatureValueProvider;
 
+import th4j.Tensor.DoubleTensor;
+
 public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProvider {
 	
+	/**
+	 * Corresponding Torch tensors for params and gradParams
+	 */
+	protected DoubleTensor paramsTensor, gradParamsTensor;
+	
+	/**
+	 * Corresponding Torch tensors for output and gradOutput
+	 */
+	protected DoubleTensor outputTensorBuffer, countOutputTensorBuffer;
 	
 	public NeuralNetworkFeatureValueProvider(int numLabels) {
 		super(numLabels);
 	}
-	
 	
 	@Override
 	public void initializeScores() {

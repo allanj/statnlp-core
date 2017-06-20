@@ -88,12 +88,7 @@ function BidirectionalLSTM:createNetwork()
     -- merges the output of one time-step of fwd and bwd rnns.
     -- You could also try nn.AddTable(), nn.Identity(), etc.
     local merge = nn.JoinTable(1, 1)
-    local mergeHiddenSize = hiddenSize
-    if self.bidirection then
-        mergeHiddenSize = 2 * hiddenSize
-    end
-    local mergeLayer = nn.Sequential():add(merge):add(nn.Linear(mergeHiddenSize, self.numLabels):noBias()) 
-    local mergeSeq = nn.Sequencer(mergeLayer)
+    local mergeSeq = nn.Sequencer(merge)
 
     -- Assume that two input sequences are given (original and reverse, both are right-padded).
     -- Instead of ConcatTable, we use ParallelTable here.
@@ -107,9 +102,16 @@ function BidirectionalLSTM:createNetwork()
        :add(parallel)
        :add(nn.ZipTable())
        :add(mergeSeq)
+    local mergeHiddenSize = hiddenSize
+    if self.bidirection then
+        mergeHiddenSize = 2 * hiddenSize
+    end
+    local rnn = nn.Sequential()
+        :add(brnn) 
+        :add(nn.Sequencer(nn.MaskZero(nn.Linear(mergeHiddenSize, self.numLabels):noBias(), 1))) 
        --- we can use  nn.LinearNoBias()
        --- if have bias, just remove the nobias.  
-    self.net = brnn
+    self.net = rnn
 end
 
 function BidirectionalLSTM:createOptimizer()
@@ -139,16 +141,9 @@ function BidirectionalLSTM:createOptimizer()
 end
 
 function BidirectionalLSTM:forward(isTraining)
-    --print("before forward")
     local output_table = self.net:forward(self.x)
-   --- print("after forward, before torch cat. ")
-    ---if self.output:dim() ~= 0 then
-    ---    print (self.output:size(1) .." ".. self.output:size(2))
-        --print (output_table:size(1) .." ".. output_table:size(2))
-    ---end
-    ---print(output_table)
+    --- this is to converting the table into tensor.
     self.output = torch.cat(self.output, output_table, 1)
-    --print("after torch cat.. "..self.output:size(1).." "..self.output:size(2))
     if not self.outputPtr:isSameSizeAs(self.output) then
         self.outputPtr:resizeAs(self.output)
     end

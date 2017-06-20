@@ -62,12 +62,6 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	private DoubleTensor outputTensorBuffer, gradOutputTensorBuffer;
 	
 	/**
-	 * CRF weight and gradient matrices.
-	 * Shape: (numLabels x embeddingDimension)
-	 */
-	private SimpleMatrix weightMatrix, gradWeightMatrix;
-	
-	/**
 	 * Neural network output and gradient matrices.
 	 * Shape: (vocabSize x embeddingDimension)
 	 */
@@ -551,12 +545,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		if (buf == null || buf.length != t.nElement()) {
 			buf = new double[(int) t.nElement()];
 		}
-//		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
-		Iterator<Object> iter = t.iterator();
-		int ptr = 0;
-		while (iter.hasNext()) { // manual iteration like this is actually slow
-			buf[ptr++] = (double) iter.next(); 
-		}
+		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
 		return buf;
 	}
 }
