@@ -1,7 +1,5 @@
 package com.statnlp.neural;
 
-import gnu.trove.map.hash.TObjectIntHashMap;
-
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
@@ -17,16 +15,16 @@ import org.ejml.data.DMatrixRMaj;
 import org.ejml.dense.row.CommonOps_DDRM;
 import org.ejml.simple.SimpleMatrix;
 
-import scala.collection.Iterator;
-import scala.util.Random;
-import th4j.Tensor.DoubleTensor;
-
 import com.naef.jnlua.LuaState;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.neural.util.LuaFunctionHelper;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
+
+import gnu.trove.map.hash.TObjectIntHashMap;
+import scala.util.Random;
+import th4j.Tensor.DoubleTensor;
 
 public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	
@@ -192,6 +190,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	        
 			// Pointer to Torch tensors
 	        this.outputTensorBuffer = new DoubleTensor(vocabSize, hiddenSize);
+	        System.out.println("the output size: " + vocabSize * hiddenSize);
 	        this.gradOutputTensorBuffer = new DoubleTensor(vocabSize, hiddenSize);
 		}
 		
@@ -360,10 +359,11 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	}
 	
 	private double[] getArray(DoubleTensor t, double[] buf) {
-		if (buf == null || buf.length != t.nElement()) {
-			buf = new double[(int) t.nElement()];
-		}
-		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
+//		if (buf == null || buf.length != t.nElement()) {
+//			buf = new double[(int) t.nElement()];
+//		}
+		buf = t.storage().getRawData().getDoubleArray(0, (int)t.nElement());
+		//t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
 //		Iterator<Object> iter = t.iterator();
 //		int ptr = 0;
 //		while (iter.hasNext()) { // manual iteration like this is actually slow
