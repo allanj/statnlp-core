@@ -54,6 +54,9 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		this.rules = parser.rules;
 		this.rootLabel = parser.rootLabel;
 		this.maxSize = DEFAULT_MAX_SIZE;
+		if(pipeline.hasParameter("maxSentenceLength")){
+			this.maxSize = Integer.parseInt(pipeline.getParameter("maxSentenceLength"));
+		}
 		Collections.sort(this.labels);
 		buildUnlabeled();
 	}
@@ -289,6 +292,72 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 			result.value = new LabeledWord(Label.get(labelId), "");
 			return result;
 		}
+	}
+
+	public static void evaluate(Instance[] predictions) {
+		int corr = 0;
+		int totalGold = 0;
+		int totalPred = 0;
+		for(Instance inst: predictions){
+			TreeCRFInstance instance = (TreeCRFInstance)inst;
+			System.out.println("Gold:");
+			System.out.println(instance.output);
+			System.out.println("Prediction:");
+			System.out.println(instance.prediction);
+			System.out.println();
+			List<String> goldConstituents = instance.output.getConstituents();
+			List<String> predConstituents = instance.prediction.getConstituents();
+			int curTotalGold = goldConstituents.size();
+			totalGold += curTotalGold;
+			int curTotalPred = predConstituents.size();
+			totalPred += curTotalPred;
+			int curCorr = countOverlaps(goldConstituents, predConstituents);
+			corr += curCorr;
+			if(curTotalPred == 0) curTotalPred = 1;
+			if(curTotalGold == 0) curTotalGold = 1;
+			double precision = 100.0*curCorr/curTotalPred;
+			double recall = 100.0*curCorr/curTotalGold;
+			double f1 = 2/((1/precision)+(1/recall));
+			System.out.println("Correct constituents: "+curCorr);
+			System.out.println("Gold constituents: "+curTotalGold);
+			System.out.println("Predicted constituents: "+curTotalPred);
+			System.out.println(String.format("P: %.2f%%", precision));
+			System.out.println(String.format("R: %.2f%%", recall));
+			System.out.println(String.format("F: %.2f%%", f1));
+		}
+		System.out.println("Correct constituents: "+corr);
+		System.out.println("Gold constituents: "+totalGold);
+		System.out.println("Predicted constituents: "+totalPred);
+		if(totalPred == 0) totalPred = 1;
+		if(totalGold == 0) totalGold = 1;
+		double precision = 100.0*corr/totalPred;
+		double recall = 100.0*corr/totalGold;
+		double f1 = 2/((1/precision)+(1/recall));
+		System.out.println(String.format("P: %.2f%%", precision));
+		System.out.println(String.format("R: %.2f%%", recall));
+		System.out.println(String.format("F: %.2f%%", f1));
+	}
+	
+	/**
+	 * Count the number of overlaps (common elements) in the given lists.
+	 * Duplicate objects are counted as separate objects.
+	 * @param list1
+	 * @param list2
+	 * @return
+	 */
+	private static int countOverlaps(List<String> list1, List<String> list2){
+		System.out.println(list1);
+		System.out.println(list2);
+		int result = 0;
+		List<String> copy = new ArrayList<String>();
+		copy.addAll(list2);
+		for(String string: list1){
+			if(copy.contains(string)){
+				copy.remove(string);
+				result += 1;
+			}
+		}
+		return result;
 	}
 
 }
