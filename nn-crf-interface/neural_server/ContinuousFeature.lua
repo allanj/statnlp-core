@@ -13,7 +13,8 @@ function ContinuousFeature:initialize(javadata, ...)
     self.data = {}
     local data = self.data
     self.numLabels = javadata:get("numLabels")
-    
+    self.numValues = javadata:get("numValues")
+
     local isTraining = javadata:get("isTraining")
     self.isTraining = isTraining
     local outputAndGradOutputPtr = {...}
@@ -40,7 +41,7 @@ end
 
 
 function ContinuousFeature:createNetwork()
-    local fwd = nn.Sequential():add(nn.Linear(1, self.numLabels):noBias())
+    local fwd = nn.Sequential():add(nn.Linear(self.numValues, self.numLabels):noBias())
     self.net = fwd
 end
 

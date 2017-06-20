@@ -36,6 +36,7 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkFeatur
 		config = new HashMap<>();
 		config.put("class", "ContinuousFeature");
 		config.put("numLabels", numLabels);
+		config.put("numValues", numFeatureValues);
 	}
 
 	private void configureJNLua() {
@@ -126,13 +127,18 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkFeatur
 		output = getArray(outputTensorBuffer, output);
 	}
 	
-	public abstract double getFeatureValue(Object input);
+	/**
+	 * The returned size should be same as the number of feature value
+	 * @param input
+	 * @return
+	 */
+	public abstract double[] getFeatureValue(Object input);
 	
 	public DoubleTensor makeInput() { 
-		double[][] featureValues = new double[input2id.size()][1];
+		double[][] featureValues = new double[input2id.size()][this.numFeatureValues];
 		for (Object input : input2id.keySet()) {
-			double featureValue = this.getFeatureValue(input);
-			featureValues[input2id.get(input)][0] = featureValue;
+			double[] featureValue = this.getFeatureValue(input);
+			featureValues[input2id.get(input)] = featureValue;
 			//input2value.put(input, featureValue);
 		}
 		DoubleTensor dt = new DoubleTensor(featureValues);

@@ -75,7 +75,7 @@ public class LinearNEMain {
 				boolean bidirection = true;
 				fvps.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size()));
 			} else if (neuralType.equals("continuous")) {
-				fvps.add(new ECRFContinuousFeatureValueProvider(Entity.Entities.size()));
+				fvps.add(new ECRFContinuousFeatureValueProvider(2, Entity.Entities.size()));
 			} else if (neuralType.equals("mlp")) {
 				fvps.add(new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size()));
 			} else {
