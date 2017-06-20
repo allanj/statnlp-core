@@ -10,6 +10,10 @@ public class ECRFInstance extends BaseInstance<ECRFInstance, Sentence, ArrayList
 
 	private static final long serialVersionUID = 1851514046050983662L;
 	
+	public ECRFInstance(int instanceId, double weight) {
+		super(instanceId, weight);
+	}
+	
 	public ECRFInstance(int instanceId, double weight, Sentence sent) {
 		super(instanceId, weight);
 		this.input = sent;
