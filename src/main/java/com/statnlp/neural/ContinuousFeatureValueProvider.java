@@ -128,17 +128,16 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkFeatur
 	}
 	
 	/**
-	 * The returned size should be same as the number of feature value
+	 * Fill the featureValue array using the input object
 	 * @param input
 	 * @return
 	 */
-	public abstract double[] getFeatureValue(Object input);
+	public abstract void getFeatureValue(Object input, double[] featureValue);
 	
 	public DoubleTensor makeInput() { 
 		double[][] featureValues = new double[input2id.size()][this.numFeatureValues];
 		for (Object input : input2id.keySet()) {
-			double[] featureValue = this.getFeatureValue(input);
-			featureValues[input2id.get(input)] = featureValue;
+			this.getFeatureValue(input, featureValues[input2id.get(input)]);
 			//input2value.put(input, featureValue);
 		}
 		DoubleTensor dt = new DoubleTensor(featureValues);
