@@ -21,7 +21,7 @@ public abstract class FeatureValueProvider {
 	 * The CRF weights and gradients of the continuous features,
 	 * each having the shape (numLabels x embeddingDimension)
 	 */
-	protected double[] weights, gradWeights;
+	//protected double[] weights, gradWeights;
 	
 	/**
 	 * The provider's internal weights and gradients
@@ -30,9 +30,9 @@ public abstract class FeatureValueProvider {
 	
 	/**
 	 * A flattened matrix containing the continuous values
-	 * with the shape (inputSize x embeddingDimension).
+	 * with the shape (inputSize x numLabels).
 	 */
-	protected double[] output, gradOutput;
+	protected double[] output, countOutput;
 	
 	/**
 	 * Maps a hyper-edge tuple (instance ID,parent node ID,child index) to an input-output pair

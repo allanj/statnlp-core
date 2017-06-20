@@ -45,36 +45,42 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	/**
 	 * Corresponding Torch tensors for output and gradOutput
 	 */
-	private DoubleTensor outputTensorBuffer, gradOutputTensorBuffer;
+	private DoubleTensor outputTensorBuffer, countOutputTensorBuffer;
 	
-	/**
-	 * CRF weight and gradient matrices.
-	 * Shape: (numLabels x embeddingDimension)
-	 */
-	private SimpleMatrix weightMatrix, gradWeightMatrix;
+//	/**
+//	 * CRF weight and gradient matrices.
+//	 * Shape: (numLabels x embeddingDimension)
+//	 */
+//	private SimpleMatrix weightMatrix, gradWeightMatrix;
 	
 	/**
 	 * Neural network output and gradient matrices.
-	 * Shape: (vocabSize x embeddingDimension)
+	 * //Shape: (inputSize x embeddingDimension)
+	 * The shape now becomes (inputSize x numLabels)
 	 */
-	private SimpleMatrix outputMatrix, gradOutputMatrix;
+	private SimpleMatrix outputMatrix, countOutputMatrix;
 	
-	/**
-	 * Result of outputMatrix * weightMatrix^T
-	 * Shape: (vocabSize x numLabels)
-	 */
-	private SimpleMatrix forwardMatrix;
+//	/**
+//	 * Result of outputMatrix * weightMatrix^T
+//	 * Shape: (vocabSize x numLabels)
+//	 */
+//	private SimpleMatrix forwardMatrix;
 	
-	/**
-	 * The transposed weight matrix that will be multiplied with outputMatrix
-	 */
-	private SimpleMatrix weightMatrix_tran;
+//	/**
+//	 * The transposed weight matrix that will be multiplied with outputMatrix
+//	 */
+//	private SimpleMatrix weightMatrix_tran;
 	
-	/**
-	 * Accumulated counts for CRF weights and neural network output.
-	 * Count is typically computed by inside-outside.
-	 */
-	private SimpleMatrix countWeightMatrix, countOutputMatrix;
+//	/**
+//	 * Accumulated counts for CRF weights and neural network output.
+//	 * Count is typically computed by inside-outside.
+//	 */
+//	private SimpleMatrix countWeightMatrix, countOutputMatrix;
+	
+//	/**
+//	 * InputSize x numLabels
+//	 */
+//	private SimpleMatrix countOutputMatrix;
 	
 	/**
 	 * Number of unique input sentences
@@ -87,7 +93,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	private int maxSentLen;
 	
 	/**
-	 * Number of hidden units and layers
+	 * Number of hidden units and layers in bidirectional LSTM
 	 */
 	private int hiddenSize;
 	
@@ -164,47 +170,49 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 			}
 		}
 		makeInput();
-		int vocabSize = numSent*maxSentLen;
+		
+		//vocabSize
+		int inputSize = numSent*maxSentLen;
 				
 		Random rng = null;
 		if (isTraining) {
 			rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
-			this.weightMatrix = new SimpleMatrix(numLabels, hiddenSize);
-			this.weightMatrix_tran = new SimpleMatrix(hiddenSize, numLabels);
-			this.gradWeightMatrix = new SimpleMatrix(numLabels, hiddenSize);
-			DMatrixRMaj weightDMatrix = this.weightMatrix.getMatrix();
-			this.weights = weightDMatrix.data;
+			//this.weightMatrix = new SimpleMatrix(numLabels, hiddenSize);
+			//this.weightMatrix_tran = new SimpleMatrix(hiddenSize, numLabels);
+			//this.gradWeightMatrix = new SimpleMatrix(numLabels, hiddenSize);
+			//DMatrixRMaj weightDMatrix = this.weightMatrix.getMatrix();
+			//this.weights = weightDMatrix.data;
 			
 			// Initialize weight matrix
-			for(int i = 0; i < weights.length; i++) {
-				weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
-					NetworkConfig.FEATURE_INIT_WEIGHT;
-			}
-			DMatrixRMaj gradWeightDMatrix = this.gradWeightMatrix.getMatrix();
-			this.gradWeights = gradWeightDMatrix.data;
+//			for(int i = 0; i < weights.length; i++) {
+//				weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
+//					NetworkConfig.FEATURE_INIT_WEIGHT;
+//			}
+//			DMatrixRMaj gradWeightDMatrix = this.gradWeightMatrix.getMatrix();
+//			this.gradWeights = gradWeightDMatrix.data;
 			
 			// Backward matrices
-	        this.gradOutputMatrix = new SimpleMatrix(vocabSize, hiddenSize);
-	        DMatrixRMaj gradOutputDMatrix = this.gradOutputMatrix.getMatrix();
-	        this.gradOutput = gradOutputDMatrix.data;
-	        this.countOutputMatrix = new SimpleMatrix(vocabSize, numLabels);
-	        this.countWeightMatrix = new SimpleMatrix(numLabels, vocabSize);
+	        this.countOutputMatrix = new SimpleMatrix(inputSize, this.numLabels);
+	        DMatrixRMaj countOutputDMatrix = this.countOutputMatrix.getMatrix();
+	        this.countOutput = countOutputDMatrix.data;
+	        //this.countOutputMatrix = new SimpleMatrix(inputSize, numLabels);
+	       // this.countWeightMatrix = new SimpleMatrix(numLabels, vocabSize);
 	        
 			// Pointer to Torch tensors
-	        this.outputTensorBuffer = new DoubleTensor(vocabSize, hiddenSize);
-	        this.gradOutputTensorBuffer = new DoubleTensor(vocabSize, hiddenSize);
+	        this.outputTensorBuffer = new DoubleTensor(inputSize, this.numLabels);
+	        this.countOutputTensorBuffer = new DoubleTensor(inputSize, this.numLabels);
 		}
 		
 		// Forward matrices
-        this.outputMatrix = new SimpleMatrix(vocabSize, hiddenSize);
-        this.forwardMatrix = new SimpleMatrix(vocabSize, numLabels);
+        this.outputMatrix = new SimpleMatrix(inputSize, this.numLabels);
+       // this.forwardMatrix = new SimpleMatrix(vocabSize, numLabels);
 		
 		config.put("isTraining", isTraining);
         
         Object[] args = new Object[3];
         args[0] = config;
         args[1] = this.outputTensorBuffer;
-        args[2] = this.gradOutputTensorBuffer;
+        args[2] = this.countOutputTensorBuffer;
         Class<?>[] retTypes;
         if (optimizeNeural && isTraining) {
         	retTypes = new Class[]{DoubleTensor.class,DoubleTensor.class};
@@ -260,7 +268,8 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 			SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) input;
 			int sentID = sentence2id.get(sentAndPos.getKey());
 			int row = sentAndPos.getValue()*numSent+sentID; 
-			val = forwardMatrix.get(row, outputLabel);
+			//previously it's forward matrix
+			val = outputMatrix.get(row, outputLabel);
 		}
 		return val;
 	}
@@ -282,8 +291,8 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		DMatrixRMaj outputData = this.outputMatrix.getMatrix();
 		outputData.data = output;
 		
-		CommonOps_DDRM.transpose(weightMatrix.getMatrix(), weightMatrix_tran.getMatrix());
-		CommonOps_DDRM.mult(outputMatrix.getMatrix(), weightMatrix_tran.getMatrix(), forwardMatrix.getMatrix());
+		//CommonOps_DDRM.transpose(weightMatrix.getMatrix(), weightMatrix_tran.getMatrix());
+		//CommonOps_DDRM.mult(outputMatrix.getMatrix(), weightMatrix_tran.getMatrix(), forwardMatrix.getMatrix());
 	}
 	
 	@Override
@@ -295,24 +304,25 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 			SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) input;
 			int sentID = sentence2id.get(sentAndPos.getKey());
 			int row = sentAndPos.getValue()*numSent+sentID; 
+			
 			synchronized (countOutputMatrix) {
 				double countOutput = countOutputMatrix.get(row, outputLabel);
 				countOutputMatrix.set(row, outputLabel, countOutput-count);
 			}
-			synchronized (countWeightMatrix) {
-				double countWeight = countWeightMatrix.get(outputLabel, row);
-				countWeightMatrix.set(outputLabel, row, countWeight-count);
-			}
+//			synchronized (countWeightMatrix) {
+//				double countWeight = countWeightMatrix.get(outputLabel, row);
+//				countWeightMatrix.set(outputLabel, row, countWeight-count);
+//			}
 		}
 	}
 
 	@Override
 	public void backward() {
 		// (vocabSize x numLabels) * (numLabels x hiddenSize)
-		CommonOps_DDRM.mult(countOutputMatrix.getMatrix(), weightMatrix.getMatrix(), gradOutputMatrix.getMatrix());
+		//CommonOps_DDRM.mult(countOutputMatrix.getMatrix(), weightMatrix.getMatrix(), gradOutputMatrix.getMatrix());
 		// (numLabels x vocabSize) * (vocabSize x hiddenSize)
-		CommonOps_DDRM.mult(countWeightMatrix.getMatrix(), outputMatrix.getMatrix(), gradWeightMatrix.getMatrix());
-		gradOutputTensorBuffer.storage().copy(gradOutput);
+		//CommonOps_DDRM.mult(countWeightMatrix.getMatrix(), outputMatrix.getMatrix(), gradWeightMatrix.getMatrix());
+		countOutputTensorBuffer.storage().copy(this.countOutput);
 		
 		Object[] args = new Object[]{};
 		Class<?>[] retTypes = new Class[0];
@@ -356,7 +366,6 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	
 	public void resetCount() {
 		countOutputMatrix.set(0.0);
-		countWeightMatrix.set(0.0);
 	}
 	
 	private double[] getArray(DoubleTensor t, double[] buf) {
@@ -364,11 +373,6 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 			buf = new double[(int) t.nElement()];
 		}
 		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
-//		Iterator<Object> iter = t.iterator();
-//		int ptr = 0;
-//		while (iter.hasNext()) { // manual iteration like this is actually slow
-//			buf[ptr++] = (double) iter.next(); 
-//		}
 		return buf;
 	}
 }
