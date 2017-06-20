@@ -24,7 +24,7 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 	private static final long serialVersionUID = -1057312710562009755L;
 	
 	public static final boolean DEBUG = false;
-	public static final int DEFAULT_MAX_SIZE = 100;
+	public static final int DEFAULT_MAX_SIZE = 50;
 	
 	public enum NodeType{
 		SINK,
@@ -128,12 +128,17 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 				int height = col-row;
 				int index = row;
 				if(height == 0){ // Terminal
+					long root = toNode_root(0);
+					networkBuilder.addNode(root);
 					for(Label label: labels){
 						if(label.type != LabelType.TERMINAL) continue;
 						int labelId = label.id;
 						long leaf = toNode(height, index, labelId);
 						networkBuilder.addNode(leaf);
 						networkBuilder.addEdge(leaf, new long[]{sink});
+						if(index == 0){
+							networkBuilder.addEdge(root, new long[]{leaf});
+						}
 					}
 				} else { // Non-terminal
 					for(Label label: labels){
@@ -176,7 +181,7 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 		// Create a super root to hold all the intermediate roots, so that they won't be removed by removeUnused
 		long superRoot = toNode_superRoot(size);
 		networkBuilder.addNode(superRoot);
-		for(int height=1; height<size; height++){
+		for(int height=0; height<size; height++){
 			long root = toNode_root(height);
 			networkBuilder.addEdge(superRoot, new long[]{root});
 		}
