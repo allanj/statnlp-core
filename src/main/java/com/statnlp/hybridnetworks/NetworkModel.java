@@ -263,6 +263,9 @@ public abstract class NetworkModel implements Serializable{
 	}
 	
 	private void printUsedMemory(String note){
+		if(!NetworkConfig.DEBUG_MODE){
+			return;
+		}
 		Runtime r = Runtime.getRuntime();
 		r.gc();
 		long usedMemory = r.totalMemory() - r.freeMemory();

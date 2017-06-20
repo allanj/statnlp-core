@@ -94,8 +94,6 @@ public class NetworkConfig {
 	 * The value used for stopping criterion of change in objective value in generative models
 	 */
 	public static double OBJTOL = 10e-15;
-	/** @deprecated Use {@link #OBJTOL} instead*/
-	public static final double objtol = OBJTOL;
 
 	public static boolean DEBUG_MODE = false;
 	
@@ -110,12 +108,7 @@ public class NetworkConfig {
 	 * Batch size for batch training (if {@link #USE_BATCH_TRAINING} is <tt>true</tt>) for each thread
 	 */
 	public static int BATCH_SIZE = 20;
-	/** @deprecated Use {@link #BATCH_SIZE} instead */
-	public static final int batchSize = 20;
 	public static int RANDOM_BATCH_SEED = 2345;
-	
-	/** @deprecated Use {@link #USE_BATCH_TRAINING} instead */
-	public static final boolean USE_BATCH_SGD = false;
 	
 	/** The weight of the cost function for SSVM and Softmax-Margin */
 	public static double MARGIN = 0.5;
@@ -170,13 +163,6 @@ public class NetworkConfig {
 	 */
 	public static boolean BUILD_FEATURES_FROM_LABELED_ONLY = false;
 
-	/** @deprecated Use {@link #CACHE_FEATURES_DURING_TRAINING} instead */
-	public static final boolean _CACHE_FEATURES_DURING_TRAINING = true;
-	/** @deprecated Use {@link #PARALLEL_FEATURE_EXTRACTION} instead */
-	public static final boolean _SEQUENTIAL_FEATURE_EXTRACTION = true ;
-	/** @deprecated Use {@link #BUILD_FEATURES_FROM_LABELED_ONLY} instead */
-	public static final boolean _BUILD_FEATURES_FROM_LABELED_ONLY = false;
-	
 	/**
 	 * Enable to try to save memory by caching feature arrays to avoid duplicate feature arrays to be stored
 	 * in memory.<br>
@@ -193,8 +179,6 @@ public class NetworkConfig {
 	 * The number of threads to be used for parallel execution
 	 */
 	public static int NUM_THREADS = 4;
-	/** @deprecated Use {@link #NUM_THREADS} instead */
-	public static final int _numThreads = NUM_THREADS;
 	
 	/** Decoding the max-marginal for each node as well. if set to true */
 	public static boolean MAX_MARGINAL_DECODING = false;
