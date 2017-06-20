@@ -658,11 +658,6 @@ public class GlobalNetworkParam implements Serializable{
 			System.arraycopy(_counts, 0, concatCounts, ptr, _counts.length);
 			ptr += _weights.length;
 			for (FeatureValueProvider provider : this._featureValueProviders) {
-				double[] weights = provider.getWeights();
-				double[] gradWeights = provider.getGradWeights();
-				System.arraycopy(weights, 0, concatWeights, ptr, weights.length);
-				System.arraycopy(gradWeights, 0, concatCounts, ptr, weights.length);
-				ptr += weights.length;
 				double[] params = provider.getParams();
 				double[] gradParams = provider.getGradParams();
 				if (params == null || gradParams == null) continue;
@@ -724,9 +719,6 @@ public class GlobalNetworkParam implements Serializable{
     		System.arraycopy(concatWeights, ptr, _weights, 0, _weights.length);
     		ptr += _weights.length;
 			for (FeatureValueProvider provider : this._featureValueProviders) {
-				double[] weights = provider.getWeights();
-				System.arraycopy(concatWeights, ptr, weights, 0, weights.length);
-				ptr += weights.length;
 				double[] params = provider.getParams();
 				double[] gradParams = provider.getGradParams();
 				if (params == null || gradParams == null) continue;
@@ -742,7 +734,6 @@ public class GlobalNetworkParam implements Serializable{
 	private int getFeatureSize() {
 		int result = this.countFeatures();
 		for (FeatureValueProvider provider : this._featureValueProviders) {
-			result += provider.getWeightSize();
 			result += provider.getParamSize();
 		}
 		return result;
@@ -790,7 +781,6 @@ public class GlobalNetworkParam implements Serializable{
 			this._obj += MathsVector.square(this._weights);
 			for (FeatureValueProvider provider : this._featureValueProviders) {
 				provider.setScale(coef);
-				this._obj += provider.getL2Weights();
 				if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
 					this._obj += provider.getL2Params();
 				}

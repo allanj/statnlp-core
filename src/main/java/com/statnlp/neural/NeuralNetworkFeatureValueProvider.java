@@ -1,24 +1,14 @@
 package com.statnlp.neural;
 
-import java.util.HashMap;
-
 import com.statnlp.hybridnetworks.FeatureValueProvider;
 
 public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProvider {
 	
-	/**
-	 * The configuration of this neural network
-	 */
-	protected HashMap<String,Object> config;
 	
 	public NeuralNetworkFeatureValueProvider(int numLabels) {
-		this(null, numLabels);
+		super(numLabels);
 	}
 	
-	public NeuralNetworkFeatureValueProvider(HashMap<String,Object> config, int numLabels) {
-		super(numLabels);
-		this.config = config;
-	}
 	
 	@Override
 	public void initializeScores() {

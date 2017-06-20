@@ -71,8 +71,8 @@ public class LinearNEMain {
 			if (neuralType.equals("lstm")) {
 				int hiddenSize = 100;
 				String optimizer = "none";
-				boolean isForwardOnly = false;
-				nets.add(new BidirectionalLSTM(BidirectionalLSTM.createConfig(hiddenSize, isForwardOnly, optimizer), Entity.Entities.size()));
+				boolean bidirection = true;
+				nets.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size()));
 			} else {
 				nets.add(new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size()));
 			}

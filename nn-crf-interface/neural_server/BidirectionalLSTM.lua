@@ -14,7 +14,8 @@ function BidirectionalLSTM:initialize(javadata, ...)
     data.sentences = listToTable(javadata:get("sentences"))
     data.hiddenSize = javadata:get("hiddenSize")
     data.optimizer = javadata:get("optimizer")
-    self.isForwardOnly = javadata:get("isForwardOnly")
+    self.bidirection = javadata:get("bidirection")
+    self.numLabels = javadata:get("numLabels")
 
     local isTraining = javadata:get("isTraining")
     self.isTraining = isTraining
@@ -73,7 +74,7 @@ function BidirectionalLSTM:createNetwork()
 
     -- backward rnn (will be applied in reverse order of input sequence)
     local bwd, bwdSeq
-    if not self.isForwardOnly then
+    if self.bidirection then
         bwd = nn.Sequential()
            :add(sharedLookupTable:sharedClone())
            :add(nn.FastLSTM(hiddenSize, hiddenSize):maskZero(1))
@@ -92,13 +93,18 @@ function BidirectionalLSTM:createNetwork()
     -- Instead of ConcatTable, we use ParallelTable here.
     local parallel = nn.ParallelTable()
     parallel:add(fwdSeq)
-    if not self.isForwardOnly then
+    local mergeHiddenSize = hiddenSize
+    if self.bidirection then
         parallel:add(bwdSeq)
+        mergeHiddenSize = 2 * hiddenSize
     end
+
     local brnn = nn.Sequential()
        :add(parallel)
        :add(nn.ZipTable())
-       :add(mergeSeq)
+       :add(mergeSeq):add(nn.Linear(mergeHiddenSize, numLabels):noBias()) 
+       --- we can use  nn.LinearNoBias()
+       --- if have bias, just remove the nobias.  
     self.net = brnn
 end
 
@@ -201,7 +207,7 @@ function BidirectionalLSTM:prepare_input()
     end
 
     -- only forward
-    if self.isForwardOnly then
+    if not self.bidirection then
         return {inputs}
     end
 

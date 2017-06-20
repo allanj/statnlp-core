@@ -178,37 +178,20 @@ public abstract class FeatureValueProvider {
 	 * Reset gradient
 	 */
 	public void resetGrad() {
-		Arrays.fill(gradWeights, 0.0);
-		if (gradOutput != null) {
-			Arrays.fill(gradOutput, 0.0);
+		if (countOutput != null) {
+			Arrays.fill(countOutput, 0.0);
 		}
 		if (getParamSize() > 0) {
 			Arrays.fill(gradParams, 0.0);
 		}
 	}
 	
-	/**
-	 * Computing L2 regularization and their gradient 
-	 */
-
-	public double getL2Weights() {
-		return MathsVector.square(weights);
-	}
 	
 	public double getL2Params() {
 		if (getParamSize() > 0) {
 			return MathsVector.square(params);
 		}
 		return 0.0;
-	}
-	
-	public void addL2WeightsGrad() {
-		double _kappa = NetworkConfig.L2_REGULARIZATION_CONSTANT;
-		for(int k = 0; k<gradWeights.length; k++) {
-			if(_kappa > 0) {
-				gradWeights[k] += 2 * scale * _kappa * weights[k];
-			}
-		}
 	}
 	
 	public void addL2ParamsGrad() {
@@ -222,21 +205,6 @@ public abstract class FeatureValueProvider {
 		}
 	}
 	
-	/**
-	 * Setters and Getters
-	 */
-
-	public int getWeightSize() {
-		return weights.length;
-	}
-	
-	public double[] getWeights() {
-		return weights;
-	}
-	
-	public double[] getGradWeights() {
-		return gradWeights;
-	}
 	
 	public int getParamSize() {
 		return params == null ? 0 : params.length;

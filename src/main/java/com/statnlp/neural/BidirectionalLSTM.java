@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.ejml.data.DMatrixRMaj;
-import org.ejml.dense.row.CommonOps_DDRM;
 import org.ejml.simple.SimpleMatrix;
 
 import com.naef.jnlua.LuaState;
@@ -35,6 +34,8 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	 */
 	private LuaState L;
 
+	protected HashMap<String,Object> config;
+	
 	/**
 	 * Corresponding Torch tensors for params and gradParams
 	 */
@@ -90,10 +91,10 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	 */
 	private int maxSentLen;
 	
-	/**
-	 * Number of hidden units and layers in bidirectional LSTM
-	 */
-	private int hiddenSize;
+//	/**
+//	 * Number of hidden units and layers in bidirectional LSTM
+//	 */
+//	private int hiddenSize;
 	
 	/**
 	 * Whether CRF optimizes this neural network,
@@ -106,16 +107,33 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	 */
 	private TObjectIntHashMap<String> sentence2id;
 
-	/**
-	 * Whether it is unidirectional
-	 */
-	private boolean isForwardOnly;
+//	/**
+//	 * Whether it is unidirectional
+//	 */
+//	private boolean isForwardOnly;
 
-	public BidirectionalLSTM(HashMap<String, Object> config, int numLabels) {
-		super(config, numLabels);
+	public BidirectionalLSTM(int numLabels) {
+		this(100, true, "none", numLabels);
+	}
+	
+	public BidirectionalLSTM(int hiddenSize, int numLabels) {
+		this(hiddenSize, true, "none", numLabels);
+	}
+	
+	public BidirectionalLSTM(int hiddenSize, String optimizer, int numLabels) {
+		this(hiddenSize, true, optimizer, numLabels);
+	}
+	
+	public BidirectionalLSTM(int hiddenSize, boolean bidirection, String optimizer, int numLabels) {
+		super(numLabels);
 		this.optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
 		this.sentence2id = new TObjectIntHashMap<String>();
-		
+		config = new HashMap<>();
+		config.put("class", "BidirectionalLSTM");
+        config.put("hiddenSize", hiddenSize);
+        config.put("bidirection", bidirection);
+        config.put("optimizer", optimizer);
+        config.put("numLabels", numLabels);
 		configureJNLua();
 	}
 
@@ -160,41 +178,15 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	
 	@Override
 	public void initialize() {
-		this.isForwardOnly = (boolean) config.get("isForwardOnly");
-		if (isTraining) {
-			this.hiddenSize = (int) config.get("hiddenSize");
-			if (! this.isForwardOnly) { // since bidirectional
-				this.hiddenSize *= 2;
-			}
-		}
 		makeInput();
-		
 		//vocabSize
 		int inputSize = numSent*maxSentLen;
 				
-		Random rng = null;
+		
 		if (isTraining) {
-			rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
-			//this.weightMatrix = new SimpleMatrix(numLabels, hiddenSize);
-			//this.weightMatrix_tran = new SimpleMatrix(hiddenSize, numLabels);
-			//this.gradWeightMatrix = new SimpleMatrix(numLabels, hiddenSize);
-			//DMatrixRMaj weightDMatrix = this.weightMatrix.getMatrix();
-			//this.weights = weightDMatrix.data;
-			
-			// Initialize weight matrix
-//			for(int i = 0; i < weights.length; i++) {
-//				weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
-//					NetworkConfig.FEATURE_INIT_WEIGHT;
-//			}
-//			DMatrixRMaj gradWeightDMatrix = this.gradWeightMatrix.getMatrix();
-//			this.gradWeights = gradWeightDMatrix.data;
-			
-			// Backward matrices
 	        this.countOutputMatrix = new SimpleMatrix(inputSize, this.numLabels);
 	        DMatrixRMaj countOutputDMatrix = this.countOutputMatrix.getMatrix();
 	        this.countOutput = countOutputDMatrix.data;
-	        //this.countOutputMatrix = new SimpleMatrix(inputSize, numLabels);
-	       // this.countWeightMatrix = new SimpleMatrix(numLabels, vocabSize);
 	        
 			// Pointer to Torch tensors
 	        this.outputTensorBuffer = new DoubleTensor(inputSize, this.numLabels);
@@ -203,7 +195,6 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		
 		// Forward matrices
         this.outputMatrix = new SimpleMatrix(inputSize, this.numLabels);
-       // this.forwardMatrix = new SimpleMatrix(vocabSize, numLabels);
 		
 		config.put("isTraining", isTraining);
         
@@ -222,6 +213,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		if(optimizeNeural && isTraining) {
 			this.paramsTensor = (DoubleTensor) outputs[0];
 			this.gradParamsTensor = (DoubleTensor) outputs[1];
+			Random rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
 			if (this.paramsTensor.nElement() > 0) {
 				this.params = getArray(this.paramsTensor, this.params);
 				for(int i = 0; i < this.params.length; i++) {
@@ -307,19 +299,11 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 				double countOutput = countOutputMatrix.get(row, outputLabel);
 				countOutputMatrix.set(row, outputLabel, countOutput-count);
 			}
-//			synchronized (countWeightMatrix) {
-//				double countWeight = countWeightMatrix.get(outputLabel, row);
-//				countWeightMatrix.set(outputLabel, row, countWeight-count);
-//			}
 		}
 	}
 
 	@Override
 	public void backward() {
-		// (vocabSize x numLabels) * (numLabels x hiddenSize)
-		//CommonOps_DDRM.mult(countOutputMatrix.getMatrix(), weightMatrix.getMatrix(), gradOutputMatrix.getMatrix());
-		// (numLabels x vocabSize) * (vocabSize x hiddenSize)
-		//CommonOps_DDRM.mult(countWeightMatrix.getMatrix(), outputMatrix.getMatrix(), gradWeightMatrix.getMatrix());
 		countOutputTensorBuffer.storage().copy(this.countOutput);
 		
 		Object[] args = new Object[]{};
@@ -329,8 +313,6 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		if(optimizeNeural && getParamSize() > 0) { // copy gradParams computed by Torch
 			gradParams = getArray(this.gradParamsTensor, gradParams);
 		}
-		
-		addL2WeightsGrad();
 		if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
 			addL2ParamsGrad();
 		}
@@ -353,21 +335,15 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		L.close();
 	}
 
-	public static HashMap<String, Object> createConfig(int hiddenSize, boolean isForwardOnly, String optimizer) {
-		HashMap<String, Object> config = new HashMap<String, Object>();
-		config.put("class", "BidirectionalLSTM");
-        config.put("hiddenSize", hiddenSize);
-        config.put("isForwardOnly", isForwardOnly);
-        config.put("optimizer", optimizer);
-		return config;
-	}
-	
 	public void resetCount() {
 		countOutputMatrix.set(0.0);
 	}
 	
 	private double[] getArray(DoubleTensor t, double[] buf) {
-		buf = t.storage().getRawData().getDoubleArray(0, (int)t.nElement());
+		if (buf == null || buf.length != t.nElement()) {
+			buf = new double[(int) t.nElement()];
+        }
+		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
 		return buf;
 	}
 }

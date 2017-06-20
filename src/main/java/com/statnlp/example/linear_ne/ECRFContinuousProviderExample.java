@@ -11,8 +11,7 @@ public class ECRFContinuousProviderExample extends FeatureValueProvider {
 
 	@Override
 	public void initialize() {
-		weights = new double[1];
-		gradWeights = new double[1];
+		
 	}
 
 	@Override
@@ -35,12 +34,7 @@ public class ECRFContinuousProviderExample extends FeatureValueProvider {
 	@Override
 	public void update(double count, Network network, int parent_k,
 			int children_k_index) {
-		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		if (input != null) {
-			synchronized (gradWeights) {
-				gradWeights[0] -= count * input2score.get(input);	
-			}
-		}
+		
 	}
 
 	@Override
