@@ -4,6 +4,8 @@
 package com.statnlp.util;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -187,6 +189,125 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 				})
 				.help("The list of tasks to be executed. The registered tasks are:\n"
 						+ registeredTasks.keySet()));
+		
+		// Model Settings
+		argParserObjects.put("--instanceParserClass", argParser.addArgument("--instanceParserClass")
+				.type(String.class)
+				.action(new ArgumentAction(){
+
+					@SuppressWarnings("unchecked")
+					@Override
+					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+							Object value) throws ArgumentParserException {
+						try {
+							withInstanceParser((Class<? extends InstanceParser>)Class.forName((String)value));
+						} catch (ClassNotFoundException e) {
+							throw LOGGER.throwing(new RuntimeException(e));
+						}
+					}
+
+					@Override
+					public void onAttach(Argument arg) {}
+
+					@Override
+					public boolean consumeArgument() {
+						return true;
+					}
+					
+				})
+				.help("The class of the instance parser to be used."));
+		argParserObjects.put("--networkCompilerClass", argParser.addArgument("--networkCompilerClass")
+				.type(String.class)
+				.action(new ArgumentAction(){
+
+					@SuppressWarnings("unchecked")
+					@Override
+					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+							Object value) throws ArgumentParserException {
+						try {
+							withNetworkCompiler((Class<? extends NetworkCompiler>)Class.forName((String)value));
+						} catch (ClassNotFoundException e) {
+							throw LOGGER.throwing(new RuntimeException(e));
+						}
+					}
+
+					@Override
+					public void onAttach(Argument arg) {}
+
+					@Override
+					public boolean consumeArgument() {
+						return true;
+					}
+					
+				})
+				.help("The class of the network compiler to be used."));
+		argParserObjects.put("--featureManagerClass", argParser.addArgument("--featureManagerClass")
+				.type(String.class)
+				.action(new ArgumentAction(){
+
+					@SuppressWarnings("unchecked")
+					@Override
+					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+							Object value) throws ArgumentParserException {
+						try {
+							withFeatureManager((Class<? extends FeatureManager>)Class.forName((String)value));
+						} catch (ClassNotFoundException e) {
+							throw LOGGER.throwing(new RuntimeException(e));
+						}
+					}
+
+					@Override
+					public void onAttach(Argument arg) {}
+
+					@Override
+					public boolean consumeArgument() {
+						return true;
+					}
+					
+				})
+				.help("The class of the feature manager to be used."));
+		argParserObjects.put("--evaluateCallback", argParser.addArgument("--evaluateCallback")
+				.type(String.class)
+				.action(new ArgumentAction(){
+
+					@Override
+					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+							Object value) throws ArgumentParserException {
+						try {
+							String[] tokens = ((String)value).split("::");
+							String className = tokens[0];
+							String funcName = tokens[1];
+							Class<?> clazz = Class.forName(className);
+							final Method evaluateCallback = clazz.getDeclaredMethod(funcName, Instance[].class);
+							withEvaluateCallback(new Consumer<Instance[]>(){
+
+								@Override
+								public void accept(Instance[] t) {
+									try {
+										evaluateCallback.invoke(t);
+									} catch (IllegalAccessException | IllegalArgumentException
+											| InvocationTargetException e) {
+										e.printStackTrace();
+									}
+								}
+								
+							});
+						} catch (ClassNotFoundException | NoSuchMethodException | SecurityException e) {
+							throw LOGGER.throwing(new RuntimeException(e));
+						}
+					}
+
+					@Override
+					public void onAttach(Argument arg) {}
+
+					@Override
+					public boolean consumeArgument() {
+						return true;
+					}
+					
+				})
+				.help("The evaluator function to be used in the format CLASS_NAME::FUNCTION_NAME."));
+		
 		
 		// Training Settings
 		argParserObjects.put("--maxIter", argParser.addArgument("--maxIter")
