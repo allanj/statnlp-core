@@ -44,6 +44,7 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		super(numLabels);
 		optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
 		config.put("optimizeNeural", optimizeNeural);
+		//TODO: if optimize the neural in torch, need to pass the L2 val as well.
 		this.configureJNLua();
 	}
 	
@@ -143,9 +144,9 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		
 		if(optimizeNeural && getParamSize() > 0) { // copy gradParams computed by Torch
 			gradParams = this.getArray(this.gradParamsTensor, gradParams);
-		}
-		if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
-			addL2ParamsGrad();
+			if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
+				addL2ParamsGrad();
+			}
 		}
 		this.resetCountOutput();
 	}
