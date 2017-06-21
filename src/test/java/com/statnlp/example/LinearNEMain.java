@@ -77,7 +77,7 @@ public class LinearNEMain {
 			} else if (neuralType.equals("continuous")) {
 				fvps.add(new ECRFContinuousFeatureValueProvider(2, Entity.Entities.size()));
 			} else if (neuralType.equals("mlp")) {
-				fvps.add(new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size()));
+				fvps.add(new MultiLayerPerceptron(neural_config, Entity.Entities.size()));
 			} else {
 				throw new RuntimeException("Unknown neural type: " + neuralType);
 			}

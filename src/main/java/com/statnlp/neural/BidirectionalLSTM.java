@@ -7,7 +7,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.neural.util.LuaFunctionHelper;
 
@@ -34,18 +33,6 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	 */
 	private TObjectIntHashMap<String> sentence2id;
 
-	public BidirectionalLSTM(int numLabels) {
-		this(100, true, "none", numLabels);
-	}
-	
-	public BidirectionalLSTM(int hiddenSize, int numLabels) {
-		this(hiddenSize, true, "none", numLabels);
-	}
-	
-	public BidirectionalLSTM(int hiddenSize, String optimizer, int numLabels) {
-		this(hiddenSize, true, optimizer, numLabels);
-	}
-	
 	public BidirectionalLSTM(int hiddenSize, boolean bidirection, String optimizer, int numLabels) {
 		super(numLabels);
 		this.optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
@@ -74,10 +61,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 		
 		config.put("isTraining", isTraining);
 		
-        Object[] args = new Object[3];
-        args[0] = config;
-        args[1] = this.outputTensorBuffer;
-        args[2] = this.countOutputTensorBuffer;
+        Object[] args = new Object[]{config, this.outputTensorBuffer, this.countOutputTensorBuffer};
         Class<?>[] retTypes;
         if (optimizeNeural && isTraining) {
         	retTypes = new Class[]{DoubleTensor.class, DoubleTensor.class};
@@ -125,36 +109,12 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	}
 
 	@Override
-	public double getScore(Network network, int parent_k, int children_k_index) {
-		double val = 0.0;
-		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		if (input != null) {
-			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			@SuppressWarnings("unchecked")
-			SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) input;
-			int sentID = sentence2id.get(sentAndPos.getKey());
-			int row = sentAndPos.getValue()*numSent+sentID; 
-			val = output[row * numLabels + outputLabel];
-		}
-		return val;
+	public int input2Index (Object input) {
+		@SuppressWarnings("unchecked")
+		SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) input;
+		int sentID = sentence2id.get(sentAndPos.getKey());
+		int row = sentAndPos.getValue()*numSent+sentID;
+		return row;
 	}
-	
-	@Override
-	public void update(double count, Network network, int parent_k, int children_k_index) {
-		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		if (input != null) {
-			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			@SuppressWarnings("unchecked")
-			SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) input;
-			int sentID = sentence2id.get(sentAndPos.getKey());
-			int row = sentAndPos.getValue()*numSent+sentID; 
-			int idx = row * this.numLabels + outputLabel;
-			
-			synchronized (countOutput) {
-				countOutput[idx] -= count;
-			}
-		}
-	}
-	
 	
 }

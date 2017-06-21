@@ -41,8 +41,9 @@ end
 
 
 function ContinuousFeature:createNetwork()
-    local fwd = nn.Sequential():add(nn.Linear(self.numValues, self.numLabels):noBias())
-    self.net = fwd
+    local fwd = nn.Sequential():add(nn.Linear(self.numValues, self.numLabels))
+    -- if no bias, just call :noBias() method
+     self.net = fwd
 end
 
 function ContinuousFeature:forward(isTraining)

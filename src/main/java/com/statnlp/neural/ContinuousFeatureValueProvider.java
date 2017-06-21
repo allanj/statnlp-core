@@ -2,7 +2,6 @@ package com.statnlp.neural;
 
 import java.util.HashMap;
 
-import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.neural.util.LuaFunctionHelper;
 
@@ -87,28 +86,9 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkFeatur
 		return dt;
 	}
 
-	public double getScore(Network network, int parent_k, int children_k_index) {
-		double val = 0.0;
-		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		if (input != null) {
-			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			int inputId = input2id.get(input);
-			val = output[inputId * this.numLabels + outputLabel];
-		}
-		return val;
-	}
-
 	@Override
-	public void update(double count, Network network, int parent_k, int children_k_index) {
-		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		if (input != null) {
-			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			int inputId = input2id.get(input);
-			int idx = inputId * this.numLabels + outputLabel;
-			synchronized (countOutput) {
-				countOutput[idx] -= count;
-			}
-		}
+	public int input2Index(Object input) {
+		return input2id.get(input);
 	}
 
 }

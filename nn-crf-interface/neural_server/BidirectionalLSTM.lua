@@ -108,9 +108,8 @@ function BidirectionalLSTM:createNetwork()
     end
     local rnn = nn.Sequential()
         :add(brnn) 
-        :add(nn.Sequencer(nn.MaskZero(nn.Linear(mergeHiddenSize, self.numLabels):noBias(), 1))) 
-       --- we can use  nn.LinearNoBias()
-       --- if have bias, just remove the nobias.  
+        :add(nn.Sequencer(nn.MaskZero(nn.Linear(mergeHiddenSize, self.numLabels), 1))) 
+       --- if don't use bias, use LinearNoBias or call :noBias()
     self.net = rnn
 end
 

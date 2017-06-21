@@ -8,6 +8,7 @@ import java.util.Arrays;
 
 import com.naef.jnlua.LuaState;
 import com.statnlp.hybridnetworks.FeatureValueProvider;
+import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.neural.util.LuaFunctionHelper;
 import com.sun.jna.Library;
@@ -87,6 +88,12 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		this.L.call(0,0);
 	}
 	
+	/**
+	 * Calculate the input position in the output/countOuput matrix position
+	 * @return
+	 */
+	public abstract int input2Index(Object input);
+	
 	@Override
 	public void update() {
 		backward();
@@ -107,6 +114,18 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		output = this.getArray(outputTensorBuffer, output);
 	}
 	
+	@Override
+	public double getScore(Network network, int parent_k, int children_k_index) {
+		double val = 0.0;
+		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
+		if (input != null) {
+			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
+			int idx = this.input2Index(input);
+			val = output[idx * this.numLabels + outputLabel];
+		}
+		return val;
+	}
+	
 	/**
 	 * Neural network's backpropagation
 	 */
@@ -124,6 +143,18 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 			addL2ParamsGrad();
 		}
 		this.resetCountOutput();
+	}
+	
+	@Override
+	public void update(double count, Network network, int parent_k, int children_k_index) {
+		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
+		if (input != null) {
+			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
+			int idx = this.input2Index(input) * this.numLabels + outputLabel;
+			synchronized (countOutput) {
+				countOutput[idx] -= count;
+			}
+		}
 	}
 	
 	public void resetCountOutput() {

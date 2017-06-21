@@ -73,9 +73,10 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	
 	protected HashMap<String, Object> config;
 	
-	public MultiLayerPerceptron(HashMap<String, Object> config, int numLabels) {
+	public MultiLayerPerceptron(String configFile, int numLabels) {
 		super(numLabels);
-		this.config = config;
+		this.config = this.createConfigFromFile(configFile);
+		config.put("numLabels", numLabels);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -279,53 +280,59 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	 * @return
 	 * @throws FileNotFoundException
 	 */
-	public static HashMap<String, Object> createConfigFromFile(String filename) throws FileNotFoundException {
-		Scanner scan = new Scanner(new File(filename));
-		HashMap<String, Object> config = new HashMap<String, Object>();
-		config.put("class", "MultiLayerPerceptron");
-		while(scan.hasNextLine()){
-			String line = scan.nextLine().trim();
-			if(line.equals("")){
-				continue;
-			}
-			String[] info = line.split(" ");
-			if(info[0].equals("serverAddress")) {
-			} else if(info[0].equals("serverPort")) {
-			} else if(info[0].equals("lang")) {
-				config.put("lang", info[1]);
-			} else if(info[0].equals("wordEmbedding")) {  //senna glove polygot
-				List<String> embeddingList = new ArrayList<String>();
-				for (int i = 1; i < info.length; i++) {
-					embeddingList.add(info[i]);
+	private HashMap<String, Object> createConfigFromFile(String filename) {
+		Scanner scan;
+		try {
+			scan = new Scanner(new File(filename));
+			HashMap<String, Object> config = new HashMap<String, Object>();
+			config.put("class", "MultiLayerPerceptron");
+			while(scan.hasNextLine()){
+				String line = scan.nextLine().trim();
+				if(line.equals("")){
+					continue;
 				}
-				config.put("embedding", embeddingList);
-			} else if(info[0].equals("embeddingSize")) {
-				List<Integer> embSizeList = new ArrayList<Integer>();
-				for (int i = 1; i < info.length; i++) {
-					embSizeList.add(Integer.parseInt(info[i])); 
+				String[] info = line.split(" ");
+				if(info[0].equals("serverAddress")) {
+				} else if(info[0].equals("serverPort")) {
+				} else if(info[0].equals("lang")) {
+					config.put("lang", info[1]);
+				} else if(info[0].equals("wordEmbedding")) {  //senna glove polygot
+					List<String> embeddingList = new ArrayList<String>();
+					for (int i = 1; i < info.length; i++) {
+						embeddingList.add(info[i]);
+					}
+					config.put("embedding", embeddingList);
+				} else if(info[0].equals("embeddingSize")) {
+					List<Integer> embSizeList = new ArrayList<Integer>();
+					for (int i = 1; i < info.length; i++) {
+						embSizeList.add(Integer.parseInt(info[i])); 
+					}
+					config.put("embSizeList", embSizeList);
+				} else if(info[0].equals("numLayer")) {
+					config.put("numLayer", Integer.parseInt(info[1]));
+				} else if(info[0].equals("hiddenSize")) {
+					config.put("hiddenSize", Integer.parseInt(info[1]));
+				} else if(info[0].equals("activation")) { //tanh, relu, identity, hardtanh
+					config.put("activation", info[1]);
+				} else if(info[0].equals("dropout")) {
+					config.put("dropout", Double.parseDouble(info[1]));
+				} else if(info[0].equals("optimizer")) {  //adagrad, adam, sgd , none(be careful with the config in statnlp)
+					config.put("optimizer", info[1]);
+				} else if(info[0].equals("learningRate")) {
+					config.put("learningRate", Double.parseDouble(info[1]));
+				} else if(info[0].equals("fixInputLayer")) {
+					config.put("fixInputLayer", Boolean.parseBoolean(info[1]));
+				} else if(info[0].equals("useOutputBias")) {
+				} else {
+					System.err.println("Unrecognized option: " + line);
 				}
-				config.put("embSizeList", embSizeList);
-			} else if(info[0].equals("numLayer")) {
-				config.put("numLayer", Integer.parseInt(info[1]));
-			} else if(info[0].equals("hiddenSize")) {
-				config.put("hiddenSize", Integer.parseInt(info[1]));
-			} else if(info[0].equals("activation")) { //tanh, relu, identity, hardtanh
-				config.put("activation", info[1]);
-			} else if(info[0].equals("dropout")) {
-				config.put("dropout", Double.parseDouble(info[1]));
-			} else if(info[0].equals("optimizer")) {  //adagrad, adam, sgd , none(be careful with the config in statnlp)
-				config.put("optimizer", info[1]);
-			} else if(info[0].equals("learningRate")) {
-				config.put("learningRate", Double.parseDouble(info[1]));
-			} else if(info[0].equals("fixInputLayer")) {
-				config.put("fixInputLayer", Boolean.parseBoolean(info[1]));
-			} else if(info[0].equals("useOutputBias")) {
-			} else {
-				System.err.println("Unrecognized option: " + line);
 			}
+			scan.close();
+			return config;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
 		}
-		scan.close();
-		return config;
+		return null;
 	}
 	
 	/**
@@ -350,6 +357,12 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	
 	public int getNumLayer() {
 		return numLayer;
+	}
+
+	@Override
+	public int input2Index(Object input) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 }
