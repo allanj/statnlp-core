@@ -641,7 +641,7 @@ public abstract class NetworkModel implements Serializable{
 		System.err.println("Okay. Decoding done.");
 		time = System.nanoTime() - time;
 		System.err.println("Overall decoding time = "+ time/1.0e9 +" secs.");
-		
+		this._fm.getParam_G().closeProvider();
 		int k = 0;
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
 			Instance[] outputs = this._decoders[threadId].getOutputs();

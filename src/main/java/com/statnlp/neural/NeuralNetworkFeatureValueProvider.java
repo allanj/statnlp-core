@@ -115,6 +115,8 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		Class<?>[] retTypes = new Class[]{DoubleTensor.class};
 		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, retTypes);
 		output = this.getArray(outputTensorBuffer, output);
+		//output = outputTensorBuffer.storage().getRawData().getDoubleArray(0, (int)outputTensorBuffer.nElement());
+		//getDoubleArray might be a bit faster, but requires more memory.
 	}
 	
 	@Override
@@ -123,8 +125,8 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
 		if (input != null) {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			int idx = this.input2Index(input);
-			val = output[idx * this.numLabels + outputLabel];
+			int idx = this.input2Index(input) * this.numLabels + outputLabel;
+			val = output[idx];
 		}
 		return val;
 	}
@@ -198,8 +200,14 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		this.load("load_model", prefix);
 	}
 	
+	@Override
+	public void closeProvider() {
+		this.cleanUp();
+	}
+	
 	/**
-	 * Clean up resources
+	 * Clean up resources, currently, we clean up the resource after decoding
+	 * TODO: should we clean up after training ? yes, if not decoding. No, if decode also, since decode will use it again.
 	 */
 	public void cleanUp() {
 		L.close();

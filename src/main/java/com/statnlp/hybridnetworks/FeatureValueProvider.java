@@ -167,6 +167,8 @@ public abstract class FeatureValueProvider {
 		input2id.clear();
 	}
 	
+	public abstract void closeProvider();
+	
 	/**
 	 * Reset gradient
 	 */
@@ -197,7 +199,6 @@ public abstract class FeatureValueProvider {
 			}
 		}
 	}
-	
 	
 	public int getParamSize() {
 		return params == null ? 0 : params.length;

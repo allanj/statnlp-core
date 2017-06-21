@@ -802,6 +802,15 @@ public class GlobalNetworkParam implements Serializable{
 	}
 	
 	/**
+	 * To close the connection. e.g. NeuralNetwork to close the Lua state
+	 */
+	public void closeProvider(){
+		for (FeatureValueProvider provider : _featureValueProviders) {
+			provider.closeProvider();
+		}
+	}
+	
+	/**
 	 * Get the list of providers
 	 * @return
 	 */
