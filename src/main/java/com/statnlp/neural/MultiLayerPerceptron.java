@@ -2,37 +2,23 @@ package com.statnlp.neural;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
-import org.ejml.data.DMatrixRMaj;
-import org.ejml.dense.row.CommonOps_DDRM;
-import org.ejml.simple.SimpleMatrix;
-
-import scala.collection.Iterator;
-import th4j.Tensor.DoubleTensor;
-
-import com.naef.jnlua.LuaState;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.neural.util.LuaFunctionHelper;
-import com.sun.jna.Library;
-import com.sun.jna.Native;
+
+import th4j.Tensor.DoubleTensor;
 
 /**
  * The class that serves as the interface to access the neural network backend.
  * This uses TH4J and JNLua to transfer the data between the JVM and the NN backend.
  */
 public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
-	
-	public static String LUA_VERSION = "5.2";
 	
 	/**
 	 * Special delimiters for the input.
@@ -46,49 +32,6 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	 */
 	private static final Integer UNKNOWN = -1;
 	
-	/**
-	 * A LuaState instance for loading Lua scripts
-	 */
-	private LuaState L;
-	
-	/**
-	 * Corresponding Torch tensors for params and gradParams
-	 */
-	private DoubleTensor paramsTensor, gradParamsTensor;
-	
-	/**
-	 * Corresponding Torch tensors for output and gradOutput
-	 */
-	private DoubleTensor outputTensorBuffer, gradOutputTensorBuffer;
-	
-	/**
-	 * Neural network output and gradient matrices.
-	 * Shape: (vocabSize x embeddingDimension)
-	 */
-	private SimpleMatrix outputMatrix, gradOutputMatrix;
-	
-	/**
-	 * Result of outputMatrix * weightMatrix^T
-	 * Shape: (vocabSize x numLabels)
-	 */
-	private SimpleMatrix forwardMatrix;
-	
-	/**
-	 * The transposed weight matrix that will be multiplied with outputMatrix
-	 */
-	private SimpleMatrix weightMatrix_tran;
-	
-	/**
-	 * Accumulated counts for CRF weights and neural network output.
-	 * Count is typically computed by inside-outside.
-	 */
-	private SimpleMatrix countWeightMatrix, countOutputMatrix;
-	
-	/**
-	 * Whether CRF optimizes this neural network,
-	 * same as defined by NetworkConfig.OPTIMIZE_NEURAL
-	 */
-	private boolean optimizeNeural;
 	
 	/**
 	 * List of word embedding to be used,
@@ -128,50 +71,11 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	 */
 	private List<HashMap<String,Integer>> token2idxList;
 	
-	public MultiLayerPerceptron(HashMap<String, Object> config, int numLabels) {
-		super(config, numLabels);
-		this.optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
-		
-		configureJNLua();
-	}
+	protected HashMap<String, Object> config;
 	
-	/**
-	 * Configure paths for JNLua and create a new LuaState instance
-	 * for loading the backend Torch/Lua script
-	 */
-	private void configureJNLua() {
-		System.setProperty("jna.library.path","./nativeLib");
-		System.setProperty("java.library.path", "./nativeLib:" + System.getProperty("java.library.path"));
-		Field fieldSysPath = null;
-		try {
-			fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
-			fieldSysPath.setAccessible(true);
-			fieldSysPath.set(null, null);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		String jnluaLib = null;
-		if (LUA_VERSION.equals("5.2")) {
-			jnluaLib = "libjnlua52";
-		} else if (LUA_VERSION.equals("5.1")) {
-			jnluaLib = "libjnlua5.1";
-		}
-		if (NetworkConfig.OS.equals("osx")) {
-			jnluaLib += ".jnilib";
-		} else if (NetworkConfig.OS.equals("linux")) {
-			jnluaLib += ".so";
-		}
-		Native.loadLibrary(jnluaLib, Library.class);
-		
-		this.L = new LuaState();
-		this.L.openLibs();
-		
-		try {
-			this.L.load(Files.newInputStream(Paths.get("nn-crf-interface/neural_server/NetworkInterface.lua")),"NetworkInterface.lua","bt");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		this.L.call(0,0);
+	public MultiLayerPerceptron(HashMap<String, Object> config, int numLabels) {
+		super(numLabels);
+		this.config = config;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -186,7 +90,6 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		}
 		makeVocab();
 		
-		Random rng = null;
 		if (isTraining) {
 			totalInputDim = 0;
 			List<Integer> embSizeList = (List<Integer>) config.get("embSizeList");
@@ -198,50 +101,21 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 				}
 			}
 			
-			rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
-			
-			this.weightMatrix = new SimpleMatrix(numLabels, getHiddenSize());
-			this.weightMatrix_tran = new SimpleMatrix(getHiddenSize(), numLabels);
-			this.gradWeightMatrix = new SimpleMatrix(numLabels, getHiddenSize());
-			DMatrixRMaj weightDMatrix = this.weightMatrix.getMatrix();
-			this.weights = weightDMatrix.data;
-			
-			// Initialize weight matrix
-			double stdv = 1.0/Math.sqrt(getHiddenSize());
-			for(int i = 0; i < weights.length; i++) {
-				if (NetworkConfig.NEURAL_RANDOM_TYPE.equals("xavier")) {
-					weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? -stdv + 2 * stdv * rng.nextDouble() :
-						NetworkConfig.FEATURE_INIT_WEIGHT;
-				} else {
-					weights[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
-						NetworkConfig.FEATURE_INIT_WEIGHT;
-				}
-			}
-			DMatrixRMaj gradWeightDMatrix = this.gradWeightMatrix.getMatrix();
-			this.gradWeights = gradWeightDMatrix.data;
-			
 			// Pointer to Torch tensors
-	        this.outputTensorBuffer = new DoubleTensor(getVocabSize(), getHiddenSize());
-	        this.gradOutputTensorBuffer = new DoubleTensor(getVocabSize(), getHiddenSize());
-	        
+	        this.outputTensorBuffer = new DoubleTensor(getVocabSize(), this.numLabels);
+	        this.countOutputTensorBuffer = new DoubleTensor(getVocabSize(), this.numLabels);
 	        // Backward matrices
-	        this.gradOutputMatrix = new SimpleMatrix(getVocabSize(), getHiddenSize());
-	        DMatrixRMaj gradOutputDMatrix = this.gradOutputMatrix.getMatrix();
-	        this.gradOutput = gradOutputDMatrix.data;
-	        this.countOutputMatrix = new SimpleMatrix(getVocabSize(), numLabels);
-	        this.countWeightMatrix = new SimpleMatrix(numLabels, getVocabSize());
+	        this.countOutput = new double[getVocabSize() * this.numLabels];
 		}
 		
-        // Forward matrices
-        this.outputMatrix = new SimpleMatrix(getVocabSize(), getHiddenSize());
-        this.forwardMatrix = new SimpleMatrix(getVocabSize(), numLabels);
+		this.output = new double[getVocabSize() * this.numLabels];
         
         config.put("isTraining", isTraining);
         
         Object[] args = new Object[3];
         args[0] = config;
         args[1] = this.outputTensorBuffer;
-        args[2] = this.gradOutputTensorBuffer;
+        args[2] = this.countOutputTensorBuffer;
         Class<?>[] retTypes;
         if (optimizeNeural && isTraining) {
         	retTypes = new Class[]{DoubleTensor.class,DoubleTensor.class};
@@ -250,12 +124,17 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
         }
         Object[] outputs = LuaFunctionHelper.execLuaFunction(this.L, "initialize", args, retTypes);
         
-		if(optimizeNeural && isTraining) {
+        if(optimizeNeural && isTraining) {
 			this.paramsTensor = (DoubleTensor) outputs[0];
 			this.gradParamsTensor = (DoubleTensor) outputs[1];
+			Random rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
 			if (this.paramsTensor.nElement() > 0) {
-				this.params = getArray(this.paramsTensor, this.params);
-				this.gradParams = getArray(this.gradParamsTensor, this.gradParams);
+				this.params = this.getArray(this.paramsTensor, this.params);
+				for(int i = 0; i < this.params.length; i++) {
+					this.params[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
+						NetworkConfig.FEATURE_INIT_WEIGHT;
+				}
+				this.gradParams = this.getArray(this.gradParamsTensor, this.gradParams);
 			}
 		}
 	}
@@ -340,31 +219,10 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
 			int id = input2id.get(input);
 			if (id != UNKNOWN) {
-				val = forwardMatrix.get(id, outputLabel);
+				val = output[id * numLabels + outputLabel];
 			}
 		}
 		return val;
-	}
-	
-	@Override
-	public void forward() {
-		if (optimizeNeural) { // update with new params
-			if (getParamSize() > 0) {
-				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
-			}
-		}
-		
-		Object[] args = new Object[]{isTraining};
-		Class<?>[] retTypes = new Class[0];
-		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, retTypes);
-		
-		// copy forward result
-		output = getArray(outputTensorBuffer, output);
-		DMatrixRMaj outputData = this.outputMatrix.getMatrix();
-		outputData.data = output;
-		
-		CommonOps_DDRM.transpose(weightMatrix.getMatrix(), weightMatrix_tran.getMatrix());
-		CommonOps_DDRM.mult(outputMatrix.getMatrix(), weightMatrix_tran.getMatrix(), forwardMatrix.getMatrix());
 	}
 	
 	@Override
@@ -373,53 +231,11 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		if (input != null) {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
 			int id = input2id.get(input);
-			synchronized (countOutputMatrix) {
-				double countOutput = countOutputMatrix.get(id, outputLabel);
-				countOutputMatrix.set(id, outputLabel, countOutput-count);
-			}
-			synchronized (countWeightMatrix) {
-				double countWeight = countWeightMatrix.get(outputLabel, id);
-				countWeightMatrix.set(outputLabel, id, countWeight-count);
+			int idx = id * this.numLabels + outputLabel;
+			synchronized (countOutput) {
+				countOutput[idx] -= count;
 			}
 		}
-	}
-	
-	@Override
-	public void backward() {
-		// inputSize x numLabel * numLabel x hiddenSize
-		CommonOps_DDRM.mult(countOutputMatrix.getMatrix(), weightMatrix.getMatrix(), gradOutputMatrix.getMatrix());
-		// numLabel x inputSize * inputSize x hiddenSize
-		CommonOps_DDRM.mult(countWeightMatrix.getMatrix(), outputMatrix.getMatrix(), gradWeightMatrix.getMatrix());
-		gradOutputTensorBuffer.storage().copy(gradOutput);
-		
-		Object[] args = new Object[0];
-		Class<?>[] retTypes = new Class[0];
-		LuaFunctionHelper.execLuaFunction(this.L, "backward", args, retTypes);
-		
-		if(optimizeNeural && getParamSize() > 0) { // copy gradParams computed by Torch
-			gradParams = getArray(this.gradParamsTensor, gradParams);
-		}
-		
-		addL2WeightsGrad();
-		if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
-			addL2ParamsGrad();
-		}
-		
-		resetCount();
-	}
-	
-	@Override
-	public void save(String prefix) {
-		LuaFunctionHelper.execLuaFunction(this.L, "save_model", new Object[]{prefix}, new Class[]{});
-	}
-	
-	@Override
-	public void load(String prefix) {
-		LuaFunctionHelper.execLuaFunction(this.L, "load_model", new Object[]{prefix}, new Class[]{});
-	}
-	
-	public void cleanUp() {
-		L.close();
 	}
 	
 	/**
@@ -536,16 +352,4 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		return numLayer;
 	}
 
-	public void resetCount() {
-		countOutputMatrix.set(0.0);
-		countWeightMatrix.set(0.0);
-	}
-	
-	private double[] getArray(DoubleTensor t, double[] buf) {
-		if (buf == null || buf.length != t.nElement()) {
-			buf = new double[(int) t.nElement()];
-		}
-		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
-		return buf;
-	}
 }

@@ -764,17 +764,6 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		
-		if (NetworkConfig.USE_NEURAL_FEATURES){
-//			for(int k = 0; k < this._size; k++) {
-//				if(_feature2rep[k][0].equals(DUMP_TYPE)) {
-//					this._weights[k] = 0;
-//					this._counts[k] = 0;
-//				}
-//			}
-			//TODO. Raymond.
-		}
-		
-		
 		this._obj = 0.0;
 		//for regularization
 		if(this.isDiscriminative() && this._kappa > 0){
