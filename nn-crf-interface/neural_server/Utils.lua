@@ -16,9 +16,11 @@ function listToTable2D(list)
     return res
 end
 
-function loadGlove(wordList, dim)
+function loadGlove(wordList, dim, sharedLookupTable)
+    sharedLookupTable = sharedLookupTable or false
     if glove == nil then
-        glove = require 'glove_torch/glove'
+        ---- TODO: need to make this path more general later.
+        glove = require 'nn-crf-interface/neural_server/glove_torch/glove'
     end
     glove:load(dim)
 
@@ -27,7 +29,12 @@ function loadGlove(wordList, dim)
     specialSymbols['<S>'] = torch.Tensor(dim):normal(0,1)
     specialSymbols['</S>'] = torch.Tensor(dim):normal(0,1)
 
-    ltw = nn.LookupTable(#wordList, dim)
+    local ltw
+    if sharedLookupTable then
+        ltw = nn.LookupTableMaskZero(#wordList, dim)
+    else 
+        ltw = nn.LookupTable(#wordList, dim)
+    end
     for i=1,#wordList do
         local emb = torch.Tensor(dim)
         local p_emb = glove:word2vec(wordList[i])

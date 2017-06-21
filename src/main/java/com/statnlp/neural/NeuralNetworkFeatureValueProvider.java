@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import com.naef.jnlua.LuaState;
 import com.statnlp.hybridnetworks.FeatureValueProvider;
@@ -25,6 +26,7 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	 */
 	public LuaState L;
 
+	protected HashMap<String,Object> config = new HashMap<>();;
 	
 	/**
 	 * Corresponding Torch tensors for params and gradParams
@@ -41,6 +43,7 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	public NeuralNetworkFeatureValueProvider(int numLabels) {
 		super(numLabels);
 		optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
+		config.put("optimizeNeural", optimizeNeural);
 		this.configureJNLua();
 	}
 	
@@ -213,6 +216,11 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 			buf = new double[(int) t.nElement()];
         }
 		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
+//		Iterator<Object> iter = t.iterator();
+//		int ptr = 0;
+//		while (iter.hasNext()) { // manual iteration like this is actually slow
+//			buf[ptr++] = (double) iter.next(); 
+//		}
 		return buf;
 	}
 }

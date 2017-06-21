@@ -39,6 +39,7 @@ function initialize(javadata, ...)
     local timer = torch.Timer()
 
     local isTraining = javadata:get("isTraining")
+    local optimizeInTorch = not javadata:get("optimizeNeural")
     if isTraining then
         -- re-seed
         torch.manualSeed(SEED)
@@ -46,11 +47,11 @@ function initialize(javadata, ...)
 
         local networkClass = javadata:get("class")
         if networkClass == "MultiLayerPerceptron" then
-            net = MultiLayerPerceptron(false, gpuid)
+            net = MultiLayerPerceptron(optimizeInTorch, gpuid)
         elseif networkClass == "BidirectionalLSTM" then
-            net = BidirectionalLSTM(false, gpuid)
+            net = BidirectionalLSTM(optimizeInTorch, gpuid)
         elseif networkClass == "ContinuousFeature" then
-            net = ContinuousFeature(false, gpuid)
+            net = ContinuousFeature(optimizeInTorch, gpuid)
         else
             error("Unsupported network class " .. networkClass)
         end

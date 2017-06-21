@@ -2,7 +2,6 @@ package com.statnlp.neural;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -16,7 +15,7 @@ import th4j.Tensor.DoubleTensor;
 
 public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	
-	protected HashMap<String,Object> config;
+	
 	
 	/**
 	 * Number of unique input sentences
@@ -35,14 +34,13 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 
 	public BidirectionalLSTM(int hiddenSize, boolean bidirection, String optimizer, int numLabels) {
 		super(numLabels);
-		this.optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
 		this.sentence2id = new TObjectIntHashMap<String>();
-		config = new HashMap<>();
 		config.put("class", "BidirectionalLSTM");
         config.put("hiddenSize", hiddenSize);
         config.put("bidirection", bidirection);
         config.put("optimizer", optimizer);
         config.put("numLabels", numLabels);
+        config.put("embedding", "glove");
 	}
 
 	@Override

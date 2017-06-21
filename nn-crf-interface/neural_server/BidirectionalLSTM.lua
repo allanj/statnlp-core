@@ -16,6 +16,7 @@ function BidirectionalLSTM:initialize(javadata, ...)
     data.optimizer = javadata:get("optimizer")
     self.bidirection = javadata:get("bidirection")
     self.numLabels = javadata:get("numLabels")
+    data.embedding = javadata:get("embedding")
     
 
     local isTraining = javadata:get("isTraining")
@@ -43,8 +44,7 @@ function BidirectionalLSTM:initialize(javadata, ...)
 
         self.params, self.gradParams = self.net:getParameters()
         print("Number of parameters: " .. self.params:nElement())
-
-        if doOptimization then
+        if self.doOptimization then
             self:createOptimizer()
             -- no return array if optim is done here
         else
@@ -63,7 +63,18 @@ function BidirectionalLSTM:createNetwork()
 
     local hiddenSize = data.hiddenSize
 
-    local sharedLookupTable = nn.LookupTableMaskZero(self.vocabSize, hiddenSize)
+    local sharedLookupTable
+    if data.embedding ~= nil then
+        if data.embedding == 'glove' then
+            sharedLookupTable = loadGlove(self.idx2word, hiddenSize, true)
+        else -- unknown/no embedding, defaults to random init
+            print ("Not using any embedding..")
+            sharedLookupTable = nn.LookupTableMaskZero(self.vocabSize, hiddenSize)
+        end
+    else
+        print ("Not using any embedding..")
+        sharedLookupTable = nn.LookupTableMaskZero(self.vocabSize, hiddenSize)
+    end
 
     -- forward rnn
     local fwd = nn.Sequential()
@@ -141,6 +152,7 @@ end
 
 function BidirectionalLSTM:forward(isTraining)
     local output_table = self.net:forward(self.x)
+    -- nn.utils.recursiveType(self.net:forward(self.x), 'torch.DoubleTensor')
     --- this is to converting the table into tensor.
     self.output = torch.cat(self.output, output_table, 1)
     if not self.outputPtr:isSameSizeAs(self.output) then

@@ -73,6 +73,7 @@ public class LinearNEMain {
 				int hiddenSize = 100;
 				String optimizer = "none";
 				boolean bidirection = true;
+				NetworkConfig.OPTIMIZE_NEURAL = true; 
 				fvps.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size()));
 			} else if (neuralType.equals("continuous")) {
 				fvps.add(new ECRFContinuousFeatureValueProvider(2, Entity.Entities.size()));
