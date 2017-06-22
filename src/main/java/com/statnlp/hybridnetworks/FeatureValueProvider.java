@@ -61,6 +61,7 @@ public abstract class FeatureValueProvider {
 	
 	/**
 	 * Add a hyper-edge and its corresponding input-output pair
+	 * TODO: fix the synchronization, it will cause the output different everytime.
 	 * @param network
 	 * @param parent_k
 	 * @param children_k_idx

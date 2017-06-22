@@ -15,23 +15,25 @@ torch.manualSeed(SEED)
 
 -- GPU setup
 local gpuid = -1
-if gpuid >= 0 then
-    local ok, cunn = pcall(require, 'cunn')
-    local ok2, cutorch = pcall(require, 'cutorch')
-    if not ok then print('package cunn not found!') end
-    if not ok2 then print('package cutorch not found!') end
-    if ok and ok2 then
-        print('using CUDA on GPU ' .. gpuid .. '...')
-        cutorch.setDevice(gpuid + 1) -- note +1 to make it 0 indexed! sigh lua
-        cutorch.manualSeed(SEED)
+function setupGPU()
+    if gpuid >= 0 then
+        local ok, cunn = pcall(require, 'cunn')
+        local ok2, cutorch = pcall(require, 'cutorch')
+        if not ok then print('package cunn not found!') end
+        if not ok2 then print('package cutorch not found!') end
+        if ok and ok2 then
+            print('using CUDA on GPU ' .. gpuid .. '...')
+            cutorch.setDevice(gpuid + 1) -- note +1 to make it 0 indexed! sigh lua
+            cutorch.manualSeed(SEED)
+        else
+            print('If cutorch and cunn are installed, your CUDA toolkit may be improperly configured.')
+            print('Check your CUDA toolkit installation, rebuild cutorch and cunn, and try again.')
+            print('Falling back on CPU mode')
+            gpuid = -1 -- overwrite user setting
+        end
     else
-        print('If cutorch and cunn are installed, your CUDA toolkit may be improperly configured.')
-        print('Check your CUDA toolkit installation, rebuild cutorch and cunn, and try again.')
-        print('Falling back on CPU mode')
-        gpuid = -1 -- overwrite user setting
+        print("CPU mode")
     end
-else
-    print("CPU mode")
 end
 
 local net
@@ -40,6 +42,9 @@ function initialize(javadata, ...)
 
     local isTraining = javadata:get("isTraining")
     local optimizeInTorch = not javadata:get("optimizeNeural")
+    gpuid = javadata:get("gpuid")
+    setupGPU()
+    if gpuid == nil then gpuid = -1 end
     if isTraining then
         -- re-seed
         torch.manualSeed(SEED)

@@ -110,14 +110,14 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		if (optimizeNeural) { // update with new params
 			if (getParamSize() > 0) {
 				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
+				//System.out.println("java side forward weights: " + this.params[0] + " " + this.params[1]);
 			}
 		}
 		Object[] args = new Object[]{isTraining};
 		Class<?>[] retTypes = new Class[]{DoubleTensor.class};
 		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, retTypes);
 		output = this.getArray(outputTensorBuffer, output);
-		//output = outputTensorBuffer.storage().getRawData().getDoubleArray(0, (int)outputTensorBuffer.nElement());
-		//getDoubleArray might be a bit faster, but requires more memory.
+		//System.out.println("java side forward output: " + this.output[0] + " " + this.output[1]);
 	}
 	
 	@Override
@@ -137,6 +137,7 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	 */
 	public void backward() {
 		countOutputTensorBuffer.storage().copy(this.countOutput);
+		//debugcode (can remove): System.out.println("java side back gradOutput: " + this.countOutput[0] + " " + this.countOutput[1]);
 		
 		Object[] args = new Object[]{};
 		Class<?>[] retTypes = new Class[0];
@@ -144,6 +145,12 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		
 		if(optimizeNeural && getParamSize() > 0) { // copy gradParams computed by Torch
 			gradParams = this.getArray(this.gradParamsTensor, gradParams);
+			/****  //debug code can be removed
+			//double sum = 0;
+			//for (int i = 0; i< gradParams.length; i++)
+			//	sum += this.gradParams[i];
+			//System.out.println("java side back gradPram: " + sum + "  param length:"+gradParams.length);
+			***/
 			if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
 				addL2ParamsGrad();
 			}

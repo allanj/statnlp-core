@@ -42,6 +42,8 @@ public class LinearNEMain {
 	public static String neural_config = "nn-crf-interface/neural_server/neural.debug.config";
 	public static String neuralType = "mlp";
 	public static boolean iobes = true;
+	public static int gpuId = -1;
+	public static String nnOptimizer = "lbfgs";
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 
@@ -71,10 +73,9 @@ public class LinearNEMain {
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
 			if (neuralType.equals("lstm")) {
 				int hiddenSize = 100;
-				String optimizer = "none";
+				String optimizer = nnOptimizer;
 				boolean bidirection = true;
-				NetworkConfig.OPTIMIZE_NEURAL = true; 
-				fvps.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size()));
+				fvps.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size(), gpuId));
 			} else if (neuralType.equals("continuous")) {
 				fvps.add(new ECRFContinuousFeatureValueProvider(2, Entity.Entities.size()));
 			} else if (neuralType.equals("mlp")) {
@@ -130,17 +131,23 @@ public class LinearNEMain {
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;
 					case "-neural": if(args[i+1].equals("mlp") || args[i+1].equals("lstm")|| args[i+1].equals("continuous")){ 
 											NetworkConfig.USE_NEURAL_FEATURES = true;
-											neuralType = args[i+1];
-											NetworkConfig.OPTIMIZE_NEURAL = true;  //false: optimize in neural network
+											neuralType = args[i+1]; //by default optim_neural is false.
 											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
 											NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 									}
 									break;
+					case "-optimNeural": 
+						NetworkConfig.OPTIMIZE_NEURAL = args[i+1].equals("true") ? true : false; //optimize the neural features or not
+						if (!NetworkConfig.OPTIMIZE_NEURAL) {
+							nnOptimizer = args[i+2];
+							i++;
+						}break;
+					case "-gpuid": gpuId = Integer.valueOf(args[i+1]); break;
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;
 					case "-lr": adagrad_learningRate = Double.valueOf(args[i+1]); break;
 					case "-backend": NetworkConfig.NEURAL_BACKEND = args[i+1]; break;
 					case "-os": NetworkConfig.OS = args[i+1]; break; // for Lua native lib, "osx" or "linux" 
-					default: System.err.println("Invalid arguments, please check usage."); System.exit(0);
+					default: System.err.println("Invalid arguments "+args[i]+", please check usage."); System.exit(0);
 				}
 			}
 			System.err.println("[Info] trainNum: "+trainNumber);
