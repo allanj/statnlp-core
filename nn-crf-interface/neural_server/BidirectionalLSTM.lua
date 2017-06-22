@@ -48,10 +48,10 @@ function BidirectionalLSTM:initialize(javadata, ...)
             -- no return array if optim is done here
         else
             if gpuid >=0 then
-                self.paramsDouble = self.params:clone():double()
+                self.paramsDouble = self.params:double()
                 self.paramsDouble:retain()
                 self.paramsPtr = torch.pointer(self.paramsDouble)
-                self.gradParamsDouble = self.gradParams:clone():double()
+                self.gradParamsDouble = self.gradParams:double()
                 self.gradParamsDouble:retain()
                 self.gradParamsPtr = torch.pointer(self.gradParamsDouble)
                 return self.paramsPtr, self.gradParamsPtr
@@ -164,7 +164,7 @@ function BidirectionalLSTM:forward(isTraining)
     if self.gpuid >= 0 and not self.doOptimization then
         --paramsDouble point to java and it's double tensor
         --need to convert back to cudaTensor if using gpu
-        self.params = self.paramsDouble:clone():cuda()
+        self.params = self.paramsDouble:cuda()
     end
     local output_table = self.net:forward(self.x)
     if self.gpuid >= 0 then
