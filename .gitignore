@@ -8,3 +8,4 @@ data/*
 *.jar
 ner_out.txt
 jnlua-0.9.6*
+install_jnlua/jnlua-1.0.4/*
