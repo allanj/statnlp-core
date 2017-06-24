@@ -41,10 +41,6 @@ function loadGlove(wordList, dim, sharedLookupTable)
         local emb = torch.Tensor(dim)
 
         local p_emb = glove:word2vec(wordList[i])
-        if i == 1 then
-            print (wordList[i] .." ")
-            print(p_emb)
-        end
         if p_emb == nil then
             p_emb = specialSymbols[wordList[i]]
         end
