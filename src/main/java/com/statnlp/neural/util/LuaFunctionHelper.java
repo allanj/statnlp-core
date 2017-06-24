@@ -2,11 +2,11 @@ package com.statnlp.neural.util;
 
 import java.util.Map;
 
-import th4j.Tensor;
-import th4j.Tensor.DoubleTensor;
-
 import com.naef.jnlua.LuaState;
 import com.sun.jna.Pointer;
+
+import th4j.Tensor;
+import th4j.Tensor.DoubleTensor;
 
 public class LuaFunctionHelper {
 	public static Object[] execLuaFunction(LuaState L, String functionName, Object[] inputs, Class<?>[] outputTypes) {
@@ -28,6 +28,8 @@ public class LuaFunctionHelper {
 				L.pushNumber(((DoubleTensor) obj).getPeerPtr());
 			} else if (obj instanceof Map) {
 				L.pushJavaObject(obj);
+			} else {
+				throw new RuntimeException("unknown or unadded types: "+obj.getClass());
 			}
 		}
 		
@@ -45,6 +47,8 @@ public class LuaFunctionHelper {
 			} else if (cls.equals(DoubleTensor.class)) {
 				Pointer ptr = new Pointer((long)L.toNumber(i));
 				outputs[i-1] = new DoubleTensor(ptr);
+			} else {
+				throw new RuntimeException("unknown or unadded types."+cls);
 			}
 			i++;
 		}

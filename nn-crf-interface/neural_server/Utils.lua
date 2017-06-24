@@ -30,21 +30,33 @@ function loadGlove(wordList, dim, sharedLookupTable)
     specialSymbols['</S>'] = torch.Tensor(dim):normal(0,1)
 
     local ltw
+    local maskZero = false
     if sharedLookupTable then
         ltw = nn.LookupTableMaskZero(#wordList, dim)
+        maskZero = true
     else 
         ltw = nn.LookupTable(#wordList, dim)
     end
     for i=1,#wordList do
         local emb = torch.Tensor(dim)
+
         local p_emb = glove:word2vec(wordList[i])
+        if i == 1 then
+            print (wordList[i] .." ")
+            print(p_emb)
+        end
         if p_emb == nil then
             p_emb = specialSymbols[wordList[i]]
         end
         for j=1,dim do
             emb[j] = p_emb[j]
         end
-        ltw.weight[i] = emb
+        if maskZero then
+            --becareful about this, check nn.LookupTableMaskZero documentation
+            ltw.weight[i + 1] = emb
+        else
+            ltw.weight[i] = emb
+        end
     end
     return ltw
 end

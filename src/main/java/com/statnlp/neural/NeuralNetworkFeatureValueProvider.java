@@ -137,8 +137,13 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	 */
 	public void backward() {
 		countOutputTensorBuffer.storage().copy(this.countOutput);
-		//debugcode (can remove): System.out.println("java side back gradOutput: " + this.countOutput[0] + " " + this.countOutput[1]);
-		
+		/****  //debug code can be removed
+		double sumGradOutput = 0;
+		for (int i = 0; i< countOutput.length; i++)
+			sumGradOutput += this.countOutput[i];
+		System.out.println("java side back sum gradOutput: " + sumGradOutput);
+		System.out.println("java side back gradOutput: " + this.countOutput[0] + " " + this.countOutput[1]);
+		***/
 		Object[] args = new Object[]{};
 		Class<?>[] retTypes = new Class[0];
 		LuaFunctionHelper.execLuaFunction(this.L, "backward", args, retTypes);

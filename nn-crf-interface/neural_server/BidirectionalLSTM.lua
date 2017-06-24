@@ -41,6 +41,7 @@ function BidirectionalLSTM:initialize(javadata, ...)
         self:createNetwork()
         print(self.net)
 
+        --make sure we will not replace this variable
         self.params, self.gradParams = self.net:getParameters()
         print("Number of parameters: " .. self.params:nElement())
         if self.doOptimization then
@@ -164,12 +165,12 @@ function BidirectionalLSTM:forward(isTraining)
     if self.gpuid >= 0 and not self.doOptimization then
         --paramsDouble point to java and it's double tensor
         --need to convert back to cudaTensor if using gpu
-        self.params = self.paramsDouble:cuda()
+        self.params:copy(self.paramsDouble:cuda())
     end
     local output_table = self.net:forward(self.x)
     if self.gpuid >= 0 then
         --convert the cuda tensor back to double tensor for java to read
-        --th4j only support double tensor
+        --th4j only support double tensor / float tensor
         nn.utils.recursiveType(output_table, 'torch.DoubleTensor')
     end
     --- this is to converting the table into tensor.
@@ -184,7 +185,6 @@ function BidirectionalLSTM:backward()
     self.gradParams:zero()
     torch.split(self.gradOutput, self.gradOutputPtr, self.numSent, 1)
     if self.gpuid >= 0 then
-        --convert the double tensor to cuda tensor for torch backprop
         nn.utils.recursiveType(self.gradOutput, 'torch.CudaTensor')
     end
     self.net:backward(self.x, self.gradOutput)
@@ -193,6 +193,7 @@ function BidirectionalLSTM:backward()
     end
     if self.gpuid >= 0 and not self.doOptimization then
         --put back the gradParam by converting the cudaTensor to double
+        --don't use =
         self.gradParamsDouble:copy(self.gradParams:double())
     end
 end
