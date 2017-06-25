@@ -31,7 +31,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	 */
 	private TObjectIntHashMap<String> sentence2id;
 
-	public BidirectionalLSTM(int hiddenSize, boolean bidirection, String optimizer, int numLabels, int gpuId) {
+	public BidirectionalLSTM(int hiddenSize, boolean bidirection, String optimizer, int numLabels, int gpuId, String embedding) {
 		super(numLabels);
 		this.sentence2id = new TObjectIntHashMap<String>();
 		config.put("class", "BidirectionalLSTM");
@@ -39,7 +39,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
         config.put("bidirection", bidirection);
         config.put("optimizer", optimizer);
         config.put("numLabels", numLabels);
-        config.put("embedding", "glove");
+        config.put("embedding", embedding);
         config.put("gpuid", gpuId);
 	}
 

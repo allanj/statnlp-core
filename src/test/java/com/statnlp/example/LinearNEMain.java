@@ -44,6 +44,7 @@ public class LinearNEMain {
 	public static boolean iobes = true;
 	public static int gpuId = -1;
 	public static String nnOptimizer = "lbfgs";
+	public static String embedding = "glove";
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 
@@ -75,7 +76,7 @@ public class LinearNEMain {
 				int hiddenSize = 100;
 				String optimizer = nnOptimizer;
 				boolean bidirection = true;
-				fvps.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size(), gpuId));
+				fvps.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size(), gpuId, embedding));
 			} else if (neuralType.equals("continuous")) {
 				fvps.add(new ECRFContinuousFeatureValueProvider(2, Entity.Entities.size()));
 			} else if (neuralType.equals("mlp")) {
@@ -142,6 +143,7 @@ public class LinearNEMain {
 							nnOptimizer = args[i+2];
 							i++;
 						}break;
+					case "-emb" : embedding = args[i+1]; break;
 					case "-gpuid": gpuId = Integer.valueOf(args[i+1]); break;
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;
 					case "-lr": adagrad_learningRate = Double.valueOf(args[i+1]); break;
