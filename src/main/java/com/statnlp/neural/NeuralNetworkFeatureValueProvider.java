@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Set;
 
 import com.naef.jnlua.LuaState;
 import com.statnlp.hybridnetworks.FeatureValueProvider;
@@ -15,6 +16,10 @@ import com.statnlp.neural.util.LuaFunctionHelper;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 
+import gnu.trove.iterator.TIntIterator;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.set.hash.TIntHashSet;
 import th4j.Tensor.DoubleTensor;
 
 public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProvider {
@@ -40,12 +45,44 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	
 	public boolean optimizeNeural;
 	
+	/**
+	 * The current batch FVP input ids.
+	 */
+	private TIntArrayList currBatchFVPInputIds;
+	
 	public NeuralNetworkFeatureValueProvider(int numLabels) {
 		super(numLabels);
 		optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
+		currBatchFVPInputIds = new TIntArrayList();
 		config.put("optimizeNeural", optimizeNeural);
 		//TODO: if optimize the neural in torch, need to pass the L2 val as well.
 		this.configureJNLua();
+	}
+	
+	@Override
+	public void initialize() {
+		this.initializeNN();
+		if (this.isTraining && NetworkConfig.USE_BATCH_TRAINING) {
+			this.makeInstsId2FVPInputId();
+		}
+	}
+	
+	public abstract void initializeNN();
+	
+	/**
+	 * Make sure the fvpInput2Id is now fixed.
+	 */
+	private void makeInstsId2FVPInputId() {
+		for (int instanceId : this.instId2FVPInput.keys()) {
+			Set<Object> fvpInputs = this.instId2FVPInput.get(instanceId);
+			TIntList fvpInputIds = new TIntArrayList();
+			for (Object fvpInput : fvpInputs) {
+				fvpInputIds.add(fvpInput2id.get(fvpInput));
+			}
+			this.instId2FVPInputId.put(instanceId, fvpInputIds);
+		}
+		System.out.println("inst id to fvp input id: " + this.instId2FVPInputId.toString());
+		this.instId2FVPInput = null;
 	}
 	
 	@Override
@@ -113,7 +150,28 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 				//System.out.println("java side forward weights: " + this.params[0] + " " + this.params[1]);
 			}
 		}
-		Object[] args = new Object[]{isTraining};
+		Object[] args = null; 
+		if (isTraining && NetworkConfig.USE_BATCH_TRAINING) {
+			TIntIterator iter = this.batchInstIds.iterator();
+			TIntHashSet set = new TIntHashSet();
+			while(iter.hasNext()) {
+				int positiveInstId = iter.next();
+				assert(positiveInstId > 0);
+				//the following two might be the same.
+				System.out.println("positive id: "+ positiveInstId);
+				set.addAll(this.instId2FVPInputId.get(positiveInstId));
+				int s1 = set.size();
+				set.addAll(this.instId2FVPInputId.get(-positiveInstId));
+				int s2 = set.size();
+				if (s1 != s2) {
+					throw new RuntimeException("the two input lists are not the same?");
+				}
+			}
+			currBatchFVPInputIds = new TIntArrayList(set);
+			args = new Object[]{isTraining, this.currBatchFVPInputIds};
+		} else {
+			args = new Object[]{isTraining};
+		}
 		Class<?>[] retTypes = new Class[]{DoubleTensor.class};
 		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, retTypes);
 		output = this.getArray(outputTensorBuffer, output);
@@ -123,10 +181,10 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	@Override
 	public double getScore(Network network, int parent_k, int children_k_index) {
 		double val = 0.0;
-		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		if (input != null) {
+		Object edgeInput = getHyperEdgeInput(network, parent_k, children_k_index);
+		if (edgeInput != null) {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			int idx = this.input2Index(input) * this.numLabels + outputLabel;
+			int idx = this.input2Index(edgeInput) * this.numLabels + outputLabel;
 			val = output[idx];
 		}
 		return val;
@@ -165,10 +223,10 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	
 	@Override
 	public void update(double count, Network network, int parent_k, int children_k_index) {
-		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		if (input != null) {
+		Object edgeInput = getHyperEdgeInput(network, parent_k, children_k_index);
+		if (edgeInput != null) {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			int idx = this.input2Index(input) * this.numLabels + outputLabel;
+			int idx = this.input2Index(edgeInput) * this.numLabels + outputLabel;
 			synchronized (countOutput) {
 				countOutput[idx] -= count;
 			}
@@ -220,7 +278,6 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	
 	/**
 	 * Clean up resources, currently, we clean up the resource after decoding
-	 * TODO: should we clean up after training ? yes, if not decoding. No, if decode also, since decode will use it again.
 	 */
 	public void cleanUp() {
 		L.close();

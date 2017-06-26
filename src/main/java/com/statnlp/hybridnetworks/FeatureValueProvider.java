@@ -1,12 +1,17 @@
 package com.statnlp.hybridnetworks;
 
-import gnu.trove.map.hash.TIntObjectHashMap;
-
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Set;
 
 import com.statnlp.commons.ml.opt.MathsVector;
+
+import gnu.trove.list.TIntList;
+import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.TIntSet;
 
 
 public abstract class FeatureValueProvider {
@@ -39,14 +44,32 @@ public abstract class FeatureValueProvider {
 	protected TIntObjectHashMap<TIntObjectHashMap<TIntObjectHashMap<SimpleImmutableEntry<Object,Integer>>>> edge2io;
 	
 	/**
-	 * Maps an input to a corresponding index
+	 * Maps an feature value provider input to a corresponding index
 	 */
-	protected LinkedHashMap<Object,Integer> input2id;
+	protected LinkedHashMap<Object,Integer> fvpInput2id;
 	
 	/**
 	 * The coefficient used for regularization, i.e., batchSize/totalInstNum.
 	 */
 	protected double scale;
+	
+	/**
+	 * The map for mapping the instance id to feature value provider input.
+	 * Used for batch training
+	 * TODO: Need to optimize this part later maybe.
+	 */
+	protected TIntObjectMap<Set<Object>> instId2FVPInput;
+	
+	/**
+	 * The map for mapping the instance id to feature value provider input id.
+	 * Used for batch training.
+	 */
+	protected TIntObjectMap<TIntList> instId2FVPInputId;
+	
+	/**
+	 * The batchInstIds obtained from NetworkModel class
+	 */
+	protected TIntSet batchInstIds;
 	
 	/**
 	 * Whether we are training or decoding
@@ -55,7 +78,9 @@ public abstract class FeatureValueProvider {
 	
 	public FeatureValueProvider(int numLabels) {
 		edge2io = new TIntObjectHashMap<TIntObjectHashMap<TIntObjectHashMap<SimpleImmutableEntry<Object,Integer>>>>();
-		input2id = new LinkedHashMap<Object,Integer>();
+		fvpInput2id = new LinkedHashMap<Object,Integer>();
+		instId2FVPInput = new TIntObjectHashMap<>();
+		instId2FVPInputId = new TIntObjectHashMap<>();
 		this.numLabels = numLabels;
 	}
 	
@@ -68,7 +93,7 @@ public abstract class FeatureValueProvider {
 	 * @param input
 	 * @param output
 	 */
-	public synchronized void addHyperEdge(Network network, int parent_k, int children_k_idx, Object input, int output) {
+	public synchronized void addHyperEdge(Network network, int parent_k, int children_k_idx, Object edgeInput, int output) {
 		int instanceID = network.getInstance().getInstanceId();
 		if ( ! edge2io.containsKey(instanceID)) {
 			edge2io.put(instanceID, new TIntObjectHashMap<TIntObjectHashMap<SimpleImmutableEntry<Object,Integer>>>());
@@ -77,12 +102,25 @@ public abstract class FeatureValueProvider {
 			edge2io.get(instanceID).put(parent_k, new TIntObjectHashMap<SimpleImmutableEntry<Object,Integer>>());
 		}
 		if ( ! edge2io.get(instanceID).get(parent_k).containsKey(children_k_idx)) {
-			edge2io.get(instanceID).get(parent_k).put(children_k_idx, new SimpleImmutableEntry<Object,Integer>(input,output));
+			edge2io.get(instanceID).get(parent_k).put(children_k_idx, new SimpleImmutableEntry<Object,Integer>(edgeInput, output));
 		}
-		if ( ! input2id.containsKey(input)) {
-			input2id.put(input, input2id.size());
+		Object fvpInput = edgeInput2FVPInput(edgeInput);
+		if ( ! fvpInput2id.containsKey(fvpInput)) {
+			fvpInput2id.put(fvpInput, fvpInput2id.size());
+		}
+		if (isTraining && NetworkConfig.USE_BATCH_TRAINING) {
+			//TODO: we can actually add those instance id with one sign (e.g. positive)
+			if (! instId2FVPInput.containsKey(instanceID)) {
+				Set<Object> set = new HashSet<>();
+				set.add(fvpInput);
+				instId2FVPInput.put(instanceID, set);
+			} else {
+				instId2FVPInput.get(instanceID).add(fvpInput);
+			}
 		}
 	}
+	
+	public abstract Object edgeInput2FVPInput(Object edgeInput);
 	
 	/**
 	 * Initialize this provider (e.g., create a network and prepare its input)
@@ -165,7 +203,7 @@ public abstract class FeatureValueProvider {
 	 * Reset provider input
 	 */
 	public void clearInput() {
-		input2id.clear();
+		fvpInput2id.clear();
 	}
 	
 	public abstract void closeProvider();
@@ -223,5 +261,9 @@ public abstract class FeatureValueProvider {
 	
 	public boolean isTraining() {
 		return isTraining;
+	}
+	
+	public void setBatchInstIds (TIntSet batchInstIds) {
+		this.batchInstIds = batchInstIds;
 	}
 }

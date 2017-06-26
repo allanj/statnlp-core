@@ -45,6 +45,7 @@ public class LinearNEMain {
 	public static int gpuId = -1;
 	public static String nnOptimizer = "lbfgs";
 	public static String embedding = "glove";
+	public static int batchSize = 10;
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 
@@ -63,6 +64,8 @@ public class LinearNEMain {
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
 		NetworkConfig.NUM_THREADS = numThreads;
 		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
+		NetworkConfig.BATCH_SIZE = batchSize; //need to enable batch training first
+		NetworkConfig.RANDOM_BATCH = false;
 		
 		if (DEBUG) {
 			NetworkConfig.RANDOM_INIT_WEIGHT = false;
@@ -128,7 +131,7 @@ public class LinearNEMain {
 					case "-testFile": testFile = args[i+1]; break;        
 					case "-windows":ECRFEval.windows = true; break;            //default: false (is using windows system to run the evaluation script)
 					case "-batch": NetworkConfig.USE_BATCH_TRAINING = true;
-									NetworkConfig.BATCH_SIZE = Integer.valueOf(args[i+1]); break;
+									batchSize = Integer.valueOf(args[i+1]); break;
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;
 					case "-neural": if(args[i+1].equals("mlp") || args[i+1].equals("lstm")|| args[i+1].equals("continuous")){ 
 											NetworkConfig.USE_NEURAL_FEATURES = true;

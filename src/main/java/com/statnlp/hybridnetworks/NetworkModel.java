@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
@@ -40,6 +39,9 @@ import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.ui.visualize.type.VisualizerFrame;
 import com.statnlp.util.instance_parser.InstanceParser;
+
+import gnu.trove.set.TIntSet;
+import gnu.trove.set.hash.TIntHashSet;
 
 public abstract class NetworkModel implements Serializable{
 	
@@ -340,7 +342,8 @@ public abstract class NetworkModel implements Serializable{
 			multiplier = -1;
 		}
 
-		HashSet<Integer> batchInstIds = new HashSet<Integer>();
+		//note that this batch inst ids only contains positive instance IDs.
+		TIntSet batchInstIds = new TIntHashSet();
 		double obj_old = Double.NEGATIVE_INFINITY;
 		//run the EM-style algorithm now...
 		long startTime = System.nanoTime();
@@ -355,24 +358,26 @@ public abstract class NetworkModel implements Serializable{
 				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
 				if(NetworkConfig.USE_BATCH_TRAINING){
 					batchInstIds.clear();
-					if(NetworkConfig.RANDOM_BATCH || batchId == 0) {
+					if(NetworkConfig.RANDOM_BATCH && batchId == 0) {
 						Collections.shuffle(instIds, RANDOM);
 					}
-					for(int iid = 0; iid<size; iid++){
-						batchInstIds.add(instIds.get((iid+offset) % instIds.size()));
+					for(int iid = 1; iid <= size; iid++){
+						int idx = iid + offset;
+						batchInstIds.add(idx);
+						if (idx == instIds.size()) break;
 					}
-					batchId++;
 					offset = NetworkConfig.BATCH_SIZE*batchId;
+					batchId++;
 				}
 				for(LocalNetworkLearnerThread learner: this._learners){
 					learner.setIterationNumber(it);
 					if(NetworkConfig.USE_BATCH_TRAINING) learner.setInstanceIdSet(batchInstIds);
-					else learner.setTrainInstanceIdSet(new HashSet<Integer>(instIds));
+					else learner.setTrainInstanceIdSet(new TIntHashSet(instIds));
 				}
 				long time = System.nanoTime();
 				
 				// Feature value provider's ``forward''
-				this._fm.getParam_G().computeContinuousScores();
+				this._fm.getParam_G().computeContinuousScores(batchInstIds);
 				this._fm.getParam_G().resetGradContinuous();
 				
 				List<Future<Void>> results = pool.invokeAll(callables);
@@ -399,6 +404,7 @@ public abstract class NetworkModel implements Serializable{
 				}
 				if(offset >= instIds.size()) {
 					batchId = 0;
+					offset = 0;
 					// this means one epoch
 					time = System.nanoTime();
 					print(String.format("Epoch %d: Obj=%-18.12f Time=%.3fs Total time: %.3fs", epochNum++, multiplier*epochObj*instIds.size()/(size+offset), (time-epochStartTime)/1.0e9, (time-startTime)/1.0e9), outstreams);
@@ -607,6 +613,7 @@ public abstract class NetworkModel implements Serializable{
 				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, false, numPredictionsGenerated);
 			}
 		}
+		this._fm.getParam_G().setProviderDecodeState();
 		
 		if (NetworkConfig.FEATURE_TOUCH_TEST) {
 			System.err.println("Touching test set.");
@@ -626,7 +633,7 @@ public abstract class NetworkModel implements Serializable{
 		printUsedMemory("before decode");
 		long time = System.nanoTime();
 		
-		this._fm.getParam_G().initializeProvider(false);
+		this._fm.getParam_G().initializeProvider();
 		this._fm.getParam_G().computeContinuousScores();
 		
 		for(int threadId = 0; threadId<this._numThreads; threadId++){

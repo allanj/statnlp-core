@@ -34,6 +34,7 @@ import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.TIntSet;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
@@ -381,7 +382,8 @@ public class GlobalNetworkParam implements Serializable{
 		initWeights(weights_new, numWeightsKept, this._size);
 		this._weights = weights_new;
 		
-		initializeProvider(true);
+		this.setProviderTrainingState();
+		this.initializeProvider();
 		
 		/** Must prepare the feature map before reset counts and obj
 		 * The reset will use feature2rep.
@@ -791,12 +793,28 @@ public class GlobalNetworkParam implements Serializable{
 	}
 	
 	/**
+	 * Basically makes the training flag false;
+	 */
+	public void setProviderDecodeState() {
+		this.setProviderState(false);
+	}
+	
+	public void setProviderTrainingState() {
+		this.setProviderState(true);
+	}
+	
+	private void setProviderState(boolean isTraining){
+		for (FeatureValueProvider provider : _featureValueProviders) {
+			provider.setTraining(isTraining);
+		}
+	}
+	
+	/**
 	 * Initialize each provider in the list in training/decoding mode
 	 * @param isTraining
 	 */
-	public void initializeProvider(boolean isTraining) {
+	public void initializeProvider() {
 		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.setTraining(isTraining);
 			provider.initialize();
 		}
 	}
@@ -822,7 +840,16 @@ public class GlobalNetworkParam implements Serializable{
 	 * Pre-compute continuous scores for all hyper-edges
 	 */
 	public void computeContinuousScores() {
+		this.computeContinuousScores(null);
+	}
+	
+	/**
+	 * Pre-compute continuous scores for all hyper-edges for a batch Instances
+	 */
+	public void computeContinuousScores(TIntSet batchInstIds) {
 		for (FeatureValueProvider provider : _featureValueProviders) {
+			if (batchInstIds != null && NetworkConfig.USE_BATCH_TRAINING) 
+				provider.setBatchInstIds(batchInstIds);
 			provider.initializeScores();
 		}
 	}

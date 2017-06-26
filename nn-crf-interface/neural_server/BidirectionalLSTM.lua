@@ -30,6 +30,13 @@ function BidirectionalLSTM:initialize(javadata, ...)
     if isTraining then
         self.idx2word = {}
         self.word2idx = {}
+        ---the following 4 is for batch training.
+        self.batchInput = {}
+        self.x1Tab = {}
+        self.x1 = torch.LongTensor()
+        self.x2Tab = {}
+        self.x2 = torch.LongTensor()
+        self.gradBatchOutput = torch.Tensor()
     end
     self.x = self:prepare_input()
     self.numSent = #data.sentences
@@ -161,13 +168,31 @@ function BidirectionalLSTM:createOptimizer()
     end
 end
 
-function BidirectionalLSTM:forward(isTraining)
+function BidirectionalLSTM:forward(isTraining, batchInputIds)
+    self.batchInputIds = batchInputIds
     if self.gpuid >= 0 and not self.doOptimization then
         --paramsDouble point to java and it's double tensor
         --need to convert back to cudaTensor if using gpu
         self.params:copy(self.paramsDouble:cuda())
     end
-    local output_table = self.net:forward(self.x)
+    local output_table
+    if self.batchInputIds ~= nil then 
+        self.batchInputIds:add(1) -- because the sentence is 0 indexed.
+        --select the specific indexes from the table
+        self.x1 = torch.cat(self.x1, self.x[1], 2):index(1, batchInputIds)
+        torch.split(self.x1Tab, self.x1, 1, 2)
+        self.x2 = torch.cat(self.x2, self.x[2], 2):index(1, batchInputIds)
+        torch.split(self.x2Tab, self.x2, 1, 2)
+        for key,_ in pairs(self.x1Tab) do
+            -- in order to remove the singleton dimension, otherwise mask zero has error
+            self.x1Tab[key] = torch.squeeze (self.x1Tab[key], 2)
+            self.x2Tab[key] = torch.squeeze (self.x2Tab[key], 2)
+        end
+        self.batchInput = {self.x1Tab, self.x2Tab}
+        output_table = self.net:forward(self.batchInput)
+    else
+        output_table = self.net:forward(self.x)
+    end
     if self.gpuid >= 0 then
         --convert the cuda tensor back to double tensor for java to read
         --th4j only support double tensor / float tensor
@@ -175,19 +200,46 @@ function BidirectionalLSTM:forward(isTraining)
     end
     --- this is to converting the table into tensor.
     self.output = torch.cat(self.output, output_table, 1)
-    if not self.outputPtr:isSameSizeAs(self.output) then
-        self.outputPtr:resizeAs(self.output)
+    if self.batchInputIds ~= nil then 
+        self.outputPtr:resize(self.maxLen, self.numSent, self.numLabels)
+        self.output:resize(self.maxLen, self.batchInputIds:size(1), self.numLabels)
+        self.outputPtr:indexCopy(2, self.batchInputIds, self.output)
+        self.outputPtr:resize(self.maxLen * self.numSent, self.numLabels)
+    else
+        if not self.outputPtr:isSameSizeAs(self.output) then
+            self.outputPtr:resizeAs(self.output)
+        end
+        self.outputPtr:copy(self.output)
     end
-    self.outputPtr:copy(self.output)
 end
 
 function BidirectionalLSTM:backward()
     self.gradParams:zero()
-    torch.split(self.gradOutput, self.gradOutputPtr, self.numSent, 1)
+    local gradOutputTensor
+    local backwardInput
+    local backwardSentNum
+    if self.batchInputIds ~= nil then
+        if self.gradBatchOutput == nil then
+            self.gradBatchOutput =  torch.Tensor() 
+        end
+        self.gradOutputPtr:resize(self.maxLen, self.numSent, self.numLabels)
+        self.gradBatchOutput:resize(self.maxLen, self.batchInputIds:size(1), self.numLabels)
+        self.gradBatchOutput:copy(self.gradOutputPtr:index(2, self.batchInputIds))
+        self.gradBatchOutput:resize(self.maxLen * self.batchInputIds:size(1), self.numLabels)
+        self.gradOutputPtr:resize(self.maxLen * self.numSent, self.numLabels)
+        gradOutputTensor = self.gradBatchOutput
+        backwardInput = self.batchInput
+        backwardSentNum = self.batchInputIds:size(1)
+    else
+        gradOutputTensor = self.gradOutputPtr
+        backwardInput = self.x
+        backwardSentNum = self.numSent
+    end
+    torch.split(self.gradOutput, gradOutputTensor, backwardSentNum, 1)
     if self.gpuid >= 0 then
         nn.utils.recursiveType(self.gradOutput, 'torch.CudaTensor')
     end
-    self.net:backward(self.x, self.gradOutput)
+    self.net:backward(backwardInput, self.gradOutput)
     if self.doOptimization then
         self.optimizer(self.feval, self.params, self.optimState)
     end
@@ -266,7 +318,7 @@ function BidirectionalLSTM:prepare_input()
         end
         if gpuid >= 0 then inputs_rev[step] = inputs_rev[step]:cuda() end
     end
-
+    self.maxLen = maxLen
     return {inputs, inputs_rev}
 end
 

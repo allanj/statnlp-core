@@ -84,7 +84,7 @@ public class ECRFFeatureManager extends FeatureManager {
 			if(NetworkConfig.USE_NEURAL_FEATURES){
 				Object input = null;
 				if(neuralType.equals("lstm")) {
-					input = new SimpleImmutableEntry<String, Integer>(sent.toString().toLowerCase(), pos);
+					input = new SimpleImmutableEntry<String, Integer>(sent.toString(), pos);
 				} else if(neuralType.equals("mlp")){
 					input = llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt;
 				} else {

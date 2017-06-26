@@ -70,9 +70,15 @@ function initialize(javadata, ...)
     end
 end
 
-function forward(training)
+function forward(training, batchInputIds)
+    local batch
+    if batchInputIds ~= nil then
+        batch = torch.LongTensor(listToTable(batchInputIds))
+    else
+        batch = nil
+    end
     local timer = torch.Timer()
-    net:forward(training)
+    net:forward(training, batch)
     local time = timer:time().real
     print(string.format("Forward took %.4fs", time))
 end

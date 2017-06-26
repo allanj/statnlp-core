@@ -80,7 +80,8 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public void initialize() {
+	@Override
+	public void initializeNN() {
 		if (isTraining) {
 			this.embeddingList = (List<String>) config.get("embedding");
 			this.hiddenSize = (int) config.get("hiddenSize");
@@ -149,7 +150,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		List<String> wordList = new ArrayList<String>();
 		List<List<Integer>> vocab = new ArrayList<List<Integer>>();
 		boolean first = true;
-		for (Object obj : input2id.keySet()) {
+		for (Object obj : fvpInput2id.keySet()) {
 			boolean isUnknown = false;
 			String input = (String) obj;
 			String[] inputPerType = input.split(OUT_SEP);
@@ -175,12 +176,12 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 							}
 						} else {
 							// Unseen
-							input2id.put(input, UNKNOWN);
+							fvpInput2id.put(input, UNKNOWN);
 							boolean startDecrement = false;
-							for (Object _obj : input2id.keySet()) {
+							for (Object _obj : fvpInput2id.keySet()) {
 								String _input = (String) _obj;
 								if (startDecrement) {
-									input2id.put(_input, input2id.get(_input)-1);
+									fvpInput2id.put(_input, fvpInput2id.get(_input)-1);
 								}
 								if (_input.equals(input)) {
 									startDecrement = true;
@@ -218,7 +219,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
 		if (input != null) {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			int id = input2id.get(input);
+			int id = fvpInput2id.get(input);
 			if (id != UNKNOWN) {
 				val = output[id * numLabels + outputLabel];
 			}
@@ -231,7 +232,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
 		if (input != null) {
 			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			int id = input2id.get(input);
+			int id = fvpInput2id.get(input);
 			int idx = id * this.numLabels + outputLabel;
 			synchronized (countOutput) {
 				countOutput[idx] -= count;
@@ -363,6 +364,11 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	public int input2Index(Object input) {
 		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	@Override
+	public Object edgeInput2FVPInput(Object edgeInput) {
+		return edgeInput;
 	}
 
 }

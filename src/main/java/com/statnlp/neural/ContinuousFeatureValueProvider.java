@@ -29,9 +29,9 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkFeatur
 	}
 
 	@Override
-	public void initialize() {
+	public void initializeNN() {
 		DoubleTensor inputs = makeInput();
-		int inputSize = input2id.size();
+		int inputSize = fvpInput2id.size();
 		if (isTraining) {
 			this.countOutput = new double[inputSize * this.numLabels];
 			// Pointer to Torch tensors
@@ -78,17 +78,22 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkFeatur
 	public abstract void getFeatureValue(Object input, double[] featureValue);
 	
 	public DoubleTensor makeInput() { 
-		double[][] featureValues = new double[input2id.size()][this.numFeatureValues];
-		for (Object input : input2id.keySet()) {
-			this.getFeatureValue(input, featureValues[input2id.get(input)]);
+		double[][] featureValues = new double[fvpInput2id.size()][this.numFeatureValues];
+		for (Object input : fvpInput2id.keySet()) {
+			this.getFeatureValue(input, featureValues[fvpInput2id.get(input)]);
 		}
 		DoubleTensor dt = new DoubleTensor(featureValues);
 		return dt;
 	}
+	
+	@Override
+	public Object edgeInput2FVPInput(Object edgeInput) {
+		return edgeInput;
+	}
 
 	@Override
 	public int input2Index(Object input) {
-		return input2id.get(input);
+		return fvpInput2id.get(input);
 	}
 
 }

@@ -9,7 +9,6 @@ import java.util.Set;
 
 import com.statnlp.neural.util.LuaFunctionHelper;
 
-import gnu.trove.map.hash.TObjectIntHashMap;
 import th4j.Tensor.DoubleTensor;
 
 public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
@@ -26,14 +25,8 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	 */
 	private int maxSentLen;
 	
-	/**
-	 * Map input sentence to index
-	 */
-	private TObjectIntHashMap<String> sentence2id;
-
 	public BidirectionalLSTM(int hiddenSize, boolean bidirection, String optimizer, int numLabels, int gpuId, String embedding) {
 		super(numLabels);
-		this.sentence2id = new TObjectIntHashMap<String>();
 		config.put("class", "BidirectionalLSTM");
         config.put("hiddenSize", hiddenSize);
         config.put("bidirection", bidirection);
@@ -44,7 +37,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	}
 
 	@Override
-	public void initialize() {
+	public void initializeNN() {
 		makeInput();
 		int inputSize = numSent*maxSentLen;
 		if (isTraining) {
@@ -90,10 +83,8 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	
 	public void makeInput() {
 		Set<String> sentenceSet = new HashSet<String>();
-		for (Object obj : input2id.keySet()) {
-			@SuppressWarnings("unchecked")
-			SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) obj;
-			String sent = sentAndPos.getKey();
+		for (Object obj : fvpInput2id.keySet()) {
+			String sent = (String)obj;
 			sentenceSet.add(sent);
 			int sentLen = sent.split(" ").length;
 			if (sentLen > this.maxSentLen) {
@@ -101,10 +92,11 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 			}
 		}
 		List<String> sentences = new ArrayList<String>(sentenceSet);
+		//need to sort the sentences to obtain the same results
 		Collections.sort(sentences);
 		for (int i = 0; i < sentences.size(); i++) {
 			String sent = sentences.get(i);
-			sentence2id.put(sent, i);
+			fvpInput2id.put(sent, i);
 		}
 		config.put("sentences", sentences);
 		this.numSent = sentences.size();
@@ -113,12 +105,19 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	}
 
 	@Override
+	public Object edgeInput2FVPInput(Object edgeInput) {
+		@SuppressWarnings("unchecked")
+		SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) edgeInput;
+		return sentAndPos.getKey();
+	}
+	
+	@Override
 	public int input2Index (Object input) {
 		@SuppressWarnings("unchecked")
 		SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) input;
-		int sentID = sentence2id.get(sentAndPos.getKey());
-		int row = sentAndPos.getValue()*numSent+sentID;
+		int sentID = fvpInput2id.get(sentAndPos.getKey());
+		int row = sentAndPos.getValue()*this.numSent+sentID;
 		return row;
 	}
-	
+
 }

@@ -5,6 +5,7 @@ import java.util.Map;
 import com.naef.jnlua.LuaState;
 import com.sun.jna.Pointer;
 
+import gnu.trove.list.TIntList;
 import th4j.Tensor;
 import th4j.Tensor.DoubleTensor;
 
@@ -27,6 +28,8 @@ public class LuaFunctionHelper {
 			} else if (obj instanceof DoubleTensor) {
 				L.pushNumber(((DoubleTensor) obj).getPeerPtr());
 			} else if (obj instanceof Map) {
+				L.pushJavaObject(obj);
+			} else if (obj instanceof TIntList) {
 				L.pushJavaObject(obj);
 			} else {
 				throw new RuntimeException("unknown or unadded types: "+obj.getClass());
