@@ -44,7 +44,7 @@ public abstract class FeatureValueProvider {
 	 * A flattened matrix containing the continuous values
 	 * with the shape (inputSize x numLabels).
 	 */
-	protected double[] output, countOutput;
+	protected transient double[] output, countOutput;
 	
 	/**
 	 * Maps a hyper-edge tuple (instance ID,parent node ID,child index) to an input-output pair
@@ -77,7 +77,7 @@ public abstract class FeatureValueProvider {
 	/**
 	 * The batchInstIds obtained from NetworkModel class
 	 */
-	protected TIntSet batchInstIds;
+	protected transient TIntSet batchInstIds;
 	
 	/**
 	 * Whether we are training or decoding
