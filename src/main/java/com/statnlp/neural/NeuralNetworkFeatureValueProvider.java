@@ -1,21 +1,15 @@
 package com.statnlp.neural;
 
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Random;
 import java.util.Set;
-import java.util.AbstractMap.SimpleImmutableEntry;
 
-import com.naef.jnlua.LuaState;
 import com.statnlp.hybridnetworks.FeatureValueProvider;
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
 import com.statnlp.neural.util.LuaFunctionHelper;
-import com.sun.jna.Library;
-import com.sun.jna.Native;
 
 import gnu.trove.iterator.TIntIterator;
 import gnu.trove.list.TIntList;
@@ -25,14 +19,7 @@ import th4j.Tensor.DoubleTensor;
 
 public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProvider {
 	
-	public static String LUA_VERSION = "5.2";
-	
-	/**
-	 * A LuaState instance for loading Lua scripts
-	 */
-	public LuaState L;
-
-	protected HashMap<String,Object> config = new HashMap<>();;
+	protected HashMap<String,Object> config;
 	
 	/**
 	 * Corresponding Torch tensors for params and gradParams
@@ -53,22 +40,70 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	
 	public NeuralNetworkFeatureValueProvider(int numLabels) {
 		super(numLabels);
+		config = new HashMap<>();
 		optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
 		currBatchFVPInputIds = new TIntArrayList();
 		config.put("optimizeNeural", optimizeNeural);
-		//TODO: if optimize the neural in torch, need to pass the L2 val as well.
-		this.configureJNLua();
 	}
 	
 	@Override
 	public void initialize() {
-		this.initializeNN();
+		int inputSize = this.getNNInputSize();
+		this.initializeNN(inputSize);
 		if (this.isTraining && NetworkConfig.USE_BATCH_TRAINING) {
 			this.makeInstsId2FVPInputId();
 		}
 	}
 	
-	public abstract void initializeNN();
+	/**
+	 * Initialize the neural network with specific inputSize.
+	 * @param inputSize
+	 */
+	private void initializeNN(int inputSize) {
+		if (isTraining) {
+			this.countOutput = new double[inputSize * this.numLabels];
+			// Pointer to Torch tensors
+	        this.outputTensorBuffer = new DoubleTensor(inputSize, this.numLabels);
+	        this.countOutputTensorBuffer = new DoubleTensor(inputSize, this.numLabels);
+		}
+		
+		// Forward matrices
+        this.output = new double[inputSize * this.numLabels];
+		
+		config.put("isTraining", isTraining);
+        Object[] args = new Object[]{config, this.outputTensorBuffer, this.countOutputTensorBuffer};
+        Class<?>[] retTypes;
+        if (optimizeNeural && isTraining) {
+        	retTypes = new Class[]{DoubleTensor.class, DoubleTensor.class};
+        } else {
+        	retTypes = new Class[]{};
+        }
+        Object[] outputs = LuaFunctionHelper.execLuaFunction(this.L, "initialize", args, retTypes);
+        
+		if(optimizeNeural && isTraining) {
+			this.paramsTensor = (DoubleTensor) outputs[0];
+			this.gradParamsTensor = (DoubleTensor) outputs[1];
+			if (this.paramsTensor.nElement() > 0) {
+				this.params = this.getArray(this.paramsTensor, this.params);
+				//TODO: this one might not be needed. Because the gradient at the first initialization is 0..
+				this.gradParams = this.getArray(this.gradParamsTensor, this.gradParams);
+				if (NetworkConfig.INIT_FV_WEIGHTS) {
+					Random rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
+					//also be careful that you may overwrite the initialized embedding if you use this.
+					for(int i = 0; i < this.params.length; i++) {
+						this.params[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
+							NetworkConfig.FEATURE_INIT_WEIGHT;
+					}
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Return the input size 
+	 * @return input size of the neural net
+	 */
+	public abstract int getNNInputSize();
 	
 	/**
 	 * Make sure the fvpInput2Id is now fixed.
@@ -89,45 +124,6 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	@Override
 	public void initializeScores() {
 		forward();
-	}
-	
-	/**
-	 * Configure paths for JNLua and create a new LuaState instance
-	 * for loading the backend Torch/Lua script
-	 */
-	private void configureJNLua() {
-		System.setProperty("jna.library.path","./nativeLib");
-		System.setProperty("java.library.path", "./nativeLib:" + System.getProperty("java.library.path"));
-		Field fieldSysPath = null;
-		try {
-			fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
-			fieldSysPath.setAccessible(true);
-			fieldSysPath.set(null, null);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		String jnluaLib = null;
-		if (LUA_VERSION.equals("5.2")) {
-			jnluaLib = "libjnlua52";
-		} else if (LUA_VERSION.equals("5.1")) {
-			jnluaLib = "libjnlua5.1";
-		}
-		if (NetworkConfig.OS.equals("osx")) {
-			jnluaLib += ".jnilib";
-		} else if (NetworkConfig.OS.equals("linux")) {
-			jnluaLib += ".so";
-		}
-		Native.loadLibrary(jnluaLib, Library.class);
-		
-		this.L = new LuaState();
-		this.L.openLibs();
-		
-		try {
-			this.L.load(Files.newInputStream(Paths.get("nn-crf-interface/neural_server/NetworkInterface.lua")),"NetworkInterface.lua","bt");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		this.L.call(0,0);
 	}
 	
 	/**
@@ -158,15 +154,7 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 			while(iter.hasNext()) {
 				int positiveInstId = iter.next();
 				assert(positiveInstId > 0);
-				//the following two might be the same.
-				//System.out.println("positive id: "+ positiveInstId);
 				set.addAll(this.instId2FVPInputId.get(positiveInstId));
-				int s1 = set.size();
-				set.addAll(this.instId2FVPInputId.get(-positiveInstId));
-				int s2 = set.size();
-				if (s1 != s2) {
-					throw new RuntimeException("the two input lists are not the same?");
-				}
 			}
 			currBatchFVPInputIds = new TIntArrayList(set);
 			args = new Object[]{isTraining, this.currBatchFVPInputIds};
@@ -176,7 +164,6 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		Class<?>[] retTypes = new Class[]{DoubleTensor.class};
 		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, retTypes);
 		output = this.getArray(outputTensorBuffer, output);
-		//System.out.println("java side forward output: " + this.output[0] + " " + this.output[1]);
 	}
 	
 	@Override
@@ -197,25 +184,12 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	 */
 	public void backward() {
 		countOutputTensorBuffer.storage().copy(this.countOutput);
-		/****  //debug code can be removed
-		double sumGradOutput = 0;
-		for (int i = 0; i< countOutput.length; i++)
-			sumGradOutput += this.countOutput[i];
-		System.out.println("java side back sum gradOutput: " + sumGradOutput);
-		System.out.println("java side back gradOutput: " + this.countOutput[0] + " " + this.countOutput[1]);
-		***/
 		Object[] args = new Object[]{};
 		Class<?>[] retTypes = new Class[0];
 		LuaFunctionHelper.execLuaFunction(this.L, "backward", args, retTypes);
 		
 		if(optimizeNeural && getParamSize() > 0) { // copy gradParams computed by Torch
 			gradParams = this.getArray(this.gradParamsTensor, gradParams);
-			/****  //debug code can be removed
-			//double sum = 0;
-			//for (int i = 0; i< gradParams.length; i++)
-			//	sum += this.gradParams[i];
-			//System.out.println("java side back gradPram: " + sum + "  param length:"+gradParams.length);
-			***/
 			if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
 				addL2ParamsGrad();
 			}
@@ -297,11 +271,6 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 			buf = new double[(int) t.nElement()];
         }
 		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
-//		Iterator<Object> iter = t.iterator();
-//		int ptr = 0;
-//		while (iter.hasNext()) { // manual iteration like this is actually slow
-//			buf[ptr++] = (double) iter.next(); 
-//		}
 		return buf;
 	}
 }

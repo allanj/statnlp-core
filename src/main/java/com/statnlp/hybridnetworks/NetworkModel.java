@@ -322,9 +322,9 @@ public abstract class NetworkModel implements Serializable{
 			int size = Math.min(NetworkConfig.BATCH_SIZE, instIds.size());
 			int offset = 0;
 			for(int it = 0; it<=maxNumIterations; it++){
-				//at each iteration, shuffle the inst ids. and reset the set, which is already in the learner thread
 				if(NetworkConfig.USE_BATCH_TRAINING){
 					batchInstIds.clear();
+					//at each epoch, shuffle the inst ids. and reset the set, which is already in the learner thread
 					if(NetworkConfig.RANDOM_BATCH && batchId == 0) {
 						Collections.shuffle(instIds, RANDOM);
 					}

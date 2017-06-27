@@ -43,13 +43,12 @@ function initialize(javadata, ...)
     local isTraining = javadata:get("isTraining")
     local optimizeInTorch = not javadata:get("optimizeNeural")
     gpuid = javadata:get("gpuid")
-    setupGPU()
     if gpuid == nil then gpuid = -1 end
+    setupGPU()
     if isTraining then
         -- re-seed
         torch.manualSeed(SEED)
         if gpuid >= 0 then cutorch.manualSeed(SEED) end
-
         local networkClass = javadata:get("class")
         if networkClass == "MultiLayerPerceptron" then
             net = MultiLayerPerceptron(optimizeInTorch, gpuid)

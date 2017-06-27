@@ -16,6 +16,16 @@ function listToTable2D(list)
     return res
 end
 
+function array2Tensor2D(array)
+    local res = torch.Tensor(#array, #array[1])
+    for i = 1, #array do
+        for j = 1, #array[1] do
+            res[i][j] = array[i][j]
+        end
+    end
+    return res
+end
+
 function loadGlove(wordList, dim, sharedLookupTable)
     sharedLookupTable = sharedLookupTable or false
     if glove == nil then

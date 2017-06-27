@@ -2,18 +2,14 @@ package com.statnlp.neural;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
 import java.util.Scanner;
-import java.util.AbstractMap.SimpleImmutableEntry;
 
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.neural.util.LuaFunctionHelper;
-
-import th4j.Tensor.DoubleTensor;
 
 /**
  * The class that serves as the interface to access the neural network backend.
@@ -82,7 +78,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public void initializeNN() {
+	public int getNNInputSize() {
 		if (isTraining) {
 			this.embeddingList = (List<String>) config.get("embedding");
 			this.hiddenSize = (int) config.get("hiddenSize");
@@ -92,7 +88,6 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 			this.token2idxList = new ArrayList<HashMap<String,Integer>>();
 		}
 		makeVocab();
-		
 		if (isTraining) {
 			totalInputDim = 0;
 			List<Integer> embSizeList = (List<Integer>) config.get("embSizeList");
@@ -103,43 +98,8 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 					totalInputDim += token2idxList.get(i).size() * numInputList.get(i);
 				}
 			}
-			
-			// Pointer to Torch tensors
-	        this.outputTensorBuffer = new DoubleTensor(getVocabSize(), this.numLabels);
-	        this.countOutputTensorBuffer = new DoubleTensor(getVocabSize(), this.numLabels);
-	        // Backward matrices
-	        this.countOutput = new double[getVocabSize() * this.numLabels];
 		}
-		
-		this.output = new double[getVocabSize() * this.numLabels];
-        
-        config.put("isTraining", isTraining);
-        
-        Object[] args = new Object[3];
-        args[0] = config;
-        args[1] = this.outputTensorBuffer;
-        args[2] = this.countOutputTensorBuffer;
-        Class<?>[] retTypes;
-        if (optimizeNeural && isTraining) {
-        	retTypes = new Class[]{DoubleTensor.class,DoubleTensor.class};
-        } else {
-        	retTypes = new Class[]{};
-        }
-        Object[] outputs = LuaFunctionHelper.execLuaFunction(this.L, "initialize", args, retTypes);
-        
-        if(optimizeNeural && isTraining) {
-			this.paramsTensor = (DoubleTensor) outputs[0];
-			this.gradParamsTensor = (DoubleTensor) outputs[1];
-			Random rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
-			if (this.paramsTensor.nElement() > 0) {
-				this.params = this.getArray(this.paramsTensor, this.params);
-				for(int i = 0; i < this.params.length; i++) {
-					this.params[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
-						NetworkConfig.FEATURE_INIT_WEIGHT;
-				}
-				this.gradParams = this.getArray(this.gradParamsTensor, this.gradParams);
-			}
-		}
+		return getVocabSize();
 	}
 	
 	/**

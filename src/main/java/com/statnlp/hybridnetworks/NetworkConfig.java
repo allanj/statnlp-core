@@ -237,6 +237,11 @@ public class NetworkConfig {
 	public static boolean IS_INDEXED_NEURAL_FEATURES = false;
 	/** Randomly choose the batch at every iteration. (false may give better result) */
 	public static boolean RANDOM_BATCH = false;
+	/**
+	 * Initialize the feature value provider weights in java
+	 * It will override the embedding weights if you have.
+	 */
+	public static boolean INIT_FV_WEIGHTS = false;
 	
 	public static String NEURAL_RANDOM_TYPE = "default";
 	

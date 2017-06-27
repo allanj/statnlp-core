@@ -1,12 +1,19 @@
 package com.statnlp.hybridnetworks;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Set;
 
+import com.naef.jnlua.LuaState;
 import com.statnlp.commons.ml.opt.MathsVector;
+import com.sun.jna.Library;
+import com.sun.jna.Native;
 
 import gnu.trove.list.TIntList;
 import gnu.trove.map.TIntObjectMap;
@@ -16,16 +23,17 @@ import gnu.trove.set.TIntSet;
 
 public abstract class FeatureValueProvider {
 	
+	public static String LUA_VERSION = "5.2";
+	
+	/**
+	 * A LuaState instance for loading Lua scripts
+	 */
+	public LuaState L;
+	
 	/**
 	 * The total number of unique output labels
 	 */
 	protected int numLabels;
-	
-	/**
-	 * The CRF weights and gradients of the continuous features,
-	 * each having the shape (numLabels x embeddingDimension)
-	 */
-	//protected double[] weights, gradWeights;
 	
 	/**
 	 * The provider's internal weights and gradients
@@ -56,7 +64,7 @@ public abstract class FeatureValueProvider {
 	/**
 	 * The map for mapping the instance id to feature value provider input.
 	 * Used for batch training
-	 * TODO: Need to optimize this part later maybe.
+	 * TODO: Need to remove this later after we have multi-threaded {@link #addHyperEdge(Network, int, int, Object, int)}.
 	 */
 	protected TIntObjectMap<Set<Object>> instId2FVPInput;
 	
@@ -82,11 +90,52 @@ public abstract class FeatureValueProvider {
 		instId2FVPInput = new TIntObjectHashMap<>();
 		instId2FVPInputId = new TIntObjectHashMap<>();
 		this.numLabels = numLabels;
+		this.configureJNLua();
+	}
+	
+	/**
+	 * Configure paths for JNLua and create a new LuaState instance
+	 * for loading the backend Torch/Lua script
+	 */
+	private void configureJNLua() {
+		System.setProperty("jna.library.path","./nativeLib");
+		System.setProperty("java.library.path", "./nativeLib:" + System.getProperty("java.library.path"));
+		Field fieldSysPath = null;
+		try {
+			fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
+			fieldSysPath.setAccessible(true);
+			fieldSysPath.set(null, null);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		String jnluaLib = null;
+		if (LUA_VERSION.equals("5.2")) {
+			jnluaLib = "libjnlua52";
+		} else if (LUA_VERSION.equals("5.1")) {
+			jnluaLib = "libjnlua5.1";
+		}
+		if (NetworkConfig.OS.equals("osx")) {
+			jnluaLib += ".jnilib";
+		} else if (NetworkConfig.OS.equals("linux")) {
+			jnluaLib += ".so";
+		}
+		Native.loadLibrary(jnluaLib, Library.class);
+		
+		this.L = new LuaState();
+		this.L.openLibs();
+		
+		try {
+			this.L.load(Files.newInputStream(Paths.get("nn-crf-interface/neural_server/NetworkInterface.lua")),"NetworkInterface.lua","bt");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		this.L.call(0,0);
 	}
 	
 	/**
 	 * Add a hyper-edge and its corresponding input-output pair
-	 * TODO: fix the synchronization, it will cause the output different everytime.
+	 * TODO: make it multi-threaded
+	 * TODO: replace {@link #instId2FVPInput} with {@link #instId2FVPInputId} directly.   
 	 * @param network
 	 * @param parent_k
 	 * @param children_k_idx
@@ -110,7 +159,7 @@ public abstract class FeatureValueProvider {
 		}
 		if (isTraining && NetworkConfig.USE_BATCH_TRAINING) {
 			//TODO: we can actually add those instance id with one sign (e.g. positive)
-			if (! instId2FVPInput.containsKey(instanceID)) {
+			if (! instId2FVPInput.containsKey(Math.abs(instanceID))) {
 				Set<Object> set = new HashSet<>();
 				set.add(fvpInput);
 				instId2FVPInput.put(instanceID, set);
@@ -202,7 +251,6 @@ public abstract class FeatureValueProvider {
 			Arrays.fill(gradParams, 0.0);
 		}
 	}
-	
 	
 	public double getL2Params() {
 		if (getParamSize() > 0) {

@@ -3,7 +3,6 @@ package com.statnlp.example;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
