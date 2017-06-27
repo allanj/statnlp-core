@@ -133,6 +133,9 @@ public class LinearNEMain {
 											NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 									}
 									break;
+					case "-initNNweight": 
+						NetworkConfig.INIT_FV_WEIGHTS = args[i+1].equals("true") ? true : false; //optimize the neural features or not
+						break;
 					case "-optimNeural": 
 						NetworkConfig.OPTIMIZE_NEURAL = args[i+1].equals("true") ? true : false; //optimize the neural features or not
 						if (!NetworkConfig.OPTIMIZE_NEURAL) {
