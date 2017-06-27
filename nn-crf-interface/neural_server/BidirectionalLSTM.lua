@@ -7,8 +7,6 @@ function BidirectionalLSTM:__init(doOptimization, gpuid)
 end
 
 function BidirectionalLSTM:initialize(javadata, ...)
-    local gpuid = self.gpuid
-
     self.data = {}
     local data = self.data
     data.sentences = listToTable(javadata:get("sentences"))
@@ -17,19 +15,16 @@ function BidirectionalLSTM:initialize(javadata, ...)
     self.bidirection = javadata:get("bidirection")
     self.numLabels = javadata:get("numLabels")
     data.embedding = javadata:get("embedding")
-    
-    local isTraining = javadata:get("isTraining")
-    self.isTraining = isTraining
-    local outputAndGradOutputPtr = {... }
-    if isTraining then
+    self.isTraining = javadata:get("isTraining")
+    self.x = self:prepare_input()
+    self.numSent = #data.sentences
+    self.output = torch.Tensor()
+    self.gradOutput = {}
+
+    if self.isTraining then
+        local outputAndGradOutputPtr = {... }
         self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
         self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
-    end
-    
-    -- what to forward
-    if isTraining then
-        self.idx2word = {}
-        self.word2idx = {}
         ---the following 4 is for batch training.
         self.batchInput = {}
         self.x1Tab = {}
@@ -37,46 +32,14 @@ function BidirectionalLSTM:initialize(javadata, ...)
         self.x2Tab = {}
         self.x2 = torch.LongTensor()
         self.gradBatchOutput = torch.Tensor()
-    end
-    self.x = self:prepare_input()
-    self.numSent = #data.sentences
-
-    self.output = torch.Tensor()
-    self.gradOutput = {}
-
-    if isTraining then
         self:createNetwork()
         print(self.net)
-
-        --make sure we will not replace this variable
-        self.params, self.gradParams = self.net:getParameters()
-        print("Number of parameters: " .. self.params:nElement())
-        if self.doOptimization then
-            self:createOptimizer()
-            -- no return array if optim is done here
-        else
-            if gpuid >=0 then
-                self.paramsDouble = self.params:double()
-                self.paramsDouble:retain()
-                self.paramsPtr = torch.pointer(self.paramsDouble)
-                self.gradParamsDouble = self.gradParams:double()
-                self.gradParamsDouble:retain()
-                self.gradParamsPtr = torch.pointer(self.gradParamsDouble)
-                return self.paramsPtr, self.gradParamsPtr
-            else
-                self.params:retain()
-                self.paramsPtr = torch.pointer(self.params)
-                self.gradParams:retain()
-                self.gradParamsPtr = torch.pointer(self.gradParams)
-                return self.paramsPtr, self.gradParamsPtr
-            end
-        end
+        return self:obtainParams()
     end
 end
 
 function BidirectionalLSTM:createNetwork()
     local data = self.data
-    local gpuid = self.gpuid
 
     local hiddenSize = data.hiddenSize
 
@@ -138,13 +101,38 @@ function BidirectionalLSTM:createNetwork()
         :add(brnn) 
         :add(nn.Sequencer(nn.MaskZero(nn.Linear(mergeHiddenSize, self.numLabels), 1))) 
        --- if don't use bias, use LinearNoBias or call :noBias()
-    if gpuid >=0 then rnn:cuda() end
+    if self.gpuid >=0 then rnn:cuda() end
     self.net = rnn
+end
+
+function BidirectionalLSTM:obtainParams()
+    --make sure we will not replace this variable
+    self.params, self.gradParams = self.net:getParameters()
+    print("Number of parameters: " .. self.params:nElement())
+    if self.doOptimization then
+        self:createOptimizer()
+        -- no return array if optim is done here
+    else
+        if self.gpuid >=0 then
+            self.paramsDouble = self.params:double()
+            self.paramsDouble:retain()
+            self.paramsPtr = torch.pointer(self.paramsDouble)
+            self.gradParamsDouble = self.gradParams:double()
+            self.gradParamsDouble:retain()
+            self.gradParamsPtr = torch.pointer(self.gradParamsDouble)
+            return self.paramsPtr, self.gradParamsPtr
+        else
+            self.params:retain()
+            self.paramsPtr = torch.pointer(self.params)
+            self.gradParams:retain()
+            self.gradParamsPtr = torch.pointer(self.gradParams)
+            return self.paramsPtr, self.gradParamsPtr
+        end
+    end
 end
 
 function BidirectionalLSTM:createOptimizer()
     local data = self.data
-
     -- set optimizer. If nil, optimization is done by caller.
     print(string.format("Optimizer: %s", data.optimizer))
     self.doOptimization = data.optimizer ~= nil and data.optimizer ~= 'none'
@@ -169,30 +157,13 @@ function BidirectionalLSTM:createOptimizer()
 end
 
 function BidirectionalLSTM:forward(isTraining, batchInputIds)
-    self.batchInputIds = batchInputIds
     if self.gpuid >= 0 and not self.doOptimization then
         --paramsDouble point to java and it's double tensor
         --need to convert back to cudaTensor if using gpu
         self.params:copy(self.paramsDouble:cuda())
     end
-    local output_table
-    if self.batchInputIds ~= nil then 
-        self.batchInputIds:add(1) -- because the sentence is 0 indexed.
-        --select the specific indexes from the table
-        self.x1 = torch.cat(self.x1, self.x[1], 2):index(1, batchInputIds)
-        torch.split(self.x1Tab, self.x1, 1, 2)
-        self.x2 = torch.cat(self.x2, self.x[2], 2):index(1, batchInputIds)
-        torch.split(self.x2Tab, self.x2, 1, 2)
-        for key,_ in pairs(self.x1Tab) do
-            -- in order to remove the singleton dimension, otherwise mask zero has error
-            self.x1Tab[key] = torch.squeeze (self.x1Tab[key], 2)
-            self.x2Tab[key] = torch.squeeze (self.x2Tab[key], 2)
-        end
-        self.batchInput = {self.x1Tab, self.x2Tab}
-        output_table = self.net:forward(self.batchInput)
-    else
-        output_table = self.net:forward(self.x)
-    end
+    local nnInput = self:getForwardInput(batchInputIds)
+    local output_table = self.net:forward(nnInput)
     if self.gpuid >= 0 then
         --convert the cuda tensor back to double tensor for java to read
         --th4j only support double tensor / float tensor
@@ -210,6 +181,24 @@ function BidirectionalLSTM:forward(isTraining, batchInputIds)
             self.outputPtr:resizeAs(self.output)
         end
         self.outputPtr:copy(self.output)
+    end
+end
+
+function BidirectionalLSTM:getForwardInput(batchInputIds)
+    if batchInputIds ~= nil then 
+        self.batchInputIds = batchInputIds
+        self.batchInputIds:add(1) -- because the sentence is 0 indexed.
+        --select the specific indexes from the table
+        self.x1 = torch.cat(self.x1, self.x[1], 2):index(1, batchInputIds)
+        self.x1:resize(self.x1:size(1)*self.x1:size(2))
+        torch.split(self.x1Tab, self.x1, batchInputIds:size(1), 1)
+        self.x2 = torch.cat(self.x2, self.x[2], 2):index(1, batchInputIds)
+        self.x2:resize(self.x2:size(1)*self.x2:size(2))
+        torch.split(self.x2Tab, self.x2, batchInputIds:size(1), 1)
+        self.batchInput = {self.x1Tab, self.x2Tab}
+        return self.batchInput
+    else
+        return self.x
     end
 end
 
@@ -266,23 +255,7 @@ function BidirectionalLSTM:prepare_input()
     end
 
     if self.isTraining then
-        self.word2idx['<PAD>'] = 0
-        self.idx2word[0] = '<PAD>'
-        self.word2idx['<UNK>'] = 1
-        self.idx2word[1] = '<UNK>'
-        self.vocabSize = 2
-        for i=1,#sentences do
-            local tokens = sentence_toks[i]
-            for j=1,#tokens do
-                local tok = tokens[j]
-                local tok_id = self.word2idx[tok]
-                if tok_id == nil then
-                    self.vocabSize = self.vocabSize+1
-                    self.word2idx[tok] = self.vocabSize
-                    self.idx2word[self.vocabSize] = tok
-                end
-            end
-        end
+        self:buildVocab(sentences, sentence_toks)
     end
 
     local inputs = {}
@@ -320,6 +293,28 @@ function BidirectionalLSTM:prepare_input()
     end
     self.maxLen = maxLen
     return {inputs, inputs_rev}
+end
+
+function BidirectionalLSTM:buildVocab(sentences, sentence_toks)
+    self.idx2word = {}
+    self.word2idx = {}
+    self.word2idx['<PAD>'] = 0
+    self.idx2word[0] = '<PAD>'
+    self.word2idx['<UNK>'] = 1
+    self.idx2word[1] = '<UNK>'
+    self.vocabSize = 2
+    for i=1,#sentences do
+        local tokens = sentence_toks[i]
+        for j=1,#tokens do
+            local tok = tokens[j]
+            local tok_id = self.word2idx[tok]
+            if tok_id == nil then
+                self.vocabSize = self.vocabSize+1
+                self.word2idx[tok] = self.vocabSize
+                self.idx2word[self.vocabSize] = tok
+            end
+        end
+    end
 end
 
 function BidirectionalLSTM:save_model(path)
