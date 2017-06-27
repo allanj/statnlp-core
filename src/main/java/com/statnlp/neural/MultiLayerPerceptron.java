@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.AbstractMap.SimpleImmutableEntry;
 
 import com.statnlp.hybridnetworks.Network;
 import com.statnlp.hybridnetworks.NetworkConfig;
@@ -216,10 +217,11 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	@Override
 	public double getScore(Network network, int parent_k, int children_k_index) {
 		double val = 0.0;
-		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		if (input != null) {
-			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			int id = fvpInput2id.get(input);
+		SimpleImmutableEntry<Object, Integer> io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
+		if (io != null) {
+			Object edgeInput = io.getKey();
+			int outputLabel = io.getValue();
+			int id = fvpInput2id.get(edgeInput);
 			if (id != UNKNOWN) {
 				val = output[id * numLabels + outputLabel];
 			}
@@ -229,10 +231,11 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	
 	@Override
 	public void update(double count, Network network, int parent_k, int children_k_index) {
-		Object input = getHyperEdgeInput(network, parent_k, children_k_index);
-		if (input != null) {
-			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
-			int id = fvpInput2id.get(input);
+		SimpleImmutableEntry<Object, Integer> io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
+		if (io != null) {
+			Object edgeInput = io.getKey();
+			int outputLabel = io.getValue();
+			int id = fvpInput2id.get(edgeInput);
 			int idx = id * this.numLabels + outputLabel;
 			synchronized (countOutput) {
 				countOutput[idx] -= count;

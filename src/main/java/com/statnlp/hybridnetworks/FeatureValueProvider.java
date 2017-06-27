@@ -164,7 +164,7 @@ public abstract class FeatureValueProvider {
 	 * @param children_k_index
 	 * @return input
 	 */
-	public Object getHyperEdgeInput(Network network, int parent_k, int children_k_index) {
+	public SimpleImmutableEntry<Object, Integer> getHyperEdgeInputOutput(Network network, int parent_k, int children_k_index) {
 		int instanceID = network.getInstance().getInstanceId();
 		TIntObjectHashMap<TIntObjectHashMap<SimpleImmutableEntry<Object, Integer>>> tmp = edge2io.get(instanceID);
 		if (tmp == null)
@@ -174,36 +174,19 @@ public abstract class FeatureValueProvider {
 		if (tmp2 == null)
 			return null;
 		
-		Object input = tmp2.get(children_k_index).getKey();
-		return input;
+		return tmp2.get(children_k_index);
 	}
 	
 	/**
-	 * Get the output label index for a specified hyper-edge
-	 * @param network
-	 * @param parent_k
-	 * @param children_k_index
-	 * @return output
+	 * Call this method after the training is finished
+	 * Do not call this if it's during training.
 	 */
-	public int getHyperEdgeOutput(Network network, int parent_k, int children_k_index) {
-		int instanceID = network.getInstance().getInstanceId();
-		TIntObjectHashMap<TIntObjectHashMap<SimpleImmutableEntry<Object, Integer>>> tmp = edge2io.get(instanceID);
-		if (tmp == null)
-			return -1;
-		
-		TIntObjectHashMap<SimpleImmutableEntry<Object, Integer>> tmp2 = tmp.get(parent_k);
-		if (tmp2 == null)
-			return -1;
-		
-		int output = tmp2.get(children_k_index).getValue();
-		return output;
-	}
-	
-	/**
-	 * Reset provider input
-	 */
-	public void clearInput() {
+	public void clearInputAndEdgeMapping() {
 		fvpInput2id.clear();
+		edge2io.clear();
+		if (NetworkConfig.USE_BATCH_TRAINING) {
+			instId2FVPInputId = null;
+		}
 	}
 	
 	public abstract void closeProvider();
@@ -255,8 +238,12 @@ public abstract class FeatureValueProvider {
 		scale = coef;
 	}
 	
-	public void setTraining(boolean flag) {
-		isTraining = flag;
+	public void setTrainingState() {
+		isTraining = true;
+	}
+	
+	public void setDecodingState() {
+		isTraining = false;
 	}
 	
 	public boolean isTraining() {

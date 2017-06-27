@@ -80,8 +80,6 @@ public class GlobalNetworkParam implements Serializable{
 	protected int[][] _feature2rep;//three-dimensional array representation of the feature.
 	/** The weights parameter */
 	protected double[] _weights;
-	/** Store the best weights when using the batch SGD */
-	protected double[] _bestWeight;
 	/** A flag whether the model is discriminative */
 	protected boolean _isDiscriminative;
 	
@@ -405,7 +403,8 @@ public class GlobalNetworkParam implements Serializable{
 		/**********/
 		
 		this._version = 0;
-		this._opt = this._optFactory.create(this._weights.length, getFeatureIntMap(), this._stringIndex);
+		int numWeights = this._weights.length + this.getProviderParamSize();
+		this._opt = this._optFactory.create(numWeights, getFeatureIntMap(), this._stringIndex);
 		this._locked = true;
 		
 		System.err.println(this._size+" features.");
@@ -803,9 +802,16 @@ public class GlobalNetworkParam implements Serializable{
 		this.setProviderState(true);
 	}
 	
-	private void setProviderState(boolean isTraining){
+	public void clearProviderInputAndEdgeMapping() {
 		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.setTraining(isTraining);
+			provider.clearInputAndEdgeMapping();
+		}
+	}
+	
+	public void setProviderState(boolean isTraining){
+		for (FeatureValueProvider provider : _featureValueProviders) {
+			if (isTraining) provider.setTrainingState();
+			else provider.setDecodingState();
 		}
 	}
 	
@@ -817,6 +823,14 @@ public class GlobalNetworkParam implements Serializable{
 		for (FeatureValueProvider provider : _featureValueProviders) {
 			provider.initialize();
 		}
+	}
+	
+	public int getProviderParamSize() {
+		int size = 0;
+		for (FeatureValueProvider provider : _featureValueProviders) {
+			size += provider.getParamSize();
+		}
+		return size;
 	}
 	
 	/**

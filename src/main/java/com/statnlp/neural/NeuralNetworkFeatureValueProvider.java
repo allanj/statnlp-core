@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.AbstractMap.SimpleImmutableEntry;
 
 import com.naef.jnlua.LuaState;
 import com.statnlp.hybridnetworks.FeatureValueProvider;
@@ -81,7 +82,7 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 			}
 			this.instId2FVPInputId.put(instanceId, fvpInputIds);
 		}
-		System.out.println("inst id to fvp input id: " + this.instId2FVPInputId.toString());
+		//System.out.println("inst id to fvp input id: " + this.instId2FVPInputId.toString());
 		this.instId2FVPInput = null;
 	}
 	
@@ -158,7 +159,7 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 				int positiveInstId = iter.next();
 				assert(positiveInstId > 0);
 				//the following two might be the same.
-				System.out.println("positive id: "+ positiveInstId);
+				//System.out.println("positive id: "+ positiveInstId);
 				set.addAll(this.instId2FVPInputId.get(positiveInstId));
 				int s1 = set.size();
 				set.addAll(this.instId2FVPInputId.get(-positiveInstId));
@@ -181,9 +182,10 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	@Override
 	public double getScore(Network network, int parent_k, int children_k_index) {
 		double val = 0.0;
-		Object edgeInput = getHyperEdgeInput(network, parent_k, children_k_index);
-		if (edgeInput != null) {
-			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
+		SimpleImmutableEntry<Object, Integer> io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
+		if (io != null) {
+			Object edgeInput = io.getKey();
+			int outputLabel = io.getValue();
 			int idx = this.input2Index(edgeInput) * this.numLabels + outputLabel;
 			val = output[idx];
 		}
@@ -223,9 +225,10 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	
 	@Override
 	public void update(double count, Network network, int parent_k, int children_k_index) {
-		Object edgeInput = getHyperEdgeInput(network, parent_k, children_k_index);
-		if (edgeInput != null) {
-			int outputLabel = getHyperEdgeOutput(network, parent_k, children_k_index);
+		SimpleImmutableEntry<Object, Integer> io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
+		if (io != null) {
+			Object edgeInput = io.getKey();
+			int outputLabel = io.getValue();
 			int idx = this.input2Index(edgeInput) * this.numLabels + outputLabel;
 			synchronized (countOutput) {
 				countOutput[idx] -= count;
