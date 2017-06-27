@@ -12,7 +12,7 @@ import com.statnlp.commons.types.WordToken;
 public class EReader {
 
 	
-	public static List<ECRFInstance> readData(String path, boolean setLabel, int number) throws IOException{
+	public static ECRFInstance[] readData(String path, boolean setLabel, int number) throws IOException{
 		return readData(path, setLabel, number, "IOB");
 	}
 	
@@ -25,7 +25,7 @@ public class EReader {
 	 * @return
 	 * @throws IOException
 	 */
-	public static List<ECRFInstance> readData(String path, boolean setLabel, int number, String encoding) throws IOException{
+	public static ECRFInstance[] readData(String path, boolean setLabel, int number, String encoding) throws IOException{
 		BufferedReader br = RAWF.reader(path);
 		String line = null;
 		List<ECRFInstance> insts = new ArrayList<ECRFInstance>();
@@ -42,7 +42,7 @@ public class EReader {
 				words.toArray(wordsArr);
 				Sentence sent = new Sentence(wordsArr);
 				ECRFInstance inst = new ECRFInstance(index++,1.0,sent);
-				inst.entities = es;
+				inst.output = es;
 //				System.err.println(es.toString());
 				if(!encoding.equals("NONE")) setEncoding(inst, encoding);
 //				System.err.println(inst.entities.toString());
@@ -81,7 +81,7 @@ public class EReader {
 				}
 			}else
 				currEntity = rawCurrEntity;
-			words.add(new WordToken(values[0],values[2],-1, currEntity));
+			words.add(new WordToken(values[0],values[1],-1, currEntity));
 			es.add(currEntity);
 			prevLine = line;
 			prevEntity = currEntity;
@@ -90,7 +90,7 @@ public class EReader {
 		List<ECRFInstance> myInsts = insts;
 		String type = setLabel? "Training":"Testing";
 		System.err.println(type+" instance, total:"+ myInsts.size()+" Instance. ");
-		return myInsts;
+		return myInsts.toArray(new ECRFInstance[myInsts.size()]);
 	}
 
 	private static void setEncoding(ECRFInstance inst, String encoding){

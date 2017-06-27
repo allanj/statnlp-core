@@ -15,6 +15,7 @@ function MultiLayerPerceptron:initialize(javadata, ...)
 
     self.data = {}
     local data = self.data
+
     data.vocab = listToTable2D(javadata:get("vocab"))
     data.numInputList = listToTable(javadata:get("numInputList"))
     data.embedding = listToTable(javadata:get("embedding"))
@@ -28,7 +29,8 @@ function MultiLayerPerceptron:initialize(javadata, ...)
     data.dropout = javadata:get("dropout")
     data.optimizer = javadata:get("optimizer")
     data.lang = javadata:get("lang")
-
+    data.numLabels = javadata:get("numLabels")
+    
     local isTraining = javadata:get("isTraining")
     local outputAndGradOutputPtr = {... }
     if isTraining then
@@ -47,7 +49,7 @@ function MultiLayerPerceptron:initialize(javadata, ...)
         word2idx[wordList[i]] = i
     end
     self.numInput = self.x[1]:size(1)
-
+    
     if isTraining then
         self:createNetwork()
         if data.fixInputLayer then print(self.inputLayer) end
@@ -73,6 +75,7 @@ function MultiLayerPerceptron:createNetwork()
     local data = self.data
     local gpuid = self.gpuid
 
+    
     -- input layer
     local pt = nn.ParallelTable()
     local totalInput = 0
@@ -109,7 +112,6 @@ function MultiLayerPerceptron:createNetwork()
     end
 
     local jt = nn.JoinTable(2)
-
     self.net = nn.Sequential()
     local mlp = self.net
     if data.fixInputLayer then
@@ -151,6 +153,17 @@ function MultiLayerPerceptron:createNetwork()
             mlp:add(act)
         end
     end
+
+    -- output layer (passed to CRF)
+    local outputDim = data.numLabels
+    local lastInputDim
+    if data.numLayer == 0 then
+        lastInputDim = totalDim
+    else
+        lastInputDim = data.hiddenSize
+    end
+    mlp:add(nn.Linear(lastInputDim, outputDim))
+    --- remove the noBias if we need the bias
 
     if gpuid >= 0 then
         if data.fixInputLayer then self.inputLayer:cuda() end

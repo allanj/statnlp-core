@@ -16,11 +16,12 @@
  */
 package com.statnlp.hybridnetworks;
 
-import java.util.HashSet;
 import java.util.concurrent.Callable;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
+
+import gnu.trove.set.TIntSet;
 
 public class LocalNetworkLearnerThread extends Thread implements Callable<Void> {
 	
@@ -46,9 +47,9 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	private int _it;
 	
 	/** Prepare the list of instance ids for the batch selection */
-	private HashSet<Integer> chargeInstsIds = null;
+	private TIntSet chargeInstsIds = null;
 	/** Prepare the list of training inst ids **/
-	private HashSet<Integer> trainInstsIds = null;
+	private TIntSet trainInstsIds = null;
 	
 	/**default: false. Depend on whether network config precompile or not.**/
 	private boolean precompile = false;
@@ -237,10 +238,10 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 		this._it = it;
 	}
 	
-	public void setInstanceIdSet(HashSet<Integer> set){
+	public void setInstanceIdSet(TIntSet set){
 		this.chargeInstsIds = set;
 	}
-	public void setTrainInstanceIdSet(HashSet<Integer> set){
+	public void setTrainInstanceIdSet(TIntSet set){
 		this.trainInstsIds = set;
 	}
 	

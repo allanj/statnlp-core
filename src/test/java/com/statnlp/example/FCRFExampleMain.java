@@ -178,23 +178,8 @@ public class FCRFExampleMain {
 		FCRFInstance[] ecrfs = trainInstances.toArray(new FCRFInstance[trainInstances.size()]);
 		
 		if(!useExistingModel){
-			if(NetworkConfig.USE_NEURAL_FEATURES){
-				FCRFInstance[] allInsts = new FCRFInstance[trainInstances.size()+testInstances.size()];
-				int i = 0;
-		        for(; i<trainInstances.size(); i++) {
-		        	allInsts[i] = trainInstances.get(i);
-		        }
-		        int lastId = allInsts[i-1].getInstanceId();
-		        for(int j = 0; j<testInstances.size(); j++, i++) {
-		        	allInsts[i] = testInstances.get(j);
-		        	allInsts[i].setInstanceId(lastId+j+1);
-		        	allInsts[i].setUnlabeled();
-		        }
-		        model.train(allInsts, trainInstances.size(), numIteration);
-			}else{
-				System.out.println("Training Instance size: " + ecrfs.length);
-				model.train(ecrfs, numIteration);
-			}
+			System.out.println("Training Instance size: " + ecrfs.length);
+			model.train(ecrfs, numIteration);
 		}
 		
 		if(saveModel){

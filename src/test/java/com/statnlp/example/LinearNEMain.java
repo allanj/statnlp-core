@@ -6,11 +6,11 @@ import java.util.List;
 
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
+import com.statnlp.example.linear_ne.ECRFContinuousFeatureValueProvider;
 import com.statnlp.example.linear_ne.ECRFEval;
 import com.statnlp.example.linear_ne.ECRFFeatureManager;
 import com.statnlp.example.linear_ne.ECRFInstance;
 import com.statnlp.example.linear_ne.ECRFNetworkCompiler;
-import com.statnlp.example.linear_ne.EConfig;
 import com.statnlp.example.linear_ne.EReader;
 import com.statnlp.example.linear_ne.Entity;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
@@ -27,6 +27,7 @@ public class LinearNEMain {
 	public static boolean DEBUG = false;
 
 	public static int trainNumber = -100;
+	public static int devNumber = -100;
 	public static int testNumber = -100;
 	public static int numIteration = 100;
 	public static int numThreads = 5;
@@ -34,14 +35,20 @@ public class LinearNEMain {
 	public static double adagrad_learningRate = 0.1;
 	public static double l2 = 0.01;
 	
-	public static String trainPath = "nn-crf-interface/nlp-from-scratch/me/eng.train.conll";
-	public static String testFile = "nn-crf-interface/nlp-from-scratch/me/eng.testb.conll";
+	public static String trainPath = "nn-crf-interface/nlp-from-scratch/me/eng.train";
+	public static String devFile = "nn-crf-interface/nlp-from-scratch/me/eng.testa";
+	public static String testFile = "nn-crf-interface/nlp-from-scratch/me/eng.testb";
 //	public static String trainPath = "nn-crf-interface/nlp-from-scratch/debug/debug.train.txt";
 //	public static String testFile = "nn-crf-interface/nlp-from-scratch/debug/debug.train.txt";
 	public static String nerOut = "nn-crf-interface/nlp-from-scratch/me/output/ner_out.txt";
 	public static String neural_config = "nn-crf-interface/neural_server/neural.debug.config";
 	public static String neuralType = "mlp";
 	public static boolean iobes = true;
+	public static int gpuId = -1;
+	public static String nnOptimizer = "lbfgs";
+	public static String embedding = "glove";
+	public static int batchSize = 10;
+	public static OptimizerFactory optimizer = OptimizerFactory.getLBFGSFactory();
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 
@@ -50,56 +57,51 @@ public class LinearNEMain {
 		System.err.println("[Info] testFile: "+testFile);
 		System.err.println("[Info] nerOut: "+nerOut);
 		
-		List<ECRFInstance> trainInstances = null;
-		List<ECRFInstance> testInstances = null;
+		ECRFInstance[] trainInstances = null;
+		//ECRFInstance[] devInstances = null;
+		ECRFInstance[] testInstances = null;
 		
 		
-		trainInstances = EReader.readData(trainPath,true,trainNumber, "IOBES");
-		testInstances = EReader.readData(testFile,false,testNumber,"IOB");
+		trainInstances = EReader.readData(trainPath, true, trainNumber, "IOBES");
+		//devInstances = EReader.readData(devFile, false, devNumber, "IOB");
+		testInstances = EReader.readData(testFile, false, testNumber,"IOB");
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
 		NetworkConfig.NUM_THREADS = numThreads;
 		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
+		NetworkConfig.BATCH_SIZE = batchSize; //need to enable batch training first
+		NetworkConfig.RANDOM_BATCH = false;
 		
 		if (DEBUG) {
 			NetworkConfig.RANDOM_INIT_WEIGHT = false;
 			NetworkConfig.FEATURE_INIT_WEIGHT = 0.1;
 		}
 		
-		List<FeatureValueProvider> nets = new ArrayList<FeatureValueProvider>();
+		List<FeatureValueProvider> fvps = new ArrayList<FeatureValueProvider>();
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
 			if (neuralType.equals("lstm")) {
 				int hiddenSize = 100;
-				String optimizer = "none";
-				boolean isForwardOnly = false;
-				nets.add(new BidirectionalLSTM(BidirectionalLSTM.createConfig(hiddenSize, isForwardOnly, optimizer), Entity.Entities.size()));
+				String optimizer = nnOptimizer;
+				boolean bidirection = true;
+				fvps.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size(), gpuId, embedding));
+			} else if (neuralType.equals("continuous")) {
+				fvps.add(new ECRFContinuousFeatureValueProvider(2, Entity.Entities.size()));
+			} else if (neuralType.equals("mlp")) {
+				fvps.add(new MultiLayerPerceptron(neural_config, Entity.Entities.size()));
 			} else {
-				nets.add(new MultiLayerPerceptron(MultiLayerPerceptron.createConfigFromFile(neural_config), Entity.Entities.size()));
+				throw new RuntimeException("Unknown neural type: " + neuralType);
 			}
-		}
-		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory(), nets);
+		} 
+		GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, fvps);
 		
 		System.err.println("[Info] "+Entity.Entities.size()+" entities: "+Entity.Entities.toString());
-		
-		ECRFInstance all_instances[] = new ECRFInstance[trainInstances.size()+testInstances.size()];
-        int i = 0;
-        for(; i<trainInstances.size(); i++) {
-            all_instances[i] = trainInstances.get(i);
-        }
-        int lastId = all_instances[i-1].getInstanceId();
-        for(int j = 0; j<testInstances.size(); j++, i++) {
-            all_instances[i] = testInstances.get(j);
-            all_instances[i].setInstanceId(lastId+j+1);
-            all_instances[i].setUnlabeled();
-        }
 		
 		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, neuralType, false);
 		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler(iobes);
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
-		ECRFInstance[] ecrfs = trainInstances.toArray(new ECRFInstance[trainInstances.size()]);
-		model.train(ecrfs, numIteration);
-		Instance[] predictions = model.decode(testInstances.toArray(new ECRFInstance[testInstances.size()]));
+		model.train(trainInstances, numIteration);
+		Instance[] predictions = model.decode(testInstances);
 		ECRFEval.evalNER(predictions, nerOut);
 	}
 
@@ -116,26 +118,43 @@ public class LinearNEMain {
 				switch(args[i]){
 					case "-trainNum": trainNumber = Integer.valueOf(args[i+1]); break;   //default: all 
 					case "-testNum": testNumber = Integer.valueOf(args[i+1]); break;    //default:all
+					case "-devNum": devNumber = Integer.valueOf(args[i+1]); break;    //default:all
 					case "-iter": numIteration = Integer.valueOf(args[i+1]); break;   //default:100;
 					case "-thread": numThreads = Integer.valueOf(args[i+1]); break;   //default:5
 					case "-testFile": testFile = args[i+1]; break;        
-					case "-windows":EConfig.windows = true; break;            //default: false (is using windows system to run the evaluation script)
+					case "-windows":ECRFEval.windows = true; break;            //default: false (is using windows system to run the evaluation script)
 					case "-batch": NetworkConfig.USE_BATCH_TRAINING = true;
-									NetworkConfig.BATCH_SIZE = Integer.valueOf(args[i+1]); break;
+									batchSize = Integer.valueOf(args[i+1]); break;
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;
-					case "-neural": if(args[i+1].equals("mlp") || args[i+1].equals("lstm")){ 
+					case "-neural": if(args[i+1].equals("mlp") || args[i+1].equals("lstm")|| args[i+1].equals("continuous")){ 
 											NetworkConfig.USE_NEURAL_FEATURES = true;
-											neuralType = args[i+1];
-											NetworkConfig.OPTIMIZE_NEURAL = true;  //false: optimize in neural network
+											neuralType = args[i+1]; //by default optim_neural is false.
 											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
 											NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 									}
 									break;
+					case "-initNNweight": 
+						NetworkConfig.INIT_FV_WEIGHTS = args[i+1].equals("true") ? true : false; //optimize the neural features or not
+						break;
+					case "-optimNeural": 
+						NetworkConfig.OPTIMIZE_NEURAL = args[i+1].equals("true") ? true : false; //optimize the neural features or not
+						if (!NetworkConfig.OPTIMIZE_NEURAL) {
+							nnOptimizer = args[i+2];
+							i++;
+						}break;
+					case "-optimizer":
+						 if(args[i+1].equals("sgd")) {
+							 optimizer = OptimizerFactory.getGradientDescentFactoryUsingGradientClipping(0.05, 5);
+							 
+						 }
+						break;
+					case "-emb" : embedding = args[i+1]; break;
+					case "-gpuid": gpuId = Integer.valueOf(args[i+1]); break;
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;
 					case "-lr": adagrad_learningRate = Double.valueOf(args[i+1]); break;
 					case "-backend": NetworkConfig.NEURAL_BACKEND = args[i+1]; break;
 					case "-os": NetworkConfig.OS = args[i+1]; break; // for Lua native lib, "osx" or "linux" 
-					default: System.err.println("Invalid arguments, please check usage."); System.exit(0);
+					default: System.err.println("Invalid arguments "+args[i]+", please check usage."); System.exit(0);
 				}
 			}
 			System.err.println("[Info] trainNum: "+trainNumber);
