@@ -3,6 +3,7 @@ package com.statnlp.example;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
@@ -27,6 +28,7 @@ public class LinearNEMain {
 	public static boolean DEBUG = false;
 
 	public static int trainNumber = -100;
+	public static int devNumber = -100;
 	public static int testNumber = -100;
 	public static int numIteration = 100;
 	public static int numThreads = 5;
@@ -34,8 +36,9 @@ public class LinearNEMain {
 	public static double adagrad_learningRate = 0.1;
 	public static double l2 = 0.01;
 	
-	public static String trainPath = "nn-crf-interface/nlp-from-scratch/me/eng.train.conll";
-	public static String testFile = "nn-crf-interface/nlp-from-scratch/me/eng.testb.conll";
+	public static String trainPath = "nn-crf-interface/nlp-from-scratch/me/eng.train";
+	public static String devFile = "nn-crf-interface/nlp-from-scratch/me/eng.testa";
+	public static String testFile = "nn-crf-interface/nlp-from-scratch/me/eng.testb";
 //	public static String trainPath = "nn-crf-interface/nlp-from-scratch/debug/debug.train.txt";
 //	public static String testFile = "nn-crf-interface/nlp-from-scratch/debug/debug.train.txt";
 	public static String nerOut = "nn-crf-interface/nlp-from-scratch/me/output/ner_out.txt";
@@ -46,6 +49,7 @@ public class LinearNEMain {
 	public static String nnOptimizer = "lbfgs";
 	public static String embedding = "glove";
 	public static int batchSize = 10;
+	public static OptimizerFactory optimizer = OptimizerFactory.getLBFGSFactory();
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 
@@ -54,12 +58,14 @@ public class LinearNEMain {
 		System.err.println("[Info] testFile: "+testFile);
 		System.err.println("[Info] nerOut: "+nerOut);
 		
-		List<ECRFInstance> trainInstances = null;
-		List<ECRFInstance> testInstances = null;
+		ECRFInstance[] trainInstances = null;
+		//ECRFInstance[] devInstances = null;
+		ECRFInstance[] testInstances = null;
 		
 		
-		trainInstances = EReader.readData(trainPath,true,trainNumber, "IOBES");
-		testInstances = EReader.readData(testFile,false,testNumber,"IOB");
+		trainInstances = EReader.readData(trainPath, true, trainNumber, "IOBES");
+		//devInstances = EReader.readData(devFile, false, devNumber, "IOB");
+		testInstances = EReader.readData(testFile, false, testNumber,"IOB");
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
 		NetworkConfig.NUM_THREADS = numThreads;
@@ -88,28 +94,15 @@ public class LinearNEMain {
 				throw new RuntimeException("Unknown neural type: " + neuralType);
 			}
 		} 
-		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory(), fvps);
+		GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, fvps);
 		
 		System.err.println("[Info] "+Entity.Entities.size()+" entities: "+Entity.Entities.toString());
-		
-		ECRFInstance all_instances[] = new ECRFInstance[trainInstances.size()+testInstances.size()];
-        int i = 0;
-        for(; i<trainInstances.size(); i++) {
-            all_instances[i] = trainInstances.get(i);
-        }
-        int lastId = all_instances[i-1].getInstanceId();
-        for(int j = 0; j<testInstances.size(); j++, i++) {
-            all_instances[i] = testInstances.get(j);
-            all_instances[i].setInstanceId(lastId+j+1);
-            all_instances[i].setUnlabeled();
-        }
 		
 		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, neuralType, false);
 		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler(iobes);
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
-		ECRFInstance[] ecrfs = trainInstances.toArray(new ECRFInstance[trainInstances.size()]);
-		model.train(ecrfs, numIteration);
-		Instance[] predictions = model.decode(testInstances.toArray(new ECRFInstance[testInstances.size()]));
+		model.train(trainInstances, numIteration);
+		Instance[] predictions = model.decode(testInstances);
 		ECRFEval.evalNER(predictions, nerOut);
 	}
 
@@ -126,6 +119,7 @@ public class LinearNEMain {
 				switch(args[i]){
 					case "-trainNum": trainNumber = Integer.valueOf(args[i+1]); break;   //default: all 
 					case "-testNum": testNumber = Integer.valueOf(args[i+1]); break;    //default:all
+					case "-devNum": devNumber = Integer.valueOf(args[i+1]); break;    //default:all
 					case "-iter": numIteration = Integer.valueOf(args[i+1]); break;   //default:100;
 					case "-thread": numThreads = Integer.valueOf(args[i+1]); break;   //default:5
 					case "-testFile": testFile = args[i+1]; break;        
@@ -146,6 +140,12 @@ public class LinearNEMain {
 							nnOptimizer = args[i+2];
 							i++;
 						}break;
+					case "-optimizer":
+						 if(args[i+1].equals("sgd")) {
+							 optimizer = OptimizerFactory.getGradientDescentFactoryUsingGradientClipping(0.05, 5);
+							 
+						 }
+						break;
 					case "-emb" : embedding = args[i+1]; break;
 					case "-gpuid": gpuId = Integer.valueOf(args[i+1]); break;
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;
