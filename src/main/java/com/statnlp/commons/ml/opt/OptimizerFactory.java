@@ -26,6 +26,16 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 
 public abstract class OptimizerFactory implements Serializable {
 	
+	public static enum OptimizerFactoryEnum {
+		LBFGS,
+		GD,
+		GD_ADAGRAD,
+		GD_ADADELTA,
+		GD_ADAM,
+		GD_RMSPROP,
+		;
+	}
+	
 	private static final long serialVersionUID = 70815268952763513L;
 	public static final double DEFAULT_LEARNING_RATE = 1e-3;
 	public static final double DEFAULT_LEARNING_RATE_DECAY = 0.9;
