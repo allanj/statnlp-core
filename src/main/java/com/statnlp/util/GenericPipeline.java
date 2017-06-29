@@ -877,6 +877,7 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 		if(hasWarning){
 			try{Thread.sleep(2000);}catch(InterruptedException e){}
 		}
+		super.initExecute();
 	}
 
 }
