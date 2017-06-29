@@ -19,7 +19,42 @@ public class GenericPipelineTreeCRFTest {
 	
 	private static GenericPipeline pipeline;
 	
-	public static void main(String[] args){
+	public static void main(String[] args) throws Exception {
+		final boolean runFromArgs = false;
+		if(runFromArgs){
+			runFromArgs();
+		} else {
+			runFromCode();
+		}
+	}
+	
+	private static final void runFromArgs(){
+		Runner.run(new String[]{
+			    "--instanceParserClass", "com.statnlp.util.instance_parser.TreebankInstanceParser",
+			    "--networkCompilerClass", "com.statnlp.example.tree_crf.TreeCRFNetworkCompiler",
+			    "--featureManagerClass", "com.statnlp.example.tree_crf.TreeCRFFeatureManager",
+			    "--evaluateCallback", "com.statnlp.example.tree_crf.TreeCRFNetworkCompiler::evaluate",
+			    "--trainPath", "data/ptb-binary.train",
+			    "--testPath", "data/ptb-binary.test",
+			    "--modelPath", "tree_crf.model",
+			    "--logPath", "tree_crf.log",
+			    "--attemptMemorySaving",
+			    "--numThreads", "4",
+			    "--l2", "0.001",
+			    "--useBatchTraining",
+			    "--batchSize", "2",
+			    "--useGD",
+			    "--stoppingCriteria", "MAX_ITERATION_REACHED",
+			    "--modelType", "SSVM",
+			    "--maxIter", "200",
+			    "--nodeMismatchCost", "1.0",
+			    "--edgeMismatchCost", "0.0",
+			    "--maxSentenceLength=50",
+			    "train", "test", "evaluate",
+		});
+	}
+	
+	private static final void runFromCode(){
 		pipeline = new GenericPipeline()
 				.withTrainPath("data/ptb-binary.train")						// Specify the training data
 				.withTestPath("data/ptb-binary.test")						// Specify the test data
