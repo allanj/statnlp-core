@@ -17,8 +17,8 @@ import java.util.function.Consumer;
 import org.apache.logging.log4j.Logger;
 
 import com.statnlp.commons.ml.opt.GradientDescentOptimizer;
-import com.statnlp.commons.ml.opt.GradientDescentOptimizerFactory;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
+import com.statnlp.commons.ml.opt.OptimizerFactory.OptimizerFactoryEnum;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.FeatureManager;
@@ -33,7 +33,6 @@ import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.util.instance_parser.InstanceParser;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
-import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Argument;
 import net.sourceforge.argparse4j.inf.ArgumentAction;
 import net.sourceforge.argparse4j.inf.ArgumentChoice;
@@ -550,14 +549,61 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					
 				})
 				.help("Whether to use generative model (like HMM) or discriminative model (like CRF)."));
-		argParserObjects.put("--useGD", argParser.addArgument("--useGD")
-				.action(Arguments.storeTrue())
+		argParserObjects.put("--optimizer", argParser.addArgument("--optimizer")
 				.action(new ArgumentAction(){
 
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						withOptimizerFactory(GradientDescentOptimizerFactory.getGradientDescentFactoryUsingAdaM());
+						@SuppressWarnings("unchecked")
+						String[] tokens = ((ArrayList<String>)value).toArray(new String[0]);
+						double[] params = new double[tokens.length-1];
+						for(int i=0; i<params.length; i++){
+							params[i] = Double.valueOf(tokens[i+1]);
+						}
+						OptimizerFactoryEnum optimizerFactoryType = OptimizerFactoryEnum.valueOf(tokens[0].toUpperCase());
+						OptimizerFactory optimizerFactory = null;
+						switch(optimizerFactoryType){
+						case LBFGS:
+							optimizerFactory = OptimizerFactory.getLBFGSFactory();
+							break;
+						case GD:
+							if(params.length > 0){
+								optimizerFactory = OptimizerFactory.getGradientDescentFactory(params[0]);
+							} else {
+								optimizerFactory = OptimizerFactory.getGradientDescentFactory();
+							}
+							break;
+						case GD_ADAGRAD:
+							if(params.length > 0){
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(params[0]);
+							} else {
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaGrad();
+							}
+							break;
+						case GD_ADADELTA:
+							if(params.length > 0){
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaDelta(params[0], params[1]);
+							} else {
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaDelta();
+							}
+							break;
+						case GD_RMSPROP:
+							if(params.length > 0){
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingRMSProp(params[0], params[1], params[2]);
+							} else {
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingRMSProp();
+							}
+							break;
+						case GD_ADAM:
+							if(params.length > 0){
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaM(params[0], params[1], params[2], params[3]);
+							} else {
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaM();
+							}
+							break;
+						}
+						withOptimizerFactory(optimizerFactory);
 					}
 
 					@Override
@@ -565,12 +611,18 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 
 					@Override
 					public boolean consumeArgument() {
-						return false;
+						return true;
 					}
 					
 				})
-				.help("Whether to use gradient descent (which will uses Adam with default parameters). "
-						+ "Override the --useGD argument object programmatically to modify this default behavior."));
+				.nargs("+")
+				.help("Specifies the optimizer used. The options are:\n"
+						+ "- LBFGS\n"
+						+ "- GD [learning_rate] (default: "+OptimizerFactory.DEFAULT_LEARNING_RATE+")\n"
+						+ "- GD_ADAGRAD [learning_rate] (default: "+OptimizerFactory.DEFAULT_LEARNING_RATE+")\n"
+						+ "- GD_ADADELTA [phi eps] (default: "+OptimizerFactory.DEFAULT_ADADELTA_PHI+" "+OptimizerFactory.DEFAULT_ADADELTA_EPS+")\n"
+						+ "- GD_RMSPROP [learning_rate decay_rate eps] (default: "+OptimizerFactory.DEFAULT_LEARNING_RATE+" "+OptimizerFactory.DEFAULT_RMSPROP_DECAY+" "+OptimizerFactory.DEFAULT_RMSPROP_EPS+")\n"
+						+ "- GD_ADAM [learning_rate beta1 beta2 eps] (default: "+OptimizerFactory.DEFAULT_LEARNING_RATE+" "+OptimizerFactory.DEFAULT_ADAM_BETA1+" "+OptimizerFactory.DEFAULT_ADAM_BETA2+" "+OptimizerFactory.DEFAULT_ADAM_EPS+")"));
 		argParserObjects.put("--useBatchTraining", argParser.addArgument("--useBatchTraining")
 				.action(new ArgumentAction(){
 
