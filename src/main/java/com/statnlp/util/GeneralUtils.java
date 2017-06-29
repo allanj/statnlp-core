@@ -7,6 +7,8 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
@@ -139,6 +141,20 @@ public class GeneralUtils {
 			}
 		}
 		
+	}
+	
+	public static String toPrettyString(Map<?,?> map){
+		StringBuilder builder = new StringBuilder();
+		builder.append("{\n");
+		for(Entry<?,?> entry: map.entrySet()){
+			builder.append("\t");
+			builder.append(entry.getKey());
+			builder.append("=");
+			builder.append(entry.getValue());
+			builder.append("\n");
+		}
+		builder.append("}");
+		return builder.toString();
 	}
 
 }
