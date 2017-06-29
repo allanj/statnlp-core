@@ -284,7 +284,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 								@Override
 								public void accept(Instance[] t) {
 									try {
-										evaluateCallback.invoke(t);
+										evaluateCallback.invoke(null, (Object)t);
 									} catch (IllegalAccessException | IllegalArgumentException
 											| InvocationTargetException e) {
 										e.printStackTrace();
@@ -1528,7 +1528,10 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
     	
 		List<String> unknownArgs = new ArrayList<String>();
 		try{
-			if(retainExistingState && parameters != null){
+			if(retainExistingState){
+				if(parameters == null){
+					initParameters();
+				}
 				argParser.parseKnownArgs(args, unknownArgs, parameters);
 			} else {
 				parameters = argParser.parseKnownArgs(args, unknownArgs).getAttrs();
