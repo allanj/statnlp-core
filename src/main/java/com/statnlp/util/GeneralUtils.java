@@ -64,8 +64,8 @@ public class GeneralUtils {
 		Logger logger = LogManager.getLogger(clazz, new StringFormatterMessageFactory());
 		if(loggers == null){
 			loggers = new ArrayList<org.apache.logging.log4j.core.Logger>();
-			loggers.add((org.apache.logging.log4j.core.Logger)logger);
 		}
+		loggers.add((org.apache.logging.log4j.core.Logger)logger);
 		return logger;
 	}
 	
@@ -81,11 +81,15 @@ public class GeneralUtils {
 		TeePrinter errPrinter = new TeePrinter(logPrinter, SYSERR);
 		System.setOut(outPrinter);
 		System.setErr(errPrinter);
+		
+		// Reset all loggers
 		LogManager.shutdown();
 		Configuration config = ((LoggerContext)LogManager.getContext()).getConfiguration();
 		for(org.apache.logging.log4j.core.Logger logger: loggers){
 			logger.getContext().updateLoggers(config);
 		}
+		((org.apache.logging.log4j.core.LoggerContext)LogManager.getContext()).updateLoggers(config);
+		((org.apache.logging.log4j.core.Logger)LogManager.getRootLogger()).getContext().updateLoggers(config);
 	}
 	
 	/**
