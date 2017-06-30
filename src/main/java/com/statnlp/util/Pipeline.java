@@ -17,8 +17,8 @@ import java.util.function.Consumer;
 import org.apache.logging.log4j.Logger;
 
 import com.statnlp.commons.ml.opt.GradientDescentOptimizer;
-import com.statnlp.commons.ml.opt.GradientDescentOptimizerFactory;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
+import com.statnlp.commons.ml.opt.OptimizerFactory.OptimizerFactoryEnum;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
 import com.statnlp.hybridnetworks.FeatureManager;
@@ -33,7 +33,6 @@ import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.util.instance_parser.InstanceParser;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
-import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Argument;
 import net.sourceforge.argparse4j.inf.ArgumentAction;
 import net.sourceforge.argparse4j.inf.ArgumentChoice;
@@ -170,6 +169,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						attrs.put("tasks", value);
 						String[] args = argsAsArray(value);
 						try{
 							addTasks(args);
@@ -199,6 +199,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						try {
 							withInstanceParser((Class<? extends InstanceParser>)Class.forName((String)value));
 						} catch (ClassNotFoundException e) {
@@ -224,6 +225,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						try {
 							withNetworkCompiler((Class<? extends NetworkCompiler>)Class.forName((String)value));
 						} catch (ClassNotFoundException e) {
@@ -249,6 +251,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						try {
 							withFeatureManager((Class<? extends FeatureManager>)Class.forName((String)value));
 						} catch (ClassNotFoundException e) {
@@ -273,6 +276,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						try {
 							String[] tokens = ((String)value).split("::");
 							String className = tokens[0];
@@ -284,7 +288,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 								@Override
 								public void accept(Instance[] t) {
 									try {
-										evaluateCallback.invoke(t);
+										evaluateCallback.invoke(null, (Object)t);
 									} catch (IllegalAccessException | IllegalArgumentException
 											| InvocationTargetException e) {
 										e.printStackTrace();
@@ -318,6 +322,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withMaxIter((int)value);
 					}
 
@@ -340,6 +345,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withModelType((ModelType)value);
 					}
 
@@ -363,6 +369,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withStoppingCriteria((StoppingCriteria)value);
 					}
 
@@ -387,6 +394,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withObjtol((double)value);
 					}
 
@@ -408,6 +416,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withMargin((double)value);
 					}
 
@@ -429,6 +438,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withNodeMismatchCost((double)value);
 					}
 
@@ -450,6 +460,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withEdgeMismatchCost((double)value);
 					}
 
@@ -495,6 +506,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						String[] args = argsAsArray(value);
 						try{
 							double initialWeight = Double.parseDouble((String)args[0]);
@@ -532,11 +544,13 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 						+ "Use --weightInit random [optional_seed] to randomly assign values to all"
 						+ "weights using the given seed."));
 		argParserObjects.put("--useGenerativeModel", argParser.addArgument("--useGenerativeModel")
+				.setDefault(NetworkConfig.TRAIN_MODE_IS_GENERATIVE)
 				.action(new ArgumentAction(){
 
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withUseGenerativeModel(true);
 					}
 
@@ -550,14 +564,62 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					
 				})
 				.help("Whether to use generative model (like HMM) or discriminative model (like CRF)."));
-		argParserObjects.put("--useGD", argParser.addArgument("--useGD")
-				.action(Arguments.storeTrue())
+		argParserObjects.put("--optimizer", argParser.addArgument("--optimizer")
 				.action(new ArgumentAction(){
 
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
-						withOptimizerFactory(GradientDescentOptimizerFactory.getGradientDescentFactoryUsingAdaM());
+						setParameter(flag.substring(2), value);
+						@SuppressWarnings("unchecked")
+						String[] tokens = ((ArrayList<String>)value).toArray(new String[0]);
+						double[] params = new double[tokens.length-1];
+						for(int i=0; i<params.length; i++){
+							params[i] = Double.valueOf(tokens[i+1]);
+						}
+						OptimizerFactoryEnum optimizerFactoryType = OptimizerFactoryEnum.valueOf(tokens[0].toUpperCase());
+						OptimizerFactory optimizerFactory = null;
+						switch(optimizerFactoryType){
+						case LBFGS:
+							optimizerFactory = OptimizerFactory.getLBFGSFactory();
+							break;
+						case GD:
+							if(params.length > 0){
+								optimizerFactory = OptimizerFactory.getGradientDescentFactory(params[0]);
+							} else {
+								optimizerFactory = OptimizerFactory.getGradientDescentFactory();
+							}
+							break;
+						case GD_ADAGRAD:
+							if(params.length > 0){
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(params[0]);
+							} else {
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaGrad();
+							}
+							break;
+						case GD_ADADELTA:
+							if(params.length > 0){
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaDelta(params[0], params[1]);
+							} else {
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaDelta();
+							}
+							break;
+						case GD_RMSPROP:
+							if(params.length > 0){
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingRMSProp(params[0], params[1], params[2]);
+							} else {
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingRMSProp();
+							}
+							break;
+						case GD_ADAM:
+							if(params.length > 0){
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaM(params[0], params[1], params[2], params[3]);
+							} else {
+								optimizerFactory = OptimizerFactory.getGradientDescentFactoryUsingAdaM();
+							}
+							break;
+						}
+						withOptimizerFactory(optimizerFactory);
 					}
 
 					@Override
@@ -565,18 +627,26 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 
 					@Override
 					public boolean consumeArgument() {
-						return false;
+						return true;
 					}
 					
 				})
-				.help("Whether to use gradient descent (which will uses Adam with default parameters). "
-						+ "Override the --useGD argument object programmatically to modify this default behavior."));
+				.nargs("+")
+				.help("Specifies the optimizer used. The options are:\n"
+						+ "- LBFGS\n"
+						+ "- GD [learning_rate] (default: "+OptimizerFactory.DEFAULT_LEARNING_RATE+")\n"
+						+ "- GD_ADAGRAD [learning_rate] (default: "+OptimizerFactory.DEFAULT_LEARNING_RATE+")\n"
+						+ "- GD_ADADELTA [phi eps] (default: "+OptimizerFactory.DEFAULT_ADADELTA_PHI+" "+OptimizerFactory.DEFAULT_ADADELTA_EPS+")\n"
+						+ "- GD_RMSPROP [learning_rate decay_rate eps] (default: "+OptimizerFactory.DEFAULT_LEARNING_RATE+" "+OptimizerFactory.DEFAULT_RMSPROP_DECAY+" "+OptimizerFactory.DEFAULT_RMSPROP_EPS+")\n"
+						+ "- GD_ADAM [learning_rate beta1 beta2 eps] (default: "+OptimizerFactory.DEFAULT_LEARNING_RATE+" "+OptimizerFactory.DEFAULT_ADAM_BETA1+" "+OptimizerFactory.DEFAULT_ADAM_BETA2+" "+OptimizerFactory.DEFAULT_ADAM_EPS+")"));
 		argParserObjects.put("--useBatchTraining", argParser.addArgument("--useBatchTraining")
+				.setDefault(NetworkConfig.USE_BATCH_TRAINING)
 				.action(new ArgumentAction(){
 
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withUseBatchTraining(true);
 					}
 
@@ -591,11 +661,13 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 				})
 				.help("Whether to use mini-batches during training."));
 		argParserObjects.put("--useRandomBatch", argParser.addArgument("--useRandomBatch")
+				.setDefault(false)
 				.action(new ArgumentAction(){
 
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withUseRandomBatch(true);
 					}
 
@@ -617,6 +689,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						try{
 							withBatchSize((int)value);
 						} catch (Exception e){
@@ -642,6 +715,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withL2((double)value);
 					}
 
@@ -665,6 +739,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withTouchTestSeparately((boolean)value);
 					}
 
@@ -686,6 +761,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withPredictTopK((int)value);
 					}
 
@@ -709,6 +785,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withNumThreads((int)value);
 					}
 
@@ -725,11 +802,13 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 		
 		// Feature Extraction
 		argParserObjects.put("--serialTouch", argParser.addArgument("--serialTouch")
+				.setDefault(!NetworkConfig.PARALLEL_FEATURE_EXTRACTION)
 				.action(new ArgumentAction(){
 
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withParallelFeatureExtraction(false);
 					}
 
@@ -745,11 +824,13 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 				.help("Whether to serialize the feature extraction process. "
 						+ "By default the feature extraction is parallelized, which is faster."));
 		argParserObjects.put("--touchLabeledOnly", argParser.addArgument("--touchLabeledOnly")
+				.setDefault(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY)
 				.action(new ArgumentAction(){
 
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withExtractFeaturesFromLabeledOnly(true);
 					}
 
@@ -766,11 +847,13 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 						+ "By default the feature set is created based on all possibilities "
 						+ "(e.g., all possible transitions in linear-chain CRF vs only seen transitions)"));
 		argParserObjects.put("--attemptMemorySaving", argParser.addArgument("--attemptMemorySaving")
+				.setDefault(NetworkConfig.AVOID_DUPLICATE_FEATURES)
 				.action(new ArgumentAction(){
 
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withAttemptMemorySaving(true);
 					}
 
@@ -788,11 +871,13 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 		
 		// Other Settings
 		argParserObjects.put("--debugMode", argParser.addArgument("--debugMode")
+				.setDefault(NetworkConfig.DEBUG_MODE)
 				.action(new ArgumentAction(){
 
 					@Override
 					public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
 							Object value) throws ArgumentParserException {
+						setParameter(flag.substring(2), value);
 						withDebugMode(true);
 					}
 
@@ -1096,7 +1181,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 	 * @return
 	 */
 	public THIS withDebugMode(boolean debug){
-		NetworkConfig.AVOID_DUPLICATE_FEATURES = debug;
+		NetworkConfig.DEBUG_MODE = debug;
 		return getThis();
 	}
 	
@@ -1528,7 +1613,10 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
     	
 		List<String> unknownArgs = new ArrayList<String>();
 		try{
-			if(retainExistingState && parameters != null){
+			if(retainExistingState){
+				if(parameters == null){
+					initParameters();
+				}
 				argParser.parseKnownArgs(args, unknownArgs, parameters);
 			} else {
 				parameters = argParser.parseKnownArgs(args, unknownArgs).getAttrs();
@@ -1604,6 +1692,7 @@ public abstract class Pipeline<THIS extends Pipeline<?>> {
 	
 	public void initExecute(){
 		LOGGER.info("Tasks to be executed: %s", taskList);
+		LOGGER.info("Configurations:\n%s\n%s", NetworkConfig.getConfig(), GeneralUtils.toPrettyString(parameters));
 	}
 	
 	public void execute(){
