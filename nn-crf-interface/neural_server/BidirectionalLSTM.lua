@@ -32,6 +32,11 @@ function BidirectionalLSTM:initialize(javadata, ...)
         self.x2Tab = {}
         self.x2 = torch.LongTensor()
         self.gradBatchOutput = torch.Tensor()
+        if self.gpuid >= 0 then 
+            self.x1 = self.x1:cuda()
+            self.x2 = self.x2:cuda()
+            self.gradBatchOutput = self.gradBatchOutput:cuda()
+        end
         self:createNetwork()
         print(self.net)
         return self:obtainParams()
