@@ -190,8 +190,8 @@ function BidirectionalLSTM:forward(isTraining, batchInputIds)
 end
 
 function BidirectionalLSTM:getForwardInput(batchInputIds)
+    self.batchInputIds = batchInputIds
     if batchInputIds ~= nil then 
-        self.batchInputIds = batchInputIds
         self.batchInputIds:add(1) -- because the sentence is 0 indexed.
         --select the specific indexes from the table
         self.x1 = torch.cat(self.x1, self.x[1], 2):index(1, batchInputIds)
