@@ -46,7 +46,7 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkFeatur
 	}
 
 	@Override
-	public int input2Index(Object input) {
+	public int edgeInput2Index(Object input) {
 		return fvpInput2id.get(input);
 	}
 

@@ -59,9 +59,9 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	}
 	
 	@Override
-	public int input2Index (Object input) {
+	public int edgeInput2Index (Object edgeInput) {
 		@SuppressWarnings("unchecked")
-		SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) input;
+		SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) edgeInput;
 		int sentID = fvpInput2id.get(sentAndPos.getKey());
 		int row = sentAndPos.getValue()*this.numSent+sentID;
 		return row;

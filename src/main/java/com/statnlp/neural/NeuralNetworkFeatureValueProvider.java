@@ -130,7 +130,7 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	 * Calculate the input position in the output/countOuput matrix position
 	 * @return
 	 */
-	public abstract int input2Index(Object input);
+	public abstract int edgeInput2Index(Object edgeInput);
 	
 	@Override
 	public void update() {
@@ -173,7 +173,7 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		if (io != null) {
 			Object edgeInput = io.getKey();
 			int outputLabel = io.getValue();
-			int idx = this.input2Index(edgeInput) * this.numLabels + outputLabel;
+			int idx = this.edgeInput2Index(edgeInput) * this.numLabels + outputLabel;
 			val = output[idx];
 		}
 		return val;
@@ -203,7 +203,7 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 		if (io != null) {
 			Object edgeInput = io.getKey();
 			int outputLabel = io.getValue();
-			int idx = this.input2Index(edgeInput) * this.numLabels + outputLabel;
+			int idx = this.edgeInput2Index(edgeInput) * this.numLabels + outputLabel;
 			synchronized (countOutput) {
 				countOutput[idx] -= count;
 			}

@@ -324,7 +324,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	}
 
 	@Override
-	public int input2Index(Object input) {
+	public int edgeInput2Index(Object input) {
 		// TODO Auto-generated method stub
 		return 0;
 	}
