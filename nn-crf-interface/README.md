@@ -1,10 +1,22 @@
+<!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
+
+- [StatNLP Feature Value Provider Interface](#statnlp-feature-value-provider-interface)
+	- [Requirements](#requirements)
+	- [Implementation on the Feature Value Provider](#implementation-on-the-feature-value-provider)
+		- [Neural Network Feature Value Provider](#neural-network-feature-value-provider)
+			- [BiLSTM Class](#bilstm-class)
+			- [Implement BiLSTM in Torch](#implement-bilstm-in-torch)
+			- [Specify the input and output of the BiLSTM through `FeatureManager`.](#specify-the-input-and-output-of-the-bilstm-through-featuremanager)
+		- [Continuous Feature Value Provider](#continuous-feature-value-provider)
+
+<!-- /TOC -->
 ## StatNLP Feature Value Provider Interface
 
-This document describe how to integrate the feature value provider into usual StatNLP implementations. In some of the implementation, you may want to use continuous feature value instead of binary feature value, or a neural network component such as Long short-term memory (LSTM) to improve the model performance. We will go through the procedure step by step based on previous StatNLP implementations. 
+This document describe how to integrate the feature value provider into usual StatNLP implementations. In some of the implementation, you may want to use continuous feature value instead of binary feature value, or a neural network component such as Long short-term memory (LSTM) to improve the model performance. We will go through the procedure step by step based on previous StatNLP implementations.
 
 In general, we have two main feature value provider:
-1. [Neural network feature value provider](#neural)
-2. [Continuous feature value provider](#continuous)
+1. [Neural network feature value provider](#neural-network-feature-value-provider)
+2. [Continuous feature value provider](#continuous-feature-value-provider)
 
 
 ### Requirements
@@ -14,7 +26,7 @@ In general, we have two main feature value provider:
 
 ### Implementation on the Feature Value Provider
 
-#### Neural Network Feature Value Provider<a name="neural"></a>
+#### Neural Network Feature Value Provider
 We describe the procedure with Bi-direction LSTM on a sequence labeling task (_i.e._ named entity recognition) as an example. The general steps are as follow:
 1. Create a BiLSTM class which extends the `NeuralNetworkFeatureValueProvider`.
 2. Implement the BiLSTM in Torch.
@@ -23,7 +35,7 @@ We describe the procedure with Bi-direction LSTM on a sequence labeling task (_i
 The code for this example can be found in `com.statnlp.example.linear_ne`.
 
 ##### BiLSTM Class
-It requires you to put some configurations, such as hidden size, and override three methods in the class. 
+It requires you to put some configurations, such as hidden size, and override three methods in the class.
 ```java
 public class BiLSTM extends NeuralNetworkFeatureValueProvider {
 
@@ -63,13 +75,13 @@ public class BiLSTM extends NeuralNetworkFeatureValueProvider {
 ```
 
 ##### Implement BiLSTM in Torch
-Basically, implment a `BiLSTM` class as usual Torch implementation and extend `AbstractNeuralNetwork` class. 
+Basically, implment a `BiLSTM` class as usual Torch implementation and extend `AbstractNeuralNetwork` class.
 ```lua
 ---At the head of the file
 local BiLSTM, parent = torch.class('BiLSTM', 'AbstractNeuralNetwork')
 ```
 See the example under `neural_server` folder: `BidirectionalLSTM.lua`. Add some code to the `NetworkInterface.lua`:
-```lua 
+```lua
 include 'nn-crf-interface/neural_server/BidirectionalLSTM.lua'
 ...
 function initialize(javadata, ...)
@@ -98,7 +110,7 @@ edgeInput = new SimpleImmutableEntry<String, Integer>(sentence, position);
 net.addHyperEdge(network, parent_k, children_k_index, edgeInput, outputLabel);
 ```
 
-#### Continuous Feature Value Provider<a name="continuous"></a>
+#### Continuous Feature Value Provider
 Just need to create your own continuous feature value provider class which extends the abstract `ContinuousFeatureValueProvider` class.
 
 ```java
@@ -107,7 +119,7 @@ public class ECRFContinuousFeatureValueProvider extends ContinuousFeatureValuePr
 	public ECRFContinuousFeatureValueProvider(int numFeatureValues, int numLabels) {
 		super(numFeatureValues, numLabels);
 	}
-	
+
 	@Override
 	public void getFeatureValue(Object input, double[] featureValue) {
 		// TODO: fill in the feature values of the input.
