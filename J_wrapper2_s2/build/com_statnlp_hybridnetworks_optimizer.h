@@ -9,26 +9,10 @@ extern "C" {
 #endif
 /*
  * Class:     com_statnlp_hybridnetworks_optimizer
- * Method:    set_weights
+ * Method:    initialize_weights
  * Signature: ([D)V
  */
-JNIEXPORT void JNICALL Java_com_statnlp_hybridnetworks_optimizer_set_1weights
-  (JNIEnv *, jobject, jdoubleArray);
-
-/*
- * Class:     com_statnlp_hybridnetworks_optimizer
- * Method:    get_weights
- * Signature: ()[D
- */
-JNIEXPORT jdoubleArray JNICALL Java_com_statnlp_hybridnetworks_optimizer_get_1weights
-  (JNIEnv *, jobject);
-
-/*
- * Class:     com_statnlp_hybridnetworks_optimizer
- * Method:    set_gradients
- * Signature: ([D)V
- */
-JNIEXPORT void JNICALL Java_com_statnlp_hybridnetworks_optimizer_set_1gradients
+JNIEXPORT void JNICALL Java_com_statnlp_hybridnetworks_optimizer_initialize_1weights
   (JNIEnv *, jobject, jdoubleArray);
 
 /*
