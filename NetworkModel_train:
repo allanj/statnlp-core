@@ -1,0 +1,29 @@
+NetworkModel_train:
+279-354 
+for(int it = 0; it<=maxNumIterations; it++){
+354-389
+389-393 
+FeatureManager_update
+394-426 
+}
+
+
+FeatureManager_update: FeatureManager_update(boolean)
+
+FeatureManager_update(boolean):
+104-125 
+GlobalNetworkParam_update
+125-135
+
+
+GlobalNetworkParam_update:
+569 - 571 
+GlobalNetworkParam_updateDiscriminative
+571 - 579
+
+
+
+GlobalNetworkParam_updateDiscriminative :
+647-688 
+LBFGSOPtimizer_optimize
+688-740

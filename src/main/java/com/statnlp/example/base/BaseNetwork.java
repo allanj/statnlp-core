@@ -160,8 +160,7 @@ public class BaseNetwork extends TableLookupNetwork {
 						+ "required public constructor: (int, Instance, long[], int[][][], int, "
 						+ "LocalNetworkParam, NetworkCompiler)", e);
 			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-				throw new RuntimeException("Error in constructing a sub-network of class "+networkClass.getName()
-						+ " (id="+networkId+",nodeCount="+nodeCount+")\nInstance: "+inst, e);
+				throw new RuntimeException("Error in constructing a sub-network of class "+networkClass.getName(), e);
 			}
 		}
 		

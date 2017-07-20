@@ -75,14 +75,6 @@ public abstract class NetworkCompiler implements Serializable{
 	public final ConcurrentHashMap<Integer, InstanceInfo> instanceInfos = new ConcurrentHashMap<Integer, InstanceInfo>();
 	
 	/**
-	 * Clears the cache of compiled network.<br>
-	 * This should be done between training and testing.
-	 */
-	public void reset(){
-		instanceInfos.clear();
-	}
-	
-	/**
 	 * Compile and store the networks per instance basis (each instance has two networks: labeled and unlabeled)
 	 * @param networkId
 	 * @param inst
@@ -90,27 +82,19 @@ public abstract class NetworkCompiler implements Serializable{
 	 * @return
 	 */
 	public Network compileAndStore(int networkId, Instance inst, LocalNetworkParam param){
+		Network network = compile(networkId, inst, param);
 		int absInstID = Math.abs(inst.getInstanceId());
 		InstanceInfo info = instanceInfos.putIfAbsent(absInstID, new InstanceInfo(absInstID));
 		if(info == null){ // This means previously there is no InstanceInfo
 			info = instanceInfos.get(absInstID);
 		}
-		Network network;
 		if(inst.isLabeled()){
-			if(info.labeledNetwork != null){
-				return info.labeledNetwork;
-			}
-			network = compileLabeled(networkId, inst, param);
 			info.labeledNetwork = network;
 			if(info.unlabeledNetwork != null){
 				info.unlabeledNetwork.setLabeledNetwork(network);
 				network.setUnlabeledNetwork(info.unlabeledNetwork);
 			}
 		} else {
-			if(info.unlabeledNetwork != null){
-				return info.unlabeledNetwork;
-			}
-			network = compileUnlabeled(networkId, inst, param);
 			info.unlabeledNetwork = network;
 			if(info.labeledNetwork != null){
 				info.labeledNetwork.setUnlabeledNetwork(network);

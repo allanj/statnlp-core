@@ -34,7 +34,6 @@ import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.set.TIntSet;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
@@ -80,6 +79,8 @@ public class GlobalNetworkParam implements Serializable{
 	protected int[][] _feature2rep;//three-dimensional array representation of the feature.
 	/** The weights parameter */
 	protected double[] _weights;
+	/** Store the best weights when using the batch SGD */
+	protected double[] _bestWeight;
 	/** A flag whether the model is discriminative */
 	protected boolean _isDiscriminative;
 	
@@ -380,8 +381,7 @@ public class GlobalNetworkParam implements Serializable{
 		initWeights(weights_new, numWeightsKept, this._size);
 		this._weights = weights_new;
 		
-		this.setProviderTrainingState();
-		this.initializeProvider();
+		initializeProvider(true);
 		
 		/** Must prepare the feature map before reset counts and obj
 		 * The reset will use feature2rep.
@@ -403,8 +403,7 @@ public class GlobalNetworkParam implements Serializable{
 		/**********/
 		
 		this._version = 0;
-		int numWeights = this._weights.length + this.getProviderParamSize();
-		this._opt = this._optFactory.create(numWeights, getFeatureIntMap(), this._stringIndex);
+		this._opt = this._optFactory.create(this._weights.length, getFeatureIntMap(), this._stringIndex);
 		this._locked = true;
 		
 		System.err.println(this._size+" features.");
@@ -569,7 +568,21 @@ public class GlobalNetworkParam implements Serializable{
 	public synchronized boolean update(){
 		boolean done;
 		if(this.isDiscriminative()){
-			done = this.updateDiscriminative();
+			updateDiscriminative_pre();
+			
+	    	done = false;
+	    	
+	    	try{
+	    		// The _weights parameters will be updated inside this optimize method.
+	    		// This is possible since the _weights array is passed to the optimizer above,
+	    		// and the optimizer will set the weights directly, as arrays are passed by reference
+	        	done = this._opt.optimize();
+	    	} catch(ExceptionWithIflag e){
+	    		throw new NetworkException("Exception with Iflag:"+e.getMessage());
+	    	}
+	    	
+	    	done = updateDiscriminative_post(done);
+	    	
 		} else {
 			done = this.updateGenerative();
 		}
@@ -588,7 +601,7 @@ public class GlobalNetworkParam implements Serializable{
 	 * @return true if the difference between previous and current objective function value
 	 * 		   is less than {@link NetworkConfig#objtol}, false otherwise.
 	 */
-	private boolean updateGenerative(){
+	public boolean updateGenerative(){
 		for(int type: this._featureIntMap.keys()){
 			TIntObjectHashMap<TIntIntHashMap> output2input = this._featureIntMap.get(type);
 			for(int output: output2input.keys()){
@@ -644,7 +657,8 @@ public class GlobalNetworkParam implements Serializable{
 	 * 		   or the optimizer deems the optimization is finished, or
 	 * 		   the decrease is less than 0.01% for three iterations, false otherwise.
 	 */
-	protected boolean updateDiscriminative(){
+	
+	protected void updateDiscriminative_pre(){
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
 			if (concatWeights == null) {
 				int concatDim = getFeatureSize();
@@ -659,6 +673,11 @@ public class GlobalNetworkParam implements Serializable{
 			System.arraycopy(_counts, 0, concatCounts, ptr, _counts.length);
 			ptr += _weights.length;
 			for (FeatureValueProvider provider : this._featureValueProviders) {
+				double[] weights = provider.getWeights();
+				double[] gradWeights = provider.getGradWeights();
+				System.arraycopy(weights, 0, concatWeights, ptr, weights.length);
+				System.arraycopy(gradWeights, 0, concatCounts, ptr, weights.length);
+				ptr += weights.length;
 				double[] params = provider.getParams();
 				double[] gradParams = provider.getGradParams();
 				if (params == null || gradParams == null) continue;
@@ -674,18 +693,11 @@ public class GlobalNetworkParam implements Serializable{
 		}
     	
     	this._opt.setObjective(-this._obj);
-    	
-    	boolean done = false;
-    	
-    	try{
-    		// The _weights parameters will be updated inside this optimize method.
-    		// This is possible since the _weights array is passed to the optimizer above,
-    		// and the optimizer will set the weights directly, as arrays are passed by reference
-        	done = this._opt.optimize();
-    	} catch(ExceptionWithIflag e){
-    		throw new NetworkException("Exception with Iflag:"+e.getMessage());
-    	}
-    	double diff = this.getObj()-this.getObj_old();
+		
+	}
+	
+	protected boolean updateDiscriminative_post(boolean done){
+		double diff = this.getObj()-this.getObj_old();
     	double diffRatio = Math.abs(diff/this.getObj_old());
     	if(NetworkConfig.STOPPING_CRITERIA == StoppingCriteria.SMALL_ABSOLUTE_CHANGE){
 	    	if(diff >= 0 && diff < NetworkConfig.OBJTOL){
@@ -709,9 +721,10 @@ public class GlobalNetworkParam implements Serializable{
     		// and so does not correspond to the current objective value.
     		// In practice, though, the two are usually very close to each other (if we
     		// are stopping near the solution), so not copying will also work.
-    		for(int i=0; i<this._weights.length; i++){
+    		
+    		/*for(int i=0; i<this._weights.length; i++){
         		this._weights[i] = LBFGS.solution_cache[i];
-        	}
+        	}*/
     	}
     	
     	if (NetworkConfig.USE_NEURAL_FEATURES) {
@@ -720,6 +733,9 @@ public class GlobalNetworkParam implements Serializable{
     		System.arraycopy(concatWeights, ptr, _weights, 0, _weights.length);
     		ptr += _weights.length;
 			for (FeatureValueProvider provider : this._featureValueProviders) {
+				double[] weights = provider.getWeights();
+				System.arraycopy(concatWeights, ptr, weights, 0, weights.length);
+				ptr += weights.length;
 				double[] params = provider.getParams();
 				double[] gradParams = provider.getGradParams();
 				if (params == null || gradParams == null) continue;
@@ -732,9 +748,30 @@ public class GlobalNetworkParam implements Serializable{
 		return done;
 	}
 	
+	protected boolean updateDiscriminative(){
+		
+		updateDiscriminative_pre();
+		
+    	boolean done = false;
+    	
+    	try{
+    		// The _weights parameters will be updated inside this optimize method.
+    		// This is possible since the _weights array is passed to the optimizer above,
+    		// and the optimizer will set the weights directly, as arrays are passed by reference
+        	done = this._opt.optimize();
+    	} catch(ExceptionWithIflag e){
+    		throw new NetworkException("Exception with Iflag:"+e.getMessage());
+    	}
+    	
+    	done = updateDiscriminative_post(done);
+    	
+    	return done;
+	}
+	
 	private int getFeatureSize() {
 		int result = this.countFeatures();
 		for (FeatureValueProvider provider : this._featureValueProviders) {
+			result += provider.getWeightSize();
 			result += provider.getParamSize();
 		}
 		return result;
@@ -765,12 +802,24 @@ public class GlobalNetworkParam implements Serializable{
 			}
 		}
 		
+		if (NetworkConfig.USE_NEURAL_FEATURES){
+//			for(int k = 0; k < this._size; k++) {
+//				if(_feature2rep[k][0].equals(DUMP_TYPE)) {
+//					this._weights[k] = 0;
+//					this._counts[k] = 0;
+//				}
+//			}
+			//TODO. Raymond.
+		}
+		
+		
 		this._obj = 0.0;
 		//for regularization
 		if(this.isDiscriminative() && this._kappa > 0){
 			this._obj += MathsVector.square(this._weights);
 			for (FeatureValueProvider provider : this._featureValueProviders) {
 				provider.setScale(coef);
+				this._obj += provider.getL2Weights();
 				if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
 					this._obj += provider.getL2Params();
 				}
@@ -792,53 +841,13 @@ public class GlobalNetworkParam implements Serializable{
 	}
 	
 	/**
-	 * Basically makes the training flag false;
-	 */
-	public void setProviderDecodeState() {
-		this.setProviderState(false);
-	}
-	
-	public void setProviderTrainingState() {
-		this.setProviderState(true);
-	}
-	
-	public void clearProviderInputAndEdgeMapping() {
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.clearInputAndEdgeMapping();
-		}
-	}
-	
-	public void setProviderState(boolean isTraining){
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			if (isTraining) provider.setTrainingState();
-			else provider.setDecodingState();
-		}
-	}
-	
-	/**
 	 * Initialize each provider in the list in training/decoding mode
 	 * @param isTraining
 	 */
-	public void initializeProvider() {
+	public void initializeProvider(boolean isTraining) {
 		for (FeatureValueProvider provider : _featureValueProviders) {
+			provider.setTraining(isTraining);
 			provider.initialize();
-		}
-	}
-	
-	public int getProviderParamSize() {
-		int size = 0;
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			size += provider.getParamSize();
-		}
-		return size;
-	}
-	
-	/**
-	 * To close the connection. e.g. NeuralNetwork to close the Lua state
-	 */
-	public void closeProvider(){
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.closeProvider();
 		}
 	}
 	
@@ -854,16 +863,7 @@ public class GlobalNetworkParam implements Serializable{
 	 * Pre-compute continuous scores for all hyper-edges
 	 */
 	public void computeContinuousScores() {
-		this.computeContinuousScores(null);
-	}
-	
-	/**
-	 * Pre-compute continuous scores for all hyper-edges for a batch Instances
-	 */
-	public void computeContinuousScores(TIntSet batchInstIds) {
 		for (FeatureValueProvider provider : _featureValueProviders) {
-			if (batchInstIds != null && NetworkConfig.USE_BATCH_TRAINING) 
-				provider.setBatchInstIds(batchInstIds);
 			provider.initializeScores();
 		}
 	}

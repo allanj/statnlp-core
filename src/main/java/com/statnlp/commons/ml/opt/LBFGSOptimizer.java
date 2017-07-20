@@ -20,17 +20,17 @@ import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 
 public class LBFGSOptimizer implements Optimizer{
 
-	private int _n;
-	private int _m = 4;
-	private double _f;
-	private double[] _diag;
-	private double[] _x;
-	private double[] _g;
-	private boolean _diagco = false;
-	private int[] _iprint = {0,0};
-	private int[] _iflag = {0};
-	private double _eps = 10e-10;
-	private double _xtol = 10e-16;
+	public int _n;
+	public int _m = 4;
+	public double _f;
+	public double[] _diag;
+	public double[] _x;
+	public double[] _g;
+	public boolean _diagco = false;
+	public int[] _iprint = {0,0};
+	public int[] _iflag = {0};
+	public double _eps = 10e-10;
+	public double _xtol = 10e-16;
 	
 	/**
 	 * Creates an LBFGS Optimizer with default epsilon (10e-10) and tolerance (10e-16)

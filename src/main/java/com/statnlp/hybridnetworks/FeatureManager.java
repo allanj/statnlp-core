@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 
+import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.util.instance_parser.InstanceParser;
 
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -100,29 +101,29 @@ public abstract class FeatureManager implements Serializable{
 	 * @return A boolean, telling whether the optimization process is done. Will always return false if
 	 * 		   justUpdateObjectiveAndGradient is true.
 	 */
-	public synchronized boolean update(boolean justUpdateObjectiveAndGradient){
+	public synchronized void update_pre() {
 		//if the number of thread is 1, then your local param fetches information directly from the global param.
-		if(NetworkConfig.NUM_THREADS != 1){
-			this._param_g.resetCountsAndObj();
-			
-			for(LocalNetworkParam param_l : this._params_l){
-				int[] fs = param_l.getFeatures();
-				for(int f_local = 0; f_local<fs.length; f_local++){
-					int f_global = fs[f_local];
-					double count = param_l.getCount(f_local);
-					this._param_g.addCount(f_global, count);
+				if(NetworkConfig.NUM_THREADS != 1){
+					this._param_g.resetCountsAndObj();
+					
+					for(LocalNetworkParam param_l : this._params_l){
+						int[] fs = param_l.getFeatures();
+						for(int f_local = 0; f_local<fs.length; f_local++){
+							int f_global = fs[f_local];
+							double count = param_l.getCount(f_local);
+							this._param_g.addCount(f_global, count);
+						}
+						this._param_g.addObj(param_l.getObj());
+					}
 				}
-				this._param_g.addObj(param_l.getObj());
-			}
-		}
-		if(justUpdateObjectiveAndGradient){
-			this._param_g._obj_old = this._param_g._obj;
-			return false;
-		}
+
+				
+				this._param_g.updateContinuous();
+	}
+	
+	public synchronized void update_post() {
+		this._param_g._obj_old = this._param_g._obj;
 		
-		this._param_g.updateContinuous();
-		
-		boolean done = this._param_g.update();
 
 		if(NetworkConfig.NUM_THREADS != 1){
 			for(LocalNetworkParam param_l : this._params_l){
@@ -131,6 +132,34 @@ public abstract class FeatureManager implements Serializable{
 		} else {
 			this._param_g.resetCountsAndObj();
 		}
+	}
+
+	
+	public synchronized boolean update(boolean justUpdateObjectiveAndGradient){
+		update_pre();
+		
+		boolean done;
+		if(this._param_g.isDiscriminative()){
+			this._param_g.updateDiscriminative_pre();
+			
+	    	done = false;
+	    	
+	    	try{
+	    		// The _weights parameters will be updated inside this optimize method.
+	    		// This is possible since the _weights array is passed to the optimizer above,
+	    		// and the optimizer will set the weights directly, as arrays are passed by reference
+	        	done = this._param_g._opt.optimize();
+	    	} catch(ExceptionWithIflag e){
+	    		throw new NetworkException("Exception with Iflag:"+e.getMessage());
+	    	}
+	    	
+	    	done = this._param_g.updateDiscriminative_post(done);
+	    	
+		} else {
+			done = this._param_g.updateGenerative();
+		}
+		
+		update_post();
 		return done;
 	}
 	

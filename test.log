@@ -1,0 +1,28 @@
+00:23:02.831 [main] INFO  com.statnlp.util.GenericPipeline - [train]Total training time: 7.608s
+
+00:23:02.850 [main] INFO  com.statnlp.util.GenericPipeline - [train]Writing model into test.model...
+00:23:03.117 [main] WARN  com.statnlp.util.GenericPipeline - [train]Cannot save model to test.model
+00:23:03.118 [main] WARN  com.statnlp.util.GenericPipeline - Throwing
+java.io.NotSerializableException: com.statnlp.hybridnetworks.LocalNetworkLearnerThread
+	at java.io.ObjectOutputStream.writeObject0(ObjectOutputStream.java:1184) ~[?:1.8.0_131]
+	at java.io.ObjectOutputStream.writeArray(ObjectOutputStream.java:1378) ~[?:1.8.0_131]
+	at java.io.ObjectOutputStream.writeObject0(ObjectOutputStream.java:1174) ~[?:1.8.0_131]
+	at java.io.ObjectOutputStream.defaultWriteFields(ObjectOutputStream.java:1548) ~[?:1.8.0_131]
+	at java.io.ObjectOutputStream.writeSerialData(ObjectOutputStream.java:1509) ~[?:1.8.0_131]
+	at java.io.ObjectOutputStream.writeOrdinaryObject(ObjectOutputStream.java:1432) ~[?:1.8.0_131]
+	at java.io.ObjectOutputStream.writeObject0(ObjectOutputStream.java:1178) ~[?:1.8.0_131]
+	at java.io.ObjectOutputStream.defaultWriteFields(ObjectOutputStream.java:1548) ~[?:1.8.0_131]
+	at java.io.ObjectOutputStream.writeSerialData(ObjectOutputStream.java:1509) ~[?:1.8.0_131]
+	at java.io.ObjectOutputStream.writeOrdinaryObject(ObjectOutputStream.java:1432) ~[?:1.8.0_131]
+	at java.io.ObjectOutputStream.writeObject0(ObjectOutputStream.java:1178) ~[?:1.8.0_131]
+	at java.io.ObjectOutputStream.writeObject(ObjectOutputStream.java:348) ~[?:1.8.0_131]
+	at com.statnlp.util.GenericPipeline.saveModel(GenericPipeline.java:433) ~[classes/:?]
+	at com.statnlp.util.Pipeline.SaveModel(Pipeline.java:1311) ~[classes/:?]
+	at com.statnlp.util.Pipeline.Train(Pipeline.java:1260) ~[classes/:?]
+	at com.statnlp.util.Pipeline.execute(Pipeline.java:1463) [classes/:?]
+	at com.statnlp.example.LinearCRFMain.runPipeline(LinearCRFMain.java:67) [test-classes/:?]
+	at com.statnlp.example.LinearCRFMain.main(LinearCRFMain.java:42) [test-classes/:?]
+00:23:03.124 [main] INFO  com.statnlp.util.GenericPipeline - [test]Model already loaded, using loaded model.
+00:23:23.352 [main] INFO  com.statnlp.util.GenericPipeline - [test]Total testing time: 20.094s
+
+00:23:23.360 [main] INFO  com.statnlp.util.Pipeline - Total execution time: 28.611s

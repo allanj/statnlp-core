@@ -16,21 +16,9 @@ function listToTable2D(list)
     return res
 end
 
-function array2Tensor2D(array)
-    local res = torch.Tensor(#array, #array[1])
-    for i = 1, #array do
-        for j = 1, #array[1] do
-            res[i][j] = array[i][j]
-        end
-    end
-    return res
-end
-
-function loadGlove(wordList, dim, sharedLookupTable)
-    sharedLookupTable = sharedLookupTable or false
+function loadGlove(wordList, dim)
     if glove == nil then
-        ---- TODO: need to make this path more general later.
-        glove = require 'nn-crf-interface/neural_server/glove_torch/glove'
+        glove = require 'glove_torch/glove'
     end
     glove:load(dim)
 
@@ -39,17 +27,9 @@ function loadGlove(wordList, dim, sharedLookupTable)
     specialSymbols['<S>'] = torch.Tensor(dim):normal(0,1)
     specialSymbols['</S>'] = torch.Tensor(dim):normal(0,1)
 
-    local ltw
-    local maskZero = false
-    if sharedLookupTable then
-        ltw = nn.LookupTableMaskZero(#wordList, dim)
-        maskZero = true
-    else 
-        ltw = nn.LookupTable(#wordList, dim)
-    end
+    ltw = nn.LookupTable(#wordList, dim)
     for i=1,#wordList do
         local emb = torch.Tensor(dim)
-
         local p_emb = glove:word2vec(wordList[i])
         if p_emb == nil then
             p_emb = specialSymbols[wordList[i]]
@@ -57,12 +37,7 @@ function loadGlove(wordList, dim, sharedLookupTable)
         for j=1,dim do
             emb[j] = p_emb[j]
         end
-        if maskZero then
-            --becareful about this, check nn.LookupTableMaskZero documentation
-            ltw.weight[i + 1] = emb
-        else
-            ltw.weight[i] = emb
-        end
+        ltw.weight[i] = emb
     end
     return ltw
 end

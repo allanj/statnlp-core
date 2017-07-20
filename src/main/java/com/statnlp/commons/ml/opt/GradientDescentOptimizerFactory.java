@@ -42,26 +42,23 @@ public class GradientDescentOptimizerFactory extends OptimizerFactory {
 	private double adamBeta2;
 	private double adamEps;
 	
-	private boolean gradientClipping;
-	private double gradientClippingThreshold;
-	
 	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate) {
-		this(adaptiveStrategy, learningRate, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, 0.0);
+		this(adaptiveStrategy, learningRate, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 	}
 	
-	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double gradientClippingThreshold) {
-		this(adaptiveStrategy, learningRate, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true, gradientClippingThreshold);
+	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay) {
+		this(adaptiveStrategy, learningRate, learningRateDecay, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 	}
 	
 	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double adadeltaPhi, double adadeltaEps) {
-		this(adaptiveStrategy, learningRate, 1.0, adadeltaPhi, adadeltaEps, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, 0.0);
+		this(adaptiveStrategy, learningRate, 1.0, adadeltaPhi, adadeltaEps, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 	}
 
 	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double adadeltaPhi, double adadeltaEps, double adadeltaDecay) {
-		this(adaptiveStrategy, learningRate, 1.0, adadeltaPhi, adadeltaEps, adadeltaDecay, 0.0, 0.0, 0.0, 0.0, 0.0, false, 0.0);
+		this(adaptiveStrategy, learningRate, 1.0, adadeltaPhi, adadeltaEps, adadeltaDecay, 0.0, 0.0, 0.0, 0.0, 0.0);
 	}
 
-	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps, boolean gradientClipping, double gradientClippingThreshold) {
+	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps) {
 		this.adaptiveStrategy = adaptiveStrategy;
 		this.learningRate = learningRate;
 		this.learningRateDecay = learningRateDecay;
@@ -73,13 +70,11 @@ public class GradientDescentOptimizerFactory extends OptimizerFactory {
 		this.adamBeta1 = adamBeta1;
 		this.adamBeta2 = adamBeta2;
 		this.adamEps = adamEps;
-		this.gradientClipping = gradientClipping;
-		this.gradientClippingThreshold = gradientClippingThreshold;
 	}
 
 	@Override
 	public GradientDescentOptimizer create(int numWeights) {
-		return new GradientDescentOptimizer(adaptiveStrategy, learningRate, learningRateDecay, adadeltaPhi, adadeltaEps, adadeltaGradDecay, rmsPropDecay, rmsPropEps, adamBeta1, adamBeta2, adamEps, numWeights, gradientClipping, gradientClippingThreshold);
+		return new GradientDescentOptimizer(adaptiveStrategy, learningRate, learningRateDecay, adadeltaPhi, adadeltaEps, adadeltaGradDecay, rmsPropDecay, rmsPropEps, adamBeta1, adamBeta2, adamEps, numWeights);
 	}
 
 }

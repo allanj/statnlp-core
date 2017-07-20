@@ -26,16 +26,6 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 
 public abstract class OptimizerFactory implements Serializable {
 	
-	public static enum OptimizerFactoryEnum {
-		LBFGS,
-		GD,
-		GD_ADAGRAD,
-		GD_ADADELTA,
-		GD_ADAM,
-		GD_RMSPROP,
-		;
-	}
-	
 	private static final long serialVersionUID = 70815268952763513L;
 	public static final double DEFAULT_LEARNING_RATE = 1e-3;
 	public static final double DEFAULT_LEARNING_RATE_DECAY = 0.9;
@@ -47,7 +37,6 @@ public abstract class OptimizerFactory implements Serializable {
 	public static final double DEFAULT_ADAM_BETA1 = 0.9;
 	public static final double DEFAULT_ADAM_BETA2 = 0.95;
 	public static final double DEFAULT_ADAM_EPS = 1e-7;
-	public static final double DEFAULT_CLIPPING_THRESHOLD = 5.0;
 	
 	protected OptimizerFactory() {}
 	
@@ -78,26 +67,6 @@ public abstract class OptimizerFactory implements Serializable {
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactory(double learningRate){
 		return new GradientDescentOptimizerFactory(AdaptiveStrategy.NONE, learningRate);
-	}
-	
-	/**
-	 * Return the factory object to create a gradient descent optimizer with gradient clipping default threshold 5..<br>
-	 * The returned factory will create instances of GradientDescentOptimizer with normal (S)GD procedure.<br>
-	 * @param learningRate
-	 * @return
-	 */
-	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingGradientClipping(double learningRate){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.NONE, learningRate, DEFAULT_CLIPPING_THRESHOLD);
-	}
-	
-	/**
-	 * Return the factory object to create a gradient descent optimizer with gradient clipping with threshold.<br>
-	 * The returned factory will create instances of GradientDescentOptimizer with normal (S)GD procedure.<br>
-	 * @param learningRate
-	 * @return
-	 */
-	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingGradientClipping(double learningRate, double threshold){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.NONE, learningRate, threshold);
 	}
 	
 	/**
@@ -326,7 +295,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingRMSProp(){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.RMSPROP, DEFAULT_LEARNING_RATE, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, DEFAULT_RMSPROP_DECAY, DEFAULT_RMSPROP_EPS, 0.0, 0.0, 0.0, false, 0);
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.RMSPROP, DEFAULT_LEARNING_RATE, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, DEFAULT_RMSPROP_DECAY, DEFAULT_RMSPROP_EPS, 0.0, 0.0, 0.0);
 	}
 	
 	/**
@@ -339,7 +308,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingRMSProp(double learningRate, double rmsPropDecay, double rmsPropEps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.RMSPROP, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, rmsPropDecay, rmsPropEps, 0.0, 0.0, 0.0, false, 0);
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.RMSPROP, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, rmsPropDecay, rmsPropEps, 0.0, 0.0, 0.0);
 	}
 	
 	/**
@@ -355,7 +324,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaM(){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM, DEFAULT_LEARNING_RATE, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, DEFAULT_ADAM_BETA1, DEFAULT_ADAM_BETA2, DEFAULT_ADAM_EPS, false, 0);
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM, DEFAULT_LEARNING_RATE, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, DEFAULT_ADAM_BETA1, DEFAULT_ADAM_BETA2, DEFAULT_ADAM_EPS);
 	}
 	
 	/**
@@ -369,7 +338,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaM(double learningRate, double adamBeta1, double adamBeta2, double adamEps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, adamBeta1, adamBeta2, adamEps, false, 0);
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, adamBeta1, adamBeta2, adamEps);
 	}
 	
 	/**
@@ -385,7 +354,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaMThenStop(double learningRate, double adamBeta1, double adamBeta2, double adamEps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM_THEN_STOP, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, adamBeta1, adamBeta2, adamEps, false, 0);
+		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM_THEN_STOP, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, adamBeta1, adamBeta2, adamEps);
 	}
 	
 	/**

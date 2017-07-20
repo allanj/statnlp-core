@@ -48,7 +48,6 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 	public static final Logger LOGGER = GeneralUtils.createLogger(GenericPipeline.class);
 
 	public GenericPipeline() {
-		super();
 		// Various Paths
 		argParserObjects.put("--linearModelClass", argParser.addArgument("--linearModelClass")
 				.type(String.class)
@@ -209,13 +208,9 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 	 * @param logPath
 	 * @return
 	 */
-	public GenericPipeline withLogPath(String logPath) {
+	public GenericPipeline withLogPath(String logPath){
 		setParameter("logPath", logPath);
-		try{
-			GeneralUtils.updateLogger(logPath);
-		} catch (FileNotFoundException e){
-			throw new RuntimeException(e);
-		}
+		GeneralUtils.updateLogger(logPath);
 		return getThis();
 	}
 
@@ -877,7 +872,6 @@ public class GenericPipeline extends Pipeline<GenericPipeline> {
 		if(hasWarning){
 			try{Thread.sleep(2000);}catch(InterruptedException e){}
 		}
-		super.initExecute();
 	}
 
 }
