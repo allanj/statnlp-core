@@ -110,10 +110,7 @@ public class GradientDescentOptimizer implements Optimizer{
 	
 	private int iterNum;
 	
-	private boolean gradientClipping;
-	private double gradientClippingThreshold;
-	
-	public GradientDescentOptimizer(AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps, int weightLength, boolean gradientClipping, double gradientClippingThreshold){
+	public GradientDescentOptimizer(AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps, int weightLength){
 		this.prevGradients = new double[weightLength];
 		this.prevSqGradients = new double[weightLength];
 		this.prevDelta = new double[weightLength];
@@ -135,8 +132,6 @@ public class GradientDescentOptimizer implements Optimizer{
 		this.adamEps = adamEps;
 		
 		this.iterNum = 0;
-		this.gradientClipping = gradientClipping;
-		this.gradientClippingThreshold = gradientClippingThreshold;
 		
 		switch(this.adaptiveStrategy){
 		case NONE:
@@ -261,8 +256,7 @@ public class GradientDescentOptimizer implements Optimizer{
 				System.err.println("[AdaGrad]Reset from obj = "+this._obj+", new learning rate = "+learningRate);
 			}
 		}
-		if (this.gradientClipping)
-			clipGradients(this.gradientClippingThreshold);
+//		clipGradients();
 		for(int k = 0; k<this._x.length; k++){
 			if(currentAdaptiveMethod == AdaptiveMethod.NONE){ // Normal (S)GD
 				this._x[k] -= this.learningRate * this._g[k];
@@ -301,13 +295,17 @@ public class GradientDescentOptimizer implements Optimizer{
 		return false;
 	}
 	
-	private void clipGradients(double threshold){
-		double sum = MathsVector.norm(this._g);
-		sum = sum/Math.min(threshold, sum);
-		for(int k=0; k<this._x.length; k++){
-			this._g[k] /= sum;
-		}
-	}
+//	private void clipGradients(){
+//		double sum = 0.0;
+//		for(int k=0; k<this._x.length; k++){
+//			sum += Math.pow(this._g[k], 2);
+//		}
+//		sum = Math.sqrt(sum);
+//		sum = sum/Math.min(30, sum);
+//		for(int k=0; k<this._x.length; k++){
+//			this._g[k] /= sum;
+//		}
+//	}
 	
 	/**
 	 * Check whether current objective value is the best, and if it is, set as the current best.<br>

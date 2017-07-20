@@ -11,10 +11,6 @@ import com.statnlp.commons.types.Sentence;
 
 public class ECRFEval {
 	
-	
-	public static boolean windows = false;
-	public static String evalScript = "eval/conlleval.pl";  //remember to make the script runnable
-	
 	/**
 	 * 
 	 * @param testInsts
@@ -41,12 +37,12 @@ public class ECRFEval {
 	
 	private static void evalNER(String outputFile) throws IOException{
 		try{
-			System.err.println("perl "+evalScript+" < "+outputFile);
+			System.err.println("perl "+EConfig.evalScript+" < "+outputFile);
 			ProcessBuilder pb = null;
-			if(windows){
+			if(EConfig.windows){
 				pb = new ProcessBuilder("D:/Perl64/bin/perl","E:/Framework/data/semeval10t1/conlleval.pl"); 
 			}else{
-				pb = new ProcessBuilder(evalScript); 
+				pb = new ProcessBuilder(EConfig.evalScript); 
 			}
 			pb.redirectInput(new File(outputFile));
 			pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
