@@ -79,10 +79,6 @@ public class LBFGSOptimizer implements Optimizer{
 		return _x;
 	}
 
-	@Override
-	public double[] getGradients() {
-		return _g;
-	}
 	
 	//return true if it should stop.
 	public boolean optimize() throws ExceptionWithIflag{

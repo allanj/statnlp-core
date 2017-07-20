@@ -34,6 +34,7 @@ import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
+import sun.misc.Unsafe;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
@@ -43,6 +44,20 @@ import gnu.trove.map.hash.TIntObjectHashMap;
  *
  */
 public class GlobalNetworkParam implements Serializable{
+	
+	static Unsafe unsafe = null;
+
+	//Native method declaration
+	 static {
+		 try {
+	            Field field = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+	            field.setAccessible(true);
+	            unsafe = (sun.misc.Unsafe) field.get(null);
+	        } catch (Exception e) {
+	            throw new AssertionError(e);
+	        }
+		System.load("/home/roozbeh/Documents/statnlp-core_2/target/optimizer.so"); 
+	 }
 	
 	private static final long serialVersionUID = -1216927656396018976L;
 	
@@ -61,6 +76,8 @@ public class GlobalNetworkParam implements Serializable{
 	protected transient double _obj;
 	/** A variable for batch SGD optimization, if applicable */
 	protected transient int _batchSize;
+	
+	public long gp;
 	
 	protected transient int _version;
 	
@@ -179,13 +196,6 @@ public class GlobalNetworkParam implements Serializable{
 		return this._featureIntMap;
 	}
 	
-	public double[] getWeights(){
-		return this._weights;
-	}
-	
-	public void setWeights(double[] newWeights){
-		this._weights = newWeights;
-	}
 	
 	/**
 	 * Return the current number of features
@@ -236,9 +246,9 @@ public class GlobalNetworkParam implements Serializable{
 		//if the model is discriminative model, we will flip the sign for
 		//the counts because we will need to use LBFGS.
 		if(this.isDiscriminative()){
-			this._counts[feature] -= count;
+			setCount(feature,getCount(feature) - count);
 		} else {
-			this._counts[feature] += count;
+			setCount(feature,getCount(feature) + count);
 		}
 		
 	}
@@ -255,8 +265,20 @@ public class GlobalNetworkParam implements Serializable{
 		return this._obj_old;
 	}
 	
+	@SuppressWarnings("restriction")
+	private void initialize_Counts(){
+        gp = unsafe.allocateMemory(this._size*8);
+		//this._counts = new double[this._size];
+	}
+	
+	@SuppressWarnings("restriction")
+	private void setCount(int f,double v){
+	    unsafe.putDouble(gp+8*f,v);
+	}
+	
+	@SuppressWarnings("restriction")
 	private double getCount(int f){
-		return this._counts[f];
+	    return unsafe.getDouble(gp+8*f);
 	}
 	
 	public double getWeight(int f){
@@ -264,6 +286,7 @@ public class GlobalNetworkParam implements Serializable{
 //		if(f>=this._weights.length)
 //			return NetworkConfig.FEATURE_INIT_WEIGHT;
 		return this._weights[f];
+		//return this._opt.get
 	}
 	
 	/**
@@ -277,15 +300,7 @@ public class GlobalNetworkParam implements Serializable{
 		this._weights[f] = weight;
 	}
 	
-	/**
-	 * Force set a weight at the specified index
-	 * @param f
-	 * @param weight
-	 * @see #setWeight(int, double)
-	 */
-	public synchronized void overRideWeight(int f, double weight){
-		this._weights[f] = weight;
-	}
+
 	
 	public void unlock(){
 		if(!this.isLocked())
@@ -371,7 +386,7 @@ public class GlobalNetworkParam implements Serializable{
 		}
 		
 		double[] weights_new = new double[this._size];
-		this._counts = new double[this._size];
+		initialize_Counts();
 		int numWeightsKept;
 		if(keepExistingWeights){
 			numWeightsKept = this._weights.length;
@@ -592,9 +607,6 @@ public class GlobalNetworkParam implements Serializable{
 		return done;
 	}
 	
-	public double[] getCounts(){
-		return this._counts;
-	}
 	
 	/**
 	 * Update the weights using generative algorithm (e.g., for HMM)
@@ -782,7 +794,7 @@ public class GlobalNetworkParam implements Serializable{
 	}
 	
 	/**
-	 * Set {@link #_counts} (the gradient) and {@link #_obj} to the regularization term, 
+	 * Set (the gradient) and {@link #_obj} to the regularization term, 
 	 * essentially zeroing the values to be updated with the model gradient and objective value. 
 	 */
 	protected synchronized void resetCountsAndObj(){
@@ -795,10 +807,10 @@ public class GlobalNetworkParam implements Serializable{
 		
 		
 		for(int k = 0 ; k<this._size; k++){
-			this._counts[k] = 0.0;
+			setCount(k,0.0);
 			//for regularization
 			if(this.isDiscriminative() && this._kappa > 0 && k>=this._fixedFeaturesSize){
-				this._counts[k] += 2 * coef * this._kappa * this._weights[k];
+				setCount(k, getCount(k) + 2 * coef * this._kappa * getWeight(k));
 			}
 		}
 		

@@ -1,8 +1,8 @@
-07:28:59.278 [main] INFO  com.statnlp.util.GenericPipeline - [train]Total training time: 8.274s
+11:30:01.343 [main] INFO  com.statnlp.util.GenericPipeline - [train]Total training time: 8.647s
 
-07:28:59.281 [main] INFO  com.statnlp.util.GenericPipeline - [train]Writing model into test.model...
-07:28:59.427 [main] WARN  com.statnlp.util.GenericPipeline - [train]Cannot save model to test.model
-07:28:59.427 [main] WARN  com.statnlp.util.GenericPipeline - Throwing
+11:30:01.348 [main] INFO  com.statnlp.util.GenericPipeline - [train]Writing model into test.model...
+11:30:01.494 [main] WARN  com.statnlp.util.GenericPipeline - [train]Cannot save model to test.model
+11:30:01.495 [main] WARN  com.statnlp.util.GenericPipeline - Throwing
 java.io.NotSerializableException: com.statnlp.hybridnetworks.LocalNetworkLearnerThread
 	at java.io.ObjectOutputStream.writeObject0(ObjectOutputStream.java:1184) ~[?:1.8.0_131]
 	at java.io.ObjectOutputStream.writeArray(ObjectOutputStream.java:1378) ~[?:1.8.0_131]
@@ -22,7 +22,7 @@ java.io.NotSerializableException: com.statnlp.hybridnetworks.LocalNetworkLearner
 	at com.statnlp.util.Pipeline.execute(Pipeline.java:1463) [classes/:?]
 	at com.statnlp.example.LinearCRFMain.runPipeline(LinearCRFMain.java:67) [test-classes/:?]
 	at com.statnlp.example.LinearCRFMain.main(LinearCRFMain.java:42) [test-classes/:?]
-07:28:59.432 [main] INFO  com.statnlp.util.GenericPipeline - [test]Model already loaded, using loaded model.
-07:29:21.175 [main] INFO  com.statnlp.util.GenericPipeline - [test]Total testing time: 21.652s
+11:30:01.501 [main] INFO  com.statnlp.util.GenericPipeline - [test]Model already loaded, using loaded model.
+11:30:21.195 [main] INFO  com.statnlp.util.GenericPipeline - [test]Total testing time: 19.574s
 
-07:29:21.181 [main] INFO  com.statnlp.util.Pipeline - Total execution time: 30.454s
+11:30:21.201 [main] INFO  com.statnlp.util.Pipeline - Total execution time: 28.787s

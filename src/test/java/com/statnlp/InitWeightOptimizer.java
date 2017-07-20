@@ -89,17 +89,6 @@ public class InitWeightOptimizer implements Optimizer {
 		}
 	}
 
-	/* (non-Javadoc)
-	 * @see com.statnlp.commons.ml.opt.Optimizer#getGradients()
-	 */
-	@Override
-	public double[] getGradients() {
-		if(realOptimizer == null){
-			return this.gradients;
-		} else {
-			return realOptimizer.getGradients();
-		}
-	}
 
 	/* (non-Javadoc)
 	 * @see com.statnlp.commons.ml.opt.Optimizer#optimize()

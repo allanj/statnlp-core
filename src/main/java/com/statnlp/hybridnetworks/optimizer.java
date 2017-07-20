@@ -32,7 +32,6 @@ class optimizer {
 	 public native void process();
 	 public int N;
 	 public double f;
-	 public double[] w;
 	 public long wp;
 	 public long gp;
 	 public int m = 4;
@@ -71,9 +70,8 @@ class optimizer {
 		g_net_model =  net_model;
 		optimizer opt = new optimizer();
 		opt_ = (LBFGSOptimizer)net_model._fm._param_g._opt;
-		opt.w = net_model._fm._param_g._weights;
 		opt.N = opt_._n;
-		opt.initialize_weights(new double[opt.N]);
+		opt.initialize_weights(net_model._fm._param_g._weights);
 		zeros = new double[opt.N];
 		Arrays.fill(zeros, 0);
 
@@ -102,38 +100,36 @@ class optimizer {
 	 
 
 	 @SuppressWarnings("restriction")
-	void set(long p, int i, double d)
+	public static void set(long p, int i, double d)
 	  {
 	    unsafe.putDouble(p+8*i,d);
 	  }
 
 	  @SuppressWarnings("restriction")
-	double get(long p, int i)
+	public static double get(long p, int i)
 	  {
 	    return unsafe.getDouble(p+8*i);
 	  }
 
 	 private void evaluate() throws InterruptedException {
 		//System.arraycopy(get_weights(), 0, _weights, 0, _weights.length);
-		double[] w_ = g_net_model._fm._param_g._weights;
-		for(int i = 0; i<N; i++){
-			w_[i] = get(wp,i);
-		}
+		/*for(int i = 0; i<N; i++){
+			g_net_model._fm._param_g._weights[i] = get(wp,i);
+		}*/
 		
-		System.out.println("!x:"+opt_._x[1]);				
+		System.out.println("!x:"+opt_._x[1]);
+		g_net_model._fm._param_g.gp = gp;
+
 		if(!updates())
 		{
 			System.out.println("break");
-			opt_._g = zeros;
+		//	opt_._g = zeros;
 		}
-		System.out.println("g:"+opt_._g[1]);
+		//System.out.println("g:"+g_net_model._fm._param_g._counts[0]);
 		System.out.println("f:"+opt_._f);	
 		System.out.println("\n");		
 		f = opt_._f;
-		
-		for(int i = 0; i<N; i++){
-			set(gp,i,opt_._g[i]);
-		}
+
 		
 	}
 
