@@ -33,9 +33,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.hypergraph.NetworkConfig.InferenceType;
+import com.statnlp.hypergraph.decoding.Metric;
+import com.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.ui.visualize.type.VisualizerFrame;
 import com.statnlp.util.instance_parser.InstanceParser;
@@ -66,6 +69,8 @@ public abstract class NetworkModel implements Serializable{
 	private transient LocalNetworkDecoderThread[] _decoders;
 	private transient PrintStream[] outstreams = new PrintStream[]{System.out};
 	private transient Consumer<TrainingIterationInformation> endOfIterCallback;
+	private transient GlobalNeuralNetworkParam _neuralLearner;
+	private transient GlobalNeuralNetworkParam _neuralDecoder;
 	
 	public static class TrainingIterationInformation {
 		public int iterNum;
@@ -242,13 +247,20 @@ public abstract class NetworkModel implements Serializable{
 		System.out.println(String.format("Memory used %s: %.3fMB", note, usedMemory/(1024.0*1024)));
 	}
 	
+	public void train(Instance[] trainInsts, int maxNumIterations) throws InterruptedException {
+		train(trainInsts, maxNumIterations, null, null, -1);
+	}
+	
 	/**
 	 * Starts training using the instances given for up to specified number of iterations.
 	 * @param trainInstances The instances on which this model should be trained.
 	 * @param maxNumIterations The maximum number of iterations the training should go.
+	 * @param devInstance development set for evaluation
+	 * @param evalFunction the evaluation function used to evaluate the development set
+	 * @param k The specified number used to evaluate the development set in every <tt>k</tt> iterations.
 	 * @throws InterruptedException If there are interruptions during multi-threaded training.
 	 */
-	public void train(Instance[] trainInstances, int maxNumIterations) throws InterruptedException{
+	public void train(Instance[] trainInstances, int maxNumIterations, Instance[] devInstances, Function<Instance[], Metric> evalFunction, int k) throws InterruptedException{
 		Instance[][] insts = prepareInstanceForCompilation(trainInstances);
 		ArrayList<Integer> instIds = new ArrayList<Integer>();
 		for(int i=0; i<trainInstances.length; i++){
@@ -288,6 +300,8 @@ public abstract class NetworkModel implements Serializable{
 		
 		//finalize the features.
 		this._fm.getParam_G().lockIt();
+		this._neuralLearner = this._fm.getParam_G().getNNParamG();
+		this._fm.getParam_G().getNNParamG().prepareInputId();
 		printUsedMemory("after lock");
 		
 		if(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY && NetworkConfig.CACHE_FEATURES_DURING_TRAINING){
@@ -347,8 +361,8 @@ public abstract class NetworkModel implements Serializable{
 				long time = System.nanoTime();
 				
 				// Feature value provider's ``forward''
-				this._fm.getParam_G().computeContinuousScores(batchInstIds);
-				this._fm.getParam_G().resetGradContinuous();
+				this._fm.getParam_G().getNNParamG().forward();
+				this._fm.getParam_G().getNNParamG().resetAllNNGradients();
 				
 				List<Future<Void>> results = pool.invokeAll(callables);
 				for(Future<Void> result: results){
@@ -374,6 +388,11 @@ public abstract class NetworkModel implements Serializable{
 				} else {
 					print(String.format("Batch %d: Obj=%-18.12f", batchId, multiplier*obj), outstreams);
 				}
+				if (devInstances != null && evalFunction != null && k > 0 && (it + 1) % k == 0) {
+					Instance[] devRes = this.decode(devInstances, true);
+					evalFunction.apply(devRes);
+					this._fm._param_g.setNNParamG(_neuralLearner);
+				}
 				if(offset >= instIds.size()) {
 					batchId = 0;
 					offset = 0;
@@ -388,7 +407,7 @@ public abstract class NetworkModel implements Serializable{
 				}
 				obj_old = obj;
 				if (lastIter || done) {
-					this._fm.getParam_G().computeContinuousScores();
+					this._fm.getParam_G()._nn_param_g.forward();
 				}
 				if(endOfIterCallback != null){
 					endOfIterCallback.accept(new TrainingIterationInformation(it, epochNum, done, lastIter, obj));
@@ -401,8 +420,11 @@ public abstract class NetworkModel implements Serializable{
 					print("Training completes. No significant progress (<objtol) after "+it+" iterations.", outstreams);
 					break;
 				}
+				if (devInstances != null && evalFunction != null) {
+					this._decoders = null;
+					this._neuralDecoder = null;
+				}
 			}
-			this._fm.getParam_G().clearProviderInputAndEdgeMapping();
 		} finally {
 			pool.shutdown();
 		}
@@ -589,9 +611,6 @@ public abstract class NetworkModel implements Serializable{
 
 		printUsedMemory("before decode");
 		this._compiler.reset();
-		this._fm.getParam_G().setProviderDecodeState();
-		//the following just to make sure the map is cleared after training.
-		this._fm.getParam_G().clearProviderInputAndEdgeMapping();
 		
 		if (NetworkConfig.FEATURE_TOUCH_TEST) {
 			System.err.println("Touching test set.");
@@ -610,8 +629,19 @@ public abstract class NetworkModel implements Serializable{
 		
 		long time = System.nanoTime();
 		
-		this._fm.getParam_G().initializeProvider();
-		this._fm.getParam_G().computeContinuousScores();
+		//initialize the neural decoder.
+		if (_neuralDecoder == null) {
+			GlobalNeuralNetworkParam learner = this._fm.getParam_G().getNNParamG();
+			_neuralDecoder = new GlobalNeuralNetworkParam(learner.getAllNets());
+			//TODO: initialize the neural decoder using the global neural net.
+			// need to prepare the input.
+			//copy the paramter in learner for decoder.
+		}
+		//Still need to copy the parameter from learner to decoder
+		this._fm.getParam_G().setNNParamG(_neuralDecoder);
+		this._fm.getParam_G().getNNParamG().prepareInputId();
+		this._fm.getParam_G().getNNParamG().initializeNetwork();
+		this._fm.getParam_G().getNNParamG().forward();
 		
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
 			this._decoders[threadId] = this._decoders[threadId].copyThread(this._fm);
@@ -620,7 +650,6 @@ public abstract class NetworkModel implements Serializable{
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
 			this._decoders[threadId].join();
 		}
-		this._fm.getParam_G().clearProviderInputAndEdgeMapping();
 		printUsedMemory("after decode");
 		
 		System.err.println("Okay. Decoding done.");

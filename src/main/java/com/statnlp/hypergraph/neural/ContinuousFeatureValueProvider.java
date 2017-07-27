@@ -1,6 +1,6 @@
-package com.statnlp.neural;
+package com.statnlp.hypergraph.neural;
 
-public abstract class ContinuousFeatureValueProvider extends NeuralNetworkFeatureValueProvider {
+public abstract class ContinuousFeatureValueProvider extends NeuralNetworkCore {
 
 	protected int numFeatureValues;
 	
@@ -41,7 +41,7 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkFeatur
 	}
 	
 	@Override
-	public Object edgeInput2FVPInput(Object edgeInput) {
+	public Object hyperEdgeInput2NNInput(Object edgeInput) {
 		return edgeInput;
 	}
 

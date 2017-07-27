@@ -10,8 +10,8 @@ import com.statnlp.hypergraph.GlobalNetworkParam;
 import com.statnlp.hypergraph.Network;
 import com.statnlp.hypergraph.NetworkConfig;
 import com.statnlp.hypergraph.NetworkIDMapper;
-import com.statnlp.neural.MultiLayerPerceptron;
-import com.statnlp.neural.NeuralNetworkFeatureValueProvider;
+import com.statnlp.hypergraph.neural.MultiLayerPerceptron;
+import com.statnlp.hypergraph.neural.NeuralNetworkCore;
 
 public class ECRFFeatureManager extends FeatureManager {
 
@@ -21,14 +21,14 @@ public class ECRFFeatureManager extends FeatureManager {
 	private String OUT_SEP = MultiLayerPerceptron.OUT_SEP; 
 	private String IN_SEP = MultiLayerPerceptron.IN_SEP;
 	
-	private NeuralNetworkFeatureValueProvider net;
+	private NeuralNetworkCore net;
 	private String neuralType;
 	private boolean moreBinaryFeatures = false;
 	
 	public ECRFFeatureManager(GlobalNetworkParam param_g, String neuralType, boolean moreBinaryFeatures) {
 		super(param_g);
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			this.net = (NeuralNetworkFeatureValueProvider) param_g.getFeatureValueProviders().get(0);
+			this.net = (NeuralNetworkCore) param_g.getFeatureValueProviders().get(0);
 		}
 		this.neuralType = neuralType;
 		this.moreBinaryFeatures = moreBinaryFeatures;

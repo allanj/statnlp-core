@@ -14,13 +14,13 @@ import com.statnlp.example.linear_ne.ECRFNetworkCompiler;
 import com.statnlp.example.linear_ne.EReader;
 import com.statnlp.example.linear_ne.Entity;
 import com.statnlp.hypergraph.DiscriminativeNetworkModel;
-import com.statnlp.hypergraph.FeatureValueProvider;
+import com.statnlp.hypergraph.AbstractNeuralNetwork;
 import com.statnlp.hypergraph.GlobalNetworkParam;
 import com.statnlp.hypergraph.NetworkConfig;
 import com.statnlp.hypergraph.NetworkModel;
 import com.statnlp.hypergraph.NetworkConfig.ModelType;
-import com.statnlp.neural.BidirectionalLSTM;
-import com.statnlp.neural.MultiLayerPerceptron;
+import com.statnlp.hypergraph.neural.BidirectionalLSTM;
+import com.statnlp.hypergraph.neural.MultiLayerPerceptron;
 
 public class LinearNEMain {
 	
@@ -77,7 +77,7 @@ public class LinearNEMain {
 			NetworkConfig.FEATURE_INIT_WEIGHT = 0.1;
 		}
 		
-		List<FeatureValueProvider> fvps = new ArrayList<FeatureValueProvider>();
+		List<AbstractNeuralNetwork> fvps = new ArrayList<AbstractNeuralNetwork>();
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
 			if (neuralType.equals("lstm")) {

@@ -1,4 +1,4 @@
-package com.statnlp.neural.util;
+package com.statnlp.hypergraph.neural.util;
 
 import java.util.Map;
 

@@ -1,6 +1,6 @@
 package com.statnlp.example.linear_ne;
 
-import com.statnlp.neural.ContinuousFeatureValueProvider;
+import com.statnlp.hypergraph.neural.ContinuousFeatureValueProvider;
 
 public class ECRFContinuousFeatureValueProvider extends ContinuousFeatureValueProvider {
 

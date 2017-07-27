@@ -1,13 +1,12 @@
-package com.statnlp.neural;
+package com.statnlp.hypergraph.neural;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
+public class BidirectionalLSTM extends NeuralNetworkCore {
 	
 	/**
 	 * Number of unique input sentences
@@ -29,7 +28,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	public int getNNInputSize() {
 		Set<String> sentenceSet = new HashSet<String>();
 		int maxSentLen = 0;
-		for (Object obj : fvpInput2id.keySet()) {
+		for (Object obj : nnInput2Id.keySet()) {
 			String sent = (String)obj;
 			sentenceSet.add(sent);
 			int sentLen = sent.split(" ").length;
@@ -38,12 +37,6 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 			}
 		}
 		List<String> sentences = new ArrayList<String>(sentenceSet);
-		//need to sort the sentences to obtain the same results
-		Collections.sort(sentences);
-		for (int i = 0; i < sentences.size(); i++) {
-			String sent = sentences.get(i);
-			fvpInput2id.put(sent, i);
-		}
 		config.put("sentences", sentences);
 		this.numSent = sentences.size();
 		System.out.println("maxLen="+maxSentLen);
@@ -52,7 +45,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	}
 
 	@Override
-	public Object edgeInput2FVPInput(Object edgeInput) {
+	public Object hyperEdgeInput2NNInput(Object edgeInput) {
 		@SuppressWarnings("unchecked")
 		SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) edgeInput;
 		return sentAndPos.getKey();
@@ -62,7 +55,7 @@ public class BidirectionalLSTM extends NeuralNetworkFeatureValueProvider {
 	public int edgeInput2Index (Object edgeInput) {
 		@SuppressWarnings("unchecked")
 		SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) edgeInput;
-		int sentID = fvpInput2id.get(sentAndPos.getKey());
+		int sentID = nnInput2Id.get(sentAndPos.getKey());
 		int row = sentAndPos.getValue()*this.numSent+sentID;
 		return row;
 	}

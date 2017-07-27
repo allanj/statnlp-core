@@ -1,22 +1,20 @@
-package com.statnlp.neural;
+package com.statnlp.hypergraph.neural;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.AbstractMap.SimpleImmutableEntry;
-
-import com.statnlp.hypergraph.Network;
-import com.statnlp.hypergraph.NetworkConfig;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 
+import com.statnlp.hypergraph.Network;
+import com.statnlp.hypergraph.NetworkConfig;
+
 /**
  * The class that serves as the interface to access the neural network backend.
  * This uses TH4J and JNLua to transfer the data between the JVM and the NN backend.
  */
-public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
+public class MultiLayerPerceptron extends NeuralNetworkCore {
 	
 	/**
 	 * Special delimiters for the input.
@@ -178,10 +176,10 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	@Override
 	public double getScore(Network network, int parent_k, int children_k_index) {
 		double val = 0.0;
-		SimpleImmutableEntry<Object, Integer> io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
+		NeuralIO io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
 		if (io != null) {
-			Object edgeInput = io.getKey();
-			int outputLabel = io.getValue();
+			Object edgeInput = io.getInput();
+			int outputLabel = io.getOutput();
 			int id = fvpInput2id.get(edgeInput);
 			if (id != UNKNOWN) {
 				val = output[id * numLabels + outputLabel];
@@ -192,10 +190,10 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	
 	@Override
 	public void update(double count, Network network, int parent_k, int children_k_index) {
-		SimpleImmutableEntry<Object, Integer> io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
+		NeuralIO io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
 		if (io != null) {
-			Object edgeInput = io.getKey();
-			int outputLabel = io.getValue();
+			Object edgeInput = io.getInput();
+			int outputLabel = io.getOutput();
 			int id = fvpInput2id.get(edgeInput);
 			int idx = id * this.numLabels + outputLabel;
 			synchronized (countOutput) {
@@ -331,7 +329,7 @@ public class MultiLayerPerceptron extends NeuralNetworkFeatureValueProvider {
 	}
 
 	@Override
-	public Object edgeInput2FVPInput(Object edgeInput) {
+	public Object hyperEdgeInput2NNInput(Object edgeInput) {
 		return edgeInput;
 	}
 

@@ -82,7 +82,7 @@ public abstract class FeatureManager implements Serializable{
 	public void setLocalNetworkParams(int threadId, LocalNetworkParam param_l){
 		this._params_l[threadId] = param_l;
 	}
-
+	
 	/**
 	 * Go through all threads, accumulating the value of the objective function and the gradients, 
 	 * and then update the weights to be evaluated next
@@ -120,7 +120,7 @@ public abstract class FeatureManager implements Serializable{
 			return false;
 		}
 		
-		this._param_g.updateContinuous();
+		this._param_g.getNNParamG().backward();
 		
 		boolean done = this._param_g.update();
 

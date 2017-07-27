@@ -28,13 +28,13 @@ import java.util.Random;
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.hypergraph.NetworkConfig.StoppingCriteria;
+import com.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.set.TIntSet;
 
 //TODO: other optimization and regularization methods. Such as the L1 regularization.
 
@@ -104,17 +104,17 @@ public class GlobalNetworkParam implements Serializable{
 	/** The weights that some of them will be replaced by neural net if NNCRF is enabled. */
 	private transient double[] concatWeights, concatCounts;
 	
-	private List<FeatureValueProvider> _featureValueProviders;
+	protected GlobalNeuralNetworkParam _nn_param_g;
 	
 	public GlobalNetworkParam(){
 		this(OptimizerFactory.getLBFGSFactory());
 	}
 	
 	public GlobalNetworkParam(OptimizerFactory optimizerFactory) {
-		this(optimizerFactory, new ArrayList<FeatureValueProvider>());
+		this(optimizerFactory, new GlobalNeuralNetworkParam());
 	}
 	
-	public GlobalNetworkParam(OptimizerFactory optimizerFactory, List<FeatureValueProvider> featureValueProviders){
+	public GlobalNetworkParam(OptimizerFactory optimizerFactory, GlobalNeuralNetworkParam nn_param_g){
 		this._locked = false;
 		this._version = -1;
 		this._size = 0;
@@ -138,7 +138,7 @@ public class GlobalNetworkParam implements Serializable{
 			}
 			this._subSize = new int[NetworkConfig.NUM_THREADS];
 		}
-		this._featureValueProviders = featureValueProviders;
+		this._nn_param_g = nn_param_g;
 	}
 	
 	public void mergeStringIndex(LocalNetworkLearnerThread[] learners){
@@ -380,8 +380,7 @@ public class GlobalNetworkParam implements Serializable{
 		initWeights(weights_new, numWeightsKept, this._size);
 		this._weights = weights_new;
 		
-		this.setProviderTrainingState();
-		this.initializeProvider();
+		this._nn_param_g.initializeNetwork();
 		
 		/** Must prepare the feature map before reset counts and obj
 		 * The reset will use feature2rep.
@@ -403,7 +402,7 @@ public class GlobalNetworkParam implements Serializable{
 		/**********/
 		
 		this._version = 0;
-		int numWeights = this._weights.length + this.getProviderParamSize();
+		int numWeights = this._weights.length + this.getAllNNParamSize();
 		this._opt = this._optFactory.create(numWeights, getFeatureIntMap(), this._stringIndex);
 		this._locked = true;
 		
@@ -658,9 +657,9 @@ public class GlobalNetworkParam implements Serializable{
 			System.arraycopy(_weights, 0, concatWeights, ptr, _weights.length);
 			System.arraycopy(_counts, 0, concatCounts, ptr, _counts.length);
 			ptr += _weights.length;
-			for (FeatureValueProvider provider : this._featureValueProviders) {
-				double[] params = provider.getParams();
-				double[] gradParams = provider.getGradParams();
+			for (AbstractNeuralNetwork net : this._nn_param_g.getAllNets()) {
+				double[] params = net.getParams();
+				double[] gradParams = net.getGradParams();
 				if (params == null || gradParams == null) continue;
 				System.arraycopy(params, 0, concatWeights, ptr, params.length);
 				System.arraycopy(gradParams, 0, concatCounts, ptr, gradParams.length);
@@ -719,9 +718,9 @@ public class GlobalNetworkParam implements Serializable{
     		int ptr = 0;
     		System.arraycopy(concatWeights, ptr, _weights, 0, _weights.length);
     		ptr += _weights.length;
-			for (FeatureValueProvider provider : this._featureValueProviders) {
-				double[] params = provider.getParams();
-				double[] gradParams = provider.getGradParams();
+			for (AbstractNeuralNetwork net : this._nn_param_g.getAllNets()) {
+				double[] params = net.getParams();
+				double[] gradParams = net.getGradParams();
 				if (params == null || gradParams == null) continue;
 				System.arraycopy(concatWeights, ptr, params, 0, params.length);
 				ptr += params.length;
@@ -733,11 +732,11 @@ public class GlobalNetworkParam implements Serializable{
 	}
 	
 	private int getFeatureSize() {
-		int result = this.countFeatures();
-		for (FeatureValueProvider provider : this._featureValueProviders) {
-			result += provider.getParamSize();
+		int size = this.countFeatures();
+		for (AbstractNeuralNetwork net : this._nn_param_g.getAllNets()) {
+			size += net.getParamSize();
 		}
-		return result;
+		return size;
 	}
 	
 	public boolean isDiscriminative(){
@@ -769,7 +768,7 @@ public class GlobalNetworkParam implements Serializable{
 		//for regularization
 		if(this.isDiscriminative() && this._kappa > 0){
 			this._obj += MathsVector.square(this._weights);
-			for (FeatureValueProvider provider : this._featureValueProviders) {
+			for (AbstractNeuralNetwork provider : this._nn_param_g.getAllNets()) {
 				provider.setScale(coef);
 				if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
 					this._obj += provider.getL2Params();
@@ -783,136 +782,26 @@ public class GlobalNetworkParam implements Serializable{
 		//always add to _counts the NEGATION of the term g(x)'s gradient.
 	}
 	
-	/**
-	 * Add a feature value provider  
-	 * @param provider
-	 */
-	public void addFeatureValueProvider(FeatureValueProvider provider) {
-		this._featureValueProviders.add(provider);
+	
+	public void setNNParamG(GlobalNeuralNetworkParam nn_param_g) {
+		this._nn_param_g = nn_param_g;
 	}
 	
-	/**
-	 * Basically makes the training flag false;
-	 */
-	public void setProviderDecodeState() {
-		this.setProviderState(false);
-	}
-	
-	public void setProviderTrainingState() {
-		this.setProviderState(true);
-	}
-	
-	public void clearProviderInputAndEdgeMapping() {
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.clearInputAndEdgeMapping();
-		}
-	}
-	
-	public void setProviderState(boolean isTraining){
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			if (isTraining) provider.setTrainingState();
-			else provider.setDecodingState();
-		}
-	}
-	
-	/**
-	 * Initialize each provider in the list in training/decoding mode
-	 * @param isTraining
-	 */
-	public void initializeProvider() {
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.initialize();
-		}
-	}
-	
-	public int getProviderParamSize() {
+	public int getAllNNParamSize() {
 		int size = 0;
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			size += provider.getParamSize();
+		for (AbstractNeuralNetwork net : this._nn_param_g.getAllNets()) {
+			size += net.getParamSize();
 		}
 		return size;
 	}
 	
-	/**
-	 * To close the connection. e.g. NeuralNetwork to close the Lua state
-	 */
-	public void closeProvider(){
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.closeProvider();
-		}
-	}
 	
 	/**
-	 * Get the list of providers
+	 * Get the global neural net param
 	 * @return
 	 */
-	public List<FeatureValueProvider> getFeatureValueProviders() {
-		return this._featureValueProviders;
-	}
-	
-	/**
-	 * Pre-compute continuous scores for all hyper-edges
-	 */
-	public void computeContinuousScores() {
-		this.computeContinuousScores(null);
-	}
-	
-	/**
-	 * Pre-compute continuous scores for all hyper-edges for a batch Instances
-	 */
-	public void computeContinuousScores(TIntSet batchInstIds) {
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			if (batchInstIds != null && NetworkConfig.USE_BATCH_TRAINING) 
-				provider.setBatchInstIds(batchInstIds);
-			provider.initializeScores();
-		}
-	}
-	
-	/**
-	 * Compute gradient once counts from all hyper-edges are accumulated
-	 */
-	public void updateContinuous() {
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.update();
-		}
-	}
-	
-	/**
-	 * Sum the provider scores for a given hyper-edge
-	 * @param network
-	 * @param parent_k
-	 * @param children_k
-	 * @param children_k_index
-	 * @return
-	 */
-	public double getContinuousScore(Network network, int parent_k, int[] children_k, int children_k_index) {
-		double score = 0.0;
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			score += provider.getScore(network, parent_k, children_k_index);
-		}
-		return score;
-	}
-	
-	/**
-	 * Send the count information for a given hyper-edge to each provider
-	 * @param count
-	 * @param network
-	 * @param parent_k
-	 * @param children_k_index
-	 */
-	public void setContinuousCount(double count, Network network, int parent_k, int children_k_index) {
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.update(count, network, parent_k, children_k_index);
-		}
-	}
-	
-	/**
-	 * Reset accumulated gradient in each provider
-	 */
-	public void resetGradContinuous() {
-		for (FeatureValueProvider provider : _featureValueProviders) {
-			provider.resetGrad();
-		}
+	public GlobalNeuralNetworkParam getNNParamG() {
+		return this._nn_param_g;
 	}
 	
 	public void setInstsNum(int number){
@@ -944,7 +833,7 @@ public class GlobalNetworkParam implements Serializable{
 		out.writeObject(this._locked);
 		
 		out.writeObject("_featureValueProviders");
-		out.writeObject(this._featureValueProviders);
+		out.writeObject(this._nn_param_g);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -962,7 +851,7 @@ public class GlobalNetworkParam implements Serializable{
 			this._fixedFeaturesSize = in.readInt();
 			this._locked = in.readBoolean();
 			if(in.available() > 0)
-				this._featureValueProviders = (List<FeatureValueProvider>)in.readObject();
+				this._nn_param_g = (GlobalNeuralNetworkParam)in.readObject();
 		} else {
 			if(version.equals("Version 1")){
 				while(true){

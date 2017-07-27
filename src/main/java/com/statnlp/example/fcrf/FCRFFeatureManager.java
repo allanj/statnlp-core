@@ -14,7 +14,7 @@ import com.statnlp.hypergraph.GlobalNetworkParam;
 import com.statnlp.hypergraph.Network;
 import com.statnlp.hypergraph.NetworkConfig;
 import com.statnlp.hypergraph.NetworkIDMapper;
-import com.statnlp.neural.MultiLayerPerceptron;
+import com.statnlp.hypergraph.neural.MultiLayerPerceptron;
 
 public class FCRFFeatureManager extends FeatureManager {
 

@@ -1,25 +1,22 @@
-package com.statnlp.neural;
+package com.statnlp.hypergraph.neural;
 
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
-import com.statnlp.hypergraph.FeatureValueProvider;
+import com.statnlp.hypergraph.AbstractNeuralNetwork;
 import com.statnlp.hypergraph.Network;
 import com.statnlp.hypergraph.NetworkConfig;
-import com.statnlp.neural.util.LuaFunctionHelper;
+import com.statnlp.hypergraph.neural.util.LuaFunctionHelper;
 
-import gnu.trove.iterator.TIntIterator;
-import gnu.trove.list.TIntList;
-import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.set.hash.TIntHashSet;
 import th4j.Tensor.DoubleTensor;
 
-public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProvider {
+public abstract class NeuralNetworkCore extends AbstractNeuralNetwork {
 	
 	protected HashMap<String,Object> config;
+	
+	protected boolean isTraining;
 	
 	/**
 	 * Corresponding Torch tensors for params and gradParams
@@ -33,16 +30,12 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	
 	public boolean optimizeNeural;
 	
-	/**
-	 * The current batch FVP input ids.
-	 */
-	private TIntArrayList currBatchFVPInputIds;
+	public Map<Object, Integer> nnInput2Id;
 	
-	public NeuralNetworkFeatureValueProvider(int numLabels) {
+	public NeuralNetworkCore(int numLabels) {
 		super(numLabels);
 		config = new HashMap<>();
 		optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
-		currBatchFVPInputIds = new TIntArrayList();
 		config.put("optimizeNeural", optimizeNeural);
 	}
 	
@@ -50,9 +43,6 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	public void initialize() {
 		int inputSize = this.getNNInputSize();
 		this.initializeNN(inputSize);
-		if (this.isTraining && NetworkConfig.USE_BATCH_TRAINING) {
-			this.makeInstsId2FVPInputId();
-		}
 	}
 	
 	/**
@@ -106,40 +96,15 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	public abstract int getNNInputSize();
 	
 	/**
-	 * Make sure the fvpInput2Id is now fixed.
-	 */
-	private void makeInstsId2FVPInputId() {
-		for (int instanceId : this.instId2FVPInput.keys()) {
-			Set<Object> fvpInputs = this.instId2FVPInput.get(instanceId);
-			TIntList fvpInputIds = new TIntArrayList();
-			for (Object fvpInput : fvpInputs) {
-				fvpInputIds.add(fvpInput2id.get(fvpInput));
-			}
-			this.instId2FVPInputId.put(instanceId, fvpInputIds);
-		}
-		//System.out.println("inst id to fvp input id: " + this.instId2FVPInputId.toString());
-		this.instId2FVPInput = null;
-	}
-	
-	@Override
-	public void initializeScores() {
-		forward();
-	}
-	
-	/**
 	 * Calculate the input position in the output/countOuput matrix position
 	 * @return
 	 */
 	public abstract int edgeInput2Index(Object edgeInput);
 	
-	@Override
-	public void update() {
-		backward();
-	}
-	
 	/**
 	 * Neural network's forward
 	 */
+	@Override
 	public void forward() {
 		if (optimizeNeural) { // update with new params
 			if (getParamSize() > 0) {
@@ -148,19 +113,7 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 			}
 		}
 		Object[] args = null; 
-		if (isTraining && NetworkConfig.USE_BATCH_TRAINING) {
-			TIntIterator iter = this.batchInstIds.iterator();
-			TIntHashSet set = new TIntHashSet();
-			while(iter.hasNext()) {
-				int positiveInstId = iter.next();
-				assert(positiveInstId > 0);
-				set.addAll(this.instId2FVPInputId.get(positiveInstId));
-			}
-			currBatchFVPInputIds = new TIntArrayList(set);
-			args = new Object[]{isTraining, this.currBatchFVPInputIds};
-		} else {
-			args = new Object[]{isTraining};
-		}
+		args = new Object[]{isTraining};
 		Class<?>[] retTypes = new Class[]{DoubleTensor.class};
 		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, retTypes);
 		output = this.getArray(outputTensorBuffer, output);
@@ -169,10 +122,10 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	@Override
 	public double getScore(Network network, int parent_k, int children_k_index) {
 		double val = 0.0;
-		SimpleImmutableEntry<Object, Integer> io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
+		NeuralIO io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
 		if (io != null) {
-			Object edgeInput = io.getKey();
-			int outputLabel = io.getValue();
+			Object edgeInput = io.getInput();
+			int outputLabel = io.getOutput();
 			int idx = this.edgeInput2Index(edgeInput) * this.numLabels + outputLabel;
 			val = output[idx];
 		}
@@ -182,6 +135,7 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	/**
 	 * Neural network's backpropagation
 	 */
+	@Override
 	public void backward() {
 		countOutputTensorBuffer.storage().copy(this.countOutput);
 		Object[] args = new Object[]{};
@@ -199,12 +153,14 @@ public abstract class NeuralNetworkFeatureValueProvider extends FeatureValueProv
 	
 	@Override
 	public void update(double count, Network network, int parent_k, int children_k_index) {
-		SimpleImmutableEntry<Object, Integer> io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
+		NeuralIO io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
 		if (io != null) {
-			Object edgeInput = io.getKey();
-			int outputLabel = io.getValue();
+			Object edgeInput = io.getInput();
+			int outputLabel = io.getOutput();
 			int idx = this.edgeInput2Index(edgeInput) * this.numLabels + outputLabel;
 			synchronized (countOutput) {
+				//TODO: alternatively, create #threads of countOutput array.
+				//Then aggregate them together.
 				countOutput[idx] -= count;
 			}
 		}

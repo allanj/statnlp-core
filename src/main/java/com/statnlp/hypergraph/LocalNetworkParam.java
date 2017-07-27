@@ -18,7 +18,10 @@ package com.statnlp.hypergraph;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+
+import com.statnlp.hypergraph.neural.NeuralIO;
 
 import gnu.trove.map.hash.TIntIntHashMap;
 
@@ -59,6 +62,10 @@ public class LocalNetworkParam implements Serializable{
 	protected Double[][][] _costCache;
 	//check whether the cache is enabled.
 	protected boolean _cacheEnabled = true;
+	//the cache that store the input-output pair in each hyperedge and neural network
+	protected NeuralIO[][][][] _neuralCache;
+	
+	protected List<Map<Object,Integer>> localNNInput2Id;
 	
 	protected int _numNetworks;
 	
@@ -85,7 +92,9 @@ public class LocalNetworkParam implements Serializable{
 		this._isFinalized = false;
 		this._version = 0;
 		this._globalMode = false;
-		
+		if (fm._param_g.getNNParamG() != null) {
+			this._neuralCache = new NeuralIO[fm._param_g.getNNParamG().getAllNets().size()][][][];
+		}
 		if(!NetworkConfig.CACHE_FEATURES_DURING_TRAINING){
 			this.disableCache();
 		}
@@ -220,6 +229,10 @@ public class LocalNetworkParam implements Serializable{
 		this._cacheEnabled = false;
 	}
 	
+	public List<Map<Object,Integer>> getLocalNNInput2Id () {
+		return this.localNNInput2Id;
+	}
+	
 	public void enableCache(){
 		this._cacheEnabled = true;
 	}
@@ -228,8 +241,40 @@ public class LocalNetworkParam implements Serializable{
 		return this._cacheEnabled;
 	}
 	
+	public NeuralIO getHyperEdgeIO(Network network, int providerId, int parent_k, int children_k_idx) {
+		return this._neuralCache[providerId][network.getNetworkId()][parent_k][children_k_idx];
+	}
+	
 	public int toInt(String str){
 		return this._stringIndex.getOrPut(str);
+	}
+	
+	/**
+	 * Extract hyper edges information for a specific network.
+	 * @param network
+	 * @param netId
+	 * @param parent_k
+	 * @param children_k_idx
+	 * @param edgeInput
+	 * @param output
+	 */
+	public void addHyperEdge(Network network, int netId, int parent_k, int children_k_idx, Object edgeInput, int output) {
+		if (_neuralCache[netId] == null) {
+			this._neuralCache[netId] = new NeuralIO[this._numNetworks][][];
+		}
+		int networkId = network.getNetworkId();
+		if (this._neuralCache[netId][networkId] == null) {
+			this._neuralCache[netId][networkId] = new NeuralIO[network.countNodes()][];
+		}
+		if (this._neuralCache[netId][networkId][parent_k] == null) {
+			this._neuralCache[netId][networkId][parent_k] = new NeuralIO[network.getChildren(parent_k).length];
+		}
+		if (this._neuralCache[netId][networkId][parent_k][children_k_idx] != null) {
+			throw new NetworkException("nn input-output pair added for this edge, add again?");
+		}
+		this._neuralCache[netId][networkId][parent_k][children_k_idx] = new NeuralIO(edgeInput, output); 
+		Object nnInput = this._fm._param_g.getNNParamG().getAllNets().get(netId).hyperEdgeInput2NNInput(edgeInput);
+		localNNInput2Id.get(netId).put(nnInput, localNNInput2Id.size());
 	}
 	
 	/**

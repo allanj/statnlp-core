@@ -33,7 +33,7 @@ import com.statnlp.hypergraph.GlobalNetworkParam;
 import com.statnlp.hypergraph.Network;
 import com.statnlp.hypergraph.NetworkConfig;
 import com.statnlp.hypergraph.NetworkIDMapper;
-import com.statnlp.neural.MultiLayerPerceptron;
+import com.statnlp.hypergraph.neural.MultiLayerPerceptron;
 import com.statnlp.util.Pipeline;
 import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 import com.statnlp.util.instance_parser.InstanceParser;
