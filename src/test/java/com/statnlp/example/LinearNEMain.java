@@ -13,12 +13,12 @@ import com.statnlp.example.linear_ne.ECRFInstance;
 import com.statnlp.example.linear_ne.ECRFNetworkCompiler;
 import com.statnlp.example.linear_ne.EReader;
 import com.statnlp.example.linear_ne.Entity;
-import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
-import com.statnlp.hybridnetworks.FeatureValueProvider;
-import com.statnlp.hybridnetworks.GlobalNetworkParam;
-import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
-import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.hypergraph.DiscriminativeNetworkModel;
+import com.statnlp.hypergraph.FeatureValueProvider;
+import com.statnlp.hypergraph.GlobalNetworkParam;
+import com.statnlp.hypergraph.NetworkConfig;
+import com.statnlp.hypergraph.NetworkModel;
+import com.statnlp.hypergraph.NetworkConfig.ModelType;
 import com.statnlp.neural.BidirectionalLSTM;
 import com.statnlp.neural.MultiLayerPerceptron;
 

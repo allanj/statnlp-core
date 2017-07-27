@@ -10,10 +10,10 @@ import com.statnlp.example.logstic_regression.LRInstance;
 import com.statnlp.example.logstic_regression.LRNetworkCompiler;
 import com.statnlp.example.logstic_regression.LRReader;
 import com.statnlp.example.logstic_regression.RelationType;
-import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
-import com.statnlp.hybridnetworks.GlobalNetworkParam;
-import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.hypergraph.DiscriminativeNetworkModel;
+import com.statnlp.hypergraph.GlobalNetworkParam;
+import com.statnlp.hypergraph.NetworkConfig;
+import com.statnlp.hypergraph.NetworkModel;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.inf.ArgumentParser;

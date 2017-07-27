@@ -21,11 +21,11 @@ import com.statnlp.example.mention_hypergraph.MentionHypergraphNetworkCompiler;
 import com.statnlp.example.mention_hypergraph.Span;
 import com.statnlp.example.mention_hypergraph.MentionHypergraphFeatureManager.FeatureType;
 import com.statnlp.example.mention_hypergraph.MentionHypergraphInstance.WordsAndTags;
-import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
-import com.statnlp.hybridnetworks.GenerativeNetworkModel;
-import com.statnlp.hybridnetworks.GlobalNetworkParam;
-import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.hypergraph.DiscriminativeNetworkModel;
+import com.statnlp.hypergraph.GenerativeNetworkModel;
+import com.statnlp.hypergraph.GlobalNetworkParam;
+import com.statnlp.hypergraph.NetworkConfig;
+import com.statnlp.hypergraph.NetworkModel;
 
 public class MentionHypergraphMain {
 	

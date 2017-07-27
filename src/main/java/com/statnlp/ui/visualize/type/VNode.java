@@ -5,7 +5,7 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import com.statnlp.hybridnetworks.NetworkIDMapper;
+import com.statnlp.hypergraph.NetworkIDMapper;
 import com.statnlp.ui.visualize.type.VisualizeGraph.Itemtype;
 
 public class VNode {

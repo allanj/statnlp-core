@@ -5,10 +5,10 @@ import java.util.Arrays;
 import com.statnlp.commons.types.Instance;
 import com.statnlp.example.base.BaseNetwork;
 import com.statnlp.example.fcrf.FCRFNetworkCompiler.NODE_TYPES;
-import com.statnlp.hybridnetworks.LocalNetworkParam;
-import com.statnlp.hybridnetworks.NetworkCompiler;
-import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
+import com.statnlp.hypergraph.LocalNetworkParam;
+import com.statnlp.hypergraph.NetworkCompiler;
+import com.statnlp.hypergraph.NetworkConfig;
+import com.statnlp.hypergraph.NetworkConfig.InferenceType;
 
 public class FCRFNetwork extends BaseNetwork {
 

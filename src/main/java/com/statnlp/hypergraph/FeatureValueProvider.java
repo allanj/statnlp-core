@@ -1,4 +1,4 @@
-package com.statnlp.hybridnetworks;
+package com.statnlp.hypergraph;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.io.IOException;

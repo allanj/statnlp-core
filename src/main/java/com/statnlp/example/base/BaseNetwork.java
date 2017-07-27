@@ -13,13 +13,13 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.hybridnetworks.LocalNetworkParam;
-import com.statnlp.hybridnetworks.NetworkCompiler;
-import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
-import com.statnlp.hybridnetworks.NetworkException;
-import com.statnlp.hybridnetworks.NetworkIDMapper;
-import com.statnlp.hybridnetworks.TableLookupNetwork;
+import com.statnlp.hypergraph.LocalNetworkParam;
+import com.statnlp.hypergraph.NetworkCompiler;
+import com.statnlp.hypergraph.NetworkConfig;
+import com.statnlp.hypergraph.NetworkException;
+import com.statnlp.hypergraph.NetworkIDMapper;
+import com.statnlp.hypergraph.TableLookupNetwork;
+import com.statnlp.hypergraph.NetworkConfig.InferenceType;
 import com.statnlp.util.GeneralUtils;
 
 /**

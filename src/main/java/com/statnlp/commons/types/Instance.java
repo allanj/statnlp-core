@@ -18,8 +18,8 @@ package com.statnlp.commons.types;
 
 import java.io.Serializable;
 
-import com.statnlp.hybridnetworks.Network;
-import com.statnlp.hybridnetworks.NetworkCompiler;
+import com.statnlp.hypergraph.Network;
+import com.statnlp.hypergraph.NetworkCompiler;
 
 /**
  * A base class representing an instance, to hold the surface form (e.g., the words of a sentence) of a 

@@ -14,11 +14,11 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.statnlp.hybridnetworks;
+package com.statnlp.hypergraph;
 
 import java.lang.reflect.Field;
 
-import com.statnlp.hybridnetworks.decoding.Hypothesis;
+import com.statnlp.hypergraph.decoding.Hypothesis;
 
 public class NetworkConfig {
 	

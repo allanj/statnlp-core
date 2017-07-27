@@ -13,18 +13,18 @@ import com.statnlp.commons.types.Instance;
 import com.statnlp.example.fcrf.Chunk;
 import com.statnlp.example.fcrf.FCRFConfig;
 import com.statnlp.example.fcrf.FCRFConfig.TASK;
+import com.statnlp.hypergraph.DiscriminativeNetworkModel;
+import com.statnlp.hypergraph.FeatureManager;
+import com.statnlp.hypergraph.GlobalNetworkParam;
+import com.statnlp.hypergraph.NetworkConfig;
+import com.statnlp.hypergraph.NetworkModel;
+import com.statnlp.hypergraph.NetworkConfig.InferenceType;
 import com.statnlp.example.fcrf.FCRFEval;
 import com.statnlp.example.fcrf.FCRFFeatureManager;
 import com.statnlp.example.fcrf.FCRFInstance;
 import com.statnlp.example.fcrf.FCRFNetworkCompiler;
 import com.statnlp.example.fcrf.FCRFReader;
 import com.statnlp.example.fcrf.Tag;
-import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
-import com.statnlp.hybridnetworks.FeatureManager;
-import com.statnlp.hybridnetworks.GlobalNetworkParam;
-import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
-import com.statnlp.hybridnetworks.NetworkModel;
 
 public class FCRFExampleMain {
 

@@ -7,10 +7,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.hybridnetworks.DiscriminativeNetworkModel;
-import com.statnlp.hybridnetworks.GlobalNetworkParam;
-import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkModel;
+import com.statnlp.hypergraph.DiscriminativeNetworkModel;
+import com.statnlp.hypergraph.GlobalNetworkParam;
+import com.statnlp.hypergraph.NetworkConfig;
+import com.statnlp.hypergraph.NetworkModel;
 
 public class DepMain {
 

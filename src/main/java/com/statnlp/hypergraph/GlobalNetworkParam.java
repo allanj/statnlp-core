@@ -14,7 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.statnlp.hybridnetworks;
+package com.statnlp.hypergraph;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -27,10 +27,10 @@ import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
+import com.statnlp.hypergraph.NetworkConfig.StoppingCriteria;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
-import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
 
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;

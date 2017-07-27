@@ -17,8 +17,8 @@ import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 
-import com.statnlp.hybridnetworks.NetworkModel;
-import com.statnlp.hybridnetworks.TableLookupNetwork;
+import com.statnlp.hypergraph.NetworkModel;
+import com.statnlp.hypergraph.TableLookupNetwork;
 
 /**
  * The frame containing the UI elements for network visualization

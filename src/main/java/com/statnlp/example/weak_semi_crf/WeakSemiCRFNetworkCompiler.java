@@ -13,10 +13,10 @@ import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.commons.types.Span;
 import com.statnlp.example.base.BaseNetwork;
 import com.statnlp.example.base.BaseNetwork.NetworkBuilder;
-import com.statnlp.hybridnetworks.LocalNetworkParam;
-import com.statnlp.hybridnetworks.Network;
-import com.statnlp.hybridnetworks.NetworkCompiler;
-import com.statnlp.hybridnetworks.NetworkIDMapper;
+import com.statnlp.hypergraph.LocalNetworkParam;
+import com.statnlp.hypergraph.Network;
+import com.statnlp.hypergraph.NetworkCompiler;
+import com.statnlp.hypergraph.NetworkIDMapper;
 import com.statnlp.util.Pipeline;
 
 public class WeakSemiCRFNetworkCompiler extends NetworkCompiler {

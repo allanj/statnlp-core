@@ -26,7 +26,7 @@ import org.freehep.graphics2d.VectorGraphics;
 import org.freehep.graphicsio.pdf.PDFGraphics2D;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.hybridnetworks.TableLookupNetwork;
+import com.statnlp.hypergraph.TableLookupNetwork;
 import com.statnlp.util.instance_parser.InstanceParser;
 
 import edu.uci.ics.jung.algorithms.layout.FRLayout;

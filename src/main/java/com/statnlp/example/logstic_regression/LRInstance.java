@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.statnlp.commons.types.Sentence;
 import com.statnlp.example.base.BaseInstance;
-import com.statnlp.hybridnetworks.NetworkException;
+import com.statnlp.hypergraph.NetworkException;
 
 public class LRInstance extends BaseInstance<LRInstance, LGInput, RelationType> {
 

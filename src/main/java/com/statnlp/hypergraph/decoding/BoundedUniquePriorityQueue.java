@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.statnlp.hybridnetworks.decoding;
+package com.statnlp.hypergraph.decoding;
 
 import java.util.Collection;
 import java.util.Comparator;

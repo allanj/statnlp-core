@@ -6,9 +6,9 @@ import java.util.HashMap;
 import java.util.Random;
 import java.util.Set;
 
-import com.statnlp.hybridnetworks.FeatureValueProvider;
-import com.statnlp.hybridnetworks.Network;
-import com.statnlp.hybridnetworks.NetworkConfig;
+import com.statnlp.hypergraph.FeatureValueProvider;
+import com.statnlp.hypergraph.Network;
+import com.statnlp.hypergraph.NetworkConfig;
 import com.statnlp.neural.util.LuaFunctionHelper;
 
 import gnu.trove.iterator.TIntIterator;

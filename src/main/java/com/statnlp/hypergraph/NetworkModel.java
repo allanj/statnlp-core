@@ -14,7 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.statnlp.hybridnetworks;
+package com.statnlp.hypergraph;
 
 import static com.statnlp.commons.Utils.print;
 
@@ -35,7 +35,7 @@ import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
+import com.statnlp.hypergraph.NetworkConfig.InferenceType;
 import com.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import com.statnlp.ui.visualize.type.VisualizerFrame;
 import com.statnlp.util.instance_parser.InstanceParser;

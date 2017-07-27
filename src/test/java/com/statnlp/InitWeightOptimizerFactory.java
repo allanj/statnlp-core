@@ -7,7 +7,7 @@ import java.util.HashMap;
 
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
-import com.statnlp.hybridnetworks.StringIndex;
+import com.statnlp.hypergraph.StringIndex;
 
 import gnu.trove.map.hash.TIntDoubleHashMap;
 import gnu.trove.map.hash.TIntIntHashMap;

@@ -3,13 +3,14 @@ package com.statnlp.neural;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.AbstractMap.SimpleImmutableEntry;
+
+import com.statnlp.hypergraph.Network;
+import com.statnlp.hypergraph.NetworkConfig;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
-
-import com.statnlp.hybridnetworks.Network;
-import com.statnlp.hybridnetworks.NetworkConfig;
 
 /**
  * The class that serves as the interface to access the neural network backend.

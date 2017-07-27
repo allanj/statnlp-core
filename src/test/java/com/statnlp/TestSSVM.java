@@ -1,7 +1,7 @@
 package com.statnlp;
 
 import com.statnlp.example.LinearCRFMain;
-import com.statnlp.hybridnetworks.NetworkConfig;
+import com.statnlp.hypergraph.NetworkConfig;
 
 import ext.svm_struct.SVMStruct;
 

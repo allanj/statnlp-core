@@ -1,15 +1,15 @@
 
-package com.statnlp.hybridnetworks;
+package com.statnlp.hypergraph;
 
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
-import com.statnlp.hybridnetworks.decoding.EdgeHypothesis;
-import com.statnlp.hybridnetworks.decoding.NodeHypothesis;
-import com.statnlp.hybridnetworks.decoding.ScoredIndex;
+import com.statnlp.hypergraph.NetworkConfig.InferenceType;
+import com.statnlp.hypergraph.decoding.EdgeHypothesis;
+import com.statnlp.hypergraph.decoding.NodeHypothesis;
+import com.statnlp.hypergraph.decoding.ScoredIndex;
 
 /**
  * The base class for representing networks. This class is equipped with algorithm to calculate the 

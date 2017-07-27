@@ -12,8 +12,8 @@ import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
 import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
-import com.statnlp.hybridnetworks.NetworkConfig.ModelType;
-import com.statnlp.hybridnetworks.NetworkConfig.StoppingCriteria;
+import com.statnlp.hypergraph.NetworkConfig.ModelType;
+import com.statnlp.hypergraph.NetworkConfig.StoppingCriteria;
 import com.statnlp.util.GenericPipeline;
 import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 

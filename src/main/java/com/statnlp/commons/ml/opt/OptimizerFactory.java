@@ -19,7 +19,7 @@ package com.statnlp.commons.ml.opt;
 import java.io.Serializable;
 
 import com.statnlp.commons.ml.opt.GradientDescentOptimizer.AdaptiveStrategy;
-import com.statnlp.hybridnetworks.StringIndex;
+import com.statnlp.hypergraph.StringIndex;
 
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;

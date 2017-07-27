@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
 
-import com.statnlp.hybridnetworks.NetworkIDMapper;
+import com.statnlp.hypergraph.NetworkIDMapper;
 
 import edu.uci.ics.jung.graph.DirectedGraph;
 import edu.uci.ics.jung.graph.DirectedSparseMultigraph;

@@ -14,14 +14,14 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.statnlp.hybridnetworks;
+package com.statnlp.hypergraph;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
 import com.statnlp.commons.types.Instance;
-import com.statnlp.hybridnetworks.NetworkConfig.InferenceType;
+import com.statnlp.hypergraph.NetworkConfig.InferenceType;
 
 import gnu.trove.iterator.TLongIterator;
 import gnu.trove.map.hash.TLongIntHashMap;

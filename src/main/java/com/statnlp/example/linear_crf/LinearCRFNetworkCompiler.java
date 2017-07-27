@@ -31,12 +31,12 @@ import com.statnlp.commons.types.Label;
 import com.statnlp.commons.types.LinearInstance;
 import com.statnlp.example.base.BaseNetwork;
 import com.statnlp.example.base.BaseNetwork.NetworkBuilder;
-import com.statnlp.hybridnetworks.LocalNetworkParam;
-import com.statnlp.hybridnetworks.Network;
-import com.statnlp.hybridnetworks.NetworkCompiler;
-import com.statnlp.hybridnetworks.NetworkIDMapper;
-import com.statnlp.hybridnetworks.decoding.NodeHypothesis;
-import com.statnlp.hybridnetworks.decoding.ScoredIndex;
+import com.statnlp.hypergraph.LocalNetworkParam;
+import com.statnlp.hypergraph.Network;
+import com.statnlp.hypergraph.NetworkCompiler;
+import com.statnlp.hypergraph.NetworkIDMapper;
+import com.statnlp.hypergraph.decoding.NodeHypothesis;
+import com.statnlp.hypergraph.decoding.ScoredIndex;
 import com.statnlp.util.Pipeline;
 import com.statnlp.util.instance_parser.DelimiterBasedInstanceParser;
 

@@ -7,10 +7,10 @@ import com.statnlp.example.base.BaseNetwork;
 import com.statnlp.example.base.BaseNetwork.NetworkBuilder;
 import com.statnlp.example.dependency.DepConfig.Comp;
 import com.statnlp.example.dependency.DepConfig.Dir;
-import com.statnlp.hybridnetworks.LocalNetworkParam;
-import com.statnlp.hybridnetworks.Network;
-import com.statnlp.hybridnetworks.NetworkCompiler;
-import com.statnlp.hybridnetworks.NetworkIDMapper;
+import com.statnlp.hypergraph.LocalNetworkParam;
+import com.statnlp.hypergraph.Network;
+import com.statnlp.hypergraph.NetworkCompiler;
+import com.statnlp.hypergraph.NetworkIDMapper;
 
 public class DepNetworkCompiler extends NetworkCompiler {
 

@@ -1,4 +1,4 @@
-package com.statnlp.hybridnetworks;
+package com.statnlp.hypergraph;
 
 import java.io.Serializable;
 import java.util.Arrays;

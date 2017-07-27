@@ -6,10 +6,10 @@ import java.util.List;
 
 import com.statnlp.example.base.BaseNetwork;
 import com.statnlp.example.mention_hypergraph.MentionHypergraphNetworkCompiler.NodeType;
-import com.statnlp.hybridnetworks.FeatureArray;
-import com.statnlp.hybridnetworks.FeatureManager;
-import com.statnlp.hybridnetworks.GlobalNetworkParam;
-import com.statnlp.hybridnetworks.Network;
+import com.statnlp.hypergraph.FeatureArray;
+import com.statnlp.hypergraph.FeatureManager;
+import com.statnlp.hypergraph.GlobalNetworkParam;
+import com.statnlp.hypergraph.Network;
 
 public class MentionHypergraphFeatureManager extends FeatureManager {
 

@@ -7,13 +7,13 @@ import java.util.HashSet;
 import com.statnlp.commons.types.Sentence;
 import com.statnlp.example.fcrf.FCRFConfig.TASK;
 import com.statnlp.example.fcrf.FCRFNetworkCompiler.NODE_TYPES;
-import com.statnlp.hybridnetworks.FeatureArray;
-import com.statnlp.hybridnetworks.FeatureBox;
-import com.statnlp.hybridnetworks.FeatureManager;
-import com.statnlp.hybridnetworks.GlobalNetworkParam;
-import com.statnlp.hybridnetworks.Network;
-import com.statnlp.hybridnetworks.NetworkConfig;
-import com.statnlp.hybridnetworks.NetworkIDMapper;
+import com.statnlp.hypergraph.FeatureArray;
+import com.statnlp.hypergraph.FeatureBox;
+import com.statnlp.hypergraph.FeatureManager;
+import com.statnlp.hypergraph.GlobalNetworkParam;
+import com.statnlp.hypergraph.Network;
+import com.statnlp.hypergraph.NetworkConfig;
+import com.statnlp.hypergraph.NetworkIDMapper;
 import com.statnlp.neural.MultiLayerPerceptron;
 
 public class FCRFFeatureManager extends FeatureManager {
