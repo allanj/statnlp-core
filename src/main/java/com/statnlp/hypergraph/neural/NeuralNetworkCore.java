@@ -5,14 +5,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import com.statnlp.hypergraph.AbstractNeuralNetwork;
 import com.statnlp.hypergraph.Network;
 import com.statnlp.hypergraph.NetworkConfig;
 import com.statnlp.hypergraph.neural.util.LuaFunctionHelper;
 
 import th4j.Tensor.DoubleTensor;
 
-public abstract class NeuralNetworkCore extends AbstractNeuralNetwork {
+public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements Cloneable {
 	
 	protected HashMap<String,Object> config;
 	
@@ -229,4 +228,22 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork {
 		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
 		return buf;
 	}
+
+	@Override
+	protected NeuralNetworkCore clone(){
+		NeuralNetworkCore c = null;
+		try {
+			c = (NeuralNetworkCore) super.clone();
+			c.nnInput2Id = null;
+			c.configureJNLua();
+			c.params = this.params;
+		} catch (CloneNotSupportedException e) {
+			e.printStackTrace();
+		}
+		return c;
+	}
+	
+	
 }
+
+

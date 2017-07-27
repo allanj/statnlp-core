@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.statnlp.hypergraph.AbstractNeuralNetwork;
 import com.statnlp.hypergraph.LocalNetworkParam;
 import com.statnlp.hypergraph.Network;
 
@@ -29,7 +28,6 @@ public class GlobalNeuralNetworkParam implements Serializable{
 		allNNInput2Id = new ArrayList<>();
 		for (int id = 0; id < this.nets.size(); id++) {
 			this.nets.get(id).setNeuralNetId(id);
-			this.nets.get(id).setLocalNetworkParams(params_l);
 			allNNInput2Id.add(new HashMap<>());
 		}
 	}
@@ -39,7 +37,36 @@ public class GlobalNeuralNetworkParam implements Serializable{
 	 * @return
 	 */
 	public GlobalNeuralNetworkParam copyNNParamG() {
-		
+		List<NeuralNetworkCore> newNets = new ArrayList<>(this.nets.size());
+		for (int i = 0; i < this.nets.size(); i++) {
+			newNets.add(this.nets.get(i).clone());
+		}
+		return new GlobalNeuralNetworkParam(newNets);
+	}
+	
+	public void copyNNParam(GlobalNeuralNetworkParam src) {
+		for (int id = 0; id < this.nets.size(); id++) {
+			this.nets.get(id).params = src.getNet(id).params;
+		}
+	}
+	
+	public void setLocalNetworkParams(LocalNetworkParam[] params_l) {
+		this.params_l = params_l;
+		for (int id = 0; id < this.nets.size(); id++) {
+			this.nets.get(id).setLocalNetworkParams(params_l);
+		}
+	}
+	
+	public void setLearningState() {
+		for (int id = 0; id < this.nets.size(); id++) {
+			this.nets.get(id).isTraining = true;
+		}
+	}
+	
+	public void setDecodeState() {
+		for (int id = 0; id < this.nets.size(); id++) {
+			this.nets.get(id).isTraining = false;
+		}
 	}
 	
 	/**
@@ -50,12 +77,17 @@ public class GlobalNeuralNetworkParam implements Serializable{
 		return this.nets;
 	}
 	
+	public NeuralNetworkCore getNet(int netId) {
+		return this.nets.get(netId);
+	}
+	
 	public void prepareInputId() {
 		for (LocalNetworkParam param_l : params_l) {
 			for (int netId = 0; netId < this.nets.size(); netId++) {
 				allNNInput2Id.get(netId).putAll(param_l.getLocalNNInput2Id().get(netId));	
 			}
 		}
+		System.out.println(allNNInput2Id.get(0).size());
 		for (int netId = 0; netId < this.nets.size(); netId++) {
 			this.nets.get(netId).nnInput2Id = new HashMap<Object, Integer>();
 			int inputId = 0;

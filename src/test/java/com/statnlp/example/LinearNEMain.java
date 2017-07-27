@@ -14,13 +14,14 @@ import com.statnlp.example.linear_ne.ECRFNetworkCompiler;
 import com.statnlp.example.linear_ne.EReader;
 import com.statnlp.example.linear_ne.Entity;
 import com.statnlp.hypergraph.DiscriminativeNetworkModel;
-import com.statnlp.hypergraph.AbstractNeuralNetwork;
 import com.statnlp.hypergraph.GlobalNetworkParam;
 import com.statnlp.hypergraph.NetworkConfig;
-import com.statnlp.hypergraph.NetworkModel;
 import com.statnlp.hypergraph.NetworkConfig.ModelType;
+import com.statnlp.hypergraph.NetworkModel;
 import com.statnlp.hypergraph.neural.BidirectionalLSTM;
+import com.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
 import com.statnlp.hypergraph.neural.MultiLayerPerceptron;
+import com.statnlp.hypergraph.neural.NeuralNetworkCore;
 
 public class LinearNEMain {
 	
@@ -77,23 +78,23 @@ public class LinearNEMain {
 			NetworkConfig.FEATURE_INIT_WEIGHT = 0.1;
 		}
 		
-		List<AbstractNeuralNetwork> fvps = new ArrayList<AbstractNeuralNetwork>();
+		List<NeuralNetworkCore> nets = new ArrayList<NeuralNetworkCore>();
 		if(NetworkConfig.USE_NEURAL_FEATURES){
 //			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
 			if (neuralType.equals("lstm")) {
 				int hiddenSize = 100;
 				String optimizer = nnOptimizer;
 				boolean bidirection = true;
-				fvps.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size(), gpuId, embedding));
+				nets.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size(), gpuId, embedding));
 			} else if (neuralType.equals("continuous")) {
-				fvps.add(new ECRFContinuousFeatureValueProvider(2, Entity.Entities.size()));
+				nets.add(new ECRFContinuousFeatureValueProvider(2, Entity.Entities.size()));
 			} else if (neuralType.equals("mlp")) {
-				fvps.add(new MultiLayerPerceptron(neural_config, Entity.Entities.size()));
+				nets.add(new MultiLayerPerceptron(neural_config, Entity.Entities.size()));
 			} else {
 				throw new RuntimeException("Unknown neural type: " + neuralType);
 			}
 		} 
-		GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, fvps);
+		GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, new GlobalNeuralNetworkParam(nets));
 		
 		System.err.println("[Info] "+Entity.Entities.size()+" entities: "+Entity.Entities.toString());
 		

@@ -11,7 +11,6 @@ import com.statnlp.hypergraph.Network;
 import com.statnlp.hypergraph.NetworkConfig;
 import com.statnlp.hypergraph.NetworkIDMapper;
 import com.statnlp.hypergraph.neural.MultiLayerPerceptron;
-import com.statnlp.hypergraph.neural.NeuralNetworkCore;
 
 public class ECRFFeatureManager extends FeatureManager {
 
@@ -21,15 +20,11 @@ public class ECRFFeatureManager extends FeatureManager {
 	private String OUT_SEP = MultiLayerPerceptron.OUT_SEP; 
 	private String IN_SEP = MultiLayerPerceptron.IN_SEP;
 	
-	private NeuralNetworkCore net;
 	private String neuralType;
 	private boolean moreBinaryFeatures = false;
 	
 	public ECRFFeatureManager(GlobalNetworkParam param_g, String neuralType, boolean moreBinaryFeatures) {
 		super(param_g);
-		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			this.net = (NeuralNetworkCore) param_g.getFeatureValueProviders().get(0);
-		}
 		this.neuralType = neuralType;
 		this.moreBinaryFeatures = moreBinaryFeatures;
 	}
@@ -84,13 +79,13 @@ public class ECRFFeatureManager extends FeatureManager {
 			if(NetworkConfig.USE_NEURAL_FEATURES){
 				Object input = null;
 				if(neuralType.equals("lstm")) {
-					input = new SimpleImmutableEntry<String, Integer>(sent.toString(), pos);
+					input = new SimpleImmutableEntry<String, Integer>(sent.toString().toLowerCase(), pos);
 				} else if(neuralType.equals("mlp")){
 					input = llw+IN_SEP+lw+IN_SEP+currWord+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+llt+IN_SEP+lt+IN_SEP+currTag+IN_SEP+rt+IN_SEP+rrt;
 				} else {
 					input = currWord;
 				}
-				net.addHyperEdge(network, parent_k, children_k_index, input, eId);
+				this.addNeural(network, 0, parent_k, children_k_index, input, eId);
 			} else {
 				featureList.add(this._param_g.toFeature(network,FEATYPE.local.name(), currEn,  	currWord));
 			}

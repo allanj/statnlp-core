@@ -381,6 +381,19 @@ public abstract class FeatureManager implements Serializable{
 		}
 	}
 	
+	/**
+	 * Add the hyper edges to the neural network.
+	 * @param network
+	 * @param netId
+	 * @param parent_k
+	 * @param children_k_idx
+	 * @param edgeInput
+	 * @param output
+	 */
+	public void addNeural(Network network, int netId, int parent_k, int children_k_idx, Object edgeInput, int output) {
+		this._params_l[network.getThreadId()].addHyperEdge(network, netId, parent_k, children_k_idx, edgeInput, output);
+	}
+	
 	private void writeObject(ObjectOutputStream oos) throws IOException{
 		oos.writeObject(this._param_g);
 		oos.writeBoolean(this._cacheEnabled);

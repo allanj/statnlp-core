@@ -28,6 +28,7 @@ import java.util.Random;
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import com.statnlp.hypergraph.NetworkConfig.StoppingCriteria;
+import com.statnlp.hypergraph.neural.AbstractNeuralNetwork;
 import com.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;

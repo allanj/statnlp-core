@@ -110,7 +110,7 @@ public class MultiLayerPerceptron extends NeuralNetworkCore {
 		List<String> wordList = new ArrayList<String>();
 		List<List<Integer>> vocab = new ArrayList<List<Integer>>();
 		boolean first = true;
-		for (Object obj : fvpInput2id.keySet()) {
+		for (Object obj : nnInput2Id.keySet()) {
 			boolean isUnknown = false;
 			String input = (String) obj;
 			String[] inputPerType = input.split(OUT_SEP);
@@ -136,12 +136,12 @@ public class MultiLayerPerceptron extends NeuralNetworkCore {
 							}
 						} else {
 							// Unseen
-							fvpInput2id.put(input, UNKNOWN);
+							nnInput2Id.put(input, UNKNOWN);
 							boolean startDecrement = false;
-							for (Object _obj : fvpInput2id.keySet()) {
+							for (Object _obj : nnInput2Id.keySet()) {
 								String _input = (String) _obj;
 								if (startDecrement) {
-									fvpInput2id.put(_input, fvpInput2id.get(_input)-1);
+									nnInput2Id.put(_input, nnInput2Id.get(_input)-1);
 								}
 								if (_input.equals(input)) {
 									startDecrement = true;
@@ -180,7 +180,7 @@ public class MultiLayerPerceptron extends NeuralNetworkCore {
 		if (io != null) {
 			Object edgeInput = io.getInput();
 			int outputLabel = io.getOutput();
-			int id = fvpInput2id.get(edgeInput);
+			int id = nnInput2Id.get(edgeInput);
 			if (id != UNKNOWN) {
 				val = output[id * numLabels + outputLabel];
 			}
@@ -194,7 +194,7 @@ public class MultiLayerPerceptron extends NeuralNetworkCore {
 		if (io != null) {
 			Object edgeInput = io.getInput();
 			int outputLabel = io.getOutput();
-			int id = fvpInput2id.get(edgeInput);
+			int id = nnInput2Id.get(edgeInput);
 			int idx = id * this.numLabels + outputLabel;
 			synchronized (countOutput) {
 				countOutput[idx] -= count;

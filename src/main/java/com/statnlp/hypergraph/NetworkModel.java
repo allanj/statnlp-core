@@ -275,6 +275,7 @@ public abstract class NetworkModel implements Serializable{
 		if(NetworkConfig.PRE_COMPILE_NETWORKS){
 			preCompileNetworks(insts);
 		}
+		
 		printUsedMemory("before touch");
 		boolean keepExistingThreads = NetworkConfig.PRE_COMPILE_NETWORKS ? true : false;
 		// The first touch
@@ -295,13 +296,16 @@ public abstract class NetworkModel implements Serializable{
 		if(NetworkConfig.TRAIN_MODE_IS_GENERATIVE){
 			this._fm.completeType2Int(); 
 		}
-
-		printUsedMemory("after finalize");
 		
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			this._neuralLearner = this._fm.getParam_G().getNNParamG();
+			this._neuralLearner.setLearningState();
+			this._neuralLearner.setLocalNetworkParams(this._fm._params_l);
+			this._fm.getParam_G().getNNParamG().prepareInputId();
+		}
+		printUsedMemory("after finalize");
 		//finalize the features.
 		this._fm.getParam_G().lockIt();
-		this._neuralLearner = this._fm.getParam_G().getNNParamG();
-		this._fm.getParam_G().getNNParamG().prepareInputId();
 		printUsedMemory("after lock");
 		
 		if(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY && NetworkConfig.CACHE_FEATURES_DURING_TRAINING){
@@ -609,9 +613,17 @@ public abstract class NetworkModel implements Serializable{
 			}
 		}
 
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			LocalNetworkParam[] params_l = new LocalNetworkParam[this._numThreads];
+			for(int threadId = 0; threadId<this._numThreads; threadId++){
+				params_l[threadId] = this._decoders[threadId].getParam();
+				this._fm.setLocalNetworkParams(threadId, params_l[threadId]);
+				//need to set it back if continue training.
+			}
+		}
+		
 		printUsedMemory("before decode");
 		this._compiler.reset();
-		
 		if (NetworkConfig.FEATURE_TOUCH_TEST) {
 			System.err.println("Touching test set.");
 			
@@ -629,19 +641,21 @@ public abstract class NetworkModel implements Serializable{
 		
 		long time = System.nanoTime();
 		
-		//initialize the neural decoder.
-		if (_neuralDecoder == null) {
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			//initialize the neural decoder.
 			GlobalNeuralNetworkParam learner = this._fm.getParam_G().getNNParamG();
-			_neuralDecoder = new GlobalNeuralNetworkParam(learner.getAllNets());
-			//TODO: initialize the neural decoder using the global neural net.
-			// need to prepare the input.
-			//copy the paramter in learner for decoder.
+			if (_neuralDecoder == null) {
+				_neuralDecoder = learner.copyNNParamG();
+				_neuralDecoder.setLocalNetworkParams(this._fm._params_l);
+				_neuralDecoder.prepareInputId();
+				_neuralDecoder.setDecodeState();
+				_neuralDecoder.initializeNetwork();
+			} else {
+				_neuralDecoder.copyNNParam(learner);
+			}
+			this._fm.getParam_G().setNNParamG(_neuralDecoder);
+			this._fm.getParam_G().getNNParamG().forward();
 		}
-		//Still need to copy the parameter from learner to decoder
-		this._fm.getParam_G().setNNParamG(_neuralDecoder);
-		this._fm.getParam_G().getNNParamG().prepareInputId();
-		this._fm.getParam_G().getNNParamG().initializeNetwork();
-		this._fm.getParam_G().getNNParamG().forward();
 		
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
 			this._decoders[threadId] = this._decoders[threadId].copyThread(this._fm);

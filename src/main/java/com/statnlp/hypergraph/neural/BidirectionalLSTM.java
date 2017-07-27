@@ -15,7 +15,7 @@ public class BidirectionalLSTM extends NeuralNetworkCore {
 	
 	public BidirectionalLSTM(int hiddenSize, boolean bidirection, String optimizer, int numLabels, int gpuId, String embedding) {
 		super(numLabels);
-		config.put("class", "BidirectionalLSTM");
+		config.put("class", "SimpleBiLSTM");
         config.put("hiddenSize", hiddenSize);
         config.put("bidirection", bidirection);
         config.put("optimizer", optimizer);

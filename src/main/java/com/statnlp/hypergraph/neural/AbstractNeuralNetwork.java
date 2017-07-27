@@ -1,4 +1,4 @@
-package com.statnlp.hypergraph;
+package com.statnlp.hypergraph.neural;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -8,7 +8,9 @@ import java.util.Arrays;
 
 import com.naef.jnlua.LuaState;
 import com.statnlp.commons.ml.opt.MathsVector;
-import com.statnlp.hypergraph.neural.NeuralIO;
+import com.statnlp.hypergraph.LocalNetworkParam;
+import com.statnlp.hypergraph.Network;
+import com.statnlp.hypergraph.NetworkConfig;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 
@@ -60,7 +62,7 @@ public abstract class AbstractNeuralNetwork {
 	 * Configure paths for JNLua and create a new LuaState instance
 	 * for loading the backend Torch/Lua script
 	 */
-	private void configureJNLua() {
+	protected void configureJNLua() {
 		System.setProperty("jna.library.path","./nativeLib");
 		System.setProperty("java.library.path", "./nativeLib:" + System.getProperty("java.library.path"));
 		Field fieldSysPath = null;

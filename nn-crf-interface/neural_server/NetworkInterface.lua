@@ -6,6 +6,7 @@ stringx = require 'pl.stringx'
 include 'nn-crf-interface/neural_server/AbstractNeuralNetwork.lua'
 include 'nn-crf-interface/neural_server/MultiLayerPerceptron.lua'
 include 'nn-crf-interface/neural_server/BidirectionalLSTM.lua'
+include 'nn-crf-interface/neural_server/SimpleBiLSTM.lua'
 include 'nn-crf-interface/neural_server/ContinuousFeature.lua'
 include 'nn-crf-interface/neural_server/OneHot.lua'
 include 'nn-crf-interface/neural_server/Utils.lua'
@@ -39,7 +40,6 @@ end
 local net
 function initialize(javadata, ...)
     local timer = torch.Timer()
-
     local isTraining = javadata:get("isTraining")
     local optimizeInTorch = not javadata:get("optimizeNeural")
     gpuid = javadata:get("gpuid")
@@ -54,6 +54,9 @@ function initialize(javadata, ...)
             net = MultiLayerPerceptron(optimizeInTorch, gpuid)
         elseif networkClass == "BidirectionalLSTM" then
             net = BidirectionalLSTM(optimizeInTorch, gpuid)
+        elseif networkClass == "SimpleBiLSTM" then
+            print ("accessing simple bilstm")
+            net = SimpleBiLSTM(optimizeInTorch, gpuid)
         elseif networkClass == "ContinuousFeature" then
             net = ContinuousFeature(optimizeInTorch, gpuid)
         else

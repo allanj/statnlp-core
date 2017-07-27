@@ -17,7 +17,9 @@
 package com.statnlp.hypergraph;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -101,7 +103,9 @@ public class LocalNetworkParam implements Serializable{
 		if(NetworkConfig.NUM_THREADS == 1){
 			this._globalMode = true;
 		}
-		
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			this.initializeLocalNNInput2Id(fm._param_g.getNNParamG().getAllNets().size());
+		}
 		this._stringIndex = new StringIndex(numNetworks*100);
 
 	}
@@ -117,6 +121,13 @@ public class LocalNetworkParam implements Serializable{
 	//check whether it is in global mode.
 	public boolean isGlobalMode(){
 		return this._globalMode;
+	}
+	
+	public void initializeLocalNNInput2Id(int numNets) {
+		this.localNNInput2Id = new ArrayList<>(numNets);
+		for (int i = 0; i < numNets; i++) {
+			this.localNNInput2Id.add(new HashMap<>());
+		}
 	}
 	
 	public int toLocalFeature(int f_global){
@@ -241,8 +252,11 @@ public class LocalNetworkParam implements Serializable{
 		return this._cacheEnabled;
 	}
 	
-	public NeuralIO getHyperEdgeIO(Network network, int providerId, int parent_k, int children_k_idx) {
-		return this._neuralCache[providerId][network.getNetworkId()][parent_k][children_k_idx];
+	public NeuralIO getHyperEdgeIO(Network network, int netId, int parent_k, int children_k_idx) {
+		if (this._neuralCache[netId][network.getNetworkId()][parent_k] == null){
+			return null;
+		}
+		return this._neuralCache[netId][network.getNetworkId()][parent_k][children_k_idx];
 	}
 	
 	public int toInt(String str){
@@ -259,6 +273,7 @@ public class LocalNetworkParam implements Serializable{
 	 * @param output
 	 */
 	public void addHyperEdge(Network network, int netId, int parent_k, int children_k_idx, Object edgeInput, int output) {
+		//System.out.println(netId + "," + network.getNetworkId()+","+parent_k+","+children_k_idx);
 		if (_neuralCache[netId] == null) {
 			this._neuralCache[netId] = new NeuralIO[this._numNetworks][][];
 		}

@@ -21,7 +21,7 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkCore {
 	public int getNNInputSize() {
 		double[][] inputs = makeInput();
 		config.put("inputs", inputs);
-		int inputSize = fvpInput2id.size();
+		int inputSize = nnInput2Id.size();
 		return inputSize;
 	}
 	
@@ -33,9 +33,9 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkCore {
 	public abstract void getFeatureValue(Object input, double[] featureValue);
 	
 	public double[][] makeInput() { 
-		double[][] featureValues = new double[fvpInput2id.size()][this.numFeatureValues];
-		for (Object input : fvpInput2id.keySet()) {
-			this.getFeatureValue(input, featureValues[fvpInput2id.get(input)]);
+		double[][] featureValues = new double[nnInput2Id.size()][this.numFeatureValues];
+		for (Object input : nnInput2Id.keySet()) {
+			this.getFeatureValue(input, featureValues[nnInput2Id.get(input)]);
 		}
 		return featureValues;
 	}
@@ -47,7 +47,7 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkCore {
 
 	@Override
 	public int edgeInput2Index(Object input) {
-		return fvpInput2id.get(input);
+		return nnInput2Id.get(input);
 	}
 
 }
