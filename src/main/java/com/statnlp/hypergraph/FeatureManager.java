@@ -382,9 +382,9 @@ public abstract class FeatureManager implements Serializable{
 	}
 	
 	/**
-	 * Add the hyper edges to the neural network.
-	 * @param network
-	 * @param netId
+	 * Saving the mappings from hyper edges to input-output pair in local network param cache.
+	 * @param network:
+	 * @param netId: specify add this neural feature to which neural network.
 	 * @param parent_k
 	 * @param children_k_idx
 	 * @param edgeInput

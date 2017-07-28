@@ -181,6 +181,10 @@ public abstract class AbstractNeuralNetwork {
 		this.netId = netId;
 	}
 	
+	public int getNeuralNetId() {
+		return this.netId;
+	}
+	
 	public int getParamSize() {
 		return params == null ? 0 : params.length;
 	}

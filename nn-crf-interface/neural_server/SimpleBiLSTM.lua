@@ -11,28 +11,25 @@ function SimpleBiLSTM:initialize(javadata, ...)
     data.sentences = listToTable(javadata:get("sentences"))
     data.hiddenSize = javadata:get("hiddenSize")
     data.optimizer = javadata:get("optimizer")
-    self.bidirection = javadata:get("bidirection")
     self.numLabels = javadata:get("numLabels")
     data.embedding = javadata:get("embedding")
-    self.isTraining = javadata:get("isTraining")
     self.x = self:prepare_input()
     self.numSent = #data.sentences
     self.output = torch.Tensor()
     self.gradOutput = {}
 
-    if self.isTraining then
+    if self.net == nil then
+        -- means is initialized process and we don't have the input yet.
         local outputAndGradOutputPtr = {... }
         self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
         self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
-        ---the following 4 is for batch training.
-        self.x2 = torch.LongTensor()
-        self.gradBatchOutput = torch.Tensor()
         self:createNetwork()
         print(self.net)
         return self:obtainParams()
     end
 end
 
+--The network is only created once is used.
 function SimpleBiLSTM:createNetwork()
     local data = self.data
     local hiddenSize = data.hiddenSize
@@ -142,11 +139,7 @@ function SimpleBiLSTM:forward(isTraining, batchInputIds)
 end
 
 function SimpleBiLSTM:getForwardInput()
-    if self.isTraining then
-        return self.x
-    else 
-        return self.test_input
-    end
+    return self.x
 end
 
 function SimpleBiLSTM:backward()
@@ -176,9 +169,9 @@ function SimpleBiLSTM:prepare_input()
         end
     end
 
-    if self.isTraining then
-        self:buildVocab(sentences, sentence_toks)
-    end
+    --note that inside if the vocab is already created
+    --just directly return
+    self:buildVocab(sentences, sentence_toks)    
 
     local inputs = {}
     local inputs_rev = {}
@@ -199,11 +192,6 @@ function SimpleBiLSTM:prepare_input()
         end
     end
     
-    -- only forward
-    if not self.bidirection then
-        return {inputs}
-    end
-
     for step=1,maxLen do
         inputs_rev[step] = torch.LongTensor(#sentences)
         for j=1,#sentences do
@@ -216,6 +204,10 @@ function SimpleBiLSTM:prepare_input()
 end
 
 function SimpleBiLSTM:buildVocab(sentences, sentence_toks)
+    if self.idx2word ~= nil then
+        --means the vocabulary is already created
+        return 
+    end
     self.idx2word = {}
     self.word2idx = {}
     self.word2idx['<PAD>'] = 0
@@ -238,7 +230,8 @@ function SimpleBiLSTM:buildVocab(sentences, sentence_toks)
 end
 
 function SimpleBiLSTM:save_model(path)
-    torch.save(path,self.net)
+    --need to save the vocabulary as well.
+    torch.save(path, self.net)
 end
 
 function SimpleBiLSTM:load_model(path)

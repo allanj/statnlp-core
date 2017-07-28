@@ -55,7 +55,6 @@ function initialize(javadata, ...)
         elseif networkClass == "BidirectionalLSTM" then
             net = BidirectionalLSTM(optimizeInTorch, gpuid)
         elseif networkClass == "SimpleBiLSTM" then
-            print ("accessing simple bilstm")
             net = SimpleBiLSTM(optimizeInTorch, gpuid)
         elseif networkClass == "ContinuousFeature" then
             net = ContinuousFeature(optimizeInTorch, gpuid)

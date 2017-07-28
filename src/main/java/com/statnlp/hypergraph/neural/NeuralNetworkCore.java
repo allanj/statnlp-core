@@ -98,7 +98,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 * Calculate the input position in the output/countOuput matrix position
 	 * @return
 	 */
-	public abstract int edgeInput2Index(Object edgeInput);
+	public abstract int hyperEdgeInput2OutputRowIndex(Object edgeInput);
 	
 	/**
 	 * Neural network's forward
@@ -125,7 +125,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		if (io != null) {
 			Object edgeInput = io.getInput();
 			int outputLabel = io.getOutput();
-			int idx = this.edgeInput2Index(edgeInput) * this.numLabels + outputLabel;
+			int idx = this.hyperEdgeInput2OutputRowIndex(edgeInput) * this.numLabels + outputLabel;
 			val = output[idx];
 		}
 		return val;
@@ -156,7 +156,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		if (io != null) {
 			Object edgeInput = io.getInput();
 			int outputLabel = io.getOutput();
-			int idx = this.edgeInput2Index(edgeInput) * this.numLabels + outputLabel;
+			int idx = this.hyperEdgeInput2OutputRowIndex(edgeInput) * this.numLabels + outputLabel;
 			synchronized (countOutput) {
 				//TODO: alternatively, create #threads of countOutput array.
 				//Then aggregate them together.
@@ -235,7 +235,6 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		try {
 			c = (NeuralNetworkCore) super.clone();
 			c.nnInput2Id = null;
-			c.configureJNLua();
 			c.params = this.params;
 		} catch (CloneNotSupportedException e) {
 			e.printStackTrace();

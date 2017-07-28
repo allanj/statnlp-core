@@ -52,7 +52,7 @@ public class BidirectionalLSTM extends NeuralNetworkCore {
 	}
 	
 	@Override
-	public int edgeInput2Index (Object edgeInput) {
+	public int hyperEdgeInput2OutputRowIndex (Object edgeInput) {
 		@SuppressWarnings("unchecked")
 		SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) edgeInput;
 		int sentID = nnInput2Id.get(sentAndPos.getKey());

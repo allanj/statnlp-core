@@ -323,7 +323,7 @@ public class MultiLayerPerceptron extends NeuralNetworkCore {
 	}
 
 	@Override
-	public int edgeInput2Index(Object input) {
+	public int hyperEdgeInput2OutputRowIndex(Object input) {
 		// TODO Auto-generated method stub
 		return 0;
 	}

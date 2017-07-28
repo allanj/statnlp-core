@@ -273,7 +273,6 @@ public class LocalNetworkParam implements Serializable{
 	 * @param output
 	 */
 	public void addHyperEdge(Network network, int netId, int parent_k, int children_k_idx, Object edgeInput, int output) {
-		//System.out.println(netId + "," + network.getNetworkId()+","+parent_k+","+children_k_idx);
 		if (_neuralCache[netId] == null) {
 			this._neuralCache[netId] = new NeuralIO[this._numNetworks][][];
 		}

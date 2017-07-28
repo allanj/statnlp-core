@@ -46,7 +46,7 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkCore {
 	}
 
 	@Override
-	public int edgeInput2Index(Object input) {
+	public int hyperEdgeInput2OutputRowIndex(Object input) {
 		return nnInput2Id.get(input);
 	}
 
