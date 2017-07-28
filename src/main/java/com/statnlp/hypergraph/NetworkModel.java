@@ -396,6 +396,9 @@ public abstract class NetworkModel implements Serializable{
 					Instance[] devRes = this.decode(devInstances, true);
 					evalFunction.apply(devRes);
 					this._fm._param_g.setNNParamG(_neuralLearner);
+					for(int threadId=0; threadId<this._numThreads; threadId++){
+						this._fm.setLocalNetworkParams(threadId, this._learners[threadId].getLocalNetworkParam());
+					}
 				}
 				if(offset >= instIds.size()) {
 					batchId = 0;

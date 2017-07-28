@@ -3,6 +3,7 @@ package com.statnlp.example;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import com.statnlp.commons.ml.opt.OptimizerFactory;
 import com.statnlp.commons.types.Instance;
@@ -18,6 +19,7 @@ import com.statnlp.hypergraph.GlobalNetworkParam;
 import com.statnlp.hypergraph.NetworkConfig;
 import com.statnlp.hypergraph.NetworkConfig.ModelType;
 import com.statnlp.hypergraph.NetworkModel;
+import com.statnlp.hypergraph.decoding.Metric;
 import com.statnlp.hypergraph.neural.BidirectionalLSTM;
 import com.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
 import com.statnlp.hypergraph.neural.MultiLayerPerceptron;
@@ -39,9 +41,8 @@ public class LinearNEMain {
 	public static String trainPath = "nn-crf-interface/nlp-from-scratch/me/eng.train";
 	public static String devFile = "nn-crf-interface/nlp-from-scratch/me/eng.testa";
 	public static String testFile = "nn-crf-interface/nlp-from-scratch/me/eng.testb";
-//	public static String trainPath = "nn-crf-interface/nlp-from-scratch/debug/debug.train.txt";
-//	public static String testFile = "nn-crf-interface/nlp-from-scratch/debug/debug.train.txt";
 	public static String nerOut = "nn-crf-interface/nlp-from-scratch/me/output/ner_out.txt";
+	public static String tmpOut = "nn-crf-interface/nlp-from-scratch/me/output/tmp_out.txt";
 	public static String neural_config = "nn-crf-interface/neural_server/neural.debug.config";
 	public static String neuralType = "mlp";
 	public static boolean iobes = true;
@@ -50,6 +51,7 @@ public class LinearNEMain {
 	public static String embedding = "glove";
 	public static int batchSize = 10;
 	public static OptimizerFactory optimizer = OptimizerFactory.getLBFGSFactory();
+	public static boolean evalOnDev = false;
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 
@@ -59,12 +61,12 @@ public class LinearNEMain {
 		System.err.println("[Info] nerOut: "+nerOut);
 		
 		ECRFInstance[] trainInstances = null;
-		//ECRFInstance[] devInstances = null;
+		ECRFInstance[] devInstances = null;
 		ECRFInstance[] testInstances = null;
 		
 		
 		trainInstances = EReader.readData(trainPath, true, trainNumber, "IOBES");
-		//devInstances = EReader.readData(devFile, false, devNumber, "IOB");
+		devInstances = EReader.readData(devFile, false, devNumber, "IOB");
 		testInstances = EReader.readData(testFile, false, testNumber,"IOB");
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
@@ -101,7 +103,17 @@ public class LinearNEMain {
 		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, neuralType, false);
 		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler(iobes);
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
-		model.train(trainInstances, numIteration);
+		Function<Instance[], Metric> evalFunc = new Function<Instance[], Metric>() {
+
+			@Override
+			public Metric apply(Instance[] t) {
+				return ECRFEval.evalNER(t, tmpOut);
+			}
+			
+		};
+		if (!evalOnDev) devInstances = null;
+		model.train(trainInstances, numIteration, devInstances, evalFunc, 10);
+		
 		Instance[] predictions = model.decode(testInstances);
 		ECRFEval.evalNER(predictions, nerOut);
 	}
@@ -154,7 +166,8 @@ public class LinearNEMain {
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;
 					case "-lr": adagrad_learningRate = Double.valueOf(args[i+1]); break;
 					case "-backend": NetworkConfig.NEURAL_BACKEND = args[i+1]; break;
-					case "-os": NetworkConfig.OS = args[i+1]; break; // for Lua native lib, "osx" or "linux" 
+					case "-os": NetworkConfig.OS = args[i+1]; break; // for Lua native lib, "osx" or "linux"
+					case "-evalDev": evalOnDev = args[i+1].equals("true") ? true : false; break;
 					default: System.err.println("Invalid arguments "+args[i]+", please check usage."); System.exit(0);
 				}
 			}

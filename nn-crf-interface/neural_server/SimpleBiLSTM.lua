@@ -13,6 +13,7 @@ function SimpleBiLSTM:initialize(javadata, ...)
     data.optimizer = javadata:get("optimizer")
     self.numLabels = javadata:get("numLabels")
     data.embedding = javadata:get("embedding")
+    self.isTraining = javadata:get("isTraining")
     self.x = self:prepare_input()
     self.numSent = #data.sentences
     self.output = torch.Tensor()
@@ -145,7 +146,7 @@ end
 function SimpleBiLSTM:backward()
     self.gradParams:zero()
     local gradOutputTensor = self.gradOutputPtr
-    local backwardInput = self.x
+    local backwardInput = getForwardInput()
     local backwardSentNum = self.numSent
     torch.split(self.gradOutput, gradOutputTensor, backwardSentNum, 1)
     self.net:backward(backwardInput, self.gradOutput)
