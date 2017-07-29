@@ -27,12 +27,13 @@ import java.util.Random;
 
 import com.statnlp.commons.ml.opt.LBFGS;
 import com.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
-import com.statnlp.hypergraph.NetworkConfig.StoppingCriteria;
-import com.statnlp.hypergraph.neural.AbstractNeuralNetwork;
-import com.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
 import com.statnlp.commons.ml.opt.MathsVector;
 import com.statnlp.commons.ml.opt.Optimizer;
 import com.statnlp.commons.ml.opt.OptimizerFactory;
+import com.statnlp.hypergraph.NetworkConfig.StoppingCriteria;
+import com.statnlp.hypergraph.neural.AbstractNeuralNetwork;
+import com.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
+import com.statnlp.hypergraph.neural.NeuralNetworkCore;
 
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
@@ -773,10 +774,12 @@ public class GlobalNetworkParam implements Serializable{
 		//for regularization
 		if(this.isDiscriminative() && this._kappa > 0){
 			this._obj += MathsVector.square(this._weights);
-			for (AbstractNeuralNetwork provider : this._nn_param_g.getAllNets()) {
-				provider.setScale(coef);
-				if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
-					this._obj += provider.getL2Params();
+			if (NetworkConfig.USE_NEURAL_FEATURES) {
+				for (NeuralNetworkCore net : this._nn_param_g.getAllNets()) {
+					net.setScale(coef);
+					if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
+						this._obj += net.getL2Params();
+					}
 				}
 			}
 			this._obj *= - coef * this._kappa;

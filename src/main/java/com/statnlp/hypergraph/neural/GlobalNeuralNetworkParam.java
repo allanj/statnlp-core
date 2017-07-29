@@ -104,7 +104,7 @@ public class GlobalNeuralNetworkParam implements Serializable{
 	 * Building the neural network structure.
 	 */
 	public void initializeNetwork() {
-		for (AbstractNeuralNetwork net : nets) {
+		for (NeuralNetworkCore net : nets) {
 			net.initialize();
 		}
 	}
@@ -113,7 +113,7 @@ public class GlobalNeuralNetworkParam implements Serializable{
 	 * forward all the networks
 	 */
 	public void forward() {
-		for (AbstractNeuralNetwork net : nets) {
+		for (NeuralNetworkCore net : nets) {
 			net.forward();
 		}
 	}
@@ -122,7 +122,7 @@ public class GlobalNeuralNetworkParam implements Serializable{
 	 * Backpropagation.
 	 */
 	public void backward() {
-		for (AbstractNeuralNetwork net : nets) {
+		for (NeuralNetworkCore net : nets) {
 			net.backward();
 		}
 	}
@@ -137,7 +137,7 @@ public class GlobalNeuralNetworkParam implements Serializable{
 	 */
 	public double getNNScore(Network network, int parent_k, int[] children_k, int children_k_index) {
 		double score = 0.0;
-		for (AbstractNeuralNetwork net : nets) {
+		for (NeuralNetworkCore net : nets) {
 			score += net.getScore(network, parent_k, children_k_index);
 		}
 		return score;
@@ -151,7 +151,7 @@ public class GlobalNeuralNetworkParam implements Serializable{
 	 * @param children_k_index
 	 */
 	public void setNNGradOutput(double count, Network network, int parent_k, int children_k_index) {
-		for (AbstractNeuralNetwork net : nets) {
+		for (NeuralNetworkCore net : nets) {
 			net.update(count, network, parent_k, children_k_index);
 		}
 	}
@@ -160,7 +160,7 @@ public class GlobalNeuralNetworkParam implements Serializable{
 	 * Close the Lua state connection
 	 */
 	public void closeNNConnections() {
-		for (AbstractNeuralNetwork net : this.nets) {
+		for (NeuralNetworkCore net : this.nets) {
 			net.closeProvider();
 		}
 	}
@@ -169,7 +169,7 @@ public class GlobalNeuralNetworkParam implements Serializable{
 	 * Reset accumulated gradient in each neural network
 	 */
 	public void resetAllNNGradients() {
-		for (AbstractNeuralNetwork net : this.nets) {
+		for (NeuralNetworkCore net : this.nets) {
 			net.resetGrad();
 		}
 	}

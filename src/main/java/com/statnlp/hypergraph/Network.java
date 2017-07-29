@@ -528,8 +528,9 @@ public abstract class Network implements Serializable, HyperGraph{
 			 	if(NetworkConfig.MODEL_TYPE.USE_COST){
 					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
-			 	
-			 	score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+			 	if (NetworkConfig.USE_NEURAL_FEATURES) {
+			 		score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+			 	}
 			 	
 				for(int child_k : children_k){
 					if(child_k < 0){
@@ -566,8 +567,9 @@ public abstract class Network implements Serializable, HyperGraph{
  			if(NetworkConfig.MODEL_TYPE.USE_COST){
 				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 			}
- 			
- 			score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+ 			if (NetworkConfig.USE_NEURAL_FEATURES) {
+ 				score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+ 			} 			
  			
 			for(int child_k : children_k){
 				if(child_k < 0){
@@ -626,7 +628,9 @@ public abstract class Network implements Serializable, HyperGraph{
 			if(NetworkConfig.MODEL_TYPE.USE_COST){
 				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 			}
-			score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+			if (NetworkConfig.USE_NEURAL_FEATURES) {
+				score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+			}
 			score += this._outside[k];
 			for(int child_k : children_k){
 				if(child_k < 0){
@@ -704,7 +708,9 @@ public abstract class Network implements Serializable, HyperGraph{
 				if(NetworkConfig.MODEL_TYPE.USE_COST){
 					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
-			 	score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+				if (NetworkConfig.USE_NEURAL_FEATURES) {
+					score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+				}
 				score += this._outside[k];  // beta(s')
 				for(int child_k : children_k){
 					if(child_k < 0){
@@ -727,6 +733,8 @@ public abstract class Network implements Serializable, HyperGraph{
 				fa.update_MF_Version(this._param, count, this.getUnlabeledNetwork().getMarginalSharedArray());
 			}else{
 				fa.update(this._param, count);
+			}
+			if (NetworkConfig.USE_NEURAL_FEATURES) {
 				this._param._fm.getParam_G().getNNParamG().setNNGradOutput(count, this, k, children_k_index); // todo
 			}
 			if(!NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
@@ -803,7 +811,9 @@ public abstract class Network implements Serializable, HyperGraph{
 							System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 						}
 					}
-					score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+					if (NetworkConfig.USE_NEURAL_FEATURES) {
+						score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+					}
 					for(int child_k : children_k){
 						if(child_k < 0){
 							// A negative child_k is not a reference to a node, it's just a number associated with this edge
@@ -847,7 +857,9 @@ public abstract class Network implements Serializable, HyperGraph{
 						System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 					}
 				}
-				score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+				if (NetworkConfig.USE_NEURAL_FEATURES) {
+					score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+				}
 				for(int child_k : children_k){
 					if(child_k < 0){
 						// A negative child_k is not a reference to a node, it's just a number associated with this edge
@@ -895,7 +907,9 @@ public abstract class Network implements Serializable, HyperGraph{
 						System.err.println("WARNING: Compiler was not specified during network creation, setting cost to 0.0");
 					}
 				}
-				score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+				if (NetworkConfig.USE_NEURAL_FEATURES) {
+					score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+				}
 //				for(int child_k : children_k){
 //					score += this._max[child_k];
 //				}

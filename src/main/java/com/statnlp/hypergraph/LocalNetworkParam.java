@@ -94,17 +94,15 @@ public class LocalNetworkParam implements Serializable{
 		this._isFinalized = false;
 		this._version = 0;
 		this._globalMode = false;
-		if (fm._param_g.getNNParamG() != null) {
+		if (NetworkConfig.USE_NEURAL_FEATURES && fm._param_g.getNNParamG() != null) {
 			this._neuralCache = new NeuralIO[fm._param_g.getNNParamG().getAllNets().size()][][][];
+			this.initializeLocalNNInput2Id(fm._param_g.getNNParamG().getAllNets().size());
 		}
 		if(!NetworkConfig.CACHE_FEATURES_DURING_TRAINING){
 			this.disableCache();
 		}
 		if(NetworkConfig.NUM_THREADS == 1){
 			this._globalMode = true;
-		}
-		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			this.initializeLocalNNInput2Id(fm._param_g.getNNParamG().getAllNets().size());
 		}
 		this._stringIndex = new StringIndex(numNetworks*100);
 
