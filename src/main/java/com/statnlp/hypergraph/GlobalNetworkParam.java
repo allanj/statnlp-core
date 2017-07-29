@@ -221,6 +221,10 @@ public class GlobalNetworkParam implements Serializable{
 	
 	private boolean _storeFeatureReps = false;
 	
+	public void setStoreFeatureReps() {
+		this._storeFeatureReps = true;
+	}
+	
 	/**
 	 * Add certain value to the specified feature (identified by the id)
 	 * @param feature

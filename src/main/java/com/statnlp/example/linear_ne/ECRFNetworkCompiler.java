@@ -2,6 +2,8 @@ package com.statnlp.example.linear_ne;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.statnlp.commons.types.Instance;
 import com.statnlp.example.base.BaseNetwork;
@@ -15,58 +17,42 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 
 	private static final long serialVersionUID = -2388666010977956073L;
 
-	public enum NODE_TYPES {LEAF,NODE,ROOT};
+	public enum NodeType {Leaf, Node, Root};
 	public int _size;
 	public BaseNetwork genericUnlabeledNetwork;
-	private boolean iobes;
+	private boolean useIOBESConstraintBuildNetwork = true;
+	//0: should be start tag
+	//length -1: should be end tag;
+	private Entity[] labels;
+	private Map<Entity, Integer> labelIndex;
 	
-	public ECRFNetworkCompiler(boolean iobes){
+	public ECRFNetworkCompiler(boolean useIOBESConstraint, Entity[] labels){
 		this._size = 150;
-		this.iobes = iobes;
+		this.useIOBESConstraintBuildNetwork = useIOBESConstraint;
+		this.labels = labels;
+		this.labelIndex = new HashMap<>(this.labels.length);
+		for (int l = 0; l < this.labels.length; l++) {
+			this.labelIndex.put(this.labels[l], l);
+		}
+		NetworkIDMapper.setCapacity(new int[]{this._size, this.labels.length, 3});
 		this.compileUnlabeledInstancesGeneric();
 	}
 	
 	public long toNode_leaf(){
-		int[] arr = new int[]{0, Entity.Entities.size(), 0,0,NODE_TYPES.LEAF.ordinal()};
+		//since 0 is the start_tag index;
+		int[] arr = new int[]{0, 0, NodeType.Leaf.ordinal()};
 		return NetworkIDMapper.toHybridNodeID(arr);
 	}
 	
 	public long toNode(int pos, int tag_id){
-		int[] arr = new int[]{pos+1,tag_id,0,0,NODE_TYPES.NODE.ordinal()};
+		int[] arr = new int[]{pos, tag_id, NodeType.Node.ordinal()};
 		return NetworkIDMapper.toHybridNodeID(arr);
 	}
 	
 	public long toNode_root(int size){
-		int[] arr = new int[]{size+1, Entity.Entities.size(), 0, 0, NODE_TYPES.ROOT.ordinal()};
+		int[] arr = new int[]{size - 1, labels.length - 1, NodeType.Root.ordinal()};
 		return NetworkIDMapper.toHybridNodeID(arr);
 	}
-
-	@Override
-	public ECRFInstance decompile(Network network) {
-		BaseNetwork lcrfNetwork = (BaseNetwork)network;
-		ECRFInstance lcrfInstance = (ECRFInstance)lcrfNetwork.getInstance();
-		ECRFInstance result = lcrfInstance.duplicate();
-		ArrayList<String> prediction = new ArrayList<String>();
-		
-		
-		long root = toNode_root(lcrfInstance.size());
-		int rootIdx = Arrays.binarySearch(lcrfNetwork.getAllNodes(),root);
-		//System.err.println(rootIdx+" final score:"+network.getMax(rootIdx));
-		for(int i=0;i<lcrfInstance.size();i++){
-			int child_k = lcrfNetwork.getMaxPath(rootIdx)[0];
-			long child = lcrfNetwork.getNode(child_k);
-			rootIdx = child_k;
-			int tagID = NetworkIDMapper.toHybridNodeArray(child)[1];
-			String resEntity = Entity.get(tagID).getForm();
-			if(resEntity.startsWith("S-")) resEntity = "B-"+resEntity.substring(2);
-			if(resEntity.startsWith("E-")) resEntity = "I-"+resEntity.substring(2);
-			prediction.add(0, resEntity);
-		}
-		
-		result.setPrediction(prediction);
-		return result;
-	}
-	
 
 	public BaseNetwork compileLabeled(int networkId, Instance instance, LocalNetworkParam param){
 		ECRFInstance inst = (ECRFInstance)instance;
@@ -74,8 +60,8 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 		long leaf = toNode_leaf();
 		long[] children = new long[]{leaf};
 		lcrfNetwork.addNode(leaf);
-		for(int i=0;i<inst.size();i++){
-			long node = toNode(i, Entity.get(inst.getOutput().get(i)).getId()   );
+		for(int i = 0; i < inst.size(); i++){
+			long node = toNode(i, this.labelIndex.get( Entity.get(inst.getOutput().get(i))) );
 			lcrfNetwork.addNode(node);
 			long[] currentNodes = new long[]{node};
 			lcrfNetwork.addEdge(node, children);
@@ -101,34 +87,34 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 	
 	public void compileUnlabeledInstancesGeneric(){
 		NetworkBuilder<BaseNetwork> lcrfNetwork = NetworkBuilder.builder();
-		
 		long leaf = toNode_leaf();
 		long[] children = new long[]{leaf};
 		lcrfNetwork.addNode(leaf);
-		for(int i=0;i<_size;i++){
-			long[] currentNodes = new long[Entity.Entities.size()];
-			for(int l=0;l<Entity.Entities.size();l++){
-//				if(i==0 && Entity.get(l).getForm().startsWith("I-")){ currentNodes[l]=-1; continue;}
+		for(int i = 0; i < _size; i++){
+			long[] currentNodes = new long[this.labels.length];
+			for(int l = 0; l < this.labels.length; l++){
 				long node = toNode(i,l);
-				
-				String currEntity = Entity.get(l).getForm();
+				String currEntity =  this.labels[l].getForm();
 				for(long child: children){
 					if(child==-1) continue;
-					int[] childArr = NetworkIDMapper.toHybridNodeArray(child);
-					String childEntity = i!=0 ? Entity.get(childArr[1]).getForm() : "O";
-					
-					
-					if( (childEntity.startsWith("B-") || childEntity.startsWith("I-")  ) 
-							&& (currEntity.startsWith("I-") || currEntity.startsWith("E-"))
-							&& childEntity.substring(2).equals(currEntity.substring(2)) ) {
-						if(lcrfNetwork.contains(child)){
-							lcrfNetwork.addNode(node);
-							lcrfNetwork.addEdge(node, new long[]{child});
+					if (useIOBESConstraintBuildNetwork) {
+						int[] childArr = NetworkIDMapper.toHybridNodeArray(child);
+						String childEntity = this.labels[childArr[1]].getForm();
+						if( (childEntity.startsWith("B-") || childEntity.startsWith("I-")  ) 
+								&& (currEntity.startsWith("I-") || currEntity.startsWith("E-"))
+								&& childEntity.substring(2).equals(currEntity.substring(2)) ) {
+							if(lcrfNetwork.contains(child)){
+								lcrfNetwork.addNode(node);
+								lcrfNetwork.addEdge(node, new long[]{child});
+							}
+						}else if(   (childEntity.startsWith("S-") || childEntity.startsWith("E-") || childEntity.equals("O") ) 
+								&& (currEntity.startsWith("B-") ||currEntity.startsWith("S-") || currEntity.startsWith("O") ) ) {
+							if(lcrfNetwork.contains(child)){
+								lcrfNetwork.addNode(node);
+								lcrfNetwork.addEdge(node, new long[]{child});
+							}
 						}
-						
-					}else if(   (childEntity.startsWith("S-") || childEntity.startsWith("E-") || childEntity.equals("O") ) 
-							&& (currEntity.startsWith("B-") ||currEntity.startsWith("S-") || currEntity.startsWith("O") ) ) {
-						
+					} else {
 						if(lcrfNetwork.contains(child)){
 							lcrfNetwork.addNode(node);
 							lcrfNetwork.addEdge(node, new long[]{child});
@@ -139,27 +125,47 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 					currentNodes[l] = node;
 				else currentNodes[l] = -1;
 			}
-			long root = toNode_root(i+1);
+			long root = toNode_root(i + 1);
 			lcrfNetwork.addNode(root);
-			for(long child:currentNodes){
+			for(long child : currentNodes){
 				if(child==-1) continue;
 				int[] childArr = NetworkIDMapper.toHybridNodeArray(child);
-				String childEntity = Entity.get(childArr[1]).getForm();
-				if (iobes) {
+				String childEntity =  this.labels[childArr[1]].getForm();
+				if (useIOBESConstraintBuildNetwork) {
 					if(!childEntity.startsWith("B-")&&  !childEntity.startsWith("I-")) {
 						lcrfNetwork.addEdge(root, new long[]{child});
 					}
 				} else {
 					lcrfNetwork.addEdge(root, new long[]{child});
 				}
-				
 			}
-				
 			children = currentNodes;
-			
 		}
 		BaseNetwork network = lcrfNetwork.buildRudimentaryNetwork();
 		genericUnlabeledNetwork =  network;
+	}
+	
+	@Override
+	public ECRFInstance decompile(Network network) {
+		BaseNetwork lcrfNetwork = (BaseNetwork)network;
+		ECRFInstance lcrfInstance = (ECRFInstance)lcrfNetwork.getInstance();
+		ECRFInstance result = lcrfInstance.duplicate();
+		ArrayList<String> prediction = new ArrayList<String>();
+		long root = toNode_root(lcrfInstance.size());
+		int rootIdx = Arrays.binarySearch(lcrfNetwork.getAllNodes(),root);
+		//System.err.println(rootIdx+" final score:"+network.getMax(rootIdx));
+		for(int i=0;i<lcrfInstance.size();i++){
+			int child_k = lcrfNetwork.getMaxPath(rootIdx)[0];
+			long child = lcrfNetwork.getNode(child_k);
+			rootIdx = child_k;
+			int tagID = NetworkIDMapper.toHybridNodeArray(child)[1];
+			String resEntity = this.labels[tagID].getForm();
+			if(resEntity.startsWith("S-")) resEntity = "B-"+resEntity.substring(2);
+			if(resEntity.startsWith("E-")) resEntity = "I-"+resEntity.substring(2);
+			prediction.add(0, resEntity);
+		}
+		result.setPrediction(prediction);
+		return result;
 	}
 	
 	public double costAt(Network network, int parent_k, int[] child_k){

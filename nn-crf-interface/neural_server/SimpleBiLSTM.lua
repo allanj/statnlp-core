@@ -1,3 +1,4 @@
+include 'LampleLSTM.lua'
 local SimpleBiLSTM, parent = torch.class('SimpleBiLSTM', 'AbstractNeuralNetwork')
 
 function SimpleBiLSTM:__init(doOptimization, gpuid)
@@ -39,18 +40,21 @@ function SimpleBiLSTM:createNetwork()
         if data.embedding == 'glove' then
             sharedLookupTable = loadGlove(self.idx2word, hiddenSize, true)
         else -- unknown/no embedding, defaults to random init
-            print ("Not using any embedding..")
+            print ("unknown embedding type, use random embedding..")
             sharedLookupTable = nn.LookupTableMaskZero(self.vocabSize, hiddenSize)
+            print("lookup table parameter: ".. sharedLookupTable:getParameters():nElement())
         end
     else
-        print ("Not using any embedding..")
+        print ("Not using any embedding, just use random embedding")
         sharedLookupTable = nn.LookupTableMaskZero(self.vocabSize, hiddenSize)
     end
 
     -- forward rnn
+    local fwdLSTM = LampleLSTM(hiddenSize, hiddenSize):maskZero(1)
+    print("number of lstm parameters:"..fwdLSTM:getParameters():nElement())
     local fwd = nn.Sequential()
        :add(sharedLookupTable)
-       :add(nn.FastLSTM(hiddenSize, hiddenSize):maskZero(1))
+       :add(fwdLSTM)
 
     -- internally, rnn will be wrapped into a Recursor to make it an AbstractRecurrent instance.
     local fwdSeq = nn.Sequencer(fwd)
@@ -59,7 +63,7 @@ function SimpleBiLSTM:createNetwork()
     local bwd, bwdSeq
     bwd = nn.Sequential()
            :add(sharedLookupTable:sharedClone())
-           :add(nn.FastLSTM(hiddenSize, hiddenSize):maskZero(1))
+           :add(LampleLSTM(hiddenSize, hiddenSize):maskZero(1))
            
     bwdSeq = nn.Sequential()
             :add(nn.Sequencer(bwd))
@@ -146,7 +150,7 @@ end
 function SimpleBiLSTM:backward()
     self.gradParams:zero()
     local gradOutputTensor = self.gradOutputPtr
-    local backwardInput = getForwardInput()
+    local backwardInput = self:getForwardInput()
     local backwardSentNum = self.numSent
     torch.split(self.gradOutput, gradOutputTensor, backwardSentNum, 1)
     self.net:backward(backwardInput, self.gradOutput)
@@ -228,6 +232,7 @@ function SimpleBiLSTM:buildVocab(sentences, sentence_toks)
             end
         end
     end
+    print("number of unique words:" .. #self.idx2word)
 end
 
 function SimpleBiLSTM:save_model(path)

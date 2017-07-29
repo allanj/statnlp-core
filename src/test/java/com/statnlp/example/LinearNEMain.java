@@ -45,10 +45,10 @@ public class LinearNEMain {
 	public static String tmpOut = "nn-crf-interface/nlp-from-scratch/me/output/tmp_out.txt";
 	public static String neural_config = "nn-crf-interface/neural_server/neural.debug.config";
 	public static String neuralType = "mlp";
-	public static boolean iobes = true;
+	public static boolean iobes = false;
 	public static int gpuId = -1;
 	public static String nnOptimizer = "lbfgs";
-	public static String embedding = "glove";
+	public static String embedding = "random";
 	public static int batchSize = 10;
 	public static OptimizerFactory optimizer = OptimizerFactory.getLBFGSFactory();
 	public static boolean evalOnDev = false;
@@ -59,6 +59,7 @@ public class LinearNEMain {
 		System.err.println("[Info] trainingFile: "+trainPath);
 		System.err.println("[Info] testFile: "+testFile);
 		System.err.println("[Info] nerOut: "+nerOut);
+		System.err.println("[Info] use IOBES constraint to build network: "+iobes);
 		
 		ECRFInstance[] trainInstances = null;
 		ECRFInstance[] devInstances = null;
@@ -75,6 +76,18 @@ public class LinearNEMain {
 		NetworkConfig.BATCH_SIZE = batchSize; //need to enable batch training first
 		NetworkConfig.RANDOM_BATCH = false;
 		
+		//In order to compare with neural architecture for named entity recognition
+		Entity.get("START_TAG");
+		Entity.get("END_TAG");
+		Entity[] labels = new Entity[Entity.Entities.size()];
+		labels[0] = Entity.get("START_TAG");
+		labels[labels.length - 1] = Entity.get("END_TAG");
+		int l = 1;
+		for (String ent : Entity.Entities.keySet()) {
+			if (ent.equals("START_TAG") || ent.equals("END_TAG")) continue;
+			labels[l] = Entity.get(ent);
+			l++;
+		}
 		if (DEBUG) {
 			NetworkConfig.RANDOM_INIT_WEIGHT = false;
 			NetworkConfig.FEATURE_INIT_WEIGHT = 0.1;
@@ -87,21 +100,19 @@ public class LinearNEMain {
 				int hiddenSize = 100;
 				String optimizer = nnOptimizer;
 				boolean bidirection = true;
-				nets.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, Entity.Entities.size(), gpuId, embedding));
+				nets.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, labels.length - 2, gpuId, embedding));
 			} else if (neuralType.equals("continuous")) {
-				nets.add(new ECRFContinuousFeatureValueProvider(2, Entity.Entities.size()));
+				nets.add(new ECRFContinuousFeatureValueProvider(2, labels.length - 2));
 			} else if (neuralType.equals("mlp")) {
-				nets.add(new MultiLayerPerceptron(neural_config, Entity.Entities.size()));
+				nets.add(new MultiLayerPerceptron(neural_config, labels.length - 2));
 			} else {
 				throw new RuntimeException("Unknown neural type: " + neuralType);
 			}
 		} 
 		GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, new GlobalNeuralNetworkParam(nets));
 		
-		System.err.println("[Info] "+Entity.Entities.size()+" entities: "+Entity.Entities.toString());
-		
-		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, neuralType, false);
-		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler(iobes);
+		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, labels, neuralType, false);
+		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler(iobes, labels);
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
 		Function<Instance[], Metric> evalFunc = new Function<Instance[], Metric>() {
 
