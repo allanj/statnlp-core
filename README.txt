@@ -69,7 +69,7 @@ your data:
 Linear-chain CRF:
 
     java -jar target/statnlp-core-2017.1-SNAPSHOT.jar \
-        --linearModelClass com.statnlp.example.linear_crf.LinearCRF \
+        --linearModelClass org.statnlp.example.linear_crf.LinearCRF \
         --trainPath data/train.data \
         --testPath data/test.data \
         --modelPath data/test.model \
@@ -81,7 +81,7 @@ This package also comes with visualization GUI to see how the graphical models
 represent the input. Simply execute "visualize" task to the above, as follows:
 
     java -jar target/statnlp-core-2017.1-SNAPSHOT.jar \
-        --linearModelClass com.statnlp.example.linear_crf.LinearCRF \
+        --linearModelClass org.statnlp.example.linear_crf.LinearCRF \
         --trainPath data/train.data \
         visualize
 

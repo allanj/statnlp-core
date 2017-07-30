@@ -28,7 +28,7 @@ We describe the procedure with Bi-direction LSTM on a sequence labeling task (_i
 2. Implement the BiLSTM in Torch.
 3. Specify the input and output of the BiLSTM through `FeatureManager`.
 
-The code for this example can be found in `com.statnlp.example.linear_ne`.
+The code for this example can be found in `org.statnlp.example.linear_ne`.
 
 ##### BiLSTM Class
 It requires you to put some configurations, such as hidden size, and override three methods in the class.
