@@ -26,6 +26,10 @@ function SimpleBiLSTM:initialize(javadata, ...)
 
     if self.net == nil then
         -- means is initialized process and we don't have the input yet.
+        self.x1Tab = {}
+        self.x1 = torch.LongTensor()
+        self.x2Tab = {}
+        self.x2 = torch.LongTensor()
         self.gradOutput = {}
         local outputAndGradOutputPtr = {... }
         self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
@@ -138,7 +142,7 @@ function SimpleBiLSTM:createOptimizer()
 end
 
 function SimpleBiLSTM:forward(isTraining, batchInputIds)
-    local nnInput = self:getForwardInput(isTraining)
+    local nnInput = self:getForwardInput(isTraining, batchInputIds)
     local output_table = self.net:forward(nnInput)
     --- this is to converting the table into tensor.
     self.output = torch.cat(self.output, output_table, 1)
@@ -148,19 +152,48 @@ function SimpleBiLSTM:forward(isTraining, batchInputIds)
     self.outputPtr:copy(self.output)
 end
 
-function SimpleBiLSTM:getForwardInput(isTraining)
+function SimpleBiLSTM:getForwardInput(isTraining, batchInputIds)
     if isTraining then
-        return self.x
+        if batchInputIds ~= nil then
+            batchInputIds:add(1) -- because the sentence is 0 indexed.
+            self.batchInputIds = batchInputIds
+            self.x1 = torch.cat(self.x1, self.x[1], 2):index(1, batchInputIds)
+            self.x1:resize(self.x1:size(1)*self.x1:size(2))
+            torch.split(self.x1Tab, self.x1, batchInputIds:size(1), 1)
+            self.x2 = torch.cat(self.x2, self.x[2], 2):index(1, batchInputIds)
+            self.x2:resize(self.x2:size(1)*self.x2:size(2))
+            torch.split(self.x2Tab, self.x2, batchInputIds:size(1), 1)
+            self.batchInput = {self.x1Tab, self.x2Tab}
+            return self.batchInput
+        else
+            return self.x
+        end
     else
         return self.testInput
+    end
+end
+
+function SimpleBiLSTM:getBackwardInput()
+    if self.batchInputIds ~= nil then
+        return self.batchInput
+    else
+        return self.x
+    end
+end
+
+function SimpleBiLSTM:getBackwardSentNum()
+    if self.batchInputIds ~= nil then
+        return self.batchInputIds:size(1)
+    else
+        return self.numSent
     end
 end
 
 function SimpleBiLSTM:backward()
     self.gradParams:zero()
     local gradOutputTensor = self.gradOutputPtr
-    local backwardInput = self:getForwardInput(true)  --since backward only happen in training
-    local backwardSentNum = self.numSent
+    local backwardInput = self:getBackwardInput()  --since backward only happen in training
+    local backwardSentNum = self:getBackwardSentNum()
     torch.split(self.gradOutput, gradOutputTensor, backwardSentNum, 1)
     self.net:backward(backwardInput, self.gradOutput)
     if self.doOptimization then
@@ -205,7 +238,7 @@ function SimpleBiLSTM:prepare_input()
             end
         end
     end
-    
+    print("max sentencen length:"..maxLen)
     for step=1,maxLen do
         inputs_rev[step] = torch.LongTensor(#sentences)
         for j=1,#sentences do
