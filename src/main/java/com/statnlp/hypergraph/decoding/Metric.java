@@ -13,4 +13,6 @@ public interface Metric {
 	 * @return
 	 */
 	public boolean isBetter(Metric other);
+	
+	public Object getMetricValue();
 }

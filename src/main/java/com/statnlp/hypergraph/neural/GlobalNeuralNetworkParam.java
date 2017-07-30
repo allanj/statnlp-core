@@ -5,9 +5,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.statnlp.hypergraph.LocalNetworkParam;
 import com.statnlp.hypergraph.Network;
+
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.TIntSet;
 
 public class GlobalNeuralNetworkParam implements Serializable{
 
@@ -69,6 +76,10 @@ public class GlobalNeuralNetworkParam implements Serializable{
 		}
 	}
 	
+	public boolean isLearningState() {
+		return this.nets.get(0).isTraining;
+	}
+	
 	/**
 	 * Return all the neural network. 
 	 * @return
@@ -86,8 +97,9 @@ public class GlobalNeuralNetworkParam implements Serializable{
 			for (int netId = 0; netId < this.nets.size(); netId++) {
 				allNNInput2Id.get(netId).putAll(param_l.getLocalNNInput2Id().get(netId));	
 			}
+			param_l.setLocalNNInput2Id(null);
 		}
-		System.out.println(allNNInput2Id.get(0).size());
+		//System.out.println(allNNInput2Id.get(0).size());
 		for (int netId = 0; netId < this.nets.size(); netId++) {
 			this.nets.get(netId).nnInput2Id = new HashMap<Object, Integer>();
 			int inputId = 0;
@@ -98,6 +110,32 @@ public class GlobalNeuralNetworkParam implements Serializable{
 			allNNInput2Id.set(netId, null);
 		}
 		allNNInput2Id = null;
+	}
+	
+	/**
+	 * Used for batch training.
+	 */
+	public void prepareInstId2NNInputId() {
+		for (int netId = 0; netId < this.nets.size(); netId++) {
+			this.nets.get(netId).instId2NNInputId = new TIntObjectHashMap<>();
+		}
+		for (LocalNetworkParam param_l : params_l) {
+			for (int netId = 0; netId < this.nets.size(); netId++) {
+				TIntObjectMap<Set<Object>> instId2NNInput =  param_l.getLocalInstId2NNInput().get(netId);
+				for (int instId : instId2NNInput.keys()) {
+					Set<Object> set = instId2NNInput.get(instId);
+					TIntList list = new TIntArrayList();
+					for (Object obj : set) {
+						list.add(this.nets.get(netId).nnInput2Id.get(obj));
+					}
+					if (this.nets.get(netId).instId2NNInputId.containsKey(instId)) {
+						throw new RuntimeException("should unique for each local param.");
+					} else {
+						this.nets.get(netId).instId2NNInputId.put(instId, list);
+					}
+				}
+			}
+		}
 	}
 	
 	/**
@@ -112,9 +150,9 @@ public class GlobalNeuralNetworkParam implements Serializable{
 	/**
 	 * forward all the networks
 	 */
-	public void forward() {
+	public void forward(TIntSet batchInstIds) {
 		for (NeuralNetworkCore net : nets) {
-			net.forward();
+			net.forward(batchInstIds);
 		}
 	}
 	

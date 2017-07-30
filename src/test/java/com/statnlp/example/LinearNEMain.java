@@ -22,7 +22,6 @@ import com.statnlp.hypergraph.NetworkModel;
 import com.statnlp.hypergraph.decoding.Metric;
 import com.statnlp.hypergraph.neural.BidirectionalLSTM;
 import com.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
-import com.statnlp.hypergraph.neural.MultiLayerPerceptron;
 import com.statnlp.hypergraph.neural.NeuralNetworkCore;
 
 public class LinearNEMain {
@@ -38,13 +37,12 @@ public class LinearNEMain {
 	public static double adagrad_learningRate = 0.1;
 	public static double l2 = 0.01;
 	
-	public static String trainPath = "nn-crf-interface/nlp-from-scratch/me/eng.train";
-	public static String devFile = "nn-crf-interface/nlp-from-scratch/me/eng.testa";
-	public static String testFile = "nn-crf-interface/nlp-from-scratch/me/eng.testb";
-	public static String nerOut = "nn-crf-interface/nlp-from-scratch/me/output/ner_out.txt";
-	public static String tmpOut = "nn-crf-interface/nlp-from-scratch/me/output/tmp_out.txt";
-	public static String neural_config = "nn-crf-interface/neural_server/neural.debug.config";
-	public static String neuralType = "mlp";
+	public static String trainFile = "data/conll2003/eng.train";
+	public static String devFile = "data/conll2003/eng.testa";
+	public static String testFile = "data/conll2003/eng.testb";
+	public static String nerOut = "data/conll2003/output/ner_out.txt";
+	public static String tmpOut = "data/conll2003/output/tmp_out.txt";
+	public static String neuralType = "lstm";
 	public static boolean iobes = false;
 	public static int gpuId = -1;
 	public static String nnOptimizer = "lbfgs";
@@ -56,7 +54,7 @@ public class LinearNEMain {
 	public static void main(String[] args) throws IOException, InterruptedException{
 
 		processArgs(args);
-		System.err.println("[Info] trainingFile: "+trainPath);
+		System.err.println("[Info] trainingFile: "+trainFile);
 		System.err.println("[Info] testFile: "+testFile);
 		System.err.println("[Info] nerOut: "+nerOut);
 		System.err.println("[Info] use IOBES constraint to build network: "+iobes);
@@ -66,9 +64,9 @@ public class LinearNEMain {
 		ECRFInstance[] testInstances = null;
 		
 		
-		trainInstances = EReader.readData(trainPath, true, trainNumber, "IOBES");
+		trainInstances = EReader.readData(trainFile, true, trainNumber, "IOBES");
 		devInstances = EReader.readData(devFile, false, devNumber, "IOB");
-		testInstances = EReader.readData(testFile, false, testNumber,"IOB");
+		
 		NetworkConfig.CACHE_FEATURES_DURING_TRAINING = true;
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
 		NetworkConfig.NUM_THREADS = numThreads;
@@ -103,8 +101,6 @@ public class LinearNEMain {
 				nets.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, labels.length - 2, gpuId, embedding));
 			} else if (neuralType.equals("continuous")) {
 				nets.add(new ECRFContinuousFeatureValueProvider(2, labels.length - 2));
-			} else if (neuralType.equals("mlp")) {
-				nets.add(new MultiLayerPerceptron(neural_config, labels.length - 2));
 			} else {
 				throw new RuntimeException("Unknown neural type: " + neuralType);
 			}
@@ -123,8 +119,9 @@ public class LinearNEMain {
 			
 		};
 		if (!evalOnDev) devInstances = null;
-		model.train(trainInstances, numIteration, devInstances, evalFunc, 10);
+		model.train(trainInstances, numIteration, devInstances, evalFunc, 3);
 		
+		testInstances = EReader.readData(testFile, false, testNumber,"IOB");
 		Instance[] predictions = model.decode(testInstances);
 		ECRFEval.evalNER(predictions, nerOut);
 	}
@@ -157,6 +154,7 @@ public class LinearNEMain {
 											NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 									}
 									break;
+					case "-iobes":  iobes = args[i+1].equals("true") ? true : false; break; 
 					case "-initNNweight": 
 						NetworkConfig.INIT_FV_WEIGHTS = args[i+1].equals("true") ? true : false; //optimize the neural features or not
 						break;

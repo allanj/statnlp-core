@@ -20,12 +20,16 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.statnlp.hypergraph.neural.NeuralIO;
 
+import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
 
 //one thread should have one such LocalFeatureMap.
 /**
@@ -68,6 +72,7 @@ public class LocalNetworkParam implements Serializable{
 	protected NeuralIO[][][][] _neuralCache;
 	
 	protected List<Map<Object,Integer>> localNNInput2Id;
+	protected List<TIntObjectMap<Set<Object>>> localInstId2NNInput;
 	
 	protected int _numNetworks;
 	
@@ -97,6 +102,9 @@ public class LocalNetworkParam implements Serializable{
 		if (NetworkConfig.USE_NEURAL_FEATURES && fm._param_g.getNNParamG() != null) {
 			this._neuralCache = new NeuralIO[fm._param_g.getNNParamG().getAllNets().size()][][][];
 			this.initializeLocalNNInput2Id(fm._param_g.getNNParamG().getAllNets().size());
+			if (NetworkConfig.USE_BATCH_TRAINING && fm._param_g.getNNParamG().isLearningState()) {
+				this.initializeLocalInstId2Input(fm._param_g.getNNParamG().getAllNets().size());
+			}
 		}
 		if(!NetworkConfig.CACHE_FEATURES_DURING_TRAINING){
 			this.disableCache();
@@ -125,6 +133,13 @@ public class LocalNetworkParam implements Serializable{
 		this.localNNInput2Id = new ArrayList<>(numNets);
 		for (int i = 0; i < numNets; i++) {
 			this.localNNInput2Id.add(new HashMap<>());
+		}
+	}
+	
+	public void initializeLocalInstId2Input(int numNets) {
+		this.localInstId2NNInput = new ArrayList<>(numNets);
+		for (int i = 0; i < numNets; i++) {
+			this.localInstId2NNInput.add(new TIntObjectHashMap<>());
 		}
 	}
 	
@@ -242,6 +257,14 @@ public class LocalNetworkParam implements Serializable{
 		return this.localNNInput2Id;
 	}
 	
+	public List<TIntObjectMap<Set<Object>>> getLocalInstId2NNInput () {
+		return this.localInstId2NNInput;
+	}
+	
+	public void setLocalNNInput2Id(List<Map<Object,Integer>> localNNInput2Id) {
+		this.localNNInput2Id = localNNInput2Id;
+	}
+	
 	public void enableCache(){
 		this._cacheEnabled = true;
 	}
@@ -286,7 +309,23 @@ public class LocalNetworkParam implements Serializable{
 		}
 		this._neuralCache[netId][networkId][parent_k][children_k_idx] = new NeuralIO(edgeInput, output); 
 		Object nnInput = this._fm._param_g.getNNParamG().getAllNets().get(netId).hyperEdgeInput2NNInput(edgeInput);
-		localNNInput2Id.get(netId).put(nnInput, localNNInput2Id.size());
+		if (!localNNInput2Id.get(netId).containsKey(nnInput)) {
+			localNNInput2Id.get(netId).put(nnInput, localNNInput2Id.size());
+		}
+		if (NetworkConfig.USE_BATCH_TRAINING && this._fm._param_g.getNNParamG().isLearningState()) {
+			//only need positive instance ID
+			int instId = network.getInstance().getInstanceId();
+			if (instId > 0) {
+				TIntObjectMap<Set<Object>> map =  this.localInstId2NNInput.get(netId);
+				if (map.containsKey(instId)) {
+					map.get(instId).add(nnInput);
+				} else {
+					Set<Object> set = new HashSet<>();
+					set.add(nnInput);
+					map.put(instId, set);
+				}
+			}
+		}
 	}
 	
 	/**

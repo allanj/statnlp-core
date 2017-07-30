@@ -1,7 +1,9 @@
 package com.statnlp.hypergraph.neural;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -9,6 +11,14 @@ import com.statnlp.hypergraph.Network;
 import com.statnlp.hypergraph.NetworkConfig;
 import com.statnlp.hypergraph.neural.util.LuaFunctionHelper;
 
+import gnu.trove.iterator.TIntIterator;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.set.TIntSet;
+import gnu.trove.set.hash.TIntHashSet;
 import th4j.Tensor.DoubleTensor;
 
 public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements Cloneable {
@@ -29,7 +39,22 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	
 	public boolean optimizeNeural;
 	
-	public Map<Object, Integer> nnInput2Id;
+	/**
+	 * Neural network input to index (id)
+	 * If you are using batch training, do not directly use this to obtain input id.
+	 * Use the method # {@link #getNNInputID()}
+	 */
+	protected Map<Object, Integer> nnInput2Id;
+	
+	/**
+	 * Save the mapping from instance id to neural network input id.
+	 */
+	protected TIntObjectMap<TIntList> instId2NNInputId;
+	
+	/**
+	 * Dynamically save the batch instance id in batch training.
+	 */
+	protected TIntIntMap dynamicNNInputId2BatchInputId;
 	
 	public NeuralNetworkCore(int numLabels) {
 		super(numLabels);
@@ -40,27 +65,20 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	
 	@Override
 	public void initialize() {
-		int inputSize = this.getNNInputSize();
-		this.initializeNN(inputSize);
-	}
-	
-	/**
-	 * Initialize the neural network with specific inputSize.
-	 * @param inputSize
-	 */
-	private void initializeNN(int inputSize) {
-		if (isTraining) {
-			this.countOutput = new double[inputSize * this.numLabels];
-			// Pointer to Torch tensors
-	        this.outputTensorBuffer = new DoubleTensor(inputSize, this.numLabels);
-	        this.countOutputTensorBuffer = new DoubleTensor(inputSize, this.numLabels);
+		List<Object> nnInputs = new ArrayList<>(nnInput2Id.size());
+		for (Object obj : nnInput2Id.keySet()) {
+			nnInputs.add(obj);
 		}
-		
-		// Forward matrices
-        this.output = new double[inputSize * this.numLabels];
-		
+		config.put("nnInputs", nnInputs);
+		Object[] args = null;
+		if (isTraining) {
+			this.countOutputTensorBuffer = new DoubleTensor();
+			this.outputTensorBuffer = new DoubleTensor();
+			args = new Object[]{config, outputTensorBuffer, countOutputTensorBuffer};
+		} else {
+			args = new Object[]{config};
+		}
 		config.put("isTraining", isTraining);
-        Object[] args = new Object[]{config, this.outputTensorBuffer, this.countOutputTensorBuffer};
         Class<?>[] retTypes;
         if (optimizeNeural && isTraining) {
         	retTypes = new Class[]{DoubleTensor.class, DoubleTensor.class};
@@ -87,35 +105,69 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 			}
 		}
 	}
-	
-	/**
-	 * Return the input size 
-	 * @return input size of the neural net
-	 */
-	public abstract int getNNInputSize();
-	
+
 	/**
 	 * Calculate the input position in the output/countOuput matrix position
 	 * @return
 	 */
 	public abstract int hyperEdgeInput2OutputRowIndex(Object edgeInput);
 	
+	public int getNNInputID(Object nnInput) {
+		if (NetworkConfig.USE_BATCH_TRAINING && isTraining) {
+			return this.dynamicNNInputId2BatchInputId.get(this.nnInput2Id.get(nnInput));
+		} else {
+			return this.nnInput2Id.get(nnInput);
+		}
+	}
+	
+	public int getNNInputSize() {
+		if (NetworkConfig.USE_BATCH_TRAINING && isTraining) {
+			return this.dynamicNNInputId2BatchInputId.size();
+		} else {
+			return this.nnInput2Id.size();
+		}
+	}
+	
 	/**
 	 * Neural network's forward
 	 */
 	@Override
-	public void forward() {
+	public void forward(TIntSet batchInstIds) {
 		if (optimizeNeural) { // update with new params
 			if (getParamSize() > 0) {
 				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
 				//System.out.println("java side forward weights: " + this.params[0] + " " + this.params[1]);
 			}
 		}
-		Object[] args = null; 
-		args = new Object[]{isTraining};
-		Class<?>[] retTypes = new Class[]{DoubleTensor.class};
-		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, retTypes);
+		Object[] args = null;
+		if (NetworkConfig.USE_BATCH_TRAINING && isTraining && batchInstIds != null
+				&& batchInstIds.size() > 0) {
+			//pass the batch input id.
+			TIntIterator iter = batchInstIds.iterator();
+			TIntHashSet set = new TIntHashSet();
+			while(iter.hasNext()) {
+				int positiveInstId = iter.next();
+				set.addAll(this.instId2NNInputId.get(positiveInstId));
+			}
+			TIntList batchInputIds = new TIntArrayList(set);
+			this.dynamicNNInputId2BatchInputId = new TIntIntHashMap(batchInputIds.size());
+			for (int i = 0; i < batchInputIds.size(); i++) {
+				this.dynamicNNInputId2BatchInputId.put(batchInputIds.get(i), i);
+			}
+			args = new Object[]{isTraining, batchInputIds};
+		} else {
+			args = new Object[]{isTraining};
+		}
+		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, new Class[]{});
 		output = this.getArray(outputTensorBuffer, output);
+		if (isTraining) {
+			//check if countOutput is null.
+			if (countOutput == null || countOutput.length < outputTensorBuffer.nElement()) 
+				countOutput = new double[(int) outputTensorBuffer.nElement()];
+			if (!countOutputTensorBuffer.isSameSizeAs(outputTensorBuffer)) {
+				countOutputTensorBuffer.resize(outputTensorBuffer.size());
+			}
+		}
 	}
 	
 	@Override
@@ -140,7 +192,6 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		Object[] args = new Object[]{};
 		Class<?>[] retTypes = new Class[0];
 		LuaFunctionHelper.execLuaFunction(this.L, "backward", args, retTypes);
-		
 		if(optimizeNeural && getParamSize() > 0) { // copy gradParams computed by Torch
 			gradParams = this.getArray(this.gradParamsTensor, gradParams);
 			if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
@@ -222,7 +273,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 * @return
 	 */
 	protected double[] getArray(DoubleTensor t, double[] buf) {
-		if (buf == null || buf.length != t.nElement()) {
+		if (buf == null || buf.length < t.nElement()) {
 			buf = new double[(int) t.nElement()];
         }
 		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());

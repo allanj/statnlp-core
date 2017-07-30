@@ -24,6 +24,11 @@ public class NEMetric implements Metric {
 		return fscore > metric.fscore;
 	}
 
+	@Override
+	public Double getMetricValue() {
+		return this.fscore;
+	}
+
 	
 
 }

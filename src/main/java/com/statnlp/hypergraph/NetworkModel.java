@@ -71,6 +71,8 @@ public abstract class NetworkModel implements Serializable{
 	private transient Consumer<TrainingIterationInformation> endOfIterCallback;
 	private transient GlobalNeuralNetworkParam _neuralLearner;
 	private transient GlobalNeuralNetworkParam _neuralDecoder;
+	//currBestMetric on development set.
+	private transient Metric currBestMetric;
 	
 	public static class TrainingIterationInformation {
 		public int iterNum;
@@ -275,6 +277,9 @@ public abstract class NetworkModel implements Serializable{
 		if(NetworkConfig.PRE_COMPILE_NETWORKS){
 			preCompileNetworks(insts);
 		}
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			this._fm.getParam_G().getNNParamG().setLearningState();
+		}
 		
 		printUsedMemory("before touch");
 		boolean keepExistingThreads = NetworkConfig.PRE_COMPILE_NETWORKS ? true : false;
@@ -302,6 +307,9 @@ public abstract class NetworkModel implements Serializable{
 			this._neuralLearner.setLearningState();
 			this._neuralLearner.setLocalNetworkParams(this._fm._params_l);
 			this._fm.getParam_G().getNNParamG().prepareInputId();
+			if (NetworkConfig.USE_BATCH_TRAINING) {
+				this._fm.getParam_G().getNNParamG().prepareInstId2NNInputId();
+			}
 		}
 		printUsedMemory("after finalize");
 		//finalize the features.
@@ -329,7 +337,7 @@ public abstract class NetworkModel implements Serializable{
 			// Print the objective if not using softmax 
 			multiplier = -1;
 		}
-
+		
 		//note that this batch inst ids only contains positive instance IDs.
 		TIntSet batchInstIds = new TIntHashSet();
 		double obj_old = Double.NEGATIVE_INFINITY;
@@ -365,8 +373,10 @@ public abstract class NetworkModel implements Serializable{
 				long time = System.nanoTime();
 				
 				// Feature value provider's ``forward''
-				this._fm.getParam_G().getNNParamG().forward();
-				this._fm.getParam_G().getNNParamG().resetAllNNGradients();
+				if (NetworkConfig.USE_NEURAL_FEATURES) {
+					this._fm.getParam_G().getNNParamG().forward(batchInstIds);
+					this._fm.getParam_G().getNNParamG().resetAllNNGradients();
+				}
 				
 				List<Future<Void>> results = pool.invokeAll(callables);
 				for(Future<Void> result: results){
@@ -393,12 +403,7 @@ public abstract class NetworkModel implements Serializable{
 					print(String.format("Batch %d: Obj=%-18.12f", batchId, multiplier*obj), outstreams);
 				}
 				if (devInstances != null && evalFunction != null && k > 0 && (it + 1) % k == 0) {
-					Instance[] devRes = this.decode(devInstances, true);
-					evalFunction.apply(devRes);
-					this._fm._param_g.setNNParamG(_neuralLearner);
-					for(int threadId=0; threadId<this._numThreads; threadId++){
-						this._fm.setLocalNetworkParams(threadId, this._learners[threadId].getLocalNetworkParam());
-					}
+					this.evaluateDevelopment(devInstances, evalFunction);
 				}
 				if(offset >= instIds.size()) {
 					batchId = 0;
@@ -414,7 +419,9 @@ public abstract class NetworkModel implements Serializable{
 				}
 				obj_old = obj;
 				if (lastIter || done) {
-					this._fm.getParam_G()._nn_param_g.forward();
+					if (NetworkConfig.USE_NEURAL_FEATURES) {
+						this._fm.getParam_G()._nn_param_g.forward(batchInstIds);
+					}
 				}
 				if(endOfIterCallback != null){
 					endOfIterCallback.accept(new TrainingIterationInformation(it, epochNum, done, lastIter, obj));
@@ -427,13 +434,42 @@ public abstract class NetworkModel implements Serializable{
 					print("Training completes. No significant progress (<objtol) after "+it+" iterations.", outstreams);
 					break;
 				}
-				if (devInstances != null && evalFunction != null) {
-					this._decoders = null;
-					this._neuralDecoder = null;
-				}
 			}
 		} finally {
 			pool.shutdown();
+		}
+		if (devInstances != null && evalFunction != null) {
+			print("Best metric on development set: " + currBestMetric.getMetricValue().toString());
+			this._decoders = null;
+			this._neuralDecoder = null;
+		}
+	}
+	
+	/**
+	 * Do evaluation on development set during training.
+	 * @param devInsts
+	 * @param evalFunction
+	 * @throws InterruptedException
+	 */
+	private void evaluateDevelopment(Instance[] devInsts, Function<Instance[], Metric> evalFunction) throws InterruptedException {
+		print("[Model] Evaluating on the development set..");
+		Instance[] devRes = this.decode(devInsts, true);
+		Metric metric = evalFunction.apply(devRes);
+		if (currBestMetric == null) currBestMetric = metric;
+		else {
+			if (metric.isBetter(currBestMetric)) {
+				print("[Model] Better than previous best, saving best metric:"+metric.getMetricValue().toString());
+				currBestMetric = metric;
+			}
+		}
+		this._fm._param_g.setNNParamG(_neuralLearner);
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			for(int threadId=0; threadId<this._numThreads; threadId++){
+				this._fm.setLocalNetworkParams(threadId, this._learners[threadId].getLocalNetworkParam());
+			}
+			this._fm._param_g.setNNParamG(_neuralLearner);
+			this._neuralLearner.setLearningState();
+			this._neuralLearner.setLocalNetworkParams(this._fm._params_l);
 		}
 	}
 
@@ -623,6 +659,8 @@ public abstract class NetworkModel implements Serializable{
 				this._fm.setLocalNetworkParams(threadId, params_l[threadId]);
 				//need to set it back if continue training.
 			}
+			//Important for batch training, since we don't use batch in decoding (check LocalNetworkParam, add hyperedge).
+			this._fm.getParam_G().getNNParamG().setDecodeState();
 		}
 		
 		printUsedMemory("before decode");
@@ -657,7 +695,7 @@ public abstract class NetworkModel implements Serializable{
 				_neuralDecoder.copyNNParam(learner);
 			}
 			this._fm.getParam_G().setNNParamG(_neuralDecoder);
-			this._fm.getParam_G().getNNParamG().forward();
+			this._fm.getParam_G().getNNParamG().forward(null);
 		}
 		
 		for(int threadId = 0; threadId<this._numThreads; threadId++){

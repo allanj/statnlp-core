@@ -14,6 +14,8 @@ import com.statnlp.hypergraph.NetworkConfig;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 
+import gnu.trove.set.TIntSet;
+
 
 public abstract class AbstractNeuralNetwork {
 	
@@ -117,7 +119,7 @@ public abstract class AbstractNeuralNetwork {
 	 * Pre-compute all scores for each hyper-edge.
 	 * In neural network, this is equivalent to forward.
 	 */
-	public abstract void forward();
+	public abstract void forward(TIntSet batchInstIds);
 	
 	/**
 	 * Accumulate count for a specified hyper-edge

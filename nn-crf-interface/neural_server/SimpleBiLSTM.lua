@@ -9,19 +9,24 @@ end
 function SimpleBiLSTM:initialize(javadata, ...)
     self.data = {}
     local data = self.data
-    data.sentences = listToTable(javadata:get("sentences"))
+    data.sentences = listToTable(javadata:get("nnInputs"))
     data.hiddenSize = javadata:get("hiddenSize")
     data.optimizer = javadata:get("optimizer")
     self.numLabels = javadata:get("numLabels")
     data.embedding = javadata:get("embedding")
-    self.isTraining = javadata:get("isTraining")
-    self.x = self:prepare_input()
+    local isTraining = javadata:get("isTraining")
+    if isTraining then
+        self.x = self:prepare_input()
+    else 
+        self.testInput = self:prepare_input()
+    end
     self.numSent = #data.sentences
     self.output = torch.Tensor()
-    self.gradOutput = {}
+    
 
     if self.net == nil then
         -- means is initialized process and we don't have the input yet.
+        self.gradOutput = {}
         local outputAndGradOutputPtr = {... }
         self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
         self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
@@ -50,7 +55,7 @@ function SimpleBiLSTM:createNetwork()
     end
 
     -- forward rnn
-    local fwdLSTM = LampleLSTM(hiddenSize, hiddenSize):maskZero(1)
+    local fwdLSTM = nn.FastLSTM(hiddenSize, hiddenSize):maskZero(1)
     print("number of lstm parameters:"..fwdLSTM:getParameters():nElement())
     local fwd = nn.Sequential()
        :add(sharedLookupTable)
@@ -63,7 +68,7 @@ function SimpleBiLSTM:createNetwork()
     local bwd, bwdSeq
     bwd = nn.Sequential()
            :add(sharedLookupTable:sharedClone())
-           :add(LampleLSTM(hiddenSize, hiddenSize):maskZero(1))
+           :add(nn.FastLSTM(hiddenSize, hiddenSize):maskZero(1))
            
     bwdSeq = nn.Sequential()
             :add(nn.Sequencer(bwd))
@@ -133,7 +138,7 @@ function SimpleBiLSTM:createOptimizer()
 end
 
 function SimpleBiLSTM:forward(isTraining, batchInputIds)
-    local nnInput = self:getForwardInput()
+    local nnInput = self:getForwardInput(isTraining)
     local output_table = self.net:forward(nnInput)
     --- this is to converting the table into tensor.
     self.output = torch.cat(self.output, output_table, 1)
@@ -143,14 +148,18 @@ function SimpleBiLSTM:forward(isTraining, batchInputIds)
     self.outputPtr:copy(self.output)
 end
 
-function SimpleBiLSTM:getForwardInput()
-    return self.x
+function SimpleBiLSTM:getForwardInput(isTraining)
+    if isTraining then
+        return self.x
+    else
+        return self.testInput
+    end
 end
 
 function SimpleBiLSTM:backward()
     self.gradParams:zero()
     local gradOutputTensor = self.gradOutputPtr
-    local backwardInput = self:getForwardInput()
+    local backwardInput = self:getForwardInput(true)  --since backward only happen in training
     local backwardSentNum = self.numSent
     torch.split(self.gradOutput, gradOutputTensor, backwardSentNum, 1)
     self.net:backward(backwardInput, self.gradOutput)
@@ -185,7 +194,7 @@ function SimpleBiLSTM:prepare_input()
         for j=1,#sentences do
             local tokens = sentence_toks[j]
             if step > #tokens then
-                inputs[step][j] = 0
+                inputs[step][j] = 0 --padding token
             else
                 local tok = sentence_toks[j][step]
                 local tok_id = self.word2idx[tok]

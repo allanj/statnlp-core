@@ -99,7 +99,8 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 					if(child==-1) continue;
 					if (useIOBESConstraintBuildNetwork) {
 						int[] childArr = NetworkIDMapper.toHybridNodeArray(child);
-						String childEntity = this.labels[childArr[1]].getForm();
+						String childEntity = i == 0 ? "O" : this.labels[childArr[1]].getForm();
+						if (l == 0 || l== this.labels.length -1) continue;
 						if( (childEntity.startsWith("B-") || childEntity.startsWith("I-")  ) 
 								&& (currEntity.startsWith("I-") || currEntity.startsWith("E-"))
 								&& childEntity.substring(2).equals(currEntity.substring(2)) ) {
@@ -132,7 +133,8 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 				int[] childArr = NetworkIDMapper.toHybridNodeArray(child);
 				String childEntity =  this.labels[childArr[1]].getForm();
 				if (useIOBESConstraintBuildNetwork) {
-					if(!childEntity.startsWith("B-")&&  !childEntity.startsWith("I-")) {
+					if(!childEntity.startsWith("B-")&&  !childEntity.startsWith("I-")
+						&& childArr[1] != 0 && childArr[1] != this.labels.length - 1) {
 						lcrfNetwork.addEdge(root, new long[]{child});
 					}
 				} else {
@@ -162,6 +164,8 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 			String resEntity = this.labels[tagID].getForm();
 			if(resEntity.startsWith("S-")) resEntity = "B-"+resEntity.substring(2);
 			if(resEntity.startsWith("E-")) resEntity = "I-"+resEntity.substring(2);
+			if (tagID == 0 || tagID == this.labels.length -1)
+				resEntity = "O";
 			prediction.add(0, resEntity);
 		}
 		result.setPrediction(prediction);
