@@ -3,7 +3,7 @@
  */
 package ext.svm_struct;
 
-import static com.statnlp.commons.Utils.print;
+import static org.statnlp.commons.Utils.print;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -18,20 +18,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import com.statnlp.commons.types.Instance;
-import com.statnlp.commons.types.Label;
-import com.statnlp.commons.types.LinearInstance;
-import com.statnlp.example.linear_crf.LinearCRFFeatureManager;
-import com.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
-import com.statnlp.hypergraph.DiscriminativeNetworkModel;
-import com.statnlp.hypergraph.FeatureArray;
-import com.statnlp.hypergraph.GlobalNetworkParam;
-import com.statnlp.hypergraph.LocalNetworkParam;
-import com.statnlp.hypergraph.Network;
-import com.statnlp.hypergraph.NetworkConfig;
-import com.statnlp.hypergraph.NetworkModel;
-import com.statnlp.hypergraph.StringIndex;
-import com.statnlp.hypergraph.NetworkConfig.ModelType;
+import org.statnlp.commons.types.Instance;
+import org.statnlp.commons.types.Label;
+import org.statnlp.commons.types.LinearInstance;
+import org.statnlp.example.linear_crf.LinearCRFFeatureManager;
+import org.statnlp.example.linear_crf.LinearCRFNetworkCompiler;
+import org.statnlp.hypergraph.DiscriminativeNetworkModel;
+import org.statnlp.hypergraph.FeatureArray;
+import org.statnlp.hypergraph.GlobalNetworkParam;
+import org.statnlp.hypergraph.LocalNetworkParam;
+import org.statnlp.hypergraph.Network;
+import org.statnlp.hypergraph.NetworkConfig;
+import org.statnlp.hypergraph.NetworkModel;
+import org.statnlp.hypergraph.StringIndex;
+import org.statnlp.hypergraph.NetworkConfig.ModelType;
 
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
