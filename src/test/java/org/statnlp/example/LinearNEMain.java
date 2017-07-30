@@ -50,6 +50,7 @@ public class LinearNEMain {
 	public static int batchSize = 10;
 	public static OptimizerFactory optimizer = OptimizerFactory.getLBFGSFactory();
 	public static boolean evalOnDev = false;
+	public static int evalFreq = 1000;
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 
@@ -119,7 +120,7 @@ public class LinearNEMain {
 			
 		};
 		if (!evalOnDev) devInstances = null;
-		model.train(trainInstances, numIteration, devInstances, evalFunc, 3);
+		model.train(trainInstances, numIteration, devInstances, evalFunc, evalFreq);
 		
 		testInstances = EReader.readData(testFile, false, testNumber,"IOB");
 		Instance[] predictions = model.decode(testInstances);
@@ -176,7 +177,12 @@ public class LinearNEMain {
 					case "-lr": adagrad_learningRate = Double.valueOf(args[i+1]); break;
 					case "-backend": NetworkConfig.NEURAL_BACKEND = args[i+1]; break;
 					case "-os": NetworkConfig.OS = args[i+1]; break; // for Lua native lib, "osx" or "linux"
-					case "-evalDev": evalOnDev = args[i+1].equals("true") ? true : false; break;
+					case "-evalDev": evalOnDev = args[i+1].equals("true") ? true : false; 
+						if (evalOnDev) {
+							evalFreq = Integer.valueOf(args[i+2]);
+							i++;
+						}
+						break;
 					default: System.err.println("Invalid arguments "+args[i]+", please check usage."); System.exit(0);
 				}
 			}
