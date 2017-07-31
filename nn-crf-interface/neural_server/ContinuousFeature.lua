@@ -22,9 +22,10 @@ function ContinuousFeature:initialize(javadata, ...)
         self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
         self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
     end
-    self.x = array2Tensor2D(javadata:get("inputs"))
+    self.x = array2Tensor2D(javadata:get("nnInputs"))
     self.output = torch.Tensor()
     self.gradOutput = {}
+    print("[Warning] ContinuousFeature do not support evaluate on development set and continue training yet. Simply ignore this if you are not doing this.")
     if isTraining then
         self:createNetwork()
         print(self.net)
@@ -45,7 +46,7 @@ function ContinuousFeature:createNetwork()
      self.net = fwd
 end
 
-function ContinuousFeature:forward(isTraining)
+function ContinuousFeature:forward(isTraining, batchInstId)
     --local output_table = self.net:forward(self.x)
     self.output = self.net:forward(self.x)
     --- this is to converting the table into tensor.

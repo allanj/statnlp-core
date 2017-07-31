@@ -11,33 +11,26 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkCore {
 	public ContinuousFeatureValueProvider(int numFeatureValues ,int numLabels) {
 		super(numLabels);
 		this.optimizeNeural = true; //for continuous feature, optimize neural is always true.
+		this.continuousFeatureValue = true;
 		this.numFeatureValues = numFeatureValues;
 		config.put("class", "ContinuousFeature");
 		config.put("numLabels", numLabels);
 		config.put("numValues", numFeatureValues);
 	}
 
-	@Override
-	public int getNNInputSize() {
-		double[][] inputs = makeInput();
-		config.put("inputs", inputs);
-		int inputSize = nnInput2Id.size();
-		return inputSize;
-	}
-	
 	/**
 	 * Fill the featureValue array using the input object
 	 * @param input
 	 * @return
 	 */
-	public abstract void getFeatureValue(Object input, double[] featureValue);
+	public abstract double[] getFeatureValue(Object input);
 	
-	public double[][] makeInput() { 
+	protected void prepareContinuousFeatureValue() { 
 		double[][] featureValues = new double[nnInput2Id.size()][this.numFeatureValues];
 		for (Object input : nnInput2Id.keySet()) {
-			this.getFeatureValue(input, featureValues[nnInput2Id.get(input)]);
+			featureValues[nnInput2Id.get(input)] = this.getFeatureValue(input);
 		}
-		return featureValues;
+		config.put("nnInputs", featureValues);
 	}
 	
 	@Override

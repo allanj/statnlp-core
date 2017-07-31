@@ -56,6 +56,8 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 */
 	protected TIntIntMap dynamicNNInputId2BatchInputId;
 	
+	protected boolean continuousFeatureValue = false;
+	
 	public NeuralNetworkCore(int numLabels) {
 		super(numLabels);
 		config = new HashMap<>();
@@ -69,7 +71,11 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		for (Object obj : nnInput2Id.keySet()) {
 			nnInputs.add(obj);
 		}
-		config.put("nnInputs", nnInputs);
+		if (!this.continuousFeatureValue) {
+			config.put("nnInputs", nnInputs);
+		} else {
+			this.prepareContinuousFeatureValue();
+		}
 		Object[] args = null;
 		if (isTraining) {
 			this.countOutputTensorBuffer = new DoubleTensor();
@@ -106,6 +112,10 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		}
 	}
 
+	protected void prepareContinuousFeatureValue() {
+		//should be overrided
+	}
+	
 	/**
 	 * Calculate the input position in the output/countOuput matrix position
 	 * @return
