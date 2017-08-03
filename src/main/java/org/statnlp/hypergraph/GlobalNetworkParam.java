@@ -141,6 +141,9 @@ public class GlobalNetworkParam implements Serializable{
 			this._subSize = new int[NetworkConfig.NUM_THREADS];
 		}
 		this._nn_param_g = nn_param_g;
+		if (!NetworkConfig.PARALLEL_FEATURE_EXTRACTION || NetworkConfig.NUM_THREADS == 1) {
+			this._stringIndex = new StringIndex();
+		}
 	}
 	
 	public void mergeStringIndex(LocalNetworkLearnerThread[] learners){
@@ -165,7 +168,7 @@ public class GlobalNetworkParam implements Serializable{
 	}
 	
 	public int toInt(String s){
-		return this._stringIndex.get(s);
+		return this._stringIndex.getOrPut(s);
 	}
 	
 	public StringIndex getStringIndex(){
@@ -408,6 +411,7 @@ public class GlobalNetworkParam implements Serializable{
 		/**********/
 		
 		this._version = 0;
+		this._stringIndex.lock();
 		int numWeights = this._weights.length + this.getAllNNParamSize();
 		this._opt = this._optFactory.create(numWeights, getFeatureIntMap(), this._stringIndex);
 		this._locked = true;
@@ -827,6 +831,9 @@ public class GlobalNetworkParam implements Serializable{
 		
 		out.writeObject("_featureIntMap");
 		out.writeObject(this._featureIntMap);
+		
+		out.writeObject("_stringIndex");
+		out.writeObject(this._stringIndex);
 		
 		out.writeObject("_weights");
 		out.writeObject(this._weights);
