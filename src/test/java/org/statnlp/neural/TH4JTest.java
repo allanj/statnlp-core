@@ -13,7 +13,6 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 
 import th4j.Tensor.DoubleTensor;
-import th4j.Tensor.LongTensor;
 
 public class TH4JTest {
 
@@ -69,7 +68,7 @@ public class TH4JTest {
 		for (int i = 0; i< weights.length; i++)
 			weights[i]= i;
 		DoubleTensor tensor = new DoubleTensor(weights);
-		LongTensor longTensor = new LongTensor(10);
+		//LongTensor longTensor = new LongTensor(10);
 		weights[50] = 1000;
 		double[] arr = tensor.storage().getRawData().getDoubleArray(0, (int)tensor.nElement());
 		System.out.println(arr[50]);

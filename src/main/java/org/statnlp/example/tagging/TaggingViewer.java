@@ -7,7 +7,6 @@ import java.util.Map;
 
 import org.statnlp.commons.types.Label;
 import org.statnlp.commons.types.Sentence;
-import org.statnlp.commons.types.Sentence;
 import org.statnlp.example.tagging.TagNetworkCompiler.NodeType;
 import org.statnlp.ui.visualize.type.VNode;
 import org.statnlp.ui.visualize.type.VisualizationViewerEngine;
@@ -79,8 +78,6 @@ public class TaggingViewer extends VisualizationViewerEngine {
 			for(VNode node : vg.getNodes())
 			{
 				int[] ids = node.ids;
-				int pos = ids[0];
-				int nodeId = ids[1];
 				int nodeType = ids[2];
 				if(nodeType == NodeType.leaf.ordinal()){
 					

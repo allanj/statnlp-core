@@ -13,6 +13,7 @@ import org.statnlp.commons.types.WordToken;
 import org.statnlp.hypergraph.DiscriminativeNetworkModel;
 import org.statnlp.hypergraph.GlobalNetworkParam;
 import org.statnlp.hypergraph.NetworkConfig;
+import org.statnlp.hypergraph.NetworkConfig.ModelType;
 import org.statnlp.hypergraph.NetworkModel;
 
 public class TagMain {
@@ -34,6 +35,7 @@ public class TagMain {
 		labels = new ArrayList<>();
 		TagInstance[] trainInstances = readData(trainFile, true, trainNum);
 		System.out.println("#labels: " + labels.size());
+		NetworkConfig.MODEL_TYPE = ModelType.STRUCTURED_PERCEPTRON;
 		
 		
 		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(0.1));
