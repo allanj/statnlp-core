@@ -274,6 +274,12 @@ public class LocalNetworkParam implements Serializable{
 	}
 	
 	public NeuralIO getHyperEdgeIO(Network network, int netId, int parent_k, int children_k_idx) {
+		if (this._neuralCache[netId] == null){
+			return null;
+		}
+		if (this._neuralCache[netId][network.getNetworkId()] == null){
+			return null;
+		}
 		if (this._neuralCache[netId][network.getNetworkId()][parent_k] == null){
 			return null;
 		}
