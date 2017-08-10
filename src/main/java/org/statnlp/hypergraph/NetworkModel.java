@@ -358,9 +358,9 @@ public abstract class NetworkModel implements Serializable{
 						Collections.shuffle(instIds, RANDOM);
 					}
 					for(int iid = 1; iid <= size; iid++){
-						int idx = iid + offset;
+						int idx = (iid + offset) % instIds.size();
+						idx = idx == 0 ? idx + 1 : idx;
 						batchInstIds.add(idx);
-						if (idx == instIds.size()) break;
 					}
 					offset = NetworkConfig.BATCH_SIZE*(batchId + 1);
 					batchId++;
@@ -406,11 +406,11 @@ public abstract class NetworkModel implements Serializable{
 					this.evaluateDevelopment(devInstances, evalFunction);
 				}
 				if(offset >= instIds.size()) {
-					batchId = 0;
-					offset = 0;
 					// this means one epoch
 					time = System.nanoTime();
-					print(String.format("Epoch %d: Obj=%-18.12f Time=%.3fs Total time: %.3fs", epochNum++, multiplier*epochObj*instIds.size()/(size+offset), (time-epochStartTime)/1.0e9, (time-startTime)/1.0e9), outstreams);
+					print(String.format("Epoch %d: Obj=%-18.12f Time=%.3fs Total time: %.3fs", epochNum++, multiplier*epochObj*instIds.size()/(size + offset), (time-epochStartTime)/1.0e9, (time-startTime)/1.0e9), outstreams);
+					batchId = 0;
+					offset = 0;
 					epochObj = 0.0;
 					epochStartTime = System.nanoTime();
 				}
