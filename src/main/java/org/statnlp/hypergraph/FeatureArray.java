@@ -193,6 +193,11 @@ public class FeatureArray implements Serializable{
 	public FeatureArray getNext(){
 		return this._next;
 	}
+	
+	public FeatureArray addNext(FeatureArray nextFa) {
+		this._next = nextFa;
+		return this._next;
+	}
 
 	public void update(LocalNetworkParam param, double count){
 		if(this == NEGATIVE_INFINITY){
