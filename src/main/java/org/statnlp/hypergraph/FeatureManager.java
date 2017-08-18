@@ -358,6 +358,10 @@ public abstract class FeatureManager implements Serializable{
 	 * @return
 	 */
 	public FeatureArray createFeatureArray(Network network, int[] featureIndices){
+		if (!network.getInstance().isLabeled() && network.getInstance().getInstanceId() > 0) {
+			//testing instance, also new feature array
+			return new FeatureArray(featureIndices);
+		}
 		if(NetworkConfig.AVOID_DUPLICATE_FEATURES){
 			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, this.getParams_L()[network.getThreadId()]));
 		} else {
@@ -375,6 +379,10 @@ public abstract class FeatureManager implements Serializable{
 	 * @return
 	 */
 	public FeatureArray createFeatureArray(Network network, int[] featureIndices, FeatureArray next){
+		if (!network.getInstance().isLabeled() && network.getInstance().getInstanceId() > 0) {
+			//testing instance, also new feature array
+			return new FeatureArray(featureIndices, next);
+		}
 		if(NetworkConfig.AVOID_DUPLICATE_FEATURES){
 			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, this.getParams_L()[network.getThreadId()]), next);
 		} else {

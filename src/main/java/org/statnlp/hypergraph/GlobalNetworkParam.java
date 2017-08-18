@@ -847,7 +847,7 @@ public class GlobalNetworkParam implements Serializable{
 		out.writeObject("_locked");
 		out.writeObject(this._locked);
 		
-		out.writeObject("_featureValueProviders");
+		out.writeObject("_nn_param_g");
 		out.writeObject(this._nn_param_g);
 	}
 	
