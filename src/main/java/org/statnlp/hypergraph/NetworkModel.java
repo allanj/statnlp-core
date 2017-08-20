@@ -400,7 +400,9 @@ public abstract class NetworkModel implements Serializable{
 				if(!NetworkConfig.USE_BATCH_TRAINING){
 					print(String.format("Iteration %d: Obj=%-18.12f Time=%.3fs %.12f Total time: %.3fs", it, multiplier*obj, time/1.0e9, obj/obj_old, (System.nanoTime()-startTime)/1.0e9), outstreams);
 				} else {
-					//print(String.format("Batch %d: Obj=%-18.12f", batchId, multiplier*obj), outstreams);
+					if (NetworkConfig.PRINT_BATCH_OBJECTIVE) {
+						print(String.format("Batch %d: Obj=%-18.12f", batchId, multiplier*obj), outstreams);	
+					}
 				}
 				if (devInstances != null && evalFunction != null && k > 0 && (it + 1) % k == 0) {
 					this.evaluateDevelopment(devInstances, evalFunction);
@@ -435,6 +437,7 @@ public abstract class NetworkModel implements Serializable{
 					break;
 				}
 			}
+			this._fm._param_g.setBestParameters();
 		} finally {
 			pool.shutdown();
 		}
@@ -456,9 +459,11 @@ public abstract class NetworkModel implements Serializable{
 		print("[Model] Evaluating on the development set..");
 		Instance[] devRes = this.decode(devInsts, true);
 		Metric metric = evalFunction.apply(devRes);
+		
 		if (currBestMetric == null) currBestMetric = metric;
 		else {
 			if (metric.isBetter(currBestMetric)) {
+				this._fm._param_g.setCurrentAsBestParameters();
 				print("[Model] Better than previous best, saving best metric:"+metric.getMetricValue().toString());
 				currBestMetric = metric;
 			}

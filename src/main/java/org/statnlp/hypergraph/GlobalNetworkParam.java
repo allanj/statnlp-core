@@ -25,11 +25,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.statnlp.commons.ml.opt.GradientDescentOptimizer;
 import org.statnlp.commons.ml.opt.LBFGS;
+import org.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import org.statnlp.commons.ml.opt.MathsVector;
 import org.statnlp.commons.ml.opt.Optimizer;
 import org.statnlp.commons.ml.opt.OptimizerFactory;
-import org.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import org.statnlp.hypergraph.NetworkConfig.StoppingCriteria;
 import org.statnlp.hypergraph.neural.AbstractNeuralNetwork;
 import org.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
@@ -643,6 +644,37 @@ public class GlobalNetworkParam implements Serializable{
 			result.add(num);
 		}
 		return result;
+	}
+	
+	public void setCurrentAsBestParameters () {
+		if(this._opt.name().contains("Gradient Descent Optimizer")){
+			GradientDescentOptimizer gdOptimizer = (GradientDescentOptimizer)this._opt;
+			gdOptimizer.setCurrentAsBestParameters();
+		}
+	}
+	
+	/**
+	 * Set the best parameters (only used in gradient optimizer.)
+	 */
+	public void setBestParameters() {
+		if(this._opt.name().contains("Gradient Descent Optimizer")){
+    		System.out.println("Copying the best parameters");
+    		GradientDescentOptimizer gdOptimizer = (GradientDescentOptimizer)this._opt;
+    		gdOptimizer.copyBest();
+    		if (NetworkConfig.USE_NEURAL_FEATURES) {
+        		// De-concatenate into their corresponding weight vectors 
+        		int ptr = 0;
+        		System.arraycopy(concatWeights, ptr, _weights, 0, _weights.length);
+        		ptr += _weights.length;
+    			for (AbstractNeuralNetwork net : this._nn_param_g.getAllNets()) {
+    				double[] params = net.getParams();
+    				double[] gradParams = net.getGradParams();
+    				if (params == null || gradParams == null) continue;
+    				System.arraycopy(concatWeights, ptr, params, 0, params.length);
+    				ptr += params.length;
+    			}
+        	}
+    	}
 	}
 	
 	/**

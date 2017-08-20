@@ -17,6 +17,7 @@
 package org.statnlp.commons.ml.opt;
 
 import org.statnlp.commons.ml.opt.GradientDescentOptimizer.AdaptiveStrategy;
+import org.statnlp.commons.ml.opt.GradientDescentOptimizer.BestParamCriteria;
 
 /**
  * The factory class to construct the respective gradient descent optimizer with specified parameters
@@ -45,23 +46,26 @@ public class GradientDescentOptimizerFactory extends OptimizerFactory {
 	private boolean gradientClipping;
 	private double gradientClippingThreshold;
 	
-	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate) {
-		this(adaptiveStrategy, learningRate, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, 0.0);
+	private BestParamCriteria paramSelectCriteria;
+	
+	GradientDescentOptimizerFactory(BestParamCriteria paramSelectCriteria, AdaptiveStrategy adaptiveStrategy, double learningRate) {
+		this(paramSelectCriteria, adaptiveStrategy, learningRate, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, 0.0);
 	}
 	
-	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double gradientClippingThreshold) {
-		this(adaptiveStrategy, learningRate, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true, gradientClippingThreshold);
+	GradientDescentOptimizerFactory(BestParamCriteria paramSelectCriteria, AdaptiveStrategy adaptiveStrategy, double learningRate, double gradientClippingThreshold) {
+		this(paramSelectCriteria, adaptiveStrategy, learningRate, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true, gradientClippingThreshold);
 	}
 	
-	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double adadeltaPhi, double adadeltaEps) {
-		this(adaptiveStrategy, learningRate, 1.0, adadeltaPhi, adadeltaEps, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, 0.0);
+	GradientDescentOptimizerFactory(BestParamCriteria paramSelectCriteria, AdaptiveStrategy adaptiveStrategy, double learningRate, double adadeltaPhi, double adadeltaEps) {
+		this(paramSelectCriteria, adaptiveStrategy, learningRate, 1.0, adadeltaPhi, adadeltaEps, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, 0.0);
 	}
 
-	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double adadeltaPhi, double adadeltaEps, double adadeltaDecay) {
-		this(adaptiveStrategy, learningRate, 1.0, adadeltaPhi, adadeltaEps, adadeltaDecay, 0.0, 0.0, 0.0, 0.0, 0.0, false, 0.0);
+	GradientDescentOptimizerFactory(BestParamCriteria paramSelectCriteria, AdaptiveStrategy adaptiveStrategy, double learningRate, double adadeltaPhi, double adadeltaEps, double adadeltaDecay) {
+		this(paramSelectCriteria, adaptiveStrategy, learningRate, 1.0, adadeltaPhi, adadeltaEps, adadeltaDecay, 0.0, 0.0, 0.0, 0.0, 0.0, false, 0.0);
 	}
 
-	GradientDescentOptimizerFactory(AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps, boolean gradientClipping, double gradientClippingThreshold) {
+	GradientDescentOptimizerFactory(BestParamCriteria paramSelectCriteria, AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps, boolean gradientClipping, double gradientClippingThreshold) {
+		this.paramSelectCriteria = paramSelectCriteria;
 		this.adaptiveStrategy = adaptiveStrategy;
 		this.learningRate = learningRate;
 		this.learningRateDecay = learningRateDecay;
@@ -79,7 +83,7 @@ public class GradientDescentOptimizerFactory extends OptimizerFactory {
 
 	@Override
 	public GradientDescentOptimizer create(int numWeights) {
-		return new GradientDescentOptimizer(adaptiveStrategy, learningRate, learningRateDecay, adadeltaPhi, adadeltaEps, adadeltaGradDecay, rmsPropDecay, rmsPropEps, adamBeta1, adamBeta2, adamEps, numWeights, gradientClipping, gradientClippingThreshold);
+		return new GradientDescentOptimizer(paramSelectCriteria, adaptiveStrategy, learningRate, learningRateDecay, adadeltaPhi, adadeltaEps, adadeltaGradDecay, rmsPropDecay, rmsPropEps, adamBeta1, adamBeta2, adamEps, numWeights, gradientClipping, gradientClippingThreshold);
 	}
 
 }

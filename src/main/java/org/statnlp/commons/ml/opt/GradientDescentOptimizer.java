@@ -92,8 +92,25 @@ public class GradientDescentOptimizer implements Optimizer{
 		ADAM,
 	}
 	
+	/**
+	 * 	Criteria to search for best parameter (used in gradient descent)
+	 */
+	public static enum BestParamCriteria {
+		/**
+		 * Usually used in neural network.
+		 */
+		BEST_ON_DEV,
+		
+		/**
+		 * Better not used this if using batch mode, as the batch objective 
+		 * could not be so expressive as epoch objective
+		 */
+		BEST_OBJECTIVE;
+	}
+	
 	private AdaptiveStrategy adaptiveStrategy;
 	private AdaptiveMethod currentAdaptiveMethod;
+	private BestParamCriteria paramSelectCriteria;
 	private double learningRate;
 	private double learningRateDecay;
 	
@@ -113,12 +130,13 @@ public class GradientDescentOptimizer implements Optimizer{
 	private boolean gradientClipping;
 	private double gradientClippingThreshold;
 	
-	public GradientDescentOptimizer(AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps, int weightLength, boolean gradientClipping, double gradientClippingThreshold){
+	public GradientDescentOptimizer(BestParamCriteria paramSelectCriteria, AdaptiveStrategy adaptiveStrategy, double learningRate, double learningRateDecay, double adadeltaPhi, double adadeltaEps, double adadeltaGradDecay, double rmsPropDecay, double rmsPropEps, double adamBeta1, double adamBeta2, double adamEps, int weightLength, boolean gradientClipping, double gradientClippingThreshold){
 		this.prevGradients = new double[weightLength];
 		this.prevSqGradients = new double[weightLength];
 		this.prevDelta = new double[weightLength];
 		
 		this.adaptiveStrategy = adaptiveStrategy;
+		this.paramSelectCriteria = paramSelectCriteria;
 		
 		this.learningRate = learningRate;
 		this.learningRateDecay = learningRateDecay;
@@ -311,22 +329,34 @@ public class GradientDescentOptimizer implements Optimizer{
 	
 	/**
 	 * Check whether current objective value is the best, and if it is, set as the current best.<br>
-	 * Then return whether the current objective value is the best
+	 * Then return whether the current objective value is the best 
+	 * Used when the parameter select criteria is on objective.
 	 * @return
 	 */
 	private boolean checkAndSetAndIsBest(){
-		if(this._obj < this.bestObj){
-			this.bestObj = this._obj;
-			for(int k=0; k<this._x.length; k++){
-				this.bestX[k] = this._x[k];
-				this.bestDelta[k] = this.prevDelta[k];
-				this.bestGradients[k] = this.prevGradients[k];
-				this.bestSqGradients[k] = this.prevSqGradients[k];
+		if (paramSelectCriteria == BestParamCriteria.BEST_OBJECTIVE) {
+			if(this._obj < this.bestObj){
+				this.bestObj = this._obj;
+				for(int k=0; k<this._x.length; k++){
+					this.bestX[k] = this._x[k];
+					this.bestDelta[k] = this.prevDelta[k];
+					this.bestGradients[k] = this.prevGradients[k];
+					this.bestSqGradients[k] = this.prevSqGradients[k];
+				}
+				this.bestIterNum = this.iterNum;
+				return true;
 			}
-			this.bestIterNum = this.iterNum;
-			return true;
-		}
+		} 
 		return false;
+	}
+	
+	/**
+	 * Set the current parameter as the best parameters
+	 */
+	public void setCurrentAsBestParameters() {
+		for(int k=0; k<this._x.length; k++){
+			this.bestX[k] = this._x[k];
+		}
 	}
 	
 	/**
@@ -334,7 +364,7 @@ public class GradientDescentOptimizer implements Optimizer{
 	 * except the iteration number, which stays the same (and update the iteration number of the best
 	 * objective value as the current iteration)
 	 */
-	private void copyBest(){
+	public void copyBest(){
 		this._obj = this.bestObj;
 		for(int k=0; k<this._x.length; k++){
 			this._x[k] = this.bestX[k];

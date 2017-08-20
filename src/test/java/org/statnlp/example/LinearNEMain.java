@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+import org.statnlp.commons.ml.opt.GradientDescentOptimizer.BestParamCriteria;
 import org.statnlp.commons.ml.opt.OptimizerFactory;
 import org.statnlp.commons.types.Instance;
 import org.statnlp.example.linear_ne.ECRFContinuousFeatureValueProvider;
@@ -51,6 +52,7 @@ public class LinearNEMain {
 	public static OptimizerFactory optimizer = OptimizerFactory.getLBFGSFactory();
 	public static boolean evalOnDev = false;
 	public static int evalFreq = 1000;
+	public static boolean lowercase = false;
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 
@@ -74,6 +76,7 @@ public class LinearNEMain {
 		NetworkConfig.PARALLEL_FEATURE_EXTRACTION = true;
 		NetworkConfig.BATCH_SIZE = batchSize; //need to enable batch training first
 		NetworkConfig.RANDOM_BATCH = false;
+		NetworkConfig.PRINT_BATCH_OBJECTIVE = false;
 		
 		//In order to compare with neural architecture for named entity recognition
 		Entity.get("START_TAG");
@@ -108,7 +111,7 @@ public class LinearNEMain {
 		} 
 		GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, new GlobalNeuralNetworkParam(nets));
 		
-		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, labels, neuralType, false);
+		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, labels, neuralType, false, lowercase);
 		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler(iobes, labels);
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
 		Function<Instance[], Metric> evalFunc = new Function<Instance[], Metric>() {
@@ -155,7 +158,8 @@ public class LinearNEMain {
 											NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 									}
 									break;
-					case "-iobes":  iobes = args[i+1].equals("true") ? true : false; break; 
+					case "-iobes":  iobes = args[i+1].equals("true") ? true : false; break;
+					case "-lowercase":  lowercase = args[i+1].equals("true") ? true : false; break;
 					case "-initNNweight": 
 						NetworkConfig.INIT_FV_WEIGHTS = args[i+1].equals("true") ? true : false; //optimize the neural features or not
 						break;
@@ -167,8 +171,8 @@ public class LinearNEMain {
 						}break;
 					case "-optimizer":
 						 if(args[i+1].equals("sgd")) {
-							 optimizer = OptimizerFactory.getGradientDescentFactoryUsingGradientClipping(0.05, 5);
-							 
+							 System.out.println("[Info] Using SGD with gradient clipping, take best parameter on development set.");
+							 optimizer = OptimizerFactory.getGradientDescentFactoryUsingGradientClipping(BestParamCriteria.BEST_ON_DEV, 0.05, 5);
 						 }
 						break;
 					case "-emb" : embedding = args[i+1]; break;

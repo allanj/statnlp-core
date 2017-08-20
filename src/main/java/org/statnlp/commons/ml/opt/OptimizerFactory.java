@@ -19,6 +19,7 @@ package org.statnlp.commons.ml.opt;
 import java.io.Serializable;
 
 import org.statnlp.commons.ml.opt.GradientDescentOptimizer.AdaptiveStrategy;
+import org.statnlp.commons.ml.opt.GradientDescentOptimizer.BestParamCriteria;
 import org.statnlp.hypergraph.StringIndex;
 
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -67,7 +68,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactory(){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.NONE, DEFAULT_LEARNING_RATE);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.NONE, DEFAULT_LEARNING_RATE);
 	}
 	
 	/**
@@ -77,7 +78,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactory(double learningRate){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.NONE, learningRate);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.NONE, learningRate);
 	}
 	
 	/**
@@ -87,7 +88,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingGradientClipping(double learningRate){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.NONE, learningRate, DEFAULT_CLIPPING_THRESHOLD);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.NONE, learningRate, DEFAULT_CLIPPING_THRESHOLD);
 	}
 	
 	/**
@@ -97,7 +98,11 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingGradientClipping(double learningRate, double threshold){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.NONE, learningRate, threshold);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.NONE, learningRate, threshold);
+	}
+	
+	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingGradientClipping(BestParamCriteria criteria, double learningRate, double threshold){
+		return new GradientDescentOptimizerFactory(criteria, AdaptiveStrategy.NONE, learningRate, threshold);
 	}
 	
 	/**
@@ -107,7 +112,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaGrad(){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAGRAD, DEFAULT_LEARNING_RATE);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADAGRAD, DEFAULT_LEARNING_RATE);
 	}
 	
 	/**
@@ -117,7 +122,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaGrad(double learningRate){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAGRAD, learningRate);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADAGRAD, learningRate);
 	}
 
 	/**
@@ -131,7 +136,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaDelta(){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA, 0.0, DEFAULT_ADADELTA_PHI, DEFAULT_ADADELTA_EPS);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA, 0.0, DEFAULT_ADADELTA_PHI, DEFAULT_ADADELTA_EPS);
 	}
 	
 	/**
@@ -143,7 +148,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaDelta(double phi, double eps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA, 0.0, phi, eps);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA, 0.0, phi, eps);
 	}
 	
 	/**
@@ -157,7 +162,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingSmoothedAdaDelta(double phi, double eps, double decay){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA, 0.0, phi, eps, decay);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA, 0.0, phi, eps, decay);
 	}
 	
 	/**
@@ -171,7 +176,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaDeltaDecaying(double phi, double eps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_DECAYING, 0.0, phi, eps);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA_DECAYING, 0.0, phi, eps);
 	}
 	
 	/**
@@ -186,7 +191,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingSmoothedAdaDeltaDecaying(double phi, double eps, double decay){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_DECAYING, 0.0, phi, eps, decay);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA_DECAYING, 0.0, phi, eps, decay);
 	}
 	
 	/**
@@ -201,7 +206,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaDeltaThenAdaGrad(double learningRate, double phi, double eps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_THEN_ADAGRAD, learningRate, phi, eps);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA_THEN_ADAGRAD, learningRate, phi, eps);
 	}
 	
 	/**
@@ -215,7 +220,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaDeltaThenStop(double phi, double eps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_THEN_STOP, 0.0, phi, eps);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA_THEN_STOP, 0.0, phi, eps);
 	}
 	
 	/**
@@ -233,7 +238,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingSmoothedAdaDeltaThenGD(){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_THEN_GD, DEFAULT_LEARNING_RATE, DEFAULT_ADADELTA_PHI, DEFAULT_ADADELTA_EPS, DEFAULT_ADADELTA_GRAD_DECAY);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA_THEN_GD, DEFAULT_LEARNING_RATE, DEFAULT_ADADELTA_PHI, DEFAULT_ADADELTA_EPS, DEFAULT_ADADELTA_GRAD_DECAY);
 	}
 	
 	/**
@@ -249,7 +254,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingSmoothedAdaDeltaThenGD(double learningRate, double phi, double eps, double decay){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_THEN_GD, learningRate, phi, eps, decay);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA_THEN_GD, learningRate, phi, eps, decay);
 	}
 	
 	/**
@@ -265,7 +270,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingSmoothedAdaDeltaThenAdaGrad(double learningRate, double phi, double eps, double decay){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_THEN_ADAGRAD, learningRate, phi, eps, decay);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA_THEN_ADAGRAD, learningRate, phi, eps, decay);
 	}
 	
 	/**
@@ -282,7 +287,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingSmoothedAdaDeltaThenStop(){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_THEN_STOP, 0.0, DEFAULT_ADADELTA_PHI, DEFAULT_ADADELTA_EPS, DEFAULT_ADADELTA_GRAD_DECAY);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA_THEN_STOP, 0.0, DEFAULT_ADADELTA_PHI, DEFAULT_ADADELTA_EPS, DEFAULT_ADADELTA_GRAD_DECAY);
 	}
 	
 	/**
@@ -297,7 +302,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingSmoothedAdaDeltaThenStop(double phi, double eps, double decay){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_THEN_STOP, 0.0, phi, eps, decay);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA_THEN_STOP, 0.0, phi, eps, decay);
 	}
 	
 	/**
@@ -311,7 +316,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaDeltaThenGD(double learningRate, double phi, double eps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADADELTA_THEN_GD, learningRate, phi, eps);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADADELTA_THEN_GD, learningRate, phi, eps);
 	}
 	
 	/**
@@ -326,7 +331,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingRMSProp(){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.RMSPROP, DEFAULT_LEARNING_RATE, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, DEFAULT_RMSPROP_DECAY, DEFAULT_RMSPROP_EPS, 0.0, 0.0, 0.0, false, 0);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.RMSPROP, DEFAULT_LEARNING_RATE, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, DEFAULT_RMSPROP_DECAY, DEFAULT_RMSPROP_EPS, 0.0, 0.0, 0.0, false, 0);
 	}
 	
 	/**
@@ -339,7 +344,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingRMSProp(double learningRate, double rmsPropDecay, double rmsPropEps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.RMSPROP, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, rmsPropDecay, rmsPropEps, 0.0, 0.0, 0.0, false, 0);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.RMSPROP, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, rmsPropDecay, rmsPropEps, 0.0, 0.0, 0.0, false, 0);
 	}
 	
 	/**
@@ -355,7 +360,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaM(){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM, DEFAULT_LEARNING_RATE, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, DEFAULT_ADAM_BETA1, DEFAULT_ADAM_BETA2, DEFAULT_ADAM_EPS, false, 0);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADAM, DEFAULT_LEARNING_RATE, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, DEFAULT_ADAM_BETA1, DEFAULT_ADAM_BETA2, DEFAULT_ADAM_EPS, false, 0);
 	}
 	
 	/**
@@ -369,7 +374,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaM(double learningRate, double adamBeta1, double adamBeta2, double adamEps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, adamBeta1, adamBeta2, adamEps, false, 0);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADAM, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, adamBeta1, adamBeta2, adamEps, false, 0);
 	}
 	
 	/**
@@ -385,7 +390,7 @@ public abstract class OptimizerFactory implements Serializable {
 	 * @return
 	 */
 	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaMThenStop(double learningRate, double adamBeta1, double adamBeta2, double adamEps){
-		return new GradientDescentOptimizerFactory(AdaptiveStrategy.ADAM_THEN_STOP, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, adamBeta1, adamBeta2, adamEps, false, 0);
+		return new GradientDescentOptimizerFactory(BestParamCriteria.BEST_OBJECTIVE, AdaptiveStrategy.ADAM_THEN_STOP, learningRate, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, adamBeta1, adamBeta2, adamEps, false, 0);
 	}
 	
 	/**

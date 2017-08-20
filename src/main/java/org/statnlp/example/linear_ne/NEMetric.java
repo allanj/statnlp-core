@@ -29,6 +29,9 @@ public class NEMetric implements Metric {
 		return this.fscore;
 	}
 
+	@Override
+	public String toString() {
+		return "NEMetric [precision=" + precision + ", recall=" + recall + ", fscore=" + fscore + "]";
+	}
 	
-
 }
