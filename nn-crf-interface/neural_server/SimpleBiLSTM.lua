@@ -14,6 +14,8 @@ function SimpleBiLSTM:initialize(javadata, ...)
     data.sentences = listToTable(javadata:get("nnInputs"))
     data.hiddenSize = javadata:get("hiddenSize")
     data.optimizer = javadata:get("optimizer")
+    data.learningRate = javadata:get("learningRate")
+    data.clipping = javadata:get("clipping")
     self.numLabels = javadata:get("numLabels")
     data.embedding = javadata:get("embedding")
     local isTraining = javadata:get("isTraining")
@@ -142,7 +144,7 @@ function SimpleBiLSTM:createOptimizer()
     print(string.format("Optimizer: %s", data.optimizer))
     self.doOptimization = data.optimizer ~= nil and data.optimizer ~= 'none'
     if self.doOptimization == true then
-        if data.optimizer == 'sgd' then
+        if data.optimizer == 'sgd_normal' then
             self.optimizer = optim.sgd
             self.optimState = {learningRate=data.learningRate}
         elseif data.optimizer == 'adagrad' then
@@ -157,6 +159,10 @@ function SimpleBiLSTM:createOptimizer()
         elseif data.optimizer == 'lbfgs' then
             self.optimizer = optim.lbfgs
             self.optimState = {tolFun=10e-10, tolX=10e-16}
+        elseif data.optimizer == 'sgd' then
+            --- with gradient clipping
+            self.optimizer = sgdgc
+            self.optimState = {learningRate=data.learningRate, clipping=data.clipping}
         end
     end
 end

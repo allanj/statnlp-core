@@ -102,7 +102,7 @@ public class LinearNEMain {
 				int hiddenSize = 100;
 				String optimizer = nnOptimizer;
 				boolean bidirection = true;
-				nets.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, labels.length - 2, gpuId, embedding));
+				nets.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, 0.05, 5, labels.length - 2, gpuId, embedding));
 			} else if (neuralType.equals("continuous")) {
 				nets.add(new ECRFContinuousFeatureValueProvider(2, labels.length - 2));
 			} else {

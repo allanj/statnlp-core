@@ -5,7 +5,7 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 public class BidirectionalLSTM extends NeuralNetworkCore {
 	
 	
-	public BidirectionalLSTM(int hiddenSize, boolean bidirection, String optimizer, int numLabels, int gpuId, String embedding) {
+	public BidirectionalLSTM(int hiddenSize, boolean bidirection, String optimizer, double learningRate, int clipping, int numLabels, int gpuId, String embedding) {
 		super(numLabels);
 		config.put("class", "SimpleBiLSTM");
         config.put("hiddenSize", hiddenSize);
@@ -14,6 +14,8 @@ public class BidirectionalLSTM extends NeuralNetworkCore {
         config.put("numLabels", numLabels);
         config.put("embedding", embedding);
         config.put("gpuid", gpuId);
+        config.put("learningRate", 0.05);
+        config.put("clipping", 5);
 	}
 
 	@Override

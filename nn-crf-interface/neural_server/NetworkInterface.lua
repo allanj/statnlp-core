@@ -10,6 +10,7 @@ include 'nn-crf-interface/neural_server/SimpleBiLSTM.lua'
 include 'nn-crf-interface/neural_server/ContinuousFeature.lua'
 include 'nn-crf-interface/neural_server/OneHot.lua'
 include 'nn-crf-interface/neural_server/Utils.lua'
+include 'nn-crf-interface/neural_server/optim/sgdgc.lua'
 
 local SEED = 1337
 torch.manualSeed(SEED)
