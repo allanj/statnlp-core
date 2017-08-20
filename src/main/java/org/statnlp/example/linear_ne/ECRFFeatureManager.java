@@ -28,14 +28,16 @@ public class ECRFFeatureManager extends FeatureManager {
 	
 	private String neuralType;
 	private boolean moreBinaryFeatures = false;
+	private boolean lowercase = true;
 	private int maxmimumPrefixSUffixLength = 6;
 	private Entity[] labels;
 	
-	public ECRFFeatureManager(GlobalNetworkParam param_g, Entity[] labels, String neuralType, boolean moreBinaryFeatures) {
+	public ECRFFeatureManager(GlobalNetworkParam param_g, Entity[] labels, String neuralType, boolean moreBinaryFeatures, boolean lowercase) {
 		super(param_g);
 		this.neuralType = neuralType;
 		this.labels = labels;
 		this.moreBinaryFeatures = moreBinaryFeatures;
+		this.lowercase = lowercase;
 	}
 	
 	@Override
@@ -80,7 +82,8 @@ public class ECRFFeatureManager extends FeatureManager {
 			if (eId != 0 && eId != this.labels.length - 1) {
 				Object input = null;
 				if(neuralType.equals("lstm")) {
-					input = new SimpleImmutableEntry<String, Integer>(sent.toString(), pos);
+					String sentenceInput = this.lowercase ? sent.toString().toLowerCase() : sent.toString();
+					input = new SimpleImmutableEntry<String, Integer>(sentenceInput, pos);
 				} else if(neuralType.equals("mlp")){
 					input = llw+IN_SEP+lw+IN_SEP+word+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+llt+IN_SEP+lt+IN_SEP+tag+IN_SEP+rt+IN_SEP+rrt;
 				} else {

@@ -109,6 +109,7 @@ public class NetworkConfig {
 	 */
 	public static int BATCH_SIZE = 20;
 	public static int RANDOM_BATCH_SEED = 2345;
+	public static boolean PRINT_BATCH_OBJECTIVE = false;
 	
 	/** The weight of the cost function for SSVM and Softmax-Margin */
 	public static double MARGIN = 0.5;

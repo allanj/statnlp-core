@@ -81,14 +81,14 @@ function forward(training, batchInputIds)
     local timer = torch.Timer()
     net:forward(training, batch)
     local time = timer:time().real
-    print(string.format("Forward took %.4fs", time))
+    ---print(string.format("Forward took %.4fs", time))
 end
 
 function backward()
     local timer = torch.Timer()
     net:backward()
     local time = timer:time().real
-    print(string.format("Backward took %.4fs", time))
+    ---print(string.format("Backward took %.4fs", time))
 end
 
 function save_model(prefix)

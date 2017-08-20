@@ -1,9 +1,11 @@
 include 'LampleLSTM.lua'
+--include 'GPUUtils.lua'
 local SimpleBiLSTM, parent = torch.class('SimpleBiLSTM', 'AbstractNeuralNetwork')
 
 function SimpleBiLSTM:__init(doOptimization, gpuid)
     parent.__init(self, doOptimization)
     self.data = {}
+    self.gpuid = gpuid
 end
 
 function SimpleBiLSTM:initialize(javadata, ...)
@@ -31,6 +33,10 @@ function SimpleBiLSTM:initialize(javadata, ...)
         self.x2Tab = {}
         self.x2 = torch.LongTensor()
         self.gradOutput = {}
+        if self.gpuid >= 0 then
+            self.x1 = self.x1:cuda()
+            self.x2 = self.x2:cuda()
+        end
         local outputAndGradOutputPtr = {... }
         self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
         self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
@@ -51,11 +57,13 @@ function SimpleBiLSTM:createNetwork()
         else -- unknown/no embedding, defaults to random init
             print ("unknown embedding type, use random embedding..")
             sharedLookupTable = nn.LookupTableMaskZero(self.vocabSize, hiddenSize)
+            sharedLookupTable.weight:uniform(-torch.sqrt(0.03), torch.sqrt(0.03))
             print("lookup table parameter: ".. sharedLookupTable:getParameters():nElement())
         end
     else
         print ("Not using any embedding, just use random embedding")
         sharedLookupTable = nn.LookupTableMaskZero(self.vocabSize, hiddenSize)
+        sharedLookupTable.weight:uniform(-torch.sqrt(0.03), torch.sqrt(0.03))
     end
 
     -- forward rnn
@@ -97,6 +105,7 @@ function SimpleBiLSTM:createNetwork()
     local rnn = nn.Sequential()
         :add(brnn) 
         :add(nn.Sequencer(nn.MaskZero(nn.Linear(mergeHiddenSize, self.numLabels), 1))) 
+    if self.gpuid >= 0 then rnn:cuda() end
     self.net = rnn
 end
 
@@ -108,11 +117,22 @@ function SimpleBiLSTM:obtainParams()
         self:createOptimizer()
         -- no return array if optim is done here
     else
-        self.params:retain()
-        self.paramsPtr = torch.pointer(self.params)
-        self.gradParams:retain()
-        self.gradParamsPtr = torch.pointer(self.gradParams)
-        return self.paramsPtr, self.gradParamsPtr
+        if self.gpuid >= 0 then
+            -- since the the network is gpu network.
+            self.paramsDouble = self.params:double()
+            self.paramsDouble:retain()
+            self.paramsPtr = torch.pointer(self.paramsDouble)
+            self.gradParamsDouble = self.gradParams:double()
+            self.gradParamsDouble:retain()
+            self.gradParamsPtr = torch.pointer(self.gradParamsDouble)
+            return self.paramsPtr, self.gradParamsPtr
+        else
+            self.params:retain()
+            self.paramsPtr = torch.pointer(self.params)
+            self.gradParams:retain()
+            self.gradParamsPtr = torch.pointer(self.gradParams)
+            return self.paramsPtr, self.gradParamsPtr
+        end
     end
 end
 
@@ -142,8 +162,14 @@ function SimpleBiLSTM:createOptimizer()
 end
 
 function SimpleBiLSTM:forward(isTraining, batchInputIds)
+    if self.gpuid >= 0 and not self.doOptimization then
+        self.params:copy(self.paramsDouble:cuda())
+    end
     local nnInput = self:getForwardInput(isTraining, batchInputIds)
     local output_table = self.net:forward(nnInput)
+    if self.gpuid >= 0 then
+        nn.utils.recursiveType(output_table, 'torch.DoubleTensor')
+    end 
     --- this is to converting the table into tensor.
     self.output = torch.cat(self.output, output_table, 1)
     if not self.outputPtr:isSameSizeAs(self.output) then
@@ -163,6 +189,7 @@ function SimpleBiLSTM:getForwardInput(isTraining, batchInputIds)
             self.x2 = torch.cat(self.x2, self.x[2], 2):index(1, batchInputIds)
             self.x2:resize(self.x2:size(1)*self.x2:size(2))
             torch.split(self.x2Tab, self.x2, batchInputIds:size(1), 1)
+
             self.batchInput = {self.x1Tab, self.x2Tab}
             return self.batchInput
         else
@@ -195,9 +222,16 @@ function SimpleBiLSTM:backward()
     local backwardInput = self:getBackwardInput()  --since backward only happen in training
     local backwardSentNum = self:getBackwardSentNum()
     torch.split(self.gradOutput, gradOutputTensor, backwardSentNum, 1)
+    if self.gpuid >= 0 then
+        nn.utils.recursiveType(self.gradOutput, 'torch.CudaTensor')
+    end
     self.net:backward(backwardInput, self.gradOutput)
     if self.doOptimization then
         self.optimizer(self.feval, self.params, self.optimState)
+    else
+        if self.gpuid >= 0 then
+            self.gradParamsDouble:copy(self.gradParams:double())
+        end
     end
     
 end
@@ -237,6 +271,7 @@ function SimpleBiLSTM:prepare_input()
                 inputs[step][j] = tok_id
             end
         end
+        if self.gpuid >= 0 then inputs[step] = inputs[step]:cuda() end
     end
     print("max sentencen length:"..maxLen)
     for step=1,maxLen do
@@ -245,6 +280,7 @@ function SimpleBiLSTM:prepare_input()
             local tokens = sentence_toks[j]
             inputs_rev[step][j] = inputs[maxLen-step+1][j]
         end
+        if self.gpuid >= 0 then inputs_rev[step] = inputs_rev[step]:cuda() end
     end
     self.maxLen = maxLen
     return {inputs, inputs_rev}
