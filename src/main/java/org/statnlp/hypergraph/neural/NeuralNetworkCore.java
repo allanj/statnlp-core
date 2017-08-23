@@ -157,7 +157,8 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 			TIntHashSet set = new TIntHashSet();
 			while(iter.hasNext()) {
 				int positiveInstId = iter.next();
-				set.addAll(this.instId2NNInputId.get(positiveInstId));
+				if (this.instId2NNInputId.containsKey(positiveInstId))
+					set.addAll(this.instId2NNInputId.get(positiveInstId));
 			}
 			TIntList batchInputIds = new TIntArrayList(set);
 			this.dynamicNNInputId2BatchInputId = new TIntIntHashMap(batchInputIds.size());
