@@ -691,7 +691,7 @@ public abstract class NetworkModel implements Serializable{
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
 			//initialize the neural decoder.
 			GlobalNeuralNetworkParam learner = this._fm.getParam_G().getNNParamG();
-			if (_neuralDecoder == null) {
+			if (_neuralDecoder == null || !cacheFeatures) {
 				_neuralDecoder = learner.copyNNParamG();
 				_neuralDecoder.setLocalNetworkParams(this._fm._params_l);
 				_neuralDecoder.prepareInputId();
