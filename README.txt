@@ -1,6 +1,5 @@
 ===============================================================================
-                    StatNLP Hypergraph-based Graphical Model:
-                      A Framework for Structured Prediction
+           StatNLP: Hypergraph-based Structured Prediction Model
 ===============================================================================
 
 This package contains StatNLP Hypergraph-based Graphical Model: A Framework for
