@@ -40,7 +40,7 @@ function AbstractNeuralNetwork:prepare_input()
     self.x = torch.Tensor()
 end
 
-function AbstractNeuralNetwork:forward(isTraining)
+function AbstractNeuralNetwork:forward(isTraining, batchInputIds)
     -- Implement forward computation.
     self.isTraining = isTraining
     local output = self.net:forward(self.x)

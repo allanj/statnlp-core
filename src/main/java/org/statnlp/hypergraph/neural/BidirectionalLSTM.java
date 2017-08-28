@@ -30,7 +30,7 @@ public class BidirectionalLSTM extends NeuralNetworkCore {
 		@SuppressWarnings("unchecked")
 		SimpleImmutableEntry<String, Integer> sentAndPos = (SimpleImmutableEntry<String, Integer>) edgeInput;
 		int sentID = this.getNNInputID(sentAndPos.getKey()); 
-		int row = sentAndPos.getValue()*this.getNNInputSize()+sentID;
+		int row = sentAndPos.getValue() * this.getNNInputSize() + sentID;
 		return row;
 	}
 

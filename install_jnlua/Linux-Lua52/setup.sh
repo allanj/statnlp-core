@@ -10,5 +10,5 @@ cd $CURRENT_DIR
 cp jnlua-1.0.4/src/main/c/Linux/libjnlua5.2.so $STATNLP_DIR/nativeLib/libjnlua52.so
 cp $HOME/torch/install/lib/libTH.so $STATNLP_DIR/nativeLib
 luarocks install torch
-luarocks install nn
+## luarocks install nn
 luarocks install rnn

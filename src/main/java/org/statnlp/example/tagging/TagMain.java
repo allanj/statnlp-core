@@ -15,6 +15,8 @@ import org.statnlp.hypergraph.GlobalNetworkParam;
 import org.statnlp.hypergraph.NetworkConfig;
 import org.statnlp.hypergraph.NetworkConfig.ModelType;
 import org.statnlp.hypergraph.NetworkModel;
+import org.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
+import org.statnlp.hypergraph.neural.NeuralNetworkCore;
 
 public class TagMain {
 
@@ -24,26 +26,35 @@ public class TagMain {
 	public static int testNum = 20;
 	public static int numThreads = 10;
 	public static double l2 = 0.01;
-	public static int numIterations = 100;
+	public static int numIterations = 30;
 	public static List<String> labels;
+	public static boolean visualization = false;
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 		
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
 		NetworkConfig.NUM_THREADS = numThreads;
+		NetworkConfig.USE_NEURAL_FEATURES = true;
 		
 		labels = new ArrayList<>();
 		TagInstance[] trainInstances = readData(trainFile, true, trainNum);
 		System.out.println("#labels: " + labels.size());
-		NetworkConfig.MODEL_TYPE = ModelType.STRUCTURED_PERCEPTRON;
+		NetworkConfig.MODEL_TYPE = ModelType.CRF;
 		
+		List<NeuralNetworkCore> nets = new ArrayList<NeuralNetworkCore>();
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
+			TagBiLSTM net = new TagBiLSTM(labels.size());
+			nets.add(net);
+		}
+		GlobalNeuralNetworkParam gnnp = new GlobalNeuralNetworkParam(nets);
 		
-		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(0.1));
+		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory(), gnnp);
 		TagFeatureManager fa = new TagFeatureManager(gnp);
 		TagNetworkCompiler compiler = new TagNetworkCompiler(labels);
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
 		model.train(trainInstances, numIterations);
-		model.visualize(TaggingViewer.class, trainInstances);
+		if (visualization) model.visualize(TaggingViewer.class, trainInstances);
 		
 		TagInstance[] testInstances = readData(testFile, false, testNum);
 		Instance[] predictions = model.decode(testInstances);

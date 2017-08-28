@@ -63,6 +63,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		config = new HashMap<>();
 		optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
 		config.put("optimizeNeural", optimizeNeural);
+		config.put("numLabels", numLabels);
 	}
 	
 	@Override

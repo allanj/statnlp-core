@@ -7,6 +7,7 @@ include 'nn-crf-interface/neural_server/AbstractNeuralNetwork.lua'
 include 'nn-crf-interface/neural_server/MultiLayerPerceptron.lua'
 include 'nn-crf-interface/neural_server/BidirectionalLSTM.lua'
 include 'nn-crf-interface/neural_server/SimpleBiLSTM.lua'
+include 'nn-crf-interface/neural_server/TagBiLSTM.lua'
 include 'nn-crf-interface/neural_server/ContinuousFeature.lua'
 include 'nn-crf-interface/neural_server/OneHot.lua'
 include 'nn-crf-interface/neural_server/Utils.lua'
@@ -57,6 +58,8 @@ function initialize(javadata, ...)
             net = BidirectionalLSTM(optimizeInTorch, gpuid)
         elseif networkClass == "SimpleBiLSTM" then
             net = SimpleBiLSTM(optimizeInTorch, gpuid)
+        elseif networkClass == "TagBiLSTM" then
+            net = TagBiLSTM(optimizeInTorch, gpuid)
         elseif networkClass == "ContinuousFeature" then
             net = ContinuousFeature(optimizeInTorch, gpuid)
         else

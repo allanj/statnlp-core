@@ -57,16 +57,11 @@ public class TaggingViewer extends VisualizationViewerEngine {
 		this.instance = (TagInstance)super.instance;
 		this.inputs = (Sentence)super.inputs;
 		this.outputs = (ArrayList<String>)super.outputs;
-		//WIDTH = instance.Length * span_width;
 	}
 	
 	@Override
 	protected String label_mapping(VNode node) {
 		int[] ids = node.ids;
-//		int size = instance.size();
-//		int pos = ids[0]; // position
-//		int nodeId = ids[1];
-//		int nodeType = ids[2];
 		String label =  Arrays.toString(ids);
 		
 		return  label;
