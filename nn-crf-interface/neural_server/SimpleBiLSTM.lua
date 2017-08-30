@@ -18,7 +18,22 @@ function SimpleBiLSTM:initialize(javadata, ...)
     data.clipping = javadata:get("clipping")
     self.numLabels = javadata:get("numLabels")
     data.embedding = javadata:get("embedding")
+    local modelPath = javadata:get("nnModelFile")
     local isTraining = javadata:get("isTraining")
+    data.isTraining = isTraining
+
+    if self.net == nil and isTraining then
+        -- means is initialized process and we don't have the input yet.
+        self:createNetwork()
+        print(self.net)
+        return self:obtainParams()
+    end
+
+    if self.net == nil then 
+        self:load_model(modelPath)
+    end
+
+
     if isTraining then
         self.x = self:prepare_input()
     else 
@@ -28,24 +43,21 @@ function SimpleBiLSTM:initialize(javadata, ...)
     self.output = torch.Tensor()
     
 
-    if self.net == nil then
-        -- means is initialized process and we don't have the input yet.
-        self.x1Tab = {}
-        self.x1 = torch.LongTensor()
-        self.x2Tab = {}
-        self.x2 = torch.LongTensor()
-        self.gradOutput = {}
-        if self.gpuid >= 0 then
-            self.x1 = self.x1:cuda()
-            self.x2 = self.x2:cuda()
-        end
-        local outputAndGradOutputPtr = {... }
+    self.x1Tab = {}
+    self.x1 = torch.LongTensor()
+    self.x2Tab = {}
+    self.x2 = torch.LongTensor()
+    if self.gpuid >= 0 then
+        self.x1 = self.x1:cuda()
+        self.x2 = self.x2:cuda()
+    end
+    self.gradOutput = {}
+    local outputAndGradOutputPtr = {... }
+    if #outputAndGradOutputPtr > 0 then 
         self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
         self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
-        self:createNetwork()
-        print(self.net)
-        return self:obtainParams()
     end
+    
 end
 
 --The network is only created once is used.
@@ -321,9 +333,12 @@ end
 
 function SimpleBiLSTM:save_model(path)
     --need to save the vocabulary as well.
-    torch.save(path, self.net)
+    torch.save(path, {self.net, self.idx2word, self.word2idx})
 end
 
 function SimpleBiLSTM:load_model(path)
-    self.net = torch.load(path)
+    local object = torch.load(path)
+    self.net = object[1]
+    self.idx2word = object[2]
+    self.word2idx = object[3]
 end

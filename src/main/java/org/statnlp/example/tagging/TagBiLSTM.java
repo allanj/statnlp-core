@@ -6,6 +6,8 @@ import org.statnlp.hypergraph.neural.NeuralNetworkCore;
 
 public class TagBiLSTM extends NeuralNetworkCore {
 
+	private static final long serialVersionUID = 2893976240095976474L;
+
 	public TagBiLSTM(int numLabels) {
 		super(numLabels);
 		this.config.put("class", "TagBiLSTM");

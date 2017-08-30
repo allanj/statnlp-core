@@ -2,6 +2,8 @@ package org.statnlp.hypergraph.neural;
 
 public abstract class ContinuousFeatureValueProvider extends NeuralNetworkCore {
 
+	private static final long serialVersionUID = -4464018923146788406L;
+	
 	protected int numFeatureValues;
 	
 	public ContinuousFeatureValueProvider(int numLabels) {

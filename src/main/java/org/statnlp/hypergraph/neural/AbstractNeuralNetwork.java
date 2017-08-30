@@ -1,6 +1,7 @@
 package org.statnlp.hypergraph.neural;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -18,8 +19,10 @@ import com.sun.jna.Native;
 import gnu.trove.set.TIntSet;
 
 
-public abstract class AbstractNeuralNetwork {
+public abstract class AbstractNeuralNetwork implements Serializable{
 	
+	private static final long serialVersionUID = 1501009887917654699L;
+
 	public static String LUA_VERSION = "5.2";
 	
 	protected int netId;
@@ -27,7 +30,7 @@ public abstract class AbstractNeuralNetwork {
 	/**
 	 * A LuaState instance for loading Lua scripts
 	 */
-	public LuaState L;
+	public transient LuaState L;
 	
 	/**
 	 * The total number of unique output labels
@@ -35,9 +38,9 @@ public abstract class AbstractNeuralNetwork {
 	protected int numLabels;
 	
 	/**
-	 * The provider's internal weights and gradients
+	 * The neural net's internal weights and gradients
 	 */
-	protected double[] params, gradParams;
+	protected transient double[] params, gradParams;
 	
 	/**
 	 * A flattened matrix containing the continuous values
@@ -50,7 +53,7 @@ public abstract class AbstractNeuralNetwork {
 	 */
 	protected double scale;
 	
-	protected LocalNetworkParam[] params_l;
+	protected transient LocalNetworkParam[] params_l;
 	
 	public AbstractNeuralNetwork(int numLabels) {
 		this.numLabels = numLabels;

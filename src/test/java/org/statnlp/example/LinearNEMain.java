@@ -1,10 +1,13 @@
 package org.statnlp.example;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+import org.statnlp.commons.io.RAWF;
 import org.statnlp.commons.ml.opt.GradientDescentOptimizer.BestParamCriteria;
 import org.statnlp.commons.ml.opt.OptimizerFactory;
 import org.statnlp.commons.types.Instance;
@@ -18,8 +21,8 @@ import org.statnlp.example.linear_ne.Entity;
 import org.statnlp.hypergraph.DiscriminativeNetworkModel;
 import org.statnlp.hypergraph.GlobalNetworkParam;
 import org.statnlp.hypergraph.NetworkConfig;
-import org.statnlp.hypergraph.NetworkModel;
 import org.statnlp.hypergraph.NetworkConfig.ModelType;
+import org.statnlp.hypergraph.NetworkModel;
 import org.statnlp.hypergraph.decoding.Metric;
 import org.statnlp.hypergraph.neural.BidirectionalLSTM;
 import org.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
@@ -43,6 +46,10 @@ public class LinearNEMain {
 	public static String testFile = "data/conll2003/eng.testb";
 	public static String nerOut = "data/conll2003/output/ner_out.txt";
 	public static String tmpOut = "data/conll2003/output/tmp_out.txt";
+	public static boolean saveModel = false;
+	public static boolean readModel = true;
+	public static String modelFile = "models/linearNE.m";
+	public static String nnModelFile = "models/lstm.m";
 	public static String neuralType = "lstm";
 	public static boolean iobes = false;
 	public static int gpuId = -1;
@@ -54,7 +61,7 @@ public class LinearNEMain {
 	public static int evalFreq = 1000;
 	public static boolean lowercase = false;
 	
-	public static void main(String[] args) throws IOException, InterruptedException{
+	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException{
 
 		processArgs(args);
 		System.err.println("[Info] trainingFile: "+trainFile);
@@ -95,35 +102,46 @@ public class LinearNEMain {
 			NetworkConfig.FEATURE_INIT_WEIGHT = 0.1;
 		}
 		
-		List<NeuralNetworkCore> nets = new ArrayList<NeuralNetworkCore>();
-		if(NetworkConfig.USE_NEURAL_FEATURES){
-//			gnp =  new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactory());
-			if (neuralType.equals("lstm")) {
-				int hiddenSize = 100;
-				String optimizer = nnOptimizer;
-				boolean bidirection = true;
-				nets.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, 0.05, 5, labels.length - 2, gpuId, embedding));
-			} else if (neuralType.equals("continuous")) {
-				nets.add(new ECRFContinuousFeatureValueProvider(2, labels.length - 2));
-			} else {
-				throw new RuntimeException("Unknown neural type: " + neuralType);
-			}
-		} 
-		GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, new GlobalNeuralNetworkParam(nets));
+		NetworkModel model = null;
+		if (!readModel) {
+			List<NeuralNetworkCore> nets = new ArrayList<NeuralNetworkCore>();
+			if(NetworkConfig.USE_NEURAL_FEATURES){
+				if (neuralType.equals("lstm")) {
+					int hiddenSize = 100;
+					String optimizer = nnOptimizer;
+					boolean bidirection = true;
+					nets.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, 0.05, 5, labels.length - 2, gpuId, embedding)
+							.setModelFile(nnModelFile));
+				} else if (neuralType.equals("continuous")) {
+					nets.add(new ECRFContinuousFeatureValueProvider(2, labels.length - 2));
+				} else {
+					throw new RuntimeException("Unknown neural type: " + neuralType);
+				}
+			} 
+			GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, new GlobalNeuralNetworkParam(nets));
+			ECRFFeatureManager fa = new ECRFFeatureManager(gnp, labels, neuralType, false, lowercase);
+			ECRFNetworkCompiler compiler = new ECRFNetworkCompiler(iobes, labels);
+			model = DiscriminativeNetworkModel.create(fa, compiler);
+			Function<Instance[], Metric> evalFunc = new Function<Instance[], Metric>() {
+				@Override
+				public Metric apply(Instance[] t) {
+					return ECRFEval.evalNER(t, tmpOut);
+				}
+			};
+			if (!evalOnDev) devInstances = null;
+			model.train(trainInstances, numIteration, devInstances, evalFunc, evalFreq);
+		} else {
+			ObjectInputStream ois = RAWF.objectReader(modelFile);
+			model = (NetworkModel)ois.readObject();
+			ois.close();
+		}
 		
-		ECRFFeatureManager fa = new ECRFFeatureManager(gnp, labels, neuralType, false, lowercase);
-		ECRFNetworkCompiler compiler = new ECRFNetworkCompiler(iobes, labels);
-		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
-		Function<Instance[], Metric> evalFunc = new Function<Instance[], Metric>() {
-
-			@Override
-			public Metric apply(Instance[] t) {
-				return ECRFEval.evalNER(t, tmpOut);
-			}
-			
-		};
-		if (!evalOnDev) devInstances = null;
-		model.train(trainInstances, numIteration, devInstances, evalFunc, evalFreq);
+		if (saveModel) {
+			ObjectOutputStream oos =  RAWF.objectWriter(modelFile);
+			oos.writeObject(model);
+			oos.close();
+		}
+		
 		
 		testInstances = EReader.readData(testFile, false, testNumber,"IOB");
 		Instance[] predictions = model.decode(testInstances);

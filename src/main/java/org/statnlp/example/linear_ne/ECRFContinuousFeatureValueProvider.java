@@ -4,6 +4,8 @@ import org.statnlp.hypergraph.neural.ContinuousFeatureValueProvider;
 
 public class ECRFContinuousFeatureValueProvider extends ContinuousFeatureValueProvider {
 
+	private static final long serialVersionUID = 7652212330450652821L;
+
 	public ECRFContinuousFeatureValueProvider(int numFeatureValues, int numLabels) {
 		super(numFeatureValues, numLabels);
 	}

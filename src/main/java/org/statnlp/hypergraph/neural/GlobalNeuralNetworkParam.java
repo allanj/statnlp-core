@@ -22,9 +22,9 @@ public class GlobalNeuralNetworkParam implements Serializable{
 
 	protected List<NeuralNetworkCore> nets;
 	
-	protected LocalNetworkParam[] params_l;
+	protected transient LocalNetworkParam[] params_l;
 	
-	protected List<Map<Object,Integer>> allNNInput2Id;
+	protected transient List<Map<Object,Integer>> allNNInput2Id;
 	
 	public GlobalNeuralNetworkParam() {
 		this(new ArrayList<NeuralNetworkCore>());

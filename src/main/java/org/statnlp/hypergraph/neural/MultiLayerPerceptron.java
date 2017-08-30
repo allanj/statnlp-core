@@ -16,6 +16,8 @@ import org.statnlp.hypergraph.NetworkConfig;
  */
 public class MultiLayerPerceptron extends NeuralNetworkCore {
 	
+	private static final long serialVersionUID = -2992705834499543822L;
+	
 	/**
 	 * Special delimiters for the input.
 	 * e.g., w1#IN#w2#IN#w3#OUT#t1#IN#t2#IN#t3

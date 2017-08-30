@@ -1,5 +1,8 @@
 package org.statnlp.hypergraph.neural;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -23,40 +26,44 @@ import th4j.Tensor.DoubleTensor;
 
 public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements Cloneable {
 	
+	private static final long serialVersionUID = -2638896619016178432L;
+
 	protected HashMap<String,Object> config;
 	
-	protected boolean isTraining;
+	protected transient boolean isTraining;
 	
 	/**
 	 * Corresponding Torch tensors for params and gradParams
 	 */
-	protected DoubleTensor paramsTensor, gradParamsTensor;
+	protected transient DoubleTensor paramsTensor, gradParamsTensor;
 	
 	/**
 	 * Corresponding Torch tensors for output and gradOutput
 	 */
-	protected DoubleTensor outputTensorBuffer, countOutputTensorBuffer;
+	protected transient DoubleTensor outputTensorBuffer, countOutputTensorBuffer;
 	
-	public boolean optimizeNeural;
+	public transient boolean optimizeNeural;
 	
 	/**
 	 * Neural network input to index (id)
 	 * If you are using batch training, do not directly use this to obtain input id.
 	 * Use the method # {@link #getNNInputID()}
 	 */
-	protected Map<Object, Integer> nnInput2Id;
+	protected transient Map<Object, Integer> nnInput2Id;
 	
 	/**
 	 * Save the mapping from instance id to neural network input id.
 	 */
-	protected TIntObjectMap<TIntList> instId2NNInputId;
+	protected transient TIntObjectMap<TIntList> instId2NNInputId;
 	
 	/**
 	 * Dynamically save the batch instance id in batch training.
 	 */
-	protected TIntIntMap dynamicNNInputId2BatchInputId;
+	protected transient TIntIntMap dynamicNNInputId2BatchInputId;
 	
 	protected boolean continuousFeatureValue = false;
+	
+	protected transient String nnModelFile = null;
 	
 	public NeuralNetworkCore(int numLabels) {
 		super(numLabels);
@@ -77,14 +84,10 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		} else {
 			this.prepareContinuousFeatureValue();
 		}
-		Object[] args = null;
-		if (isTraining) {
-			this.countOutputTensorBuffer = new DoubleTensor();
-			this.outputTensorBuffer = new DoubleTensor();
-			args = new Object[]{config, outputTensorBuffer, countOutputTensorBuffer};
-		} else {
-			args = new Object[]{config};
-		}
+		this.countOutputTensorBuffer = new DoubleTensor();
+		this.outputTensorBuffer = new DoubleTensor();
+		Object[] args = new Object[]{config, outputTensorBuffer, countOutputTensorBuffer};
+		
 		config.put("isTraining", isTraining);
         Class<?>[] retTypes;
         if (optimizeNeural && isTraining) {
@@ -144,7 +147,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 */
 	@Override
 	public void forward(TIntSet batchInstIds) {
-		if (optimizeNeural) { // update with new params
+		if (optimizeNeural && isTraining) { // update with new params
 			if (getParamSize() > 0) {
 				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
 				//System.out.println("java side forward weights: " + this.params[0] + " " + this.params[1]);
@@ -305,6 +308,32 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		return c;
 	}
 	
+	public NeuralNetworkCore setModelFile(String nnModelFile) {
+		this.nnModelFile = nnModelFile;
+		return this;
+	}
+
+	private void writeObject(ObjectOutputStream out) throws IOException{
+		out.writeObject(this.config);
+		out.writeBoolean(this.continuousFeatureValue);
+		out.writeInt(this.netId);
+		out.writeInt(this.numLabels);
+		out.writeDouble(this.scale);
+		out.writeObject(this.nnModelFile);
+		this.save(this.nnModelFile);
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
+		this.config = (HashMap<String, Object>) in.readObject();
+		this.continuousFeatureValue = in.readBoolean();
+		this.netId = in.readInt();
+		this.numLabels = in.readInt();
+		this.scale = in.readDouble();
+		this.nnModelFile = (String) in.readObject();
+		this.config.put("nnModelFile", this.nnModelFile);
+		this.configureJNLua();
+	}
 	
 }
 

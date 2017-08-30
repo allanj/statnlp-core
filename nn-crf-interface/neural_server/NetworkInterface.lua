@@ -47,7 +47,7 @@ function initialize(javadata, ...)
     gpuid = javadata:get("gpuid")
     if gpuid == nil then gpuid = -1 end
     setupGPU()
-    if isTraining then
+    if isTraining or net == nil then
         -- re-seed
         torch.manualSeed(SEED)
         if gpuid >= 0 then cutorch.manualSeed(SEED) end

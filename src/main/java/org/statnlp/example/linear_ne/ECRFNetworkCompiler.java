@@ -26,6 +26,10 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 	private Entity[] labels;
 	private Map<Entity, Integer> labelIndex;
 	
+	static {
+		NetworkIDMapper.setCapacity(new int[]{150, 50, 3});
+	}
+	
 	public ECRFNetworkCompiler(boolean useIOBESConstraint, Entity[] labels){
 		this._size = 150;
 		this.useIOBESConstraintBuildNetwork = useIOBESConstraint;
@@ -34,7 +38,6 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 		for (int l = 0; l < this.labels.length; l++) {
 			this.labelIndex.put(this.labels[l], l);
 		}
-		NetworkIDMapper.setCapacity(new int[]{this._size, this.labels.length, 3});
 		this.compileUnlabeledInstancesGeneric();
 	}
 	
@@ -145,6 +148,7 @@ public class ECRFNetworkCompiler extends NetworkCompiler{
 		}
 		BaseNetwork network = lcrfNetwork.buildRudimentaryNetwork();
 		genericUnlabeledNetwork =  network;
+		System.out.println("nodes:" + genericUnlabeledNetwork.getAllNodes().length);
 	}
 	
 	@Override

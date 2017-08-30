@@ -4,7 +4,8 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 
 public class BidirectionalLSTM extends NeuralNetworkCore {
 	
-	
+	private static final long serialVersionUID = 4592893499307238510L;
+
 	public BidirectionalLSTM(int hiddenSize, boolean bidirection, String optimizer, double learningRate, int clipping, int numLabels, int gpuId, String embedding) {
 		super(numLabels);
 		config.put("class", "SimpleBiLSTM");
