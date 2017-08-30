@@ -84,9 +84,14 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		} else {
 			this.prepareContinuousFeatureValue();
 		}
-		this.countOutputTensorBuffer = new DoubleTensor();
-		this.outputTensorBuffer = new DoubleTensor();
-		Object[] args = new Object[]{config, outputTensorBuffer, countOutputTensorBuffer};
+		Object[] args = null;
+		if (isTraining || this.outputTensorBuffer == null) {
+			this.countOutputTensorBuffer = new DoubleTensor();
+			this.outputTensorBuffer = new DoubleTensor();
+			args = new Object[]{config, outputTensorBuffer, countOutputTensorBuffer};
+		} else {
+			args = new Object[]{config};
+		}
 		
 		config.put("isTraining", isTraining);
         Class<?>[] retTypes;

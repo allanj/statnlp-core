@@ -51,10 +51,9 @@ function SimpleBiLSTM:initialize(javadata, ...)
     end
     self.gradOutput = {}
     local outputAndGradOutputPtr = {... }
-    self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
-    self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
-
-    if isTraining then
+    if #outputAndGradOutputPtr > 0 then
+        self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
+        self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
         return self:obtainParams()
     end
 end
