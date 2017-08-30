@@ -22,27 +22,25 @@ function SimpleBiLSTM:initialize(javadata, ...)
     local isTraining = javadata:get("isTraining")
     data.isTraining = isTraining
 
+    if isTraining then
+        self.x = self:prepare_input()
+    end
+
     if self.net == nil and isTraining then
         -- means is initialized process and we don't have the input yet.
         self:createNetwork()
         print(self.net)
-        return self:obtainParams()
     end
-
     if self.net == nil then 
         self:load_model(modelPath)
     end
 
 
-    if isTraining then
-        self.x = self:prepare_input()
-    else 
+    if not isTraining then 
         self.testInput = self:prepare_input()
     end
     self.numSent = #data.sentences
     self.output = torch.Tensor()
-    
-
     self.x1Tab = {}
     self.x1 = torch.LongTensor()
     self.x2Tab = {}
@@ -53,11 +51,12 @@ function SimpleBiLSTM:initialize(javadata, ...)
     end
     self.gradOutput = {}
     local outputAndGradOutputPtr = {... }
-    if #outputAndGradOutputPtr > 0 then 
-        self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
-        self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
+    self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
+    self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
+
+    if isTraining then
+        return self:obtainParams()
     end
-    
 end
 
 --The network is only created once is used.
@@ -180,7 +179,7 @@ function SimpleBiLSTM:createOptimizer()
 end
 
 function SimpleBiLSTM:forward(isTraining, batchInputIds)
-    if self.gpuid >= 0 and not self.doOptimization then
+    if self.gpuid >= 0 and not self.doOptimization and isTraining then
         self.params:copy(self.paramsDouble:cuda())
     end
     local nnInput = self:getForwardInput(isTraining, batchInputIds)

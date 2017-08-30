@@ -63,7 +63,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	
 	protected boolean continuousFeatureValue = false;
 	
-	protected transient String nnModelFile = null;
+	protected String nnModelFile = null;
 	
 	public NeuralNetworkCore(int numLabels) {
 		super(numLabels);
