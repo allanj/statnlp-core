@@ -51,7 +51,7 @@ public class TagFeatureManager extends FeatureManager {
 		fs.add(this._param_g.toFeature(network, FeaType.unigram.name() + "-right", output, rw));
 		
 		fs.add(this._param_g.toFeature(network, FeaType.bigram.name() + "-1", output, lw + " " + word));
-		fs.add(this._param_g.toFeature(network, FeaType.bigram.name() + "-2", output, word + " " + rw));
+		fs.add(this._param_g.toFeature(network, FeaType.bigram.name() + "0", output, word + " " + rw));
 		
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
 			//edgeInput:

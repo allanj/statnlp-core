@@ -7,7 +7,6 @@ function TagBiLSTM:__init(doOptimization, gpuid)
 end
 
 function TagBiLSTM:initialize(javadata, ...)
-    print("something")
     self.data = {}
     local data = self.data
     data.sentences = listToTable(javadata:get("nnInputs"))
