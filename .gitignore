@@ -5,6 +5,7 @@ bin
 target/
 experiments/*
 data/*
+!data/conll2000
 *.jar
 ner_out.txt
 jnlua-1.0.4*

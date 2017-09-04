@@ -20,8 +20,8 @@ import org.statnlp.hypergraph.neural.NeuralNetworkCore;
 
 public class TagMain {
 
-	public static String trainFile = "data/conll2000/train.txt";
-	public static String testFile = "data/conll2000/test.txt";
+	public static String trainFile = "data/conll2000/sample_train.txt";
+	public static String testFile = "data/conll2000/sample_test.txt";
 	public static int trainNum = 30;
 	public static int testNum = 20;
 	public static int numThreads = 10;
@@ -34,7 +34,7 @@ public class TagMain {
 		
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
 		NetworkConfig.NUM_THREADS = numThreads;
-		NetworkConfig.USE_NEURAL_FEATURES = true;
+		NetworkConfig.USE_NEURAL_FEATURES = false;
 		
 		labels = new ArrayList<>();
 		TagInstance[] trainInstances = readData(trainFile, true, trainNum);
