@@ -35,7 +35,10 @@ public class TagMain {
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
 		NetworkConfig.NUM_THREADS = numThreads;
 		NetworkConfig.USE_NEURAL_FEATURES = false;
-		
+
+		//If you want to run Neural-CRF on Linux, please uncomment this line.
+		//NetworkConfig.OS = "linux";
+
 		labels = new ArrayList<>();
 		TagInstance[] trainInstances = readData(trainFile, true, trainNum);
 		System.out.println("#labels: " + labels.size());
