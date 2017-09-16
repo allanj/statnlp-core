@@ -9,6 +9,7 @@ include 'nn-crf-interface/neural_server/BidirectionalLSTM.lua'
 include 'nn-crf-interface/neural_server/SimpleBiLSTM.lua'
 include 'nn-crf-interface/neural_server/TagBiLSTM.lua'
 include 'nn-crf-interface/neural_server/ContinuousFeature.lua'
+include 'nn-crf-interface/neural_server/EmbeddingLayer.lua'
 include 'nn-crf-interface/neural_server/OneHot.lua'
 include 'nn-crf-interface/neural_server/Utils.lua'
 include 'nn-crf-interface/neural_server/optim/sgdgc.lua'
@@ -62,6 +63,8 @@ function initialize(javadata, ...)
             net = TagBiLSTM(optimizeInTorch, gpuid)
         elseif networkClass == "ContinuousFeature" then
             net = ContinuousFeature(optimizeInTorch, gpuid)
+        elseif networkClass == "EmbeddingLayer" then
+            net = EmbeddingLayer(optimizeInTorch, gpuid)
         else
             error("Unsupported network class " .. networkClass)
         end

@@ -17,6 +17,7 @@ import org.statnlp.example.linear_ne.ECRFFeatureManager;
 import org.statnlp.example.linear_ne.ECRFInstance;
 import org.statnlp.example.linear_ne.ECRFNetworkCompiler;
 import org.statnlp.example.linear_ne.EReader;
+import org.statnlp.example.linear_ne.EmbeddingLayer;
 import org.statnlp.example.linear_ne.Entity;
 import org.statnlp.hypergraph.DiscriminativeNetworkModel;
 import org.statnlp.hypergraph.GlobalNetworkParam;
@@ -47,7 +48,7 @@ public class LinearNEMain {
 	public static String nerOut = "data/conll2003/output/ner_out.txt";
 	public static String tmpOut = "data/conll2003/output/tmp_out.txt";
 	public static boolean saveModel = false;
-	public static boolean readModel = true;
+	public static boolean readModel = false;
 	public static String modelFile = "models/linearNE.m";
 	public static String nnModelFile = "models/lstm.m";
 	public static String neuralType = "lstm";
@@ -114,6 +115,8 @@ public class LinearNEMain {
 							.setModelFile(nnModelFile));
 				} else if (neuralType.equals("continuous")) {
 					nets.add(new ECRFContinuousFeatureValueProvider(2, labels.length - 2));
+				} else if (neuralType.equals("embedding_layer")) {
+					nets.add(new EmbeddingLayer(labels.length - 2));
 				} else {
 					throw new RuntimeException("Unknown neural type: " + neuralType);
 				}
@@ -169,7 +172,8 @@ public class LinearNEMain {
 					case "-batch": NetworkConfig.USE_BATCH_TRAINING = true;
 									batchSize = Integer.valueOf(args[i+1]); break;
 					case "-model": NetworkConfig.MODEL_TYPE = args[i+1].equals("crf")? ModelType.CRF:ModelType.SSVM;   break;
-					case "-neural": if(args[i+1].equals("mlp") || args[i+1].equals("lstm")|| args[i+1].equals("continuous")){ 
+					case "-neural": if(args[i+1].equals("mlp") || args[i+1].equals("lstm")|| args[i+1].equals("continuous")
+							|| args[i+1].equals("embedding_layer")){ 
 											NetworkConfig.USE_NEURAL_FEATURES = true;
 											neuralType = args[i+1]; //by default optim_neural is false.
 											NetworkConfig.IS_INDEXED_NEURAL_FEATURES = false; //only used when using the senna embedding.
