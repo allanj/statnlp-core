@@ -100,14 +100,14 @@ end
 
 function save_model(prefix)
     local timer = torch.Timer()
-    net:save_model(prefix)
+    torch.save(prefix, net)
     local time = timer:time().real
     print(string.format("Saving model took %.4fs", time))
 end
 
 function load_model(prefix)
     local timer = torch.Timer()
-    net:load_model(prefix)
+    net = torch.load(prefix)
     local time = timer:time().real
     print(string.format("Loading model took %.4fs", time))
 end

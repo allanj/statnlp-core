@@ -18,8 +18,8 @@ function ContinuousFeature:initialize(javadata, ...)
     local isTraining = javadata:get("isTraining")
     self.isTraining = isTraining
     local outputAndGradOutputPtr = {...}
-    if isTraining then
-        self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
+    self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
+    if isTraining then 
         self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
     end
     self.x = array2Tensor2D(javadata:get("nnInputs"))
@@ -62,13 +62,4 @@ function ContinuousFeature:backward()
     self.gradOutput = self.gradOutputPtr
     --torch.split(self.gradOutput, self.gradOutputPtr, self.x:size(2), 1)
     self.net:backward(self.x, self.gradOutput)
-end
-
-
-function ContinuousFeature:save_model(path)
-    torch.save(path,self.net)
-end
-
-function ContinuousFeature:load_model(path)
-    self.net = torch.load(path)
 end

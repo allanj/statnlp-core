@@ -270,8 +270,8 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 * Load a model from disk, implement the "load_model" method in torch
 	 * @param prefix
 	 */
-	public void load(String prefix) {
-		this.load("load_model", prefix);
+	public void load() {
+		this.load("load_model", this.nnModelFile);
 	}
 	
 	@Override
@@ -338,6 +338,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		this.nnModelFile = (String) in.readObject();
 		this.config.put("nnModelFile", this.nnModelFile);
 		this.configureJNLua();
+		this.load();
 	}
 	
 }
