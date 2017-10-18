@@ -24,6 +24,7 @@ function SimpleBiLSTM:initialize(javadata, ...)
 
     if isTraining then
         self.x = self:prepare_input()
+        self.numSent = #data.sentences
     end
 
     if self.net == nil and isTraining then
@@ -39,7 +40,6 @@ function SimpleBiLSTM:initialize(javadata, ...)
     if not isTraining then 
         self.testInput = self:prepare_input()
     end
-    self.numSent = #data.sentences
     self.output = torch.Tensor()
     self.x1Tab = {}
     self.x1 = torch.LongTensor()
