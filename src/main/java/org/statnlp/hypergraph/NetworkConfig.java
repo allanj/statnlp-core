@@ -52,6 +52,20 @@ public class NetworkConfig {
 	}
 	
 	/**
+	 * Model Status enumeration if users need 
+	 */
+	public static enum ModelStatus {
+		TRAINING,
+		DEV_IN_TRAINING,
+		TESTING;
+	}
+	
+	/**
+	 * The status to define the current model status. by default it's training.
+	 */
+	public static ModelStatus STATUS = ModelStatus.TRAINING;
+	
+	/**
 	 * The value to initialize the weights to if {@link #RANDOM_INIT_WEIGHT} is <tt>false</tt>.
 	 */
 	public static double FEATURE_INIT_WEIGHT = 0;

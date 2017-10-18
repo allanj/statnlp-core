@@ -60,7 +60,7 @@ public class TagMain {
 		if (visualization) model.visualize(TaggingViewer.class, trainInstances);
 		
 		TagInstance[] testInstances = readData(testFile, false, testNum);
-		Instance[] predictions = model.decode(testInstances);
+		Instance[] predictions = model.test(testInstances);
 		
 		//evaluation
 		int corr = 0;

@@ -37,6 +37,7 @@ import java.util.function.Function;
 
 import org.statnlp.commons.types.Instance;
 import org.statnlp.hypergraph.NetworkConfig.InferenceType;
+import org.statnlp.hypergraph.NetworkConfig.ModelStatus;
 import org.statnlp.hypergraph.decoding.Metric;
 import org.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
 import org.statnlp.ui.visualize.type.VisualizationViewerEngine;
@@ -263,6 +264,7 @@ public abstract class NetworkModel implements Serializable{
 	 * @throws InterruptedException If there are interruptions during multi-threaded training.
 	 */
 	public void train(Instance[] trainInstances, int maxNumIterations, Instance[] devInstances, Function<Instance[], Metric> evalFunction, int k) throws InterruptedException{
+		NetworkConfig.STATUS = ModelStatus.TRAINING;
 		Instance[][] insts = prepareInstanceForCompilation(trainInstances);
 		ArrayList<Integer> instIds = new ArrayList<Integer>();
 		for(int i=0; i<trainInstances.length; i++){
@@ -403,7 +405,9 @@ public abstract class NetworkModel implements Serializable{
 					}
 				}
 				if (devInstances != null && evalFunction != null && k > 0 && (it + 1) % k == 0) {
+					NetworkConfig.STATUS = ModelStatus.DEV_IN_TRAINING;
 					this.evaluateDevelopment(devInstances, evalFunction);
+					NetworkConfig.STATUS = ModelStatus.TRAINING;
 				}
 				if(offset >= instIds.size()) {
 					// this means one epoch
@@ -570,6 +574,61 @@ public abstract class NetworkModel implements Serializable{
 				unlabeledNetworkByInstanceId = arr;
 			}
 		}
+	}
+	
+	/**
+	 * Test the instances based on the learned parameters. <br>
+	 * The predictions can be obtained through {@link Instance#getPrediction()}.
+	 * @param instances The instances to be tested.
+	 * @return The same instance array, with the {@code prediction} field assigned.
+	 * @throws InterruptedException
+	 */
+	public Instance[] test(Instance[] instances) throws InterruptedException {
+		return this.test(instances, false);
+	}
+	
+	/**
+	 * Tests the instances based on the learned parameters, caching the features extracted.<br>
+	 * The caching is useful if one needs to decode the instances multiple times after changing some 
+	 * of the parameters (e.g., for tuning).<br>
+	 * The predictions can be obtained through {@link Instance#getPrediction()}.
+	 * @param instances The instances to be tested.
+	 * @param cacheFeatures Whether to cache the features from the instances.
+	 * @return The same instance array, with the {@code prediction} field assigned.
+	 * @throws InterruptedException
+	 */
+	public Instance[] test(Instance[] instances, boolean cacheFeatures) throws InterruptedException {
+		return this.test(instances, false, 1);
+	}
+	
+	/**
+	 * Tests the instances based on the learned parameters, taking the top-k structures.<br>
+	 * The best predictions can be obtained through {@link Instance#getPrediction()},
+	 * while the top-k predictions can be obtained through {@link Instance#getTopKPredictions()}.
+	 * @param instances The instances to be tested.
+	 * @param numPredictionsGenerated The number of top-k structures to be decoded.
+	 * @return The same instance array, with the {@code prediction} field assigned.
+	 * @throws InterruptedException
+	 */
+	public Instance[] test(Instance[] instances, int numPredictionsGenerated) throws InterruptedException{
+		return this.test(instances, false, numPredictionsGenerated);
+	}
+	
+	/**
+	 * Tests the instances based on the learned parameters, taking the top-k structures, caching the features extracted.<br>
+	 * The caching is useful if one needs to decode the instances multiple times after changing some 
+	 * of the parameters (e.g., for tuning).<br>
+	 * The best predictions can be obtained through {@link Instance#getPrediction()},
+	 * while the top-k predictions can be obtained through {@link Instance#getTopKPredictions()}.
+	 * @param instances The instances to be tested.
+	 * @param cacheFeatures Whether to cache the features from the instances.
+	 * @param numPredictionsGenerated The number of top-k structures to be decoded.
+	 * @return The same instance array, with the {@code prediction} field assigned.
+	 * @throws InterruptedException
+	 */
+	public Instance[] test(Instance[] instances, boolean cacheFeatures, int numPredictionsGenerated) throws InterruptedException {
+		NetworkConfig.STATUS = ModelStatus.TESTING;
+		return this.decode(instances, cacheFeatures, numPredictionsGenerated);
 	}
 	
 	/**
