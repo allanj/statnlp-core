@@ -12,6 +12,7 @@ import java.util.Random;
 
 import org.statnlp.hypergraph.Network;
 import org.statnlp.hypergraph.NetworkConfig;
+import org.statnlp.hypergraph.NetworkConfig.ModelStatus;
 import org.statnlp.hypergraph.neural.util.LuaFunctionHelper;
 
 import gnu.trove.iterator.TIntIterator;
@@ -152,7 +153,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 */
 	@Override
 	public void forward(TIntSet batchInstIds) {
-		if (optimizeNeural && isTraining) { // update with new params
+		if ((optimizeNeural && isTraining) || NetworkConfig.STATUS == ModelStatus.TESTING) { // update with new params
 			if (getParamSize() > 0) {
 				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
 				//System.out.println("java side forward weights: " + this.params[0] + " " + this.params[1]);
@@ -254,6 +255,11 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 * @param prefix
 	 */
 	public void save(String prefix) {
+		if (optimizeNeural) {
+			if (getParamSize() > 0) {
+				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
+			}
+		}
 		this.save("save_model", prefix);
 	}
 	
