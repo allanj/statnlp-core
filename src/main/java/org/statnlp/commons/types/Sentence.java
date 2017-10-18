@@ -27,6 +27,8 @@ public class Sentence extends TokenArray{
 	
 	private static final long serialVersionUID = 9100609441891803234L;
 	
+	private DependencyTree dependencyTree;
+	
 	public Sentence(WordToken[] tokens) {
 		super(tokens);
 	}
@@ -44,6 +46,10 @@ public class Sentence extends TokenArray{
 			sb.append(this._tokens[k].getForm());
 		}
 		return sb.toString();
+	}
+	
+	public DependencyTree getDependencyTree() {
+		return this.dependencyTree;
 	}
 
 }

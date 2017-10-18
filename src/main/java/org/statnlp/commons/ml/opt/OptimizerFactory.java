@@ -366,6 +366,22 @@ public abstract class OptimizerFactory implements Serializable {
 	/**
 	 * Return the factory object to create a gradient descent optimizer.<br>
 	 * The returned factory will create instances of GradientDescentOptimizer with AdaM adaptive method.<br>
+	 * By default the hyperparameters are set as follows:
+	 * <ol>
+	 * <li>learningRate = {@value #DEFAULT_LEARNING_RATE}</li>
+	 * <li>adamBeta1 = {@value #DEFAULT_ADAM_BETA1}</li>
+	 * <li>adamBeta2 = {@value #DEFAULT_ADAM_BETA2}</li>
+	 * <li>adamEps = {@value #DEFAULT_ADAM_EPS}</li>
+	 * </ol>
+	 * @return
+	 */
+	public static GradientDescentOptimizerFactory getGradientDescentFactoryUsingAdaM(BestParamCriteria criteria){
+		return new GradientDescentOptimizerFactory(criteria, AdaptiveStrategy.ADAM, DEFAULT_LEARNING_RATE, DEFAULT_LEARNING_RATE_DECAY, 0.0, 0.0, 0.0, 0.0, 0.0, DEFAULT_ADAM_BETA1, DEFAULT_ADAM_BETA2, DEFAULT_ADAM_EPS, false, 0);
+	}
+	
+	/**
+	 * Return the factory object to create a gradient descent optimizer.<br>
+	 * The returned factory will create instances of GradientDescentOptimizer with AdaM adaptive method.<br>
 	 * The hyperparameters are set according to the passed values.
 	 * @param learningRate
 	 * @param adamBeta1
