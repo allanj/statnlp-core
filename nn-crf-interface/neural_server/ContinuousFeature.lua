@@ -18,8 +18,8 @@ function ContinuousFeature:initialize(javadata, ...)
     local isTraining = javadata:get("isTraining")
     self.isTraining = isTraining
     local outputAndGradOutputPtr = {...}
-    self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
-    if isTraining then 
+    if #outputAndGradOutputPtr then 
+        self.outputPtr = torch.pushudata(outputAndGradOutputPtr[1], "torch.DoubleTensor")
         self.gradOutputPtr = torch.pushudata(outputAndGradOutputPtr[2], "torch.DoubleTensor")
     end
     self.x = array2Tensor2D(javadata:get("nnInputs"))
