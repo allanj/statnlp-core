@@ -327,7 +327,20 @@ public abstract class FeatureManager implements Serializable{
 	 * @return
 	 */
 	public FeatureArray createFeatureArray(Network network, Collection<Integer> featureIndices){
-		return createFeatureArray(network, featureIndices, null);
+		return createFeatureArray(network, featureIndices, null, null);
+	}
+	
+	/**
+	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate
+	 * FeatureArray objects are created with the exact same sequence of featureIndices.<br>
+	 * The caching can be enabled by setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.<br>
+	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
+	 * @param featureIndices The feature indices for this FeatureArray object
+	 * @param featureValues The feature values for this FeatureArray object
+	 * @return
+	 */
+	public FeatureArray createFeatureArray(Network network, Collection<Integer> featureIndices, Collection<Double> featureValues){
+		return createFeatureArray(network, featureIndices, featureValues, null);
 	}
 	
 	/**
@@ -340,13 +353,36 @@ public abstract class FeatureManager implements Serializable{
 	 * @return
 	 */
 	public FeatureArray createFeatureArray(Network network, Collection<Integer> featureIndices, FeatureArray next){
+		return createFeatureArray(network, featureIndices, null, next);
+	}
+	
+	/**
+	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate
+	 * FeatureArray objects are created with the exact same sequence of featureIndices.<br>
+	 * The caching can be enabled by setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.<br>
+	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
+	 * @param featureIndices The feature indices for this FeatureArray object
+	 * @param featureValues The feature values for this FeatureArray object
+	 * @param next Another FeatureArray object to be chained after the newly created FeatureArray object.
+	 * @return
+	 */
+	public FeatureArray createFeatureArray(Network network, Collection<Integer> featureIndices, Collection<Double> featureValues, FeatureArray next){
 		int[] features = new int[featureIndices.size()];
 		int i = 0;
 		for(Iterator<Integer> iter = featureIndices.iterator(); iter.hasNext();){
 			features[i] = iter.next();
 			i += 1;
 		}
-		return createFeatureArray(network, features, next);
+		double[] fvs = null;
+		if (featureValues != null) {
+			fvs = new double[featureValues.size()];
+			i = 0;
+			for(Iterator<Double> iter = featureValues.iterator(); iter.hasNext();){
+				fvs[i] = iter.next();
+				i += 1;
+			}
+		}
+		return createFeatureArray(network, features, fvs, next);
 	}
 	
 	/**
@@ -358,12 +394,25 @@ public abstract class FeatureManager implements Serializable{
 	 * @return
 	 */
 	public FeatureArray createFeatureArray(Network network, int[] featureIndices){
+		return createFeatureArray(network, featureIndices, null);
+	}
+	
+	/**
+	 * Creates a FeatureArray object based on the feature indices given, possibly with caching to ensure no duplicate
+	 * FeatureArray objects are created with the exact same sequence of featureIndices.<br>
+	 * The caching can be enabled by setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.<br>
+	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
+	 * @param featureIndices The feature indices for this FeatureArray object
+	 * @param fvs The feature values for this FeatureArray object
+	 * @return
+	 */
+	public FeatureArray createFeatureArray(Network network, int[] featureIndices, double[] fvs){
 		if (!network.getInstance().isLabeled() && network.getInstance().getInstanceId() > 0) {
 			//testing instance, also new feature array
 			return new FeatureArray(featureIndices);
 		}
 		if(NetworkConfig.AVOID_DUPLICATE_FEATURES){
-			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, this.getParams_L()[network.getThreadId()]));
+			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, fvs, this.getParams_L()[network.getThreadId()]));
 		} else {
 			return new FeatureArray(featureIndices);
 		}
@@ -375,18 +424,19 @@ public abstract class FeatureManager implements Serializable{
 	 * The caching can be enabled by setting {@link NetworkConfig#AVOID_DUPLICATE_FEATURES} to true.<br>
 	 * @param network Required to handle the FeatureArray object cache (this cache is different from FeatureArray position cache)
 	 * @param featureIndices The feature indices for this FeatureArray object
+	 * @param fvs The feature values for this FeatureArray object
 	 * @param next Another FeatureArray object to be chained after the newly created FeatureArray object.
 	 * @return
 	 */
-	public FeatureArray createFeatureArray(Network network, int[] featureIndices, FeatureArray next){
+	public FeatureArray createFeatureArray(Network network, int[] featureIndices, double[] fvs, FeatureArray next){
 		if (!network.getInstance().isLabeled() && network.getInstance().getInstanceId() > 0) {
 			//testing instance, also new feature array
-			return new FeatureArray(featureIndices, next);
+			return new FeatureArray(featureIndices, fvs, next);
 		}
 		if(NetworkConfig.AVOID_DUPLICATE_FEATURES){
-			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, this.getParams_L()[network.getThreadId()]), next);
+			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, fvs, this.getParams_L()[network.getThreadId()]), next);
 		} else {
-			return new FeatureArray(featureIndices, next);
+			return new FeatureArray(featureIndices, fvs, next);
 		}
 	}
 	

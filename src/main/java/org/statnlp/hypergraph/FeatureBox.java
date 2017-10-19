@@ -24,9 +24,18 @@ public class FeatureBox implements Serializable {
 	/** For now this is used for Mean-Field implementation, to update the weights during MF internal iterations */
 	protected boolean _alwaysChange = false;
 	
+	/** Feature value array */
+	protected double[] _fv;
+	
 	public FeatureBox(int[] fs) {
 		this._fs = fs;
 		this._version = -1; //the score is not calculated yet.
+	}
+	
+	public FeatureBox(int[] fs, double[] fv) {
+		this._fs = fs;
+		this._version = -1; //the score is not calculated yet.
+		this._fv = fv;
 	}
 	
 	public int length() {
@@ -48,7 +57,18 @@ public class FeatureBox implements Serializable {
 	 * @return
 	 */
 	public static FeatureBox getFeatureBox(int[] fs, LocalNetworkParam param){
-		FeatureBox fb = new FeatureBox(fs);
+		return getFeatureBox(fs, null, param);
+	}
+	
+	/**
+	 * Use the map to cache the feature index array to save the memory.
+	 * @param fs
+	 * @param fv
+	 * @param param
+	 * @return
+	 */
+	public static FeatureBox getFeatureBox(int[] fs, double[] fv, LocalNetworkParam param){
+		FeatureBox fb = new FeatureBox(fs, fv);
 		if (!NetworkConfig.AVOID_DUPLICATE_FEATURES) {
 			return fb;
 		}
@@ -68,15 +88,23 @@ public class FeatureBox implements Serializable {
 		int hash = 1;
 		int a = Arrays.hashCode(_fs);
 		hash = hash * 17 + a;
+		int b = Arrays.hashCode(_fv);
+		hash = hash * 17 + b;
 		return hash;
 	}
-
+	
 	@Override
 	public boolean equals(Object obj) {
 		if(obj instanceof FeatureBox){
 			FeatureBox other = (FeatureBox)obj;
 			boolean isEqual = Arrays.equals(_fs, other._fs);
-			return isEqual;
+			if (this._fv != null && other._fv == null) return false;
+			if (other._fv != null && this._fv == null) return false;
+			if (this._fv == null && other._fv == null)
+				return isEqual;
+			else {
+				return isEqual && Arrays.equals(_fv, other._fv); 
+			}
 		}
 		return false;
 	}

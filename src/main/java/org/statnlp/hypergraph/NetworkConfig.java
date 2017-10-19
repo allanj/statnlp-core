@@ -79,6 +79,11 @@ public class NetworkConfig {
 	public static int RANDOM_INIT_FEATURE_SEED = 1234;
 	
 	/**
+	 * Whether to use feature value in CRF part implementation
+	 */
+	public static boolean USE_FEATURE_VALUE = false;
+	
+	/**
 	 * Whether generative training is used instead of discriminative
 	 */
 	public static boolean TRAIN_MODE_IS_GENERATIVE = false;
