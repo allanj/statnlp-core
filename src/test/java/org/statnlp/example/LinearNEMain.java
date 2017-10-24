@@ -29,6 +29,8 @@ import org.statnlp.hypergraph.neural.BidirectionalLSTM;
 import org.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
 import org.statnlp.hypergraph.neural.NeuralNetworkCore;
 
+import cern.colt.Arrays;
+
 public class LinearNEMain {
 	
 	public static boolean DEBUG = false;
@@ -98,6 +100,8 @@ public class LinearNEMain {
 			labels[l] = Entity.get(ent);
 			l++;
 		}
+		System.out.println("number of labels: " + labels.length + "  " + Arrays.toString(labels));
+		
 		if (DEBUG) {
 			NetworkConfig.RANDOM_INIT_WEIGHT = false;
 			NetworkConfig.FEATURE_INIT_WEIGHT = 0.1;
@@ -209,6 +213,8 @@ public class LinearNEMain {
 							i++;
 						}
 						break;
+					case "-saveModel": saveModel = args[i+1].equals("true") ? true : false; break; // for Lua native lib, "osx" or
+					case "-readModel": readModel = args[i+1].equals("true") ? true : false; break; 
 					default: System.err.println("Invalid arguments "+args[i]+", please check usage."); System.exit(0);
 				}
 			}

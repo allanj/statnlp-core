@@ -43,11 +43,8 @@ function SimpleBiLSTM:initialize(javadata, ...)
     self.output = torch.Tensor()
     self.x1Tab = {}
     self.x1 = torch.LongTensor()
-    self.x2Tab = {}
-    self.x2 = torch.LongTensor()
     if self.gpuid >= 0 then
         self.x1 = self.x1:cuda()
-        self.x2 = self.x2:cuda()
     end
     self.gradOutput = {}
     local outputAndGradOutputPtr = {... }
@@ -95,6 +92,7 @@ function SimpleBiLSTM:createNetwork()
            :add(nn.FastLSTM(hiddenSize, hiddenSize):maskZero(1))
            
     bwdSeq = nn.Sequential()
+            :add(nn.ReverseTable())
             :add(nn.Sequencer(bwd))
             :add(nn.ReverseTable())
 
@@ -105,18 +103,22 @@ function SimpleBiLSTM:createNetwork()
 
     -- Assume that two input sequences are given (original and reverse, both are right-padded).
     -- Instead of ConcatTable, we use ParallelTable here.
-    local parallel = nn.ParallelTable()
-    parallel:add(fwdSeq)
-    parallel:add(bwdSeq)
+    local concat = nn.ConcatTable()
+    concat:add(fwdSeq)
+    concat:add(bwdSeq)
     
     local brnn = nn.Sequential()
-       :add(parallel)
+       :add(concat)
        :add(nn.ZipTable())
        :add(mergeSeq)
     local mergeHiddenSize = 2 * hiddenSize
+    local finalTanh = nn.Sequential()
+                    :add(nn.MaskZero(nn.Linear(mergeHiddenSize, hiddenSize), 1))
+                    :add(nn.Tanh())
+                    :add(nn.MaskZero(nn.Linear(hiddenSize, self.numLabels), 1))
     local rnn = nn.Sequential()
         :add(brnn) 
-        :add(nn.Sequencer(nn.MaskZero(nn.Linear(mergeHiddenSize, self.numLabels), 1))) 
+        :add(nn.Sequencer(finalTanh)) 
     if self.gpuid >= 0 then rnn:cuda() end
     self.net = rnn
 end
@@ -202,11 +204,7 @@ function SimpleBiLSTM:getForwardInput(isTraining, batchInputIds)
             self.x1 = torch.cat(self.x1, self.x[1], 2):index(1, batchInputIds)
             self.x1:resize(self.x1:size(1)*self.x1:size(2))
             torch.split(self.x1Tab, self.x1, batchInputIds:size(1), 1)
-            self.x2 = torch.cat(self.x2, self.x[2], 2):index(1, batchInputIds)
-            self.x2:resize(self.x2:size(1)*self.x2:size(2))
-            torch.split(self.x2Tab, self.x2, batchInputIds:size(1), 1)
-
-            self.batchInput = {self.x1Tab, self.x2Tab}
+            self.batchInput = self.x1Tab
             return self.batchInput
         else
             return self.x
@@ -271,7 +269,6 @@ function SimpleBiLSTM:prepare_input()
     self:buildVocab(sentences, sentence_toks)    
 
     local inputs = {}
-    local inputs_rev = {}
     for step=1,maxLen do
         inputs[step] = torch.LongTensor(#sentences)
         for j=1,#sentences do
@@ -290,16 +287,8 @@ function SimpleBiLSTM:prepare_input()
         if self.gpuid >= 0 then inputs[step] = inputs[step]:cuda() end
     end
     print("max sentencen length:"..maxLen)
-    for step=1,maxLen do
-        inputs_rev[step] = torch.LongTensor(#sentences)
-        for j=1,#sentences do
-            local tokens = sentence_toks[j]
-            inputs_rev[step][j] = inputs[maxLen-step+1][j]
-        end
-        if self.gpuid >= 0 then inputs_rev[step] = inputs_rev[step]:cuda() end
-    end
     self.maxLen = maxLen
-    return {inputs, inputs_rev}
+    return inputs
 end
 
 function SimpleBiLSTM:buildVocab(sentences, sentence_toks)
@@ -329,14 +318,15 @@ function SimpleBiLSTM:buildVocab(sentences, sentence_toks)
     print("number of unique words:" .. #self.idx2word)
 end
 
-function SimpleBiLSTM:save_model(path)
+---As now, the following code is never called
+--function SimpleBiLSTM:save_model(path)
     --need to save the vocabulary as well.
-    torch.save(path, {self.net, self.idx2word, self.word2idx})
-end
+    --torch.save(path, {self.net, self.idx2word, self.word2idx})
+--end
 
-function SimpleBiLSTM:load_model(path)
-    local object = torch.load(path)
-    self.net = object[1]
-    self.idx2word = object[2]
-    self.word2idx = object[3]
-end
+--function SimpleBiLSTM:load_model(path)
+--    local object = torch.load(path)
+--    self.net = object[1]
+--   self.idx2word = object[2]
+--    self.word2idx = object[3]
+--end
