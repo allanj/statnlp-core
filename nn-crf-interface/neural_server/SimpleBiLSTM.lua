@@ -78,18 +78,14 @@ function SimpleBiLSTM:createNetwork()
     -- forward rnn
     local fwdLSTM = nn.FastLSTM(hiddenSize, hiddenSize):maskZero(1)
     print("number of lstm parameters:"..fwdLSTM:getParameters():nElement())
-    local fwd = nn.Sequential()
-       :add(sharedLookupTable)
-       :add(fwdLSTM)
+    local fwd = nn.Sequential():add(fwdLSTM)
 
     -- internally, rnn will be wrapped into a Recursor to make it an AbstractRecurrent instance.
     local fwdSeq = nn.Sequencer(fwd)
 
     -- backward rnn (will be applied in reverse order of input sequence)
     local bwd, bwdSeq
-    bwd = nn.Sequential()
-           :add(sharedLookupTable:sharedClone())
-           :add(nn.FastLSTM(hiddenSize, hiddenSize):maskZero(1))
+    bwd = nn.Sequential():add(nn.FastLSTM(hiddenSize, hiddenSize):maskZero(1))
            
     bwdSeq = nn.Sequential()
             :add(nn.ReverseTable())
@@ -108,14 +104,15 @@ function SimpleBiLSTM:createNetwork()
     concat:add(bwdSeq)
     
     local brnn = nn.Sequential()
+       :add(nn.Sequencer(nn.Sequential():add(sharedLookupTable)))
        :add(concat)
        :add(nn.ZipTable())
        :add(mergeSeq)
     local mergeHiddenSize = 2 * hiddenSize
     local finalTanh = nn.Sequential()
-                    :add(nn.MaskZero(nn.Linear(mergeHiddenSize, hiddenSize), 1))
-                    :add(nn.Tanh())
-                    :add(nn.MaskZero(nn.Linear(hiddenSize, self.numLabels), 1))
+                    --:add(nn.MaskZero(nn.Linear(mergeHiddenSize, hiddenSize), 1))
+                    --:add(nn.Tanh())
+                    :add(nn.MaskZero(nn.Linear(mergeHiddenSize, self.numLabels), 1))
     local rnn = nn.Sequential()
         :add(brnn) 
         :add(nn.Sequencer(finalTanh)) 
@@ -201,7 +198,7 @@ function SimpleBiLSTM:getForwardInput(isTraining, batchInputIds)
         if batchInputIds ~= nil then
             batchInputIds:add(1) -- because the sentence is 0 indexed.
             self.batchInputIds = batchInputIds
-            self.x1 = torch.cat(self.x1, self.x[1], 2):index(1, batchInputIds)
+            self.x1 = torch.cat(self.x1, self.x, 2):index(1, batchInputIds)
             self.x1:resize(self.x1:size(1)*self.x1:size(2))
             torch.split(self.x1Tab, self.x1, batchInputIds:size(1), 1)
             self.batchInput = self.x1Tab
