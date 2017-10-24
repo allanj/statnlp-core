@@ -45,7 +45,7 @@ public class LinearNEMain {
 	public static double l2 = 0.01;
 	
 	public static String trainFile = "data/conll2003/eng.train";
-	public static String devFile = "data/conll2003/eng.testa";
+	public static String devFile = "data/conll2003/eng.testb";
 	public static String testFile = "data/conll2003/eng.testb";
 	public static String nerOut = "data/conll2003/output/ner_out.txt";
 	public static String tmpOut = "data/conll2003/output/tmp_out.txt";
@@ -184,6 +184,7 @@ public class LinearNEMain {
 											NetworkConfig.REGULARIZE_NEURAL_FEATURES = true;
 									}
 									break;
+					//iobes constraint to build the network structure.
 					case "-iobes":  iobes = args[i+1].equals("true") ? true : false; break;
 					case "-lowercase":  lowercase = args[i+1].equals("true") ? true : false; break;
 					case "-initNNweight": 
