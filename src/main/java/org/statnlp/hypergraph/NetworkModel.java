@@ -405,6 +405,11 @@ public abstract class NetworkModel implements Serializable{
 					}
 				}
 				if (devInstances != null && evalFunction != null && k > 0 && (it + 1) % k == 0) {
+					/**
+					 * Evaluate on the development set after k iteration of parameter updates
+					 * This has to be after update (i.e. now) if using neural as the dev output
+					 * will modify the size of outputTensor which in turn modify the countOutputTensor 
+					 */
 					NetworkConfig.STATUS = ModelStatus.DEV_IN_TRAINING;
 					this.evaluateDevelopment(devInstances, evalFunction);
 					NetworkConfig.STATUS = ModelStatus.TRAINING;
