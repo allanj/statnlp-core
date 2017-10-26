@@ -153,7 +153,8 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 */
 	@Override
 	public void forward(TIntSet batchInstIds) {
-		if ((optimizeNeural && isTraining) || NetworkConfig.STATUS == ModelStatus.TESTING) { // update with new params
+		if ((optimizeNeural && isTraining) || NetworkConfig.STATUS == ModelStatus.TESTING
+				|| NetworkConfig.STATUS == ModelStatus.DEV_IN_TRAINING) { // update with new params
 			if (getParamSize() > 0) {
 				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
 				//System.out.println("java side forward weights: " + this.params[0] + " " + this.params[1]);
