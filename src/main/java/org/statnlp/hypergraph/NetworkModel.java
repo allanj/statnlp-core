@@ -394,6 +394,16 @@ public abstract class NetworkModel implements Serializable{
 				} else {
 					done = this._fm.update();
 				}
+//				double sum = 0;
+//				for (int w = 0; w < this._fm._param_g.concatCounts.length; w++) {
+//					sum += this._fm._param_g.concatCounts[w];
+//				}
+//				System.out.println("sum of the gradients: " + sum);
+//				sum = 0;
+//				for (int w = 0; w < this._fm._param_g.concatWeights.length; w++) {
+//					sum += this._fm._param_g.concatWeights[w];
+//				}
+//				System.out.println("sum of the weights: " + sum);
 				time = System.nanoTime() - time;
 				double obj = this._fm.getParam_G().getObj_old();
 				epochObj += obj;
@@ -412,7 +422,7 @@ public abstract class NetworkModel implements Serializable{
 				if(offset >= instIds.size()) {
 					// this means one epoch
 					time = System.nanoTime();
-					print(String.format("Epoch %d: Obj=%-18.12f Time=%.3fs Total time: %.3fs", epochNum++, multiplier*epochObj*instIds.size()/(size + offset), (time-epochStartTime)/1.0e9, (time-startTime)/1.0e9), outstreams);
+					print(String.format("Epoch %d: Obj=%-18.12f Time=%.3fs Total time: %.3fs", epochNum++, epochObj /*multiplier*epochObj*instIds.size()/(size + offset)*/, (time-epochStartTime)/1.0e9, (time-startTime)/1.0e9), outstreams);
 					batchId = 0;
 					offset = 0;
 					epochObj = 0.0;
