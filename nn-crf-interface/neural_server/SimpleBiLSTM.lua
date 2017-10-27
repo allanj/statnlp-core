@@ -200,10 +200,10 @@ function SimpleBiLSTM:getForwardInput(isTraining, batchInputIds)
             batchInputIds:add(1) -- because the sentence is 0 indexed.
             self.batchInputIds = batchInputIds
             self.x1 = torch.cat(self.x1, self.x[1], 2):index(1, batchInputIds)
-            self.x1:resize(self.x1:size(1)*self.x1:size(2))
+            self.x1 = self.x1:view(self.x1:size(2), self.x1:size(1)):view(-1)
             torch.split(self.x1Tab, self.x1, batchInputIds:size(1), 1)
             self.x2 = torch.cat(self.x2, self.x[2], 2):index(1, batchInputIds)
-            self.x2:resize(self.x2:size(1)*self.x2:size(2))
+            self.x2 = self.x2:resize(self.x2:size(2), self.x2:size(1)):view(-1)
             torch.split(self.x2Tab, self.x2, batchInputIds:size(1), 1)
 
             self.batchInput = {self.x1Tab, self.x2Tab}
