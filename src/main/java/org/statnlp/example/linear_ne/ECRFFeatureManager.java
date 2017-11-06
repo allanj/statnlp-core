@@ -86,6 +86,8 @@ public class ECRFFeatureManager extends FeatureManager {
 					input = new SimpleImmutableEntry<String, Integer>(sentenceInput, pos);
 				} else if(neuralType.equals("mlp")){
 					input = llw+IN_SEP+lw+IN_SEP+word+IN_SEP+rw+IN_SEP+rrw+OUT_SEP+llt+IN_SEP+lt+IN_SEP+tag+IN_SEP+rt+IN_SEP+rrt;
+					//for simplicity, just use the current word.
+					input = word;
 				} else {
 					input = word;
 				}

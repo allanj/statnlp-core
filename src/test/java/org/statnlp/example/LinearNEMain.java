@@ -15,6 +15,7 @@ import org.statnlp.example.linear_ne.ECRFContinuousFeatureValueProvider;
 import org.statnlp.example.linear_ne.ECRFEval;
 import org.statnlp.example.linear_ne.ECRFFeatureManager;
 import org.statnlp.example.linear_ne.ECRFInstance;
+import org.statnlp.example.linear_ne.ECRFMLP;
 import org.statnlp.example.linear_ne.ECRFNetworkCompiler;
 import org.statnlp.example.linear_ne.EReader;
 import org.statnlp.example.linear_ne.EmbeddingLayer;
@@ -115,6 +116,8 @@ public class LinearNEMain {
 							.setModelFile(nnModelFile));
 				} else if (neuralType.equals("continuous")) {
 					nets.add(new ECRFContinuousFeatureValueProvider(2, labels.length - 2));
+				} else if (neuralType.equals("mlp")) {
+					nets.add(new ECRFMLP(labels.length - 2));
 				} else if (neuralType.equals("embedding_layer")) {
 					nets.add(new EmbeddingLayer(labels.length - 2));
 				} else {
