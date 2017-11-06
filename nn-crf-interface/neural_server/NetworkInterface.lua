@@ -15,7 +15,7 @@ include 'nn-crf-interface/neural_server/OneHot.lua'
 include 'nn-crf-interface/neural_server/Utils.lua'
 include 'nn-crf-interface/neural_server/optim/sgdgc.lua'
 
-local SEED = 1337
+local SEED = 1
 torch.manualSeed(SEED)
 
 -- GPU setup

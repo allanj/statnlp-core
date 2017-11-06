@@ -56,12 +56,12 @@ public class BMMain {
 		System.out.println("#labels: " + labels.size());
 		NetworkConfig.MODEL_TYPE = ModelType.CRF;
 		
-		NetworkConfig.RANDOM_INIT_WEIGHT = false;
+		NetworkConfig.RANDOM_INIT_WEIGHT = true;
 		NetworkConfig.FEATURE_INIT_WEIGHT = 2;
 		NetworkConfig.USE_BATCH_TRAINING = true;
 		NetworkConfig.BATCH_SIZE = 1;
 		NetworkConfig.PRINT_BATCH_OBJECTIVE = true;
-		
+		NetworkConfig.RANDOM_INIT_FEATURE_SEED = 1;
 		List<NeuralNetworkCore> nets = new ArrayList<NeuralNetworkCore>();
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
 			BMBiLSTM net = new BMBiLSTM(labels.size(), hiddenSize, embeddingSize);
@@ -78,9 +78,12 @@ public class BMMain {
 	
 	
 	public static BMInstance[] getExampleTrainData() {
-		String[] inputs = new String[]{"the wall street journal reported today that apple corporation made money" 
-				,"georgia tech is a university in georgia python tensoflow pytorch torch "};
-		String[] outputs = new String[]{"B I I I O O O B I O O", "B I O O O O B O B B B"};
+		String[] inputs = new String[]{"the wall street journal reported today noon" 
+				,"georgia tech is a university in georgia", 
+				"donald trump is the president of usa",
+				"donald trump likes the wall street journal"};
+		String[] outputs = new String[]{"B I I I O O O", "B I O O O O B",
+					"B I O O B O B", "B I O B I I I"};
 		BMInstance[] insts = new BMInstance[inputs.length];
 		for (int d = 0; d < inputs.length; d++) {
 			String input = inputs[d];

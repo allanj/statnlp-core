@@ -36,6 +36,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.statnlp.commons.types.Instance;
+import org.statnlp.example.benchmark_pytorch.BMUtils;
 import org.statnlp.hypergraph.NetworkConfig.InferenceType;
 import org.statnlp.hypergraph.NetworkConfig.ModelStatus;
 import org.statnlp.hypergraph.decoding.Metric;
@@ -315,6 +316,7 @@ public abstract class NetworkModel implements Serializable{
 		}
 		printUsedMemory("after finalize");
 		//finalize the features.
+		this._fm._param_g.setStoreFeatureReps();
 		this._fm.getParam_G().lockIt();
 		printUsedMemory("after lock");
 		
@@ -330,6 +332,20 @@ public abstract class NetworkModel implements Serializable{
 				this._learners[threadId].getLocalNetworkParam()._globalFeature2LocalFeature = null;
 			}
 		}
+		
+		//printing weight
+		double[] ws = this._fm._param_g._weights;
+		System.out.println("***Transition weights***");
+		StringIndex str2idx = this._fm._param_g._stringIndex;
+		str2idx.buildReverseIndex();
+		String weightFile = "nn-crf-interface/transition_params.txt";
+		BMUtils.modifyWeight(ws, this._fm._param_g._feature2rep, str2idx, weightFile);
+		for (int w = 0; w < ws.length; w++) {
+			String output = str2idx.get(this._fm._param_g._feature2rep[w][1]);
+			String input = str2idx.get(this._fm._param_g._feature2rep[w][2]);
+			System.out.println("prev: " + input + " now: " + output + ": " +  ws[w]);
+		}
+		System.out.println("*******");
 		
 		ExecutorService pool = Executors.newFixedThreadPool(this._numThreads);
 		List<Callable<Void>> callables = Arrays.asList((Callable<Void>[])this._learners);
@@ -365,6 +381,7 @@ public abstract class NetworkModel implements Serializable{
 					batchId++;
 					offset = NetworkConfig.BATCH_SIZE * batchId;
 				}
+				System.out.println(batchInstIds);
 				for(LocalNetworkLearnerThread learner: this._learners){
 					learner.setIterationNumber(it);
 					if(NetworkConfig.USE_BATCH_TRAINING) learner.setInstanceIdSet(batchInstIds);

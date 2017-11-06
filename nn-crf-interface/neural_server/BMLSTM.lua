@@ -1,4 +1,5 @@
 include 'PyTorchFastLSTM.lua'
+include 'PyTorchLSTM.lua'
 
 local BMLSTM, parent = torch.class('BMLSTM', 'AbstractNeuralNetwork')
 
@@ -52,14 +53,36 @@ function BMLSTM:createNetwork()
     --embeddingLayer.weight[1]:fill(0)
     print("embeddingSize")
     print(embeddingLayer.weight:size())
+    print(embeddingLayer.weight)
 
     local fwdLSTM = PyTorchFastLSTM(embeddingSize, hiddenSize)--:maskZero(1)
-
     local fwd = nn.Sequential():add(embeddingLayer)
                 :add(fwdLSTM)
+    fwdLSTM.i2g.weight = loadWeightFile('params/weight_ih_l0.txt', 4 * hiddenSize, embeddingSize)
+    fwdLSTM.i2g.bias = loadWeightFile('params/bias_ih_l0.txt', 4 * hiddenSize , 1)
+    print("fwd i2g weight and bias")
+    print(fwdLSTM.i2g.weight)
+    print(fwdLSTM.i2g.bias)
+    fwdLSTM.o2g.weight = loadWeightFile('params/weight_hh_l0.txt', 4 * hiddenSize, hiddenSize)
+    fwdLSTM.o2g.bias = loadWeightFile('params/weight_hh_l0.txt', 4 * hiddenSize, 1)
+    print("fwd o2g weight and bias")
+    print(fwdLSTM.o2g.weight)
+    print(fwdLSTM.o2g.bias)
+
     local fwdSeq = nn.Sequencer(fwd)
+    local bwdLSTM = PyTorchFastLSTM(embeddingSize, hiddenSize)
+    bwdLSTM.i2g.weight = loadWeightFile('params/weight_ih_l0_reverse.txt', 4 * hiddenSize, embeddingSize)
+    bwdLSTM.i2g.bias = loadWeightFile('params/bias_ih_l0_reverse.txt', 4 * hiddenSize , 1)
+    print("bwd i2g weight and bias")
+    print(bwdLSTM.i2g.weight)
+    print(bwdLSTM.i2g.bias)
+    bwdLSTM.o2g.weight = loadWeightFile('params/weight_hh_l0_reverse.txt', 4 * hiddenSize, hiddenSize)
+    bwdLSTM.o2g.bias = loadWeightFile('params/weight_hh_l0_reverse.txt', 4 * hiddenSize, 1)
+    print("bwd o2g weight and bias")
+    print(bwdLSTM.o2g.weight)
+    print(bwdLSTM.o2g.bias)
     local bwd = nn.Sequential():add(embeddingLayer:sharedClone())
-                :add(PyTorchFastLSTM(embeddingSize, hiddenSize))
+                :add(bwdLSTM)
     local bwdSeq = nn.Sequential()
             :add(nn.ReverseTable())
             :add(nn.Sequencer(bwd))
@@ -76,6 +99,9 @@ function BMLSTM:createNetwork()
        :add(nn.ZipTable())
        :add(mergeSeq)
     local lastLinear = nn.Linear(2 * hiddenSize, data.numLabels)
+    print("final linear weight and bias")
+    print(lastLinear.weight)
+    print(lastLinear.bias)
     local rnn = nn.Sequential()
         :add(brnn) 
         :add(nn.Sequencer(lastLinear))
@@ -148,6 +174,7 @@ function BMLSTM:buildVocab(sentences, sentence_toks)
     --self.idx2word[1] = '<UNK>'
     self.vocabSize = 0
     for i=1,#sentences do
+        print(sentence_toks[i])
         local tokens = sentence_toks[i]
         for j=1,#tokens do
             local tok = tokens[j]
@@ -159,10 +186,38 @@ function BMLSTM:buildVocab(sentences, sentence_toks)
             end
         end
     end
-    --for i,k in ipairs(self.idx2word) do
-    --    print(i.." "..k)
-    --end
     print("number of unique words:" .. self.vocabSize)
+    --printTable(self.word2idx)
+end
+
+function printTable(table)
+    for i,k in pairs(table) do
+        print(i .." ".. k)
+    end
+end
+
+function loadWeightFile(file, row, col)
+    collectgarbage()
+    --prefix = "/Users/allanjie/Documents/workspace/statnlp-core-main/nn-crf-interface/neural_server/"
+    myfile = torch.DiskFile('nn-crf-interface/neural_server/'..file)
+    storage = torch.DoubleStorage(col)
+    results = nil
+    if col == 1 then
+        results = torch.Tensor(row)
+    else
+        results = torch.Tensor(row, col)
+    end
+    for i=1,row do 
+        myfile:readDouble(storage)
+        if col ~= 1 then
+            for j=1,col do 
+                results[i][j] = storage[j]
+            end
+        else
+            results[i] = storage[1]
+        end
+    end
+    return results
 end
 
 function BMLSTM:getForwardInput(isTraining, batchInputIds)
