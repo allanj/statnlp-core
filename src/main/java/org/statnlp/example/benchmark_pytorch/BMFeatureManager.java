@@ -43,7 +43,7 @@ public class BMFeatureManager extends FeatureManager {
 		int labelId = paArr[2];
 		String output = parentNodeType == NodeType.root ? BMConfig.END : this.labels.get(labelId);
 		
-		if (NetworkConfig.USE_NEURAL_FEATURES) {
+		if (NetworkConfig.USE_NEURAL_FEATURES && parentNodeType != NodeType.root) {
 			//BiLSTM: position, sentence
 			SimpleImmutableEntry<String, Integer> edgeInput = 
 					new SimpleImmutableEntry<String, Integer>(sent.toString(), pos);

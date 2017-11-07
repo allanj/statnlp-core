@@ -78,12 +78,13 @@ public class BMMain {
 	
 	
 	public static BMInstance[] getExampleTrainData() {
-		String[] inputs = new String[]{"the wall street journal reported today noon" 
-				,"georgia tech is a university in georgia", 
+		String[] inputs = new String[]{"georgia tech is a university in georgia",
+				"the wall street journal reported today noon" 
+				,"donald trump likes the wall street journal",
 				"donald trump is the president of usa",
-				"donald trump likes the wall street journal"};
-		String[] outputs = new String[]{"B I I I O O O", "B I O O O O B",
-					"B I O O B O B", "B I O B I I I"};
+				};
+		String[] outputs = new String[]{"B I O O O O B", "B I I I O O O",
+					"B I O B I I I", "B I O O B O B"};
 		BMInstance[] insts = new BMInstance[inputs.length];
 		for (int d = 0; d < inputs.length; d++) {
 			String input = inputs[d];

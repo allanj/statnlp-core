@@ -31,7 +31,7 @@ function PyTorchFastLSTM:__init(inputSize, outputSize, rho, eps, momentum, affin
    end
    self.mono = mono or false
 
-   parent.__init(self, inputSize, outputSize, rho, nil, p, mono)
+   parent.__init(self, inputSize, outputSize, rho, false, p, mono)
 end
 
 function PyTorchFastLSTM:buildModel()

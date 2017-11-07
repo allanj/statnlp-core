@@ -1,0 +1,25 @@
+require 'nn'
+require 'rnn'
+include 'PyTorchFastLSTM.lua'
+
+local lstm = PyTorchFastLSTM(5, 4)
+torch.manualSeed(1)
+  lstm.i2g.weight:uniform(-1,1)
+    lstm.i2g.bias:uniform(-1,1)
+    --lstm.i2g.weight = loadWeightFile('params/weight_ih_l0.txt', 4 * hiddenSize, embeddingSize)
+    --lstm.i2g.bias = loadWeightFile('params/bias_ih_l0.txt', 4 * hiddenSize , 1)
+    --print("fwd i2g weight and bias")
+   print(lstm.i2g.weight)
+    print(lstm.i2g.bias)
+    --fwdLSTM.o2g.weight = loadWeightFile('params/weight_hh_l0.txt', 4 * hiddenSize, hiddenSize)
+    --fwdLSTM.o2g.bias = loadWeightFile('params/weight_hh_l0.txt', 4 * hiddenSize, 1)
+    lstm.o2g.weight:uniform(-1,1)
+    lstm.o2g.bias:uniform(-1,1)
+    --print("fwd o2g weight and bias")
+    print(lstm.o2g.weight)
+    print(lstm.o2g.bias)
+    --torch.manualSeed(3)
+local x = torch.Tensor(5):uniform(-1,1)
+print(x)
+local y = lstm:forward(x)
+print(y)

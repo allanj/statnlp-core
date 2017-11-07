@@ -381,7 +381,7 @@ public abstract class NetworkModel implements Serializable{
 					batchId++;
 					offset = NetworkConfig.BATCH_SIZE * batchId;
 				}
-				System.out.println(batchInstIds);
+//				System.out.println(batchInstIds);
 				for(LocalNetworkLearnerThread learner: this._learners){
 					learner.setIterationNumber(it);
 					if(NetworkConfig.USE_BATCH_TRAINING) learner.setInstanceIdSet(batchInstIds);

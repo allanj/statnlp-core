@@ -55,32 +55,85 @@ function BMLSTM:createNetwork()
     print(embeddingLayer.weight:size())
     print(embeddingLayer.weight)
 
-    local fwdLSTM = PyTorchFastLSTM(embeddingSize, hiddenSize)--:maskZero(1)
+    local fwdLSTM = PyTorchLSTM(embeddingSize, hiddenSize)--:maskZero(1)
+    self.fwdLSTM = fwdLSTM
     local fwd = nn.Sequential():add(embeddingLayer)
                 :add(fwdLSTM)
-    fwdLSTM.i2g.weight = loadWeightFile('params/weight_ih_l0.txt', 4 * hiddenSize, embeddingSize)
-    fwdLSTM.i2g.bias = loadWeightFile('params/bias_ih_l0.txt', 4 * hiddenSize , 1)
-    print("fwd i2g weight and bias")
-    print(fwdLSTM.i2g.weight)
-    print(fwdLSTM.i2g.bias)
-    fwdLSTM.o2g.weight = loadWeightFile('params/weight_hh_l0.txt', 4 * hiddenSize, hiddenSize)
-    fwdLSTM.o2g.bias = loadWeightFile('params/weight_hh_l0.txt', 4 * hiddenSize, 1)
-    print("fwd o2g weight and bias")
-    print(fwdLSTM.o2g.weight)
-    print(fwdLSTM.o2g.bias)
+    torch.manualSeed(2)
+    fwdLSTM.inputGate:get(2):get(1):get(2).weight:uniform(-1, 1)
+    fwdLSTM.inputGate:get(2):get(1):get(2).bias:uniform(-1, 1)
+    fwdLSTM.inputGate:get(2):get(2):get(2).weight:uniform(-1, 1)
+    fwdLSTM.inputGate:get(2):get(2):get(2).bias:uniform(-1, 1)
+
+    fwdLSTM.forgetGate:get(2):get(1):get(2).weight:uniform(-1, 1)
+    fwdLSTM.forgetGate:get(2):get(1):get(2).bias:uniform(-1, 1)
+    fwdLSTM.forgetGate:get(2):get(2):get(2).weight:uniform(-1, 1)
+    fwdLSTM.forgetGate:get(2):get(2):get(2).bias:uniform(-1, 1)
+
+
+    fwdLSTM.hiddenLayer:get(2):get(1):get(2).weight:uniform(-1, 1)
+    fwdLSTM.hiddenLayer:get(2):get(1):get(2).bias:uniform(-1, 1)
+    fwdLSTM.hiddenLayer:get(2):get(2):get(2).weight:uniform(-1, 1)
+    fwdLSTM.hiddenLayer:get(2):get(2):get(2).bias:uniform(-1, 1)
+
+
+    fwdLSTM.outputGate:get(2):get(1):get(2).weight:uniform(-1, 1)
+    fwdLSTM.outputGate:get(2):get(1):get(2).bias:uniform(-1, 1)
+    fwdLSTM.outputGate:get(2):get(2):get(2).weight:uniform(-1, 1)
+    fwdLSTM.outputGate:get(2):get(2):get(2).bias:uniform(-1, 1)
+    -- fwdLSTM.i2g.weight:uniform(-1,1)
+    -- fwdLSTM.i2g.bias:uniform(-1,1)
+    -- --fwdLSTM.i2g.weight = loadWeightFile('params/weight_ih_l0.txt', 4 * hiddenSize, embeddingSize)
+    -- --fwdLSTM.i2g.bias = loadWeightFile('params/bias_ih_l0.txt', 4 * hiddenSize , 1)
+    -- print("fwd i2g weight and bias")
+    -- print(fwdLSTM.i2g.weight)
+    -- print(fwdLSTM.i2g.bias)
+    -- --fwdLSTM.o2g.weight = loadWeightFile('params/weight_hh_l0.txt', 4 * hiddenSize, hiddenSize)
+    -- --fwdLSTM.o2g.bias = loadWeightFile('params/weight_hh_l0.txt', 4 * hiddenSize, 1)
+    -- fwdLSTM.o2g.weight:uniform(-1,1)
+    -- fwdLSTM.o2g.bias:uniform(-1,1)
+    -- print("fwd o2g weight and bias")
+    -- print(fwdLSTM.o2g.weight)
+    -- print(fwdLSTM.o2g.bias)
 
     local fwdSeq = nn.Sequencer(fwd)
-    local bwdLSTM = PyTorchFastLSTM(embeddingSize, hiddenSize)
-    bwdLSTM.i2g.weight = loadWeightFile('params/weight_ih_l0_reverse.txt', 4 * hiddenSize, embeddingSize)
-    bwdLSTM.i2g.bias = loadWeightFile('params/bias_ih_l0_reverse.txt', 4 * hiddenSize , 1)
-    print("bwd i2g weight and bias")
-    print(bwdLSTM.i2g.weight)
-    print(bwdLSTM.i2g.bias)
-    bwdLSTM.o2g.weight = loadWeightFile('params/weight_hh_l0_reverse.txt', 4 * hiddenSize, hiddenSize)
-    bwdLSTM.o2g.bias = loadWeightFile('params/weight_hh_l0_reverse.txt', 4 * hiddenSize, 1)
-    print("bwd o2g weight and bias")
-    print(bwdLSTM.o2g.weight)
-    print(bwdLSTM.o2g.bias)
+    local bwdLSTM = PyTorchLSTM(embeddingSize, hiddenSize)
+    --bwdLSTM.i2g.weight = loadWeightFile('params/weight_ih_l0_reverse.txt', 4 * hiddenSize, embeddingSize)
+    --bwdLSTM.i2g.bias = loadWeightFile('params/bias_ih_l0_reverse.txt', 4 * hiddenSize , 1)
+    torch.manualSeed(3)
+    bwdLSTM.inputGate:get(2):get(1):get(2).weight:uniform(-1, 1)
+    bwdLSTM.inputGate:get(2):get(1):get(2).bias:uniform(-1, 1)
+    bwdLSTM.inputGate:get(2):get(2):get(2).weight:uniform(-1, 1)
+    bwdLSTM.inputGate:get(2):get(2):get(2).bias:uniform(-1, 1)
+
+    bwdLSTM.forgetGate:get(2):get(1):get(2).weight:uniform(-1, 1)
+    bwdLSTM.forgetGate:get(2):get(1):get(2).bias:uniform(-1, 1)
+    bwdLSTM.forgetGate:get(2):get(2):get(2).weight:uniform(-1, 1)
+    bwdLSTM.forgetGate:get(2):get(2):get(2).bias:uniform(-1, 1)
+
+
+    bwdLSTM.hiddenLayer:get(2):get(1):get(2).weight:uniform(-1, 1)
+    bwdLSTM.hiddenLayer:get(2):get(1):get(2).bias:uniform(-1, 1)
+    bwdLSTM.hiddenLayer:get(2):get(2):get(2).weight:uniform(-1, 1)
+    bwdLSTM.hiddenLayer:get(2):get(2):get(2).bias:uniform(-1, 1)
+
+
+    bwdLSTM.outputGate:get(2):get(1):get(2).weight:uniform(-1, 1)
+    bwdLSTM.outputGate:get(2):get(1):get(2).bias:uniform(-1, 1)
+    bwdLSTM.outputGate:get(2):get(2):get(2).weight:uniform(-1, 1)
+    bwdLSTM.outputGate:get(2):get(2):get(2).bias:uniform(-1, 1)
+    -- bwdLSTM.i2g.weight:uniform(-1,1)
+    -- bwdLSTM.i2g.bias:uniform(-1,1)
+    -- print("bwd i2g weight and bias")
+    -- print(bwdLSTM.i2g.weight)
+    -- print(bwdLSTM.i2g.bias)
+    -- --bwdLSTM.o2g.weight = loadWeightFile('params/weight_hh_l0_reverse.txt', 4 * hiddenSize, hiddenSize)
+    -- --bwdLSTM.o2g.bias = loadWeightFile('params/weight_hh_l0_reverse.txt', 4 * hiddenSize, 1)
+    -- bwdLSTM.o2g.weight:uniform(-1,1)
+    -- bwdLSTM.o2g.bias:uniform(-1,1)
+    -- print("bwd o2g weight and bias")
+    -- print(bwdLSTM.o2g.weight)
+    -- print(bwdLSTM.o2g.bias)
     local bwd = nn.Sequential():add(embeddingLayer:sharedClone())
                 :add(bwdLSTM)
     local bwdSeq = nn.Sequential()
@@ -99,12 +152,14 @@ function BMLSTM:createNetwork()
        :add(nn.ZipTable())
        :add(mergeSeq)
     local lastLinear = nn.Linear(2 * hiddenSize, data.numLabels)
+    torch.manualSeed(4)
+    lastLinear.weight:uniform(-1,1)
+    lastLinear.bias:uniform(-1, 1)
     print("final linear weight and bias")
     print(lastLinear.weight)
     print(lastLinear.bias)
     local rnn = nn.Sequential()
-        :add(brnn) 
-        :add(nn.Sequencer(lastLinear))
+        :add(brnn):add(nn.Sequencer(lastLinear))
 
     self.net = rnn
 end
@@ -112,7 +167,6 @@ end
 function BMLSTM:obtainParams()
     --make sure we will not replace this variable
     self.params, self.gradParams = self.net:getParameters()
-    self.params:copy(torch.Tensor(self.params:size(1)):fill(2))
     print("Number of parameters: " .. self.params:nElement())
     self.params:retain()
     self.paramsPtr = torch.pointer(self.params)
@@ -187,7 +241,7 @@ function BMLSTM:buildVocab(sentences, sentence_toks)
         end
     end
     print("number of unique words:" .. self.vocabSize)
-    --printTable(self.word2idx)
+    printTable(self.word2idx)
 end
 
 function printTable(table)
@@ -240,13 +294,24 @@ end
 
 function BMLSTM:forward(isTraining, batchInputIds)
     local nnInput = self:getForwardInput(isTraining, batchInputIds)
-    local output_table = self.net:forward(nnInput)
+    -- printTable(nnInput)
+    local lstmout = self.net:get(1):forward(nnInput)
+    -- local lstmout = loadWeightFile('params/lstm_out.txt', 7, 4)
+    -- local lstmoutTable = {}
+    -- lstmoutTable = torch.split(lstmoutTable, lstmout, 7 ,1)
+     -- printTable(lstmout)
+    local output_table = self.net:get(2):forward(lstmout)
+    --local output_table = self.net:forward(nnInput)
     self.output = torch.cat(self.output, output_table, 1)
     if not self.outputPtr:isSameSizeAs(self.output) then
         self.outputPtr:resizeAs(self.output)
     end
+    -- print(self.output)
     self.outputPtr:copy(self.output)
-    
+end
+
+function printTable(table)
+    for i, k in pairs(table) do print(k) end
 end
 
 function BMLSTM:getBackwardInput()

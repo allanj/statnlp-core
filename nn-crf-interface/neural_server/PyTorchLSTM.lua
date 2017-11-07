@@ -201,7 +201,6 @@ function PyTorchLSTM:updateOutput(input)
    else
       output, cell = unpack(self.recurrentModule:updateOutput{input, prevOutput, prevCell})
    end
-
    self.outputs[self.step] = output
    self.cells[self.step] = cell
 
