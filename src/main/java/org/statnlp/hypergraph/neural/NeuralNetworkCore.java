@@ -66,12 +66,19 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	
 	protected String nnModelFile = null;
 	
-	public NeuralNetworkCore(int numLabels) {
+	/**
+	 * GPU ID required, as for loading model as well. By default is less than 0 means CPU mode.
+	 */
+	protected int gpuid = -1;
+	
+	public NeuralNetworkCore(int numLabels, int gpuid) {
 		super(numLabels);
 		config = new HashMap<>();
 		optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
+		this.gpuid = gpuid;
 		config.put("optimizeNeural", optimizeNeural);
 		config.put("numLabels", numLabels);
+		config.put("gpuid", gpuid);
 	}
 	
 	@Override
@@ -269,8 +276,8 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 * @param func: the specific function for loading model
 	 * @param prefix: model prefix.
 	 */
-	public void load(String func, String prefix) {
-		LuaFunctionHelper.execLuaFunction(this.L, func, new Object[]{prefix}, new Class[]{});
+	public void load(String func, String prefix, int gpuid) {
+		LuaFunctionHelper.execLuaFunction(this.L, func, new Object[]{prefix, gpuid}, new Class[]{});
 	}
 	
 	/**
@@ -278,7 +285,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 * @param prefix
 	 */
 	public void load() {
-		this.load("load_model", this.nnModelFile);
+		this.load("load_model", this.nnModelFile, this.gpuid);
 	}
 	
 	@Override

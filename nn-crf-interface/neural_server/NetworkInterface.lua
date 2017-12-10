@@ -105,8 +105,10 @@ function save_model(prefix)
     print(string.format("Saving model took %.4fs", time))
 end
 
-function load_model(prefix)
+function load_model(prefix, gpuID)
     local timer = torch.Timer()
+    gpuid = gpuID
+    setupGPU()
     net = torch.load(prefix)
     local time = timer:time().real
     print(string.format("Loading model took %.4fs", time))

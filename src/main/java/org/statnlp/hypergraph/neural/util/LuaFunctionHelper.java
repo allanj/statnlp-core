@@ -19,6 +19,8 @@ public class LuaFunctionHelper {
 				L.pushString((String) obj);
 			} else if (obj instanceof Double) {
 				L.pushNumber((double) obj);
+			} else if (obj instanceof Integer) {
+				L.pushNumber((int) obj);
 			} else if (obj instanceof Boolean) {
 				L.pushBoolean((boolean) obj);
 			} else if (obj instanceof double[][]) {

@@ -72,7 +72,7 @@ public class MultiLayerPerceptron extends NeuralNetworkCore {
 	protected HashMap<String, Object> config;
 	
 	public MultiLayerPerceptron(String configFile, int numLabels) {
-		super(numLabels);
+		super(numLabels, -1);
 		this.config = this.createConfigFromFile(configFile);
 		config.put("numLabels", numLabels);
 	}

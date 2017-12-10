@@ -7,14 +7,13 @@ public class BidirectionalLSTM extends NeuralNetworkCore {
 	private static final long serialVersionUID = 4592893499307238510L;
 
 	public BidirectionalLSTM(int hiddenSize, boolean bidirection, String optimizer, double learningRate, int clipping, int numLabels, int gpuId, String embedding) {
-		super(numLabels);
+		super(numLabels, gpuId);
 		config.put("class", "SimpleBiLSTM");
         config.put("hiddenSize", hiddenSize);
         config.put("bidirection", bidirection);
         config.put("optimizer", optimizer);
         config.put("numLabels", numLabels);
         config.put("embedding", embedding);
-        config.put("gpuid", gpuId);
         config.put("learningRate", 0.05);
         config.put("clipping", 5);
 	}

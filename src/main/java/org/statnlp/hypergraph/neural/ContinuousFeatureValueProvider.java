@@ -11,7 +11,7 @@ public abstract class ContinuousFeatureValueProvider extends NeuralNetworkCore {
 	}
 	
 	public ContinuousFeatureValueProvider(int numFeatureValues ,int numLabels) {
-		super(numLabels);
+		super(numLabels, -1);
 		this.optimizeNeural = true; //for continuous feature, optimize neural is always true.
 		this.continuousFeatureValue = true;
 		this.numFeatureValues = numFeatureValues;
