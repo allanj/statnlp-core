@@ -7,7 +7,7 @@ public class EmbeddingLayer extends NeuralNetworkCore {
 	private static final long serialVersionUID = 4951822203204790448L;
 
 	public EmbeddingLayer(int numLabels) {
-		super(numLabels);
+		super(numLabels, -1);
 		config.put("class", "EmbeddingLayer");
         config.put("hiddenSize", 30);
         config.put("embedding", "random");

@@ -7,7 +7,7 @@ public class ECRFMLP extends NeuralNetworkCore {
 	private static final long serialVersionUID = -6457902817484777222L;
 
 	public ECRFMLP(int numLabels) {
-		super(numLabels);
+		super(numLabels, -1);
 		config.put("class", "MultiLayerPerceptron");
 	}
 
