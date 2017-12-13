@@ -409,7 +409,7 @@ public abstract class FeatureManager implements Serializable{
 	public FeatureArray createFeatureArray(Network network, int[] featureIndices, double[] fvs){
 		if (!network.getInstance().isLabeled() && network.getInstance().getInstanceId() > 0) {
 			//testing instance, also new feature array
-			return new FeatureArray(featureIndices);
+			return new FeatureArray(featureIndices, fvs);
 		}
 		if(NetworkConfig.AVOID_DUPLICATE_FEATURES){
 			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, fvs, this.getParams_L()[network.getThreadId()]));
