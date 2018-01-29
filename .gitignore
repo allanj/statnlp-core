@@ -7,6 +7,7 @@ experiments/*
 data/*
 !data/conll2000
 *.jar
+!data/semi_example
 ner_out.txt
 jnlua-1.0.4*
 jnlua-0.9.6*
