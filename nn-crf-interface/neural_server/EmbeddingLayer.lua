@@ -134,9 +134,10 @@ function EmbeddingLayer:buildVocab(words)
         local tok = words[i]
         local tok_id = self.word2idx[tok]
         if tok_id == nil then
-            self.vocabSize = self.vocabSize+1
             self.word2idx[tok] = self.vocabSize
             self.idx2word[self.vocabSize] = tok
+            self.vocabSize = self.vocabSize+1
+
         end
     end
     print("number of unique words:" .. #self.idx2word)
