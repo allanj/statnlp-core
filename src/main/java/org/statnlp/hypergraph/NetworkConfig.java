@@ -277,5 +277,5 @@ public class NetworkConfig {
 		return builder.toString();
 	}
 	
-	public static boolean FEATURE_TOUCH_TEST = true;
+	public static boolean FEATURE_TOUCH_TEST = false;
 }
