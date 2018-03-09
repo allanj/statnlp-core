@@ -86,7 +86,7 @@ public class LocalNetworkParam implements Serializable{
 	 * For memory-optimized, map an integer array object to a feature array object
 	 * avoid creating duplicate integer array. 
 	 * **/
-	protected Map<FeatureBox, FeatureBox> fbMap;
+//	protected Map<FeatureBox, FeatureBox> fbMap;
 	
 	public LocalNetworkParam(int threadId, FeatureManager fm, int numNetworks){
 		this._threadId = threadId;

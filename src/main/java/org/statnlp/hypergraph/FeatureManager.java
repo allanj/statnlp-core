@@ -412,9 +412,9 @@ public abstract class FeatureManager implements Serializable{
 			return new FeatureArray(featureIndices, fvs);
 		}
 		if(NetworkConfig.AVOID_DUPLICATE_FEATURES){
-			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, fvs, this.getParams_L()[network.getThreadId()]));
+			return new FeatureArray(featureIndices, fvs);
 		} else {
-			return new FeatureArray(featureIndices);
+			return new FeatureArray(featureIndices, fvs);
 		}
 	}
 	
@@ -434,7 +434,7 @@ public abstract class FeatureManager implements Serializable{
 			return new FeatureArray(featureIndices, fvs, next);
 		}
 		if(NetworkConfig.AVOID_DUPLICATE_FEATURES){
-			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, fvs, this.getParams_L()[network.getThreadId()]), next);
+			return new FeatureArray(featureIndices, fvs, next);
 		} else {
 			return new FeatureArray(featureIndices, fvs, next);
 		}

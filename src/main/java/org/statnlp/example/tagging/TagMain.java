@@ -22,8 +22,8 @@ public class TagMain {
 
 	public static String trainFile = "data/conll2000/sample_train.txt";
 	public static String testFile = "data/conll2000/sample_test.txt";
-	public static int trainNum = 30;
-	public static int testNum = 20;
+	public static int trainNum = 200;
+	public static int testNum = 200;
 	public static int numThreads = 10;
 	public static double l2 = 0.01;
 	public static int numIterations = 30;

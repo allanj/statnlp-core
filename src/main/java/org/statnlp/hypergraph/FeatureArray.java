@@ -17,6 +17,7 @@
 package org.statnlp.hypergraph;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  * The class storing a list of features by their indices.<br>
@@ -33,7 +34,16 @@ public class FeatureArray implements Serializable{
 	/** The total score of this feature array, including all other feature arrays which are chained after this. */
 	private double _totalScore;
 	/** The internal feature box containing the feature indices and the cached local score. */
-	private FeatureBox _fb;
+	protected int[] _fs;
+	
+	protected double _currScore;
+	
+	protected int _version;
+	
+	
+	protected boolean _alwaysChange = false;
+	
+	protected double[] _fv;
 	/** The flag signifying the scope of the feature indices, whether local (per thread) or global (combined feature map). */
 	protected boolean _isLocal = false;
 	
@@ -44,6 +54,8 @@ public class FeatureArray implements Serializable{
 
 	private FeatureArray _next;
 	protected int[] dstNodes;
+	
+	
 	
 	/**
 	 * Merges the features in <code>fs</code> and in <code>next</code><br>
@@ -65,7 +77,8 @@ public class FeatureArray implements Serializable{
 	 * @param next
 	 */
 	public FeatureArray(int[] fs, double[] fvs, FeatureArray next) {
-		this._fb = new FeatureBox(fs, fvs);
+		this._fs = fs;
+		this._fv = fvs;
 		this._next = next;
 	}
 	
@@ -76,7 +89,7 @@ public class FeatureArray implements Serializable{
 	 * @param fs
 	 */
 	public FeatureArray(int[] fs) {
-		this._fb = new FeatureBox(fs);
+		this._fs = fs;
 		this._next = null;
 		this._isLocal = false;
 	}
@@ -89,7 +102,8 @@ public class FeatureArray implements Serializable{
 	 * @param fvs
 	 */
 	public FeatureArray(int[] fs, double[] fvs) {
-		this._fb = new FeatureBox(fs, fvs);
+		this._fs = fs;
+		this._fv = fvs;
 		this._next = null;
 		this._isLocal = false;
 	}
@@ -101,11 +115,11 @@ public class FeatureArray implements Serializable{
 	 * @see #FeatureArray(int[])
 	 * @see #FeatureArray(int[], FeatureArray)
 	 */
-	public FeatureArray(FeatureBox fb) {
-		this._fb = fb;
-		this._next = null;
-		this._isLocal = false;
-	}
+//	public FeatureArray(FeatureBox fb) {
+//		this._fb = fb;
+//		this._next = null;
+//		this._isLocal = false;
+//	}
 
 	/**
 	 * Creates a new FeatureArray based on the feature indices in the given FeatureBox object.<br>
@@ -115,11 +129,11 @@ public class FeatureArray implements Serializable{
 	 * @see #FeatureArray(int[])
 	 * @see #FeatureArray(int[], FeatureArray)
 	 */
-	public FeatureArray(FeatureBox fb, FeatureArray next) {
-		this._fb = fb;
-		this._next = next;
-		this._isLocal = false;
-	}
+//	public FeatureArray(FeatureBox fb, FeatureArray next) {
+//		this._fb = fb;
+//		this._next = next;
+//		this._isLocal = false;
+//	}
 	
 	private FeatureArray(double score) {
 		this._totalScore = score;
@@ -133,7 +147,7 @@ public class FeatureArray implements Serializable{
 	 * @param alwaysChange
 	 */
 	public void setJoint(){
-		this._fb._alwaysChange = true;
+		this._alwaysChange = true;
 	}
 	
 	/**
@@ -142,7 +156,7 @@ public class FeatureArray implements Serializable{
 	 * @param dstNodes: for each feature index, it will joint to one node. The size should be same as feature box size.
 	 */
 	public void setDstNodes(int[] dstNodes) {
-		assert(dstNodes.length == this._fb._fs.length);
+		assert(dstNodes.length == this._fs.length);
 		this.dstNodes = dstNodes;
 	}
 	
@@ -153,10 +167,10 @@ public class FeatureArray implements Serializable{
 		if(this._isLocal){
 			return this;
 		}
-
-		int length = this._fb.length();
+		
+		int length = this._fs.length;
 		if(NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY){
-			for(int fs: this._fb.get()){
+			for(int fs: this._fs){
 				if(fs == -1){
 					length--;
 				}
@@ -164,35 +178,35 @@ public class FeatureArray implements Serializable{
 		}
 
 		int[] fs_local = new int[length];
-		double[] fv_local = NetworkConfig.USE_FEATURE_VALUE && this._fb._fv != null ? new double[length] : null;
+		double[] fv_local = NetworkConfig.USE_FEATURE_VALUE && this._fv != null ? new double[length] : null;
 		int localIdx = 0;
-		for(int k = 0; k<this._fb.length(); k++, localIdx++){
-			if(this._fb.get(k) == -1 && NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY){
+		for(int k = 0; k<length; k++, localIdx++){
+			if(this._fs[k] == -1 && NetworkConfig.BUILD_FEATURES_FROM_LABELED_ONLY){
 				localIdx--;
 				continue;
 			}
 			if(!NetworkConfig.PARALLEL_FEATURE_EXTRACTION || NetworkConfig.NUM_THREADS == 1 || param._isFinalized){
-				fs_local[localIdx] = param.toLocalFeature(this._fb.get(k));
+				fs_local[localIdx] = param.toLocalFeature(this._fs[k]);
 			} else {
-				fs_local[localIdx] = this._fb.get(k);
+				fs_local[localIdx] = this._fs[k];
 			}
-			if (NetworkConfig.USE_FEATURE_VALUE && this._fb._fv != null) {
-				fv_local[localIdx] = this._fb._fv[k];
+			if (NetworkConfig.USE_FEATURE_VALUE && this._fv != null) {
+				fv_local[localIdx] = this._fv[k];
 			}
 					
 			if(fs_local[localIdx]==-1){
-				throw new RuntimeException("The local feature got an id of -1 for " + this._fb.get(k));
+				throw new RuntimeException("The local feature got an id of -1 for " + this._fs[k]);
 			}
 		}
 		
 		FeatureArray fa;
 		if (this._next != null){
-			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, fv_local, param), this._next.toLocal(param)); //saving memory
+			fa = new FeatureArray(fs_local, fv_local, this._next.toLocal(param)); //saving memory
 		} else {
-			fa = new FeatureArray(FeatureBox.getFeatureBox(fs_local, fv_local, param)); //saving memory
+			fa = new FeatureArray(fs_local, fv_local); //saving memory
 		}
 		fa._isLocal = true;
-		fa._fb._alwaysChange = this._fb._alwaysChange;
+		fa._alwaysChange = this._alwaysChange;
 		fa.dstNodes = this.dstNodes;
 		return fa;
 	}
@@ -203,7 +217,7 @@ public class FeatureArray implements Serializable{
 	 * @return
 	 */
 	public int[] getCurrent(){
-		return this._fb.get();
+		return this._fs;
 	}
 
 	/**
@@ -236,8 +250,8 @@ public class FeatureArray implements Serializable{
 		for (int idx = 0; idx < fs_local.length; idx++) {
 			int f_local = fs_local[idx];
 			double featureValue = 1.0;
-			if (NetworkConfig.USE_FEATURE_VALUE && this._fb._fv != null) {
-				featureValue = this._fb._fv[idx];
+			if (NetworkConfig.USE_FEATURE_VALUE && this._fv != null) {
+				featureValue = this._fv[idx];
 			}
 			param.addCount(f_local, count * featureValue);
 		}
@@ -288,12 +302,12 @@ public class FeatureArray implements Serializable{
 			return this._totalScore;
 		}
 		this._totalScore = 0.0;
-		if (this._fb._version != version){
-			this._fb._currScore = NetworkConfig.USE_FEATURE_VALUE ? this.computeScore(param, this.getCurrent(), this._fb._fv) :
+		if (this._version != version){
+			this._currScore = NetworkConfig.USE_FEATURE_VALUE ? this.computeScore(param, this.getCurrent(), this._fv) :
 									this.computeScore(param, this.getCurrent());
-			this._fb._version = version;
+			this._version = version;
 		}
-		this._totalScore += this._fb._currScore;
+		this._totalScore += this._currScore;
 		if (this._next != null){
 			this._totalScore += this._next.getScore(param, version);
 		}
@@ -357,8 +371,8 @@ public class FeatureArray implements Serializable{
 			return this._totalScore;
 		}
 		this._totalScore = 0.0;
-		if (this._fb._version != version || this._fb._alwaysChange){
-			this._fb._currScore = 0.0;
+		if (this._version != version || this._alwaysChange){
+			this._currScore = 0.0;
 			int[] curr = this.getCurrent();
 			for (int idx = 0; idx < curr.length; idx++) {
 				int f = curr[idx];
@@ -370,12 +384,12 @@ public class FeatureArray implements Serializable{
 					if (this.dstNodes != null) {
 						featureValue = marginal[dstNodes[idx]];
 					}
-					this._fb._currScore += param.getWeight(f) * featureValue;
+					this._currScore += param.getWeight(f) * featureValue;
 				}
 			}
-			this._fb._version = version;
+			this._version = version;
 		}
-		this._totalScore += this._fb._currScore;
+		this._totalScore += this._currScore;
 
 		if (this._next != null){
 			this._totalScore += this._next.getScore_MF_Version(param, marginal, version);
@@ -389,7 +403,7 @@ public class FeatureArray implements Serializable{
 	 * @return
 	 */
 	public int size(){
-		int size = this._fb.length();
+		int size = this._fs.length;
 		if (this._next != null){
 			size += this._next.size();
 		}
@@ -400,10 +414,10 @@ public class FeatureArray implements Serializable{
 	public String toString(){
 		StringBuilder sb = new StringBuilder();
 		sb.append('[');
-		for(int k = 0; k<this._fb.length(); k++){
+		for(int k = 0; k<this._fs.length; k++){
 			if(k!=0)
 				sb.append(' ');
-			sb.append(this._fb.get(k));
+			sb.append(this._fs[k]);
 		}
 		sb.append(']');
 		return sb.toString();
@@ -411,27 +425,47 @@ public class FeatureArray implements Serializable{
 
 	@Override
 	public int hashCode(){
-		int code = _fb.hashCode();
-		if (this._next != null){
-			code = code ^ this._next.hashCode();
-		}
-		return code;
+		int hash = 1;
+		int a = Arrays.hashCode(_fs);
+		hash = hash * 17 + a;
+		int b = Arrays.hashCode(_fv);
+		hash = hash * 17 + b;
+		return hash;
 	}
 
 	@Override
 	public boolean equals(Object o){
 		if(o instanceof FeatureArray){
-			FeatureArray fa = (FeatureArray)o;
-			if (!this._fb.equals(fa._fb)) {
-				return false;
-			}
-			if(this._next == null){
-				if(fa._next != null){
+			FeatureArray other = (FeatureArray)o;
+			boolean isEqual = Arrays.equals(_fs, other._fs);
+			if (this._fv != null && other._fv == null) return false;
+			if (other._fv != null && this._fv == null) return false;
+			if (this._fv == null && other._fv == null)
+				if (isEqual) {
+					if(this._next == null){
+						if(other._next != null){
+							return false;
+						}
+						return true;
+					}else{
+						return this._next.equals(other._next);
+					}
+				} else {
 					return false;
 				}
-				return true;
-			}else{
-				return this._next.equals(fa._next);
+			else {
+				if (isEqual && Arrays.equals(_fv, other._fv)) {
+					if(this._next == null){
+						if(other._next != null){
+							return false;
+						}
+						return true;
+					}else{
+						return this._next.equals(other._next);
+					}
+				} else {
+					return false;
+				}
 			}
 		}
 		return false;
