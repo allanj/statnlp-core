@@ -47,7 +47,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	 */
 	protected static int[][][] maxPathsSharedArrays = new int[NetworkConfig.NUM_THREADS][][];
 
-	protected static NodeHypothesis[][] hypothesisSharedArray = new NodeHypothesis[NetworkConfig.NUM_THREADS][];
+//	protected static NodeHypothesis[][] hypothesisSharedArray = new NodeHypothesis[NetworkConfig.NUM_THREADS][];
 	/** 
 	 * The working array for each thread for calculating outside scores 
 	 */
@@ -168,12 +168,12 @@ public abstract class Network implements Serializable, HyperGraph{
 		return maxPathsSharedArrays[this._threadId];
 	}
 	
-	protected NodeHypothesis[] getHypothesisSharedArray(){
-		if(hypothesisSharedArray[this._threadId] == null || this.countNodes() > hypothesisSharedArray[this._threadId].length){
-			hypothesisSharedArray[this._threadId] = new NodeHypothesis[this.countNodes()];
-		}
-		return hypothesisSharedArray[this._threadId];
-	}
+//	protected NodeHypothesis[] getHypothesisSharedArray(){
+//		if(hypothesisSharedArray[this._threadId] == null || this.countNodes() > hypothesisSharedArray[this._threadId].length){
+//			hypothesisSharedArray[this._threadId] = new NodeHypothesis[this.countNodes()];
+//		}
+//		return hypothesisSharedArray[this._threadId];
+//	}
 	
 	protected double[] getMarginalSharedArray(){
 		if(unlabeledMarginalSharedArray[this._threadId] == null || this.countNodes() > unlabeledMarginalSharedArray[this._threadId].length)
@@ -477,7 +477,7 @@ public abstract class Network implements Serializable, HyperGraph{
 	public void max(){
 		this._max = this.getMaxSharedArray();
 		this._max_paths = this.getMaxPathSharedArray();
-		this._hypotheses = this.getHypothesisSharedArray();
+//		this._hypotheses = this.getHypothesisSharedArray();
 		for(int k=0; k<this.countNodes(); k++){
 			this.max(k);
 		}
@@ -877,7 +877,7 @@ public abstract class Network implements Serializable, HyperGraph{
 			int[][] childrenList_k = this.getChildren(k);
 			this._max[k] = Double.NEGATIVE_INFINITY;
 			
-			EdgeHypothesis[] childrenOfThisNodeHypothesis = new EdgeHypothesis[childrenList_k.length];
+//			EdgeHypothesis[] childrenOfThisNodeHypothesis = new EdgeHypothesis[childrenList_k.length];
 			
 			for(int children_k_index = 0; children_k_index < childrenList_k.length; children_k_index++){
 				int[] children_k = childrenList_k[children_k_index];
@@ -910,34 +910,34 @@ public abstract class Network implements Serializable, HyperGraph{
 				if (NetworkConfig.USE_NEURAL_FEATURES) {
 					score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
 				}
-//				for(int child_k : children_k){
-//					score += this._max[child_k];
-//				}
-//				if(score >= this._max[k]){
-//					this._max[k] = score;
-//					this._max_paths[k] = children_k;
-//				}
-				NodeHypothesis[] children = new NodeHypothesis[children_k.length];
-				for(int i=0; i<children.length; i++){
-					if(children_k[i] < 0){
-						children[i] = new NodeHypothesis(children_k[i]);
-					} else {
-						children[i] = this._hypotheses[children_k[i]];
-					}
+				for(int child_k : children_k){
+					score += this._max[child_k];
 				}
-				childrenOfThisNodeHypothesis[children_k_index] = new EdgeHypothesis(k, children, score);
+				if(score >= this._max[k]){
+					this._max[k] = score;
+					this._max_paths[k] = children_k;
+				}
+//				NodeHypothesis[] children = new NodeHypothesis[children_k.length];
+//				for(int i=0; i<children.length; i++){
+//					if(children_k[i] < 0){
+//						children[i] = new NodeHypothesis(children_k[i]);
+//					} else {
+//						children[i] = this._hypotheses[children_k[i]];
+//					}
+//				}
+//				childrenOfThisNodeHypothesis[children_k_index] = new EdgeHypothesis(k, children, score);
 			}
-			this._hypotheses[k] = new NodeHypothesis(k, childrenOfThisNodeHypothesis);
-			ScoredIndex bestPath = this._hypotheses[k].getKthBestHypothesis(0);
-//			System.out.println("Node: "+this._hypotheses[k]);
-//			System.out.println("Edges: "+Arrays.toString(childrenOfThisNodeHypothesis));
-//			System.out.println(bestPath);
-			EdgeHypothesis edge = this._hypotheses[k].children()[bestPath.index[0]];
-			this._max_paths[k] = new int[edge.children().length];
-			for(int i=0; i<edge.children().length; i++){
-				this._max_paths[k][i] = edge.children()[i].nodeIndex();
-			}
-			this._max[k] = bestPath.score;
+//			this._hypotheses[k] = new NodeHypothesis(k, childrenOfThisNodeHypothesis);
+//			ScoredIndex bestPath = this._hypotheses[k].getKthBestHypothesis(0);
+////			System.out.println("Node: "+this._hypotheses[k]);
+////			System.out.println("Edges: "+Arrays.toString(childrenOfThisNodeHypothesis));
+////			System.out.println(bestPath);
+//			EdgeHypothesis edge = this._hypotheses[k].children()[bestPath.index[0]];
+//			this._max_paths[k] = new int[edge.children().length];
+//			for(int i=0; i<edge.children().length; i++){
+//				this._max_paths[k][i] = edge.children()[i].nodeIndex();
+//			}
+//			this._max[k] = bestPath.score;
 		}
 	}
 	
