@@ -86,6 +86,7 @@ public class LinearNEMain {
 		NetworkConfig.BATCH_SIZE = batchSize; //need to enable batch training first
 		NetworkConfig.RANDOM_BATCH = false;
 		NetworkConfig.PRINT_BATCH_OBJECTIVE = false;
+		NetworkConfig.FEATURE_TOUCH_TEST = true;
 		
 		//In order to compare with neural architecture for named entity recognition
 		Entity.get("START_TAG");
@@ -150,7 +151,7 @@ public class LinearNEMain {
 		
 		
 		testInstances = EReader.readData(testFile, false, testNumber,"IOB");
-		Instance[] predictions = model.decode(testInstances);
+		Instance[] predictions = model.test(testInstances);
 		ECRFEval.evalNER(predictions, nerOut);
 	}
 
