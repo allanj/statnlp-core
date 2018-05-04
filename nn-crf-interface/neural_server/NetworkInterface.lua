@@ -107,8 +107,10 @@ end
 
 function load_model(prefix, gpuID)
     local timer = torch.Timer()
-    gpuid = gpuID
-    setupGPU()
+    if gpuID >= 0 then
+        gpuid = gpuID
+        setupGPU()
+    end
     net = torch.load(prefix)
     local time = timer:time().real
     print(string.format("Loading model took %.4fs", time))

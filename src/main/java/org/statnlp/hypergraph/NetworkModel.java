@@ -721,6 +721,7 @@ public abstract class NetworkModel implements Serializable{
 		}
 
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			if (!NetworkConfig.FEATURE_TOUCH_TEST) throw new RuntimeException("with neural, you need to enable Feature Touch test option");
 			LocalNetworkParam[] params_l = new LocalNetworkParam[this._numThreads];
 			for(int threadId = 0; threadId<this._numThreads; threadId++){
 				params_l[threadId] = this._decoders[threadId].getParam();

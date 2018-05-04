@@ -133,9 +133,11 @@ function SimpleBiLSTM:obtainParams()
             -- since the the network is gpu network.
             self.paramsDouble = self.params:double()
             self.paramsDouble:retain()
+            self.params:retain()
             self.paramsPtr = torch.pointer(self.paramsDouble)
             self.gradParamsDouble = self.gradParams:double()
             self.gradParamsDouble:retain()
+            self.gradParams:retain()
             self.gradParamsPtr = torch.pointer(self.gradParamsDouble)
             return self.paramsPtr, self.gradParamsPtr
         else
@@ -178,7 +180,7 @@ function SimpleBiLSTM:createOptimizer()
 end
 
 function SimpleBiLSTM:forward(isTraining, batchInputIds)
-    if self.gpuid >= 0 and not self.doOptimization and isTraining then
+    if self.gpuid >= 0 and not self.doOptimization then
         self.params:copy(self.paramsDouble:cuda())
     end
     local nnInput = self:getForwardInput(isTraining, batchInputIds)
