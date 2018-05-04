@@ -206,7 +206,6 @@ public class LinearNEMain {
 					case "-reg": l2 = Double.valueOf(args[i+1]);  break;
 					case "-lr": adagrad_learningRate = Double.valueOf(args[i+1]); break;
 					case "-backend": NetworkConfig.NEURAL_BACKEND = args[i+1]; break;
-					case "-os": NetworkConfig.OS = args[i+1]; break; // for Lua native lib, "osx" or "linux"
 					case "-evalDev": evalOnDev = args[i+1].equals("true") ? true : false; 
 						if (evalOnDev) {
 							evalFreq = Integer.valueOf(args[i+2]);

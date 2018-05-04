@@ -249,7 +249,8 @@ public class NetworkConfig {
 	
 	public static String NEURAL_RANDOM_TYPE = "default";
 	
-	public static String OS = "osx"; // for Lua native library
+//	public static String OS = "osx"; // for Lua native library
+	//auto detect
 	
 	/***
 	 * Mean field-related flags.

@@ -71,6 +71,7 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 	protected void configureJNLua() {
 		System.setProperty("jna.library.path","./nativeLib");
 		System.setProperty("java.library.path", "./nativeLib:" + System.getProperty("java.library.path"));
+		String operatingSystem = System.getProperty("os.name");
 		Field fieldSysPath = null;
 		try {
 			fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
@@ -85,9 +86,9 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 		} else if (LUA_VERSION.equals("5.1")) {
 			jnluaLib = "libjnlua5.1";
 		}
-		if (NetworkConfig.OS.equals("osx")) {
+		if (operatingSystem.startsWith("Mac")) {
 			jnluaLib += ".jnilib";
-		} else if (NetworkConfig.OS.equals("linux")) {
+		} else if (operatingSystem.startsWith("Linux")) {
 			jnluaLib += ".so";
 		}
 		Native.loadLibrary(jnluaLib, Library.class);
