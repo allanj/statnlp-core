@@ -339,6 +339,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		out.writeInt(this.numLabels);
 		out.writeDouble(this.scale);
 		out.writeObject(this.nnModelFile);
+		out.writeObject(this.gpuid);
 		this.save(this.nnModelFile);
 	}
 	
@@ -350,6 +351,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		this.numLabels = in.readInt();
 		this.scale = in.readDouble();
 		this.nnModelFile = (String) in.readObject();
+		this.gpuid = in.readInt();
 		this.config.put("nnModelFile", this.nnModelFile);
 		this.configureJNLua();
 		this.load();
