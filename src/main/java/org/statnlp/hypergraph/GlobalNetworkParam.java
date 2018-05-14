@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Random;
 
 import org.statnlp.commons.ml.opt.GradientDescentOptimizer;
+import org.statnlp.commons.ml.opt.GradientDescentOptimizer.BestParamCriteria;
 import org.statnlp.commons.ml.opt.LBFGS;
 import org.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 import org.statnlp.commons.ml.opt.MathsVector;
@@ -660,20 +661,22 @@ public class GlobalNetworkParam implements Serializable{
 		if(this._opt.name().contains("Gradient Descent Optimizer")){
     		System.out.println("Copying the best parameters");
     		GradientDescentOptimizer gdOptimizer = (GradientDescentOptimizer)this._opt;
-    		gdOptimizer.copyBest();
-    		if (NetworkConfig.USE_NEURAL_FEATURES) {
-        		// De-concatenate into their corresponding weight vectors 
-        		int ptr = 0;
-        		System.arraycopy(concatWeights, ptr, _weights, 0, _weights.length);
-        		ptr += _weights.length;
-    			for (AbstractNeuralNetwork net : this._nn_param_g.getAllNets()) {
-    				double[] params = net.getParams();
-    				double[] gradParams = net.getGradParams();
-    				if (params == null || gradParams == null) continue;
-    				System.arraycopy(concatWeights, ptr, params, 0, params.length);
-    				ptr += params.length;
-    			}
-        	}
+    		if (gdOptimizer.getCriteria() != BestParamCriteria.LAST_UPDATE) {
+    			gdOptimizer.copyBest();
+        		if (NetworkConfig.USE_NEURAL_FEATURES) {
+            		// De-concatenate into their corresponding weight vectors 
+            		int ptr = 0;
+            		System.arraycopy(concatWeights, ptr, _weights, 0, _weights.length);
+            		ptr += _weights.length;
+        			for (AbstractNeuralNetwork net : this._nn_param_g.getAllNets()) {
+        				double[] params = net.getParams();
+        				double[] gradParams = net.getGradParams();
+        				if (params == null || gradParams == null) continue;
+        				System.arraycopy(concatWeights, ptr, params, 0, params.length);
+        				ptr += params.length;
+        			}
+            	}
+    		}
     	}
 	}
 	

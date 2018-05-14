@@ -19,6 +19,7 @@ package org.statnlp.commons.ml.opt;
 
 import java.util.Arrays;
 
+import org.statnlp.commons.ml.opt.GradientDescentOptimizer.BestParamCriteria;
 import org.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 
 /**
@@ -102,10 +103,15 @@ public class GradientDescentOptimizer implements Optimizer{
 		BEST_ON_DEV,
 		
 		/**
+		 * Use the weights at the last update.
+		 */
+		LAST_UPDATE,
+		
+		/**
 		 * Better not used this if using batch mode, as the batch objective 
 		 * could not be so expressive as epoch objective
 		 */
-		BEST_OBJECTIVE;
+		BEST_OBJ;
 	}
 	
 	private AdaptiveStrategy adaptiveStrategy;
@@ -334,7 +340,7 @@ public class GradientDescentOptimizer implements Optimizer{
 	 * @return
 	 */
 	private boolean checkAndSetAndIsBest(){
-		if (paramSelectCriteria == BestParamCriteria.BEST_OBJECTIVE) {
+		if (paramSelectCriteria == BestParamCriteria.LAST_UPDATE) {
 			if(this._obj < this.bestObj){
 				this.bestObj = this._obj;
 				for(int k=0; k<this._x.length; k++){
@@ -377,5 +383,9 @@ public class GradientDescentOptimizer implements Optimizer{
 	
 	public String name(){
 		return "Gradient Descent Optimizer with adaptive strategy: "+this.adaptiveStrategy.name();
+	}
+
+	public BestParamCriteria getCriteria() {
+		return this.paramSelectCriteria;
 	}
 }
