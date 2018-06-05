@@ -319,17 +319,15 @@ public class LocalNetworkParam implements Serializable{
 			localNNInput2Id.get(netId).put(nnInput, localNNInput2Id.size());
 		}
 		if (NetworkConfig.USE_BATCH_TRAINING && this._fm._param_g.getNNParamG().isLearningState()) {
-			//only need positive instance ID
-			int instId = network.getInstance().getInstanceId();
-			if (instId > 0) {
-				TIntObjectMap<Set<Object>> map =  this.localInstId2NNInput.get(netId);
-				if (map.containsKey(instId)) {
-					map.get(instId).add(nnInput);
-				} else {
-					Set<Object> set = new HashSet<>();
-					set.add(nnInput);
-					map.put(instId, set);
-				}
+			// need both positive and negative instance ID
+			int instId = Math.abs(network.getInstance().getInstanceId());
+			TIntObjectMap<Set<Object>> map =  this.localInstId2NNInput.get(netId);
+			if (map.containsKey(instId)) {
+				map.get(instId).add(nnInput);
+			} else {
+				Set<Object> set = new HashSet<>();
+				set.add(nnInput);
+				map.put(instId, set);
 			}
 		}
 	}
