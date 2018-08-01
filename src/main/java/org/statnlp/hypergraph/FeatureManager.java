@@ -414,7 +414,7 @@ public abstract class FeatureManager implements Serializable{
 		if(NetworkConfig.AVOID_DUPLICATE_FEATURES){
 			return new FeatureArray(FeatureBox.getFeatureBox(featureIndices, fvs, this.getParams_L()[network.getThreadId()]));
 		} else {
-			return new FeatureArray(featureIndices);
+			return new FeatureArray(featureIndices, fvs);
 		}
 	}
 	
