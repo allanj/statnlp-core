@@ -1,10 +1,9 @@
+
 package org.statnlp.hypergraph.neural;
 
-import java.io.IOException;
+import static edu.cmu.dynet.internal.dynet_swig.initialize;
+
 import java.io.Serializable;
-import java.lang.reflect.Field;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Arrays;
 
 import org.statnlp.commons.ml.opt.MathsVector;
@@ -12,10 +11,8 @@ import org.statnlp.hypergraph.LocalNetworkParam;
 import org.statnlp.hypergraph.Network;
 import org.statnlp.hypergraph.NetworkConfig;
 
-import com.naef.jnlua.LuaState;
-import com.sun.jna.Library;
-import com.sun.jna.Native;
-
+import edu.cmu.dynet.internal.ComputationGraph;
+import edu.cmu.dynet.internal.DynetParams;
 import gnu.trove.set.TIntSet;
 
 
@@ -23,30 +20,26 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 	
 	private static final long serialVersionUID = 1501009887917654699L;
 
-	public static String LUA_VERSION = "5.2";
-	
+	/**
+	 * The id of this neural network
+	 */
 	protected int netId;
 	
 	/**
-	 * A LuaState instance for loading Lua scripts
+	 * The total number of unique outputs
 	 */
-	public transient LuaState L;
-	
-	/**
-	 * The total number of unique output labels
-	 */
-	protected int numLabels;
+	protected int numOutputs;
 	
 	/**
 	 * The neural net's internal weights and gradients
 	 */
-	protected transient double[] params, gradParams;
+	protected transient float[] params, gradParams;
 	
 	/**
 	 * A flattened matrix containing the continuous values
 	 * with the shape (inputSize x numLabels).
 	 */
-	protected transient double[] output, countOutput;
+	protected transient float[] output, gradOutput;
 	
 	/**
 	 * The coefficient used for regularization, i.e., batchSize/totalInstNum.
@@ -55,53 +48,32 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 	
 	protected transient LocalNetworkParam[] params_l;
 	
+	protected transient DynetParams dp;
+	protected transient ComputationGraph cg;
+	
+	/**
+	 * Initialize the network with the number of outputs
+	 * @param numLabels
+	 */
 	public AbstractNeuralNetwork(int numLabels) {
-		this.numLabels = numLabels;
-		this.configureJNLua();
+		this(numLabels, 1234);
+	}
+	
+	/**
+	 * Constructor
+	 * @param numLabels
+	 * @param randomSeed
+	 */
+	public AbstractNeuralNetwork(int numLabels, long randomSeed) {
+		this.numOutputs = numLabels;
+		this.dp = new DynetParams();
+		dp.setRandom_seed(randomSeed);
+		initialize(dp);
+		this.cg = ComputationGraph.getNew();
 	}
 	
 	public void setLocalNetworkParams (LocalNetworkParam[] params_l) {
 		this.params_l = params_l;
-	}
-	
-	/**
-	 * Configure paths for JNLua and create a new LuaState instance
-	 * for loading the backend Torch/Lua script
-	 */
-	protected void configureJNLua() {
-		System.setProperty("jna.library.path","./nativeLib");
-		System.setProperty("java.library.path", "./nativeLib:" + System.getProperty("java.library.path"));
-		String operatingSystem = System.getProperty("os.name");
-		Field fieldSysPath = null;
-		try {
-			fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
-			fieldSysPath.setAccessible(true);
-			fieldSysPath.set(null, null);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		String jnluaLib = null;
-		if (LUA_VERSION.equals("5.2")) {
-			jnluaLib = "libjnlua52";
-		} else if (LUA_VERSION.equals("5.1")) {
-			jnluaLib = "libjnlua5.1";
-		}
-		if (operatingSystem.startsWith("Mac")) {
-			jnluaLib += ".jnilib";
-		} else if (operatingSystem.startsWith("Linux")) {
-			jnluaLib += ".so";
-		}
-		Native.loadLibrary(jnluaLib, Library.class);
-		
-		this.L = new LuaState();
-		this.L.openLibs();
-		
-		try {
-			this.L.load(Files.newInputStream(Paths.get("nn-crf-interface/neural_server/NetworkInterface.lua")),"NetworkInterface.lua","bt");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		this.L.call(0,0);
 	}
 	
 	public abstract Object hyperEdgeInput2NNInput(Object edgeInput);
@@ -109,7 +81,7 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 	/**
 	 * Initialize this provider (e.g., create a network and prepare its input)
 	 */
-	public abstract void initialize();
+	public abstract void initializeInput();
 	
 	/**
 	 * Get the score associated with a specified hyper-edge
@@ -152,17 +124,15 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 		return this.params_l[network.getThreadId()].getHyperEdgeIO(network, this.netId, parent_k, children_k_index);
 	}
 	
-	public abstract void closeProvider();
-	
 	/**
 	 * Reset gradient
 	 */
 	public void resetGrad() {
-		if (countOutput != null) {
-			Arrays.fill(countOutput, 0.0);
+		if (gradOutput != null) {
+			Arrays.fill(gradOutput, (float)0.0);
 		}
 		if (gradParams != null && getParamSize() > 0) {
-			Arrays.fill(gradParams, 0.0);
+			Arrays.fill(gradParams, (float)0.0);
 		}
 	}
 	
@@ -196,11 +166,11 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 		return params == null ? 0 : params.length;
 	}
 
-	public double[] getParams() {
+	public float[] getParams() {
 		return params;
 	}
 
-	public double[] getGradParams() {
+	public float[] getGradParams() {
 		return gradParams;
 	}
 	

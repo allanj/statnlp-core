@@ -1,11 +1,12 @@
 package org.statnlp.hypergraph.neural;
 
+import static edu.cmu.dynet.internal.dynet_swig.*;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -13,8 +14,19 @@ import java.util.Random;
 import org.statnlp.hypergraph.Network;
 import org.statnlp.hypergraph.NetworkConfig;
 import org.statnlp.hypergraph.NetworkConfig.ModelStatus;
-import org.statnlp.hypergraph.neural.util.LuaFunctionHelper;
 
+import edu.cmu.dynet.internal.ComputationGraph;
+import edu.cmu.dynet.internal.Dim;
+import edu.cmu.dynet.internal.Expression;
+import edu.cmu.dynet.internal.FloatVector;
+import edu.cmu.dynet.internal.LongVector;
+import edu.cmu.dynet.internal.LookupParameterStorage;
+import edu.cmu.dynet.internal.LookupParameterStorageVector;
+import edu.cmu.dynet.internal.ParameterCollection;
+import edu.cmu.dynet.internal.ParameterStorage;
+import edu.cmu.dynet.internal.ParameterStorageVector;
+import edu.cmu.dynet.internal.Tensor;
+import edu.cmu.dynet.internal.TensorTools;
 import gnu.trove.iterator.TIntIterator;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
@@ -23,28 +35,22 @@ import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
-import th4j.Tensor.DoubleTensor;
 
 public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements Cloneable {
 	
 	private static final long serialVersionUID = -2638896619016178432L;
 
-	protected HashMap<String,Object> config;
-	
 	protected transient boolean isTraining;
 	
-	/**
-	 * Corresponding Torch tensors for params and gradParams
-	 */
-	protected transient DoubleTensor paramsTensor, gradParamsTensor;
+	protected transient ParameterCollection modelParams;
 	
-	/**
-	 * Corresponding Torch tensors for output and gradOutput
-	 */
-	protected transient DoubleTensor outputTensorBuffer, countOutputTensorBuffer;
+	protected transient int numParams;
 	
-	public transient boolean optimizeNeural;
+	protected float[] params;
 	
+	protected transient Expression currExpr;
+	
+//	protected transient FloatVector outputVector;
 	/**
 	 * Neural network input to index (id)
 	 * If you are using batch training, do not directly use this to obtain input id.
@@ -52,85 +58,61 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 */
 	protected transient Map<Object, Integer> nnInput2Id;
 	
+	protected transient List<Object> nnInputs;
+	
 	/**
 	 * Save the mapping from instance id to neural network input id.
 	 */
 	protected transient TIntObjectMap<TIntList> instId2NNInputId;
 	
-	/**
-	 * Dynamically save the batch instance id in batch training.
-	 */
 	protected transient TIntIntMap dynamicNNInputId2BatchInputId;
 	
 	protected boolean continuousFeatureValue = false;
 	
 	protected String nnModelFile = null;
 	
-	/**
-	 * GPU ID required, as for loading model as well. By default is less than 0 means CPU mode.
-	 */
-	protected int gpuid = -1;
-	
-	public NeuralNetworkCore(int numLabels, int gpuid) {
-		super(numLabels);
-		config = new HashMap<>();
-		optimizeNeural = NetworkConfig.OPTIMIZE_NEURAL;
-		this.gpuid = gpuid;
-		config.put("optimizeNeural", optimizeNeural);
-		config.put("numLabels", numLabels);
-		config.put("gpuid", gpuid);
+	public NeuralNetworkCore(int numLabels) {
+		super(numLabels); //using cpu for default
+		
 	}
 	
-	@Override
-	public void initialize() {
-		List<Object> nnInputs = new ArrayList<>(nnInput2Id.size());
+	public abstract ParameterCollection initalizeModelParams();
+	
+	public abstract Expression buildForwardGraph(List<Object> inputs);
+	
+	private void getNumParameters() {
+		this.numParams = 0;
+		LookupParameterStorageVector lpsv =  modelParams.lookup_parameters_list();
+		ParameterStorageVector psv =  modelParams.parameters_list();
+		for (int l = 0; l < lpsv.size(); l++) {
+			LookupParameterStorage lps = lpsv.get(l);
+			this.numParams += lps.size();
+		}
+		for (int l = 0; l < psv.size(); l++) {
+			ParameterStorage ps = psv.get(l);
+			this.numParams += ps.size();
+		}
+		System.out.println("number of NN parameters: " + this.numParams);
+	}
+	
+	public void initializeInput() {
+		System.out.println("initializing");
+		if (this.isTraining) {
+			this.modelParams = this.initalizeModelParams();
+			this.getNumParameters();
+			this.gradParams = new float[this.numParams];
+			this.params = new float[this.numParams];
+			Random rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
+			for (int i = 0; i < this.params.length; i++) {
+				this.params[i] = (float) (NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextFloat()-0.5)/10 : NetworkConfig.FEATURE_INIT_WEIGHT);
+			}
+			System.out.println("finish initialize the nn parameters in Java side");
+		}
+		nnInputs = new ArrayList<>(nnInput2Id.size());
 		for (Object obj : nnInput2Id.keySet()) {
 			nnInputs.add(obj);
 		}
-		if (!this.continuousFeatureValue) {
-			config.put("nnInputs", nnInputs);
-		} else {
-			this.prepareContinuousFeatureValue();
-		}
-		Object[] args = null;
-		if (isTraining || this.outputTensorBuffer == null) {
-			this.countOutputTensorBuffer = new DoubleTensor();
-			this.outputTensorBuffer = new DoubleTensor();
-			args = new Object[]{config, outputTensorBuffer, countOutputTensorBuffer};
-		} else {
-			args = new Object[]{config};
-		}
-		
-		config.put("isTraining", isTraining);
-        Class<?>[] retTypes;
-        if (optimizeNeural && isTraining) {
-        	retTypes = new Class[]{DoubleTensor.class, DoubleTensor.class};
-        } else {
-        	retTypes = new Class[]{};
-        }
-        Object[] outputs = LuaFunctionHelper.execLuaFunction(this.L, "initialize", args, retTypes);
-        
-		if(optimizeNeural && isTraining) {
-			this.paramsTensor = (DoubleTensor) outputs[0];
-			this.gradParamsTensor = (DoubleTensor) outputs[1];
-			if (this.paramsTensor.nElement() > 0) {
-				this.params = this.getArray(this.paramsTensor, this.params);
-				//TODO: this one might not be needed. Because the gradient at the first initialization is 0..
-				this.gradParams = this.getArray(this.gradParamsTensor, this.gradParams);
-				if (NetworkConfig.INIT_FV_WEIGHTS) {
-					Random rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
-					//also be careful that you may overwrite the initialized embedding if you use this.
-					for(int i = 0; i < this.params.length; i++) {
-						this.params[i] = NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextDouble()-.5)/10 :
-							NetworkConfig.FEATURE_INIT_WEIGHT;
-					}
-				}
-			}
-		}
-	}
-
-	protected void prepareContinuousFeatureValue() {
-		//should be overrided
+		System.out.println("finish the initialization");
 	}
 	
 	/**
@@ -160,14 +142,13 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 */
 	@Override
 	public void forward(TIntSet batchInstIds) {
-		if ((optimizeNeural && isTraining) || NetworkConfig.STATUS == ModelStatus.TESTING
+		
+		if ( isTraining || NetworkConfig.STATUS == ModelStatus.TESTING
 				|| NetworkConfig.STATUS == ModelStatus.DEV_IN_TRAINING) { // update with new params
-			if (getParamSize() > 0) {
-				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
-				//System.out.println("java side forward weights: " + this.params[0] + " " + this.params[1]);
-			}
+			//copy the parameters
+			this.copyParams();
 		}
-		Object[] args = null;
+		
 		if (NetworkConfig.USE_BATCH_TRAINING && isTraining && batchInstIds != null
 				&& batchInstIds.size() > 0) {
 			//pass the batch input id.
@@ -183,18 +164,69 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 			for (int i = 0; i < batchInputIds.size(); i++) {
 				this.dynamicNNInputId2BatchInputId.put(batchInputIds.get(i), i);
 			}
-			args = new Object[]{isTraining, batchInputIds};
+			this.cg = ComputationGraph.getNew();
+			List<Object> batchInputs = new ArrayList<>(batchInputIds.size());
+			for (int i = 0; i < batchInputIds.size(); i++) {
+				batchInputs.add(nnInputs.get(batchInputIds.get(i)));
+			}
+//			System.out.println("batch size: " + batchInputs.size());
+//			this.currExpr = this.buildForwardGraph(nnInputs.get(batchInputIds.get(0)));
+			this.currExpr = this.buildForwardGraph(batchInputs);
+			Tensor outputTensor = this.cg.forward(this.currExpr);
+			FloatVector outputVector = as_vector(outputTensor);
+			this.output = this.getArray(outputVector, this.output);
+			if (isTraining && (this.gradOutput == null || this.gradOutput.length < this.output.length)) {
+				this.gradOutput = new float[this.output.length];
+			}
 		} else {
-			args = new Object[]{isTraining};
+			this.cg = ComputationGraph.getNew();
+			System.out.println("nninput size: " + nnInputs.size());
+			this.currExpr = this.buildForwardGraph(nnInputs);
+			Tensor outputTensor = this.cg.forward(this.currExpr);
+			FloatVector outputVector = as_vector(outputTensor);
+			this.output = this.getArray(outputVector, this.output);
 		}
-		LuaFunctionHelper.execLuaFunction(this.L, "forward", args, new Class[]{});
-		output = this.getArray(outputTensorBuffer, output);
-		if (isTraining) {
-			//check if countOutput is null.
-			if (countOutput == null || countOutput.length < outputTensorBuffer.nElement()) 
-				countOutput = new double[(int) outputTensorBuffer.nElement()];
-			if (!countOutputTensorBuffer.isSameSizeAs(outputTensorBuffer)) {
-				countOutputTensorBuffer.resize(outputTensorBuffer.size());
+	}
+	
+	/**
+	 * Copy the parameters from our framework to dynet.
+	 */
+	private void copyParams() {
+		LookupParameterStorageVector lpsv =  modelParams.lookup_parameters_list();
+		ParameterStorageVector psv =  modelParams.parameters_list();
+		int k = 0;
+		for (int l = 0; l < lpsv.size(); l++) {
+			LookupParameterStorage lps = lpsv.get(l);
+			Tensor vals = lps.get_all_values();
+			for(int i = 0; i < lps.size(); i++) {
+				TensorTools.set_element(vals, i, this.params[k++]);
+			}
+		}
+		for (int l = 0; l < psv.size(); l++) {
+			ParameterStorage ps = psv.get(l);
+			Tensor vals = ps.getValues();
+			for(int i = 0; i < ps.size(); i++) {
+				TensorTools.set_element(vals, i, this.params[k++]);
+			}
+		}
+	}
+	
+	private void copyGradParams() {
+		LookupParameterStorageVector lpsv =  modelParams.lookup_parameters_list();
+		ParameterStorageVector psv =  modelParams.parameters_list();
+		int k = 0;
+		for (int l = 0; l < lpsv.size(); l++) {
+			LookupParameterStorage lps = lpsv.get(l);
+			Tensor vals = lps.get_all_grads();
+			for(int i = 0; i < lps.size(); i++) {
+				TensorTools.set_element(vals, i, this.gradParams[k++]);
+			}
+		}
+		for (int l = 0; l < psv.size(); l++) {
+			ParameterStorage ps = psv.get(l);
+			Tensor vals = ps.gradients();
+			for(int i = 0; i < ps.size(); i++) {
+				TensorTools.set_element(vals, i, this.gradParams[k++]);
 			}
 		}
 	}
@@ -206,10 +238,18 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		if (io != null) {
 			Object edgeInput = io.getInput();
 			int outputLabel = io.getOutput();
-			int idx = this.hyperEdgeInput2OutputRowIndex(edgeInput) * this.numLabels + outputLabel;
+			int idx = this.hyperEdgeInput2OutputRowIndex(edgeInput) * this.numOutputs + outputLabel;
 			val = output[idx];
 		}
 		return val;
+	}
+	
+	static Dim makeDim(int[] dims) {
+	    LongVector dimInts = new LongVector();
+	    for (int i = 0; i < dims.length; i++) {
+	      dimInts.add(dims[i]);
+	    }
+	    return new Dim(dimInts);
 	}
 	
 	/**
@@ -217,15 +257,24 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 */
 	@Override
 	public void backward() {
-		countOutputTensorBuffer.storage().copy(this.countOutput);
-		Object[] args = new Object[]{};
-		Class<?>[] retTypes = new Class[0];
-		LuaFunctionHelper.execLuaFunction(this.L, "backward", args, retTypes);
-		if(optimizeNeural && getParamSize() > 0) { // copy gradParams computed by Torch
-			gradParams = this.getArray(this.gradParamsTensor, gradParams);
-			if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
-				addL2ParamsGrad();
-			}
+		
+		this.zeroGradCG();
+		FloatVector gradVec = this.getVector(this.gradOutput);
+//		Dim currExprDim = this.currExpr.dim();
+//		int[] dims = new int[1 + (int)currExprDim.ndims()];
+//		int x = this.gradOutput.length;
+//		for (int i = 0; i < currExprDim.ndims(); i++) {
+//			dims[i] = (int)currExprDim.get(i);
+//			x /= dims[i];
+//		}
+//		dims[dims.length - 1] = x;
+		Expression myGrad = input(cg, this.currExpr.dim(), gradVec);
+		Expression finalLoss = sum_elems(sum_batches(cmult(this.currExpr, myGrad)));
+		this.cg.incremental_forward(finalLoss);
+		this.cg.backward(finalLoss);
+		this.copyGradParams();
+		if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
+			addL2ParamsGrad();
 		}
 		this.resetCountOutput();
 	}
@@ -236,68 +285,30 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		if (io != null) {
 			Object edgeInput = io.getInput();
 			int outputLabel = io.getOutput();
-			int idx = this.hyperEdgeInput2OutputRowIndex(edgeInput) * this.numLabels + outputLabel;
-			synchronized (countOutput) {
+			int idx = this.hyperEdgeInput2OutputRowIndex(edgeInput) * this.numOutputs + outputLabel;
+			synchronized (gradOutput) {
 				//TODO: alternatively, create #threads of countOutput array.
 				//Then aggregate them together.
-				countOutput[idx] -= count;
+				gradOutput[idx] -= count;
 			}
+		}
+	}
+	
+	private void zeroGradCG() {
+		LookupParameterStorageVector lpsv =  modelParams.lookup_parameters_list();
+		ParameterStorageVector psv =  modelParams.parameters_list();
+		for (int l = 0; l < lpsv.size(); l++) {
+			LookupParameterStorage lps = lpsv.get(l);
+			TensorTools.zero(lps.get_all_grads());
+		}
+		for (int l = 0; l < psv.size(); l++) {
+			ParameterStorage ps = psv.get(l);
+			TensorTools.zero(ps.gradients());
 		}
 	}
 	
 	public void resetCountOutput() {
-		Arrays.fill(countOutput, 0.0);
-	}
-	
-	/**
-	 * Save the model by calling the specific function in Torch
-	 * @param func : the function in torch
-	 * @param prefix : model prefix
-	 */
-	public void save(String func, String prefix) {
-		LuaFunctionHelper.execLuaFunction(this.L, func, new Object[]{prefix}, new Class[]{});
-	}
-	
-	/**
-	 * Save the trained model, implement the "save_model" method in torch
-	 * @param prefix
-	 */
-	public void save(String prefix) {
-		if (optimizeNeural) {
-			if (getParamSize() > 0) {
-				this.paramsTensor.storage().copy(this.params); // we can do this because params is contiguous
-			}
-		}
-		this.save("save_model", prefix);
-	}
-	
-	/**
-	 * Load a trained model, using the specific function in Torch
-	 * @param func: the specific function for loading model
-	 * @param prefix: model prefix.
-	 */
-	public void load(String func, String prefix, int gpuid) {
-		LuaFunctionHelper.execLuaFunction(this.L, func, new Object[]{prefix, gpuid}, new Class[]{});
-	}
-	
-	/**
-	 * Load a model from disk, implement the "load_model" method in torch
-	 * @param prefix
-	 */
-	public void load() {
-		this.load("load_model", this.nnModelFile, this.gpuid);
-	}
-	
-	@Override
-	public void closeProvider() {
-		this.cleanUp();
-	}
-	
-	/**
-	 * Clean up resources, currently, we clean up the resource after decoding
-	 */
-	public void cleanUp() {
-		L.close();
+		Arrays.fill(gradOutput, (float)0.0);
 	}
 	
 	/**
@@ -306,12 +317,22 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 * @param buf
 	 * @return
 	 */
-	protected double[] getArray(DoubleTensor t, double[] buf) {
-		if (buf == null || buf.length < t.nElement()) {
-			buf = new double[(int) t.nElement()];
+	protected float[] getArray(FloatVector t, float[] buf) {
+		if (buf == null || buf.length < t.size()) {
+			buf = new float[(int)t.size()];
         }
-		t.storage().getRawData().read(0, buf, 0, (int) t.nElement());
+		for (int i = 0; i < t.size(); i++) {
+			buf[i] = t.get(i);
+		}
 		return buf;
+	}
+	
+	protected FloatVector getVector(float[] buf) {
+		FloatVector vec = new FloatVector(buf.length);
+		for (int i = 0; i < buf.length; i++) {
+			vec.add(buf[i]);
+		}
+		return vec;
 	}
 
 	@Override
@@ -320,7 +341,9 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		try {
 			c = (NeuralNetworkCore) super.clone();
 			c.nnInput2Id = null;
+			c.nnInputs = null;
 			c.params = this.params;
+			c.modelParams = this.modelParams;
 		} catch (CloneNotSupportedException e) {
 			e.printStackTrace();
 		}
@@ -333,28 +356,19 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	}
 
 	private void writeObject(ObjectOutputStream out) throws IOException{
-		out.writeObject(this.config);
 		out.writeBoolean(this.continuousFeatureValue);
 		out.writeInt(this.netId);
-		out.writeInt(this.numLabels);
+		out.writeInt(this.numOutputs);
 		out.writeDouble(this.scale);
 		out.writeObject(this.nnModelFile);
-		out.writeObject(this.gpuid);
-		this.save(this.nnModelFile);
 	}
 	
-	@SuppressWarnings("unchecked")
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
-		this.config = (HashMap<String, Object>) in.readObject();
 		this.continuousFeatureValue = in.readBoolean();
 		this.netId = in.readInt();
-		this.numLabels = in.readInt();
+		this.numOutputs = in.readInt();
 		this.scale = in.readDouble();
 		this.nnModelFile = (String) in.readObject();
-		this.gpuid = in.readInt();
-		this.config.put("nnModelFile", this.nnModelFile);
-		this.configureJNLua();
-		this.load();
 	}
 	
 }

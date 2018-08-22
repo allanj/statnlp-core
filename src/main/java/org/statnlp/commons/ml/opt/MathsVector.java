@@ -56,6 +56,13 @@ public class MathsVector implements Serializable{
 		return v;
 	}
 	
+	public static double square(float[] x){
+		double v = 0.0;
+		for(int k = 0; k<x.length; k++)
+			v += x[k] * x[k];
+		return v;
+	}
+	
 	public MathsVector(int size){
 		this._v = new double[size];
 	}

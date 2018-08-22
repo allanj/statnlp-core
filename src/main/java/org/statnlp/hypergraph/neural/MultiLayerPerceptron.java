@@ -184,7 +184,7 @@ public class MultiLayerPerceptron extends NeuralNetworkCore {
 			int outputLabel = io.getOutput();
 			int id = nnInput2Id.get(edgeInput);
 			if (id != UNKNOWN) {
-				val = output[id * numLabels + outputLabel];
+				val = output[id * numOutputs + outputLabel];
 			}
 		}
 		return val;
@@ -197,9 +197,9 @@ public class MultiLayerPerceptron extends NeuralNetworkCore {
 			Object edgeInput = io.getInput();
 			int outputLabel = io.getOutput();
 			int id = nnInput2Id.get(edgeInput);
-			int idx = id * this.numLabels + outputLabel;
-			synchronized (countOutput) {
-				countOutput[idx] -= count;
+			int idx = id * this.numOutputs + outputLabel;
+			synchronized (gradOutput) {
+				gradOutput[idx] -= count;
 			}
 		}
 	}

@@ -669,8 +669,8 @@ public class GlobalNetworkParam implements Serializable{
             		System.arraycopy(concatWeights, ptr, _weights, 0, _weights.length);
             		ptr += _weights.length;
         			for (AbstractNeuralNetwork net : this._nn_param_g.getAllNets()) {
-        				double[] params = net.getParams();
-        				double[] gradParams = net.getGradParams();
+        				float[] params = net.getParams();
+        				float[] gradParams = net.getGradParams();
         				if (params == null || gradParams == null) continue;
         				System.arraycopy(concatWeights, ptr, params, 0, params.length);
         				ptr += params.length;
@@ -703,8 +703,8 @@ public class GlobalNetworkParam implements Serializable{
 			System.arraycopy(_counts, 0, concatCounts, ptr, _counts.length);
 			ptr += _weights.length;
 			for (AbstractNeuralNetwork net : this._nn_param_g.getAllNets()) {
-				double[] params = net.getParams();
-				double[] gradParams = net.getGradParams();
+				float[] params = net.getParams();
+				float[] gradParams = net.getGradParams();
 				if (params == null || gradParams == null) continue;
 				System.arraycopy(params, 0, concatWeights, ptr, params.length);
 				System.arraycopy(gradParams, 0, concatCounts, ptr, gradParams.length);
@@ -764,8 +764,8 @@ public class GlobalNetworkParam implements Serializable{
     		System.arraycopy(concatWeights, ptr, _weights, 0, _weights.length);
     		ptr += _weights.length;
 			for (AbstractNeuralNetwork net : this._nn_param_g.getAllNets()) {
-				double[] params = net.getParams();
-				double[] gradParams = net.getGradParams();
+				float[] params = net.getParams();
+				float[] gradParams = net.getGradParams();
 				if (params == null || gradParams == null) continue;
 				System.arraycopy(concatWeights, ptr, params, 0, params.length);
 				ptr += params.length;

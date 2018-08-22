@@ -81,6 +81,10 @@ public abstract class OptimizerFactory implements Serializable {
 		return new GradientDescentOptimizerFactory(BestParamCriteria.LAST_UPDATE, AdaptiveStrategy.NONE, learningRate);
 	}
 	
+	public static GradientDescentOptimizerFactory getGradientDescentFactory(BestParamCriteria criteria, double learningRate){
+		return new GradientDescentOptimizerFactory(criteria, AdaptiveStrategy.NONE, learningRate);
+	}
+	
 	/**
 	 * Return the factory object to create a gradient descent optimizer with gradient clipping default threshold 5..<br>
 	 * The returned factory will create instances of GradientDescentOptimizer with normal (S)GD procedure.<br>

@@ -64,15 +64,7 @@ public class TagFeatureManager extends FeatureManager {
 		fs.add(this._param_g.toFeature(network, FeaType.transition.name(), output, childLabel));
 		
 		String word = sent.get(pos).getForm();
-		String lw = pos - 1 >= 0 ? sent.get(pos - 1).getForm() : "START";
-		String rw = pos + 1 < sent.length() ? sent.get(pos + 1).getForm() : "END";
 		
-		fs.add(this._param_g.toFeature(network, FeaType.unigram.name(), output, word));
-		fs.add(this._param_g.toFeature(network, FeaType.unigram.name() + "-left", output, lw));
-		fs.add(this._param_g.toFeature(network, FeaType.unigram.name() + "-right", output, rw));
-		
-		fs.add(this._param_g.toFeature(network, FeaType.bigram.name() + "-1", output, lw + " " + word));
-		fs.add(this._param_g.toFeature(network, FeaType.bigram.name() + "0", output, word + " " + rw));
 		
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
 			//edgeInput:
@@ -81,6 +73,16 @@ public class TagFeatureManager extends FeatureManager {
 			SimpleImmutableEntry<String, Integer> edgeInput = 
 					new SimpleImmutableEntry<String, Integer>(sent.toString(), pos);
 			this.addNeural(network, 0, parent_k, children_k_index, edgeInput, labelId);
+		} else {
+			String lw = pos - 1 >= 0 ? sent.get(pos - 1).getForm() : "START";
+			String rw = pos + 1 < sent.length() ? sent.get(pos + 1).getForm() : "END";
+			
+			fs.add(this._param_g.toFeature(network, FeaType.unigram.name(), output, word));
+			fs.add(this._param_g.toFeature(network, FeaType.unigram.name() + "-left", output, lw));
+			fs.add(this._param_g.toFeature(network, FeaType.unigram.name() + "-right", output, rw));
+			
+			fs.add(this._param_g.toFeature(network, FeaType.bigram.name() + "-1", output, lw + " " + word));
+			fs.add(this._param_g.toFeature(network, FeaType.bigram.name() + "0", output, word + " " + rw));
 		}
 		
 		

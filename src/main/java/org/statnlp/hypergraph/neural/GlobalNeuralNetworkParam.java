@@ -54,6 +54,7 @@ public class GlobalNeuralNetworkParam implements Serializable{
 	public void copyNNParam(GlobalNeuralNetworkParam src) {
 		for (int id = 0; id < this.nets.size(); id++) {
 			this.nets.get(id).params = src.getNet(id).params;
+			this.nets.get(id).modelParams = src.getNet(id).modelParams;
 		}
 	}
 	
@@ -143,7 +144,7 @@ public class GlobalNeuralNetworkParam implements Serializable{
 	 */
 	public void initializeNetwork() {
 		for (NeuralNetworkCore net : nets) {
-			net.initialize();
+			net.initializeInput();
 		}
 	}
 	
@@ -191,15 +192,6 @@ public class GlobalNeuralNetworkParam implements Serializable{
 	public void setNNGradOutput(double count, Network network, int parent_k, int children_k_index) {
 		for (NeuralNetworkCore net : nets) {
 			net.update(count, network, parent_k, children_k_index);
-		}
-	}
-	
-	/**
-	 * Close the Lua state connection
-	 */
-	public void closeNNConnections() {
-		for (NeuralNetworkCore net : this.nets) {
-			net.closeProvider();
 		}
 	}
 	

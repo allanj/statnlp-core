@@ -5,6 +5,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import org.statnlp.commons.io.RAWF;
@@ -62,6 +63,7 @@ public class LinearNEMain {
 	public static boolean evalOnDev = false;
 	public static int evalFreq = 1000;
 	public static boolean lowercase = false;
+	public static Map<String, Integer> word2int;
 	
 	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException{
 
@@ -113,7 +115,7 @@ public class LinearNEMain {
 					int hiddenSize = 100;
 					String optimizer = nnOptimizer;
 					boolean bidirection = true;
-					nets.add(new BidirectionalLSTM(hiddenSize, bidirection, optimizer, 0.05, 5, labels.length - 2, gpuId, embedding)
+					nets.add(new BidirectionalLSTM(hiddenSize, labels.length - 2, word2int)
 							.setModelFile(nnModelFile));
 				} else if (neuralType.equals("continuous")) {
 					nets.add(new ECRFContinuousFeatureValueProvider(2, labels.length - 2));
