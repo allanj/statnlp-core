@@ -18,7 +18,7 @@ public class TagFeatureManager extends FeatureManager {
 	private static final long serialVersionUID = -6059629463406022487L;
 
 	private enum FeaType {
-		unigram, bigram, transition
+		unigram, bigram, transition, word_len
 	}
 	
 	public TagFeatureManager(GlobalNetworkParam param_g) {
@@ -83,8 +83,15 @@ public class TagFeatureManager extends FeatureManager {
 			this.addNeural(network, 0, parent_k, children_k_index, edgeInput, labelId);
 		}
 		
+		FeatureArray fa = this.createFeatureArray(network, fs);
 		
-		return this.createFeatureArray(network, fs);
+		int[] fslen = new int[1]; // if you use embedding, the size can be 100.
+		double[] fvs = new double[1];
+		fslen[0] = this._param_g.toFeature(network, FeaType.word_len.name() , output, "");
+		fvs[0] = word.length();
+		fa.addNext(this.createFeatureArray(network, fslen, fvs));
+		
+		return fa;
 	}
 
 }

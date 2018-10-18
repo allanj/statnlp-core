@@ -36,6 +36,7 @@ public class TagMain {
 		NetworkConfig.NUM_THREADS = numThreads;
 		NetworkConfig.USE_NEURAL_FEATURES = false;
 		NetworkConfig.AVOID_DUPLICATE_FEATURES = true;
+		NetworkConfig.USE_FEATURE_VALUE = true; //Please set to false if you are not using feature value.
 
 		//If you want to run Neural-CRF on Linux, please uncomment this line.
 		//NetworkConfig.OS = "linux";
