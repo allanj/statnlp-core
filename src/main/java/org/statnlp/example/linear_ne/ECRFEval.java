@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.ProcessBuilder.Redirect;
 import java.util.ArrayList;
 
 import org.statnlp.commons.io.RAWF;
@@ -53,13 +54,13 @@ public class ECRFEval {
 			System.err.println("perl "+evalScript+" < "+outputFile);
 			ProcessBuilder pb = null;
 			if(windows){
-				pb = new ProcessBuilder("D:/Perl64/bin/perl","E:/Framework/data/semeval10t1/conlleval.pl"); 
+				pb = new ProcessBuilder("D:/Perl64/bin/perl","eval/conlleval.pl"); 
 			}else{
 				pb = new ProcessBuilder(evalScript); 
 			}
 			pb.redirectInput(new File(outputFile));
-			//pb.redirectOutput(Redirect.INHERIT);
-			//pb.redirectError(Redirect.INHERIT);
+			pb.redirectOutput(Redirect.INHERIT);
+			pb.redirectError(Redirect.INHERIT);
 			Process process = pb.start();
 			BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream(), "UTF-8")) ;
 			while (!br.ready()) ; // wait until buffered reader is ready.
