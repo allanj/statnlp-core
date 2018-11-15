@@ -43,7 +43,7 @@ public class LRMain {
 		System.out.println("#Relations: " + RelationType.RELS.size());
 		System.out.println("Relations: " + RelationType.RELS.toString());
 		RelationType.lock();
-		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory());
+		GlobalNetworkParam gnp = new GlobalNetworkParam();
 		LRFeatureManager tfm = new LRFeatureManager(gnp);
 		LRNetworkCompiler tnc = new LRNetworkCompiler();
 		NetworkModel model = DiscriminativeNetworkModel.create(tfm, tnc);

@@ -164,6 +164,8 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 			for (int i = 0; i < batchInputIds.size(); i++) {
 				this.dynamicNNInputId2BatchInputId.put(batchInputIds.get(i), i);
 			}
+			
+			
 			this.cg = ComputationGraph.getNew();
 			List<Object> batchInputs = new ArrayList<>(batchInputIds.size());
 			for (int i = 0; i < batchInputIds.size(); i++) {
@@ -272,6 +274,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		Expression finalLoss = sum_elems(sum_batches(cmult(this.currExpr, myGrad)));
 		this.cg.incremental_forward(finalLoss);
 		this.cg.backward(finalLoss);
+		
 		this.copyGradParams();
 		if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
 			addL2ParamsGrad();
