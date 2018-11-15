@@ -35,6 +35,10 @@ public class TreeCRFNetworkCompiler extends NetworkCompiler {
 	public int maxSize;
 	public BaseNetwork genericUnlabeled;
 	
+	static {
+		NetworkIDMapper.setCapacity(new int[] {4096, 4096, 4096, 4096, 4096});
+	}
+	
 	public TreeCRFNetworkCompiler(List<Label> labels, Map<Label, Set<CNFRule>> rules, Label rootLabel) {
 		this.labels = labels;
 		this.rules = rules;

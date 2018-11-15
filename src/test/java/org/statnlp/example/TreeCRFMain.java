@@ -97,7 +97,7 @@ public class TreeCRFMain {
 		}
 		
 		System.out.println("Number of rules: "+rules.size());
-		int k = 256;
+		int k = 1; //when k > 1, the top-k Viterbi decoding is currently unavailable.
 		Instance[] predictions = model.decode(testInstances, k);
 		int corr = 0;
 		int totalGold = 0;
