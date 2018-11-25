@@ -178,4 +178,8 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 		scale = coef;
 	}
 	
+	public ComputationGraph getGraph(){
+		return this.cg;
+	}
+	
 }

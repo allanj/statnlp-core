@@ -95,6 +95,10 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		System.out.println("number of NN parameters: " + this.numParams);
 	}
 	
+	public ParameterCollection getModel(){
+		return this.modelParams;
+	}
+	
 	public void initializeInput() {
 		System.out.println("initializing");
 		if (this.isTraining) {
@@ -107,7 +111,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 				this.params[i] = (float) (NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextFloat()-0.5)/10 : NetworkConfig.FEATURE_INIT_WEIGHT);
 			}
 			System.out.println("finish initialize the nn parameters in Java side");
-		}
+		} 
 		nnInputs = new ArrayList<>(nnInput2Id.size());
 		for (Object obj : nnInput2Id.keySet()) {
 			nnInputs.add(obj);
@@ -182,11 +186,19 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 			}
 		} else {
 			this.cg = ComputationGraph.getNew();
-			System.out.println("nninput size: " + nnInputs.size());
+			System.out.println("testing 2");
+//			System.out.println("nninput size: " + nnInputs.size());
 			this.currExpr = this.buildForwardGraph(nnInputs);
+			System.out.println("testing 3");
 			Tensor outputTensor = this.cg.forward(this.currExpr);
+			System.out.println("testing 4");
 			FloatVector outputVector = as_vector(outputTensor);
+			System.out.println("testing 5");
 			this.output = this.getArray(outputVector, this.output);
+			System.out.println("testing 6");
+			if (isTraining && (this.gradOutput == null || this.gradOutput.length < this.output.length)) {
+				this.gradOutput = new float[this.output.length];
+			}
 		}
 	}
 	
@@ -213,6 +225,9 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		}
 	}
 	
+	/**
+	 * Copy the gradients from dynet to our framework
+	 */
 	private void copyGradParams() {
 		LookupParameterStorageVector lpsv =  modelParams.lookup_parameters_list();
 		ParameterStorageVector psv =  modelParams.parameters_list();
@@ -221,14 +236,14 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 			LookupParameterStorage lps = lpsv.get(l);
 			Tensor vals = lps.get_all_grads();
 			for(int i = 0; i < lps.size(); i++) {
-				TensorTools.set_element(vals, i, this.gradParams[k++]);
+				this.gradParams[k++] = TensorTools.access_element(vals, i);
 			}
 		}
 		for (int l = 0; l < psv.size(); l++) {
 			ParameterStorage ps = psv.get(l);
 			Tensor vals = ps.gradients();
 			for(int i = 0; i < ps.size(); i++) {
-				TensorTools.set_element(vals, i, this.gradParams[k++]);
+				this.gradParams[k++] = TensorTools.access_element(vals, i);
 			}
 		}
 	}
@@ -274,7 +289,6 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		Expression finalLoss = sum_elems(sum_batches(cmult(this.currExpr, myGrad)));
 		this.cg.incremental_forward(finalLoss);
 		this.cg.backward(finalLoss);
-		
 		this.copyGradParams();
 		if (NetworkConfig.REGULARIZE_NEURAL_FEATURES) {
 			addL2ParamsGrad();

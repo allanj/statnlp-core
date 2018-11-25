@@ -170,11 +170,11 @@ public class BidirectionalLSTM extends NeuralNetworkCore {
 		}
 		
 		Expression result = concatenate_cols(finalErr);
-		System.out.println("result dimension : " + result.dim().ndims());
-		System.out.println("result size : " + result.dim().size());
+//		System.out.println("result dimension : " + result.dim().ndims());
+//		System.out.println("result size : " + result.dim().size());
 //		System.out.println("batch size: " +result.dim().batch_size());
 //		System.out.println("batch size: " +result.dim().batch_elems());
-		System.out.println("result dimension : " + result.dim().rows() + " " + result.dim().cols());
+//		System.out.println("result dimension : " + result.dim().rows() + " " + result.dim().cols());
 		
 //		for (int i = 0; i < result.dim().size(); i++) {
 //			System.out.println(result.dim().get(i));
