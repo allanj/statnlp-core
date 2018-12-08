@@ -98,7 +98,7 @@ public class NetworkConfig {
 	 * For more information, see {@link Network}
 	 * @see Network
 	 */
-	public static final int[] DEFAULT_CAPACITY_NETWORK = new int[]{0};
+	public static final int[] DEFAULT_CAPACITY_NETWORK = new int[]{1000, 1000, 1000, 1000, 1000};
 	
 	public static enum StoppingCriteria {
 		MAX_ITERATION_REACHED,
