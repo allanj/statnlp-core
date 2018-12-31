@@ -71,7 +71,10 @@ public class TagFeatureManager extends FeatureManager {
 			//edgeInput:
 			// MLP: word.
 			//BiLSTM: position, sentence
-			this.addNeural(network, 0, parent_k, children_k_index, word, labelId);
+//			this.addNeural(network, 0, parent_k, children_k_index, word, labelId);
+			SimpleImmutableEntry<String, Integer> edgeInput = 
+					new SimpleImmutableEntry<String, Integer>(sent.toString(), pos);
+			this.addNeural(network, 0, parent_k, children_k_index, edgeInput, labelId);
 		} else {
 			String lw = pos - 1 >= 0 ? sent.get(pos - 1).getForm() : "START";
 			String rw = pos + 1 < sent.length() ? sent.get(pos + 1).getForm() : "END";

@@ -105,9 +105,6 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 				System.out.println("copying memory");
 			***/
 			this.copyParams();
-			if (NetworkConfig.STATUS == ModelStatus.DEV_IN_TRAINING) {
-				System.out.println("here");
-			}
 		}
 		this.cg = ComputationGraph.getNew();
 		this.currExpr = this.buildForwardGraph(inputs);
@@ -115,6 +112,7 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 //		FloatVector outputVector = as_vector(outputTensor); //try tensor tool access element because as_vector may cause memory increase
 //		this.output = this.getArray(outputVector, this.output);
 		this.output = this.copyOutput(outputTensor, this.output);
+		outputTensor.delete();
 		if (isTraining && (this.gradOutput == null || this.gradOutput.length < this.output.length)) {
 			this.gradOutput = new float[this.output.length];
 		}

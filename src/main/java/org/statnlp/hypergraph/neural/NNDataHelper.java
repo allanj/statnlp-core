@@ -33,6 +33,10 @@ public class NNDataHelper implements Serializable{
 		return this.allNNInput2Id.get(nnInput);
 	}
 	
+	public int getNNInputSize() {
+		return this.allNNInput2Id.size();
+	}
+	
 	public NeuralIO getHyperEdgeInputOutput(Network network, int parent_k, int children_k_index) {
 		return this.params_l[network.getThreadId()].getHyperEdgeIO(network, parent_k, children_k_index);
 	}

@@ -735,17 +735,17 @@ public abstract class NetworkModel implements Serializable{
 		
 		printUsedMemory("before decode");
 		this._compiler.reset();
-		if (NetworkConfig.FEATURE_TOUCH_TEST && (this._decode_helper == null || !cacheFeatures)) {
-			System.err.println("Touching test set.");
-			for(int threadId = 0; threadId<this._numThreads; threadId++){
-				this._decoders[threadId].setTouch();
-				this._decoders[threadId].start();
-			}
-			for(int threadId = 0; threadId<this._numThreads; threadId++){
-				this._decoders[threadId].join();
-				this._decoders[threadId].setUnTouch();
-			}
-		}
+//		if (NetworkConfig.FEATURE_TOUCH_TEST && (this._decode_helper == null || !cacheFeatures)) {
+//			System.err.println("Touching test set.");
+//			for(int threadId = 0; threadId<this._numThreads; threadId++){
+//				this._decoders[threadId].setTouch();
+//				this._decoders[threadId].start();
+//			}
+//			for(int threadId = 0; threadId<this._numThreads; threadId++){
+//				this._decoders[threadId].join();
+//				this._decoders[threadId].setUnTouch();
+//			}
+//		}
 		
 		System.err.println("Okay. Decoding started.");
 		
@@ -755,6 +755,7 @@ public abstract class NetworkModel implements Serializable{
 				this._decode_helper = new NNDataHelper();
 				this._decode_helper.setLocalNetworkParams(this._fm._params_l);
 				for(int threadId = 0; threadId<this._numThreads; threadId++){
+					this._decoders[threadId].touch();
 					this._decoders[threadId].getParam()._helper = this._decode_helper;
 				}
 				this._decode_helper.prepareInputIdAndInput();
@@ -763,7 +764,7 @@ public abstract class NetworkModel implements Serializable{
 		}
 		
 		for(int threadId = 0; threadId<this._numThreads; threadId++){
-			this._decoders[threadId] = this._decoders[threadId].copyThread(this._fm);
+//			this._decoders[threadId] = this._decoders[threadId].copyThread(this._fm);
 			this._decoders[threadId].start();
 		}
 		for(int threadId = 0; threadId<this._numThreads; threadId++){

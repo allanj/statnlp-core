@@ -30,7 +30,7 @@ public class TagMain {
 	public static int testNum = 1;
 	public static int numThreads = 1;
 	public static double l2 = 0.01;
-	public static int numIterations = 10;
+	public static int numIterations = 100;
 	public static List<String> labels;
 	public static boolean visualization = false;
 	public static int maxLen;
@@ -66,7 +66,7 @@ public class TagMain {
 			net = new BidirectionalLSTM(100, labels.size(), word2int);
 			net.setMaxLen(maxLen);
 //			optimizer = OptimizerFactory.getGradientDescentFactory(BestParamCriteria.BEST_ON_DEV, 0.5);
-			optimizer = OptimizerFactory.getGradientDescentFactory(BestParamCriteria.LAST_UPDATE, 0.5);
+			optimizer = OptimizerFactory.getGradientDescentFactory(BestParamCriteria.LAST_UPDATE, 0.05);
 		}
 		GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, net);
 		TagFeatureManager fa = new TagFeatureManager(gnp);
