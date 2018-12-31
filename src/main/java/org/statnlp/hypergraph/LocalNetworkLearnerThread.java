@@ -20,6 +20,7 @@ import java.util.concurrent.Callable;
 
 import org.statnlp.commons.types.Instance;
 import org.statnlp.hypergraph.NetworkConfig.InferenceType;
+import org.statnlp.hypergraph.neural.NNDataHelper;
 
 import gnu.trove.set.TIntSet;
 
@@ -92,9 +93,9 @@ public class LocalNetworkLearnerThread extends Thread implements Callable<Void> 
 	 * @param builder The network compiler
 	 * @param it Starting iteration number
 	 */
-	public LocalNetworkLearnerThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler builder, int it){
+	public LocalNetworkLearnerThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler builder, int it, NNDataHelper helper){
 		this._threadId = threadId;
-		this._param = new LocalNetworkParam(this._threadId, fm, instances.length);
+		this._param = new LocalNetworkParam(this._threadId, fm, instances.length, helper);
 		fm.setLocalNetworkParams(this._threadId, this._param);
 		
 		this._builder = builder;

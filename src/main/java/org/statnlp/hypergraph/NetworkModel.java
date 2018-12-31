@@ -39,7 +39,7 @@ import org.statnlp.commons.types.Instance;
 import org.statnlp.hypergraph.NetworkConfig.InferenceType;
 import org.statnlp.hypergraph.NetworkConfig.ModelStatus;
 import org.statnlp.hypergraph.decoding.Metric;
-import org.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
+import org.statnlp.hypergraph.neural.NNDataHelper;
 import org.statnlp.ui.visualize.type.VisualizationViewerEngine;
 import org.statnlp.ui.visualize.type.VisualizerFrame;
 import org.statnlp.util.instance_parser.InstanceParser;
@@ -70,8 +70,9 @@ public abstract class NetworkModel implements Serializable{
 	private transient LocalNetworkDecoderThread[] _decoders;
 	private transient PrintStream[] outstreams = new PrintStream[]{System.out};
 	private transient Consumer<TrainingIterationInformation> endOfIterCallback;
-	private transient GlobalNeuralNetworkParam _neuralLearner;
-	private transient GlobalNeuralNetworkParam _neuralDecoder;
+	private transient NNDataHelper _learn_helper;
+	private transient NNDataHelper _decode_helper;
+//	private transient GlobalNeuralNetworkParam _neuralDecoder;
 	//currBestMetric on development set.
 	private transient Metric currBestMetric;
 	
@@ -104,6 +105,9 @@ public abstract class NetworkModel implements Serializable{
 		this.outstreams[0] = System.out;
 		for(int i=0; i<outstreams.length; i++){
 			this.outstreams[i+1] = outstreams[i];
+		}
+		if (NetworkConfig.USE_NEURAL_FEATURES) {
+			this._learn_helper = new NNDataHelper();
 		}
 	}
 	
@@ -280,7 +284,7 @@ public abstract class NetworkModel implements Serializable{
 			preCompileNetworks(insts);
 		}
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			this._fm.getParam_G().getNNParamG().setLearningState();
+			this._fm.getParam_G().getNN().setLearningState();
 		}
 		
 		printUsedMemory("before touch");
@@ -305,13 +309,12 @@ public abstract class NetworkModel implements Serializable{
 		}
 		
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			this._neuralLearner = this._fm.getParam_G().getNNParamG();
-			this._neuralLearner.setLearningState();
-			this._neuralLearner.setLocalNetworkParams(this._fm._params_l);
-			this._fm.getParam_G().getNNParamG().prepareInputId();
-			if (NetworkConfig.USE_BATCH_TRAINING) {
-				this._fm.getParam_G().getNNParamG().prepareInstId2NNInputId();
-			}
+			this._fm.getParam_G().getNN().setLearningState();
+			this._learn_helper.setLocalNetworkParams(this._fm._params_l);
+			this._learn_helper.prepareInputIdAndInput();
+//			if (NetworkConfig.USE_BATCH_TRAINING) {
+//				this._learn_helper.prepareInstId2NNInputId();
+//			}
 		}
 		printUsedMemory("after finalize");
 		//finalize the features.
@@ -374,8 +377,8 @@ public abstract class NetworkModel implements Serializable{
 				
 				// Feature value provider's ``forward''
 				if (NetworkConfig.USE_NEURAL_FEATURES) {
-					this._fm.getParam_G().getNNParamG().forward(batchInstIds);
-					this._fm.getParam_G().getNNParamG().resetAllNNGradients();
+					this._fm.getParam_G().getNN().forward(batchInstIds, this._learn_helper.getNNInputs());
+					this._fm.getParam_G().getNN().resetGrad();
 				}
 				
 				List<Future<Void>> results = pool.invokeAll(callables);
@@ -429,7 +432,7 @@ public abstract class NetworkModel implements Serializable{
 				obj_old = obj;
 				if (lastIter || done) {
 					if (NetworkConfig.USE_NEURAL_FEATURES) {
-						this._fm.getParam_G()._nn_param_g.forward(batchInstIds);
+						this._fm.getParam_G().getNN().forward(batchInstIds, this._learn_helper.getNNInputs());
 					}
 				}
 				if(endOfIterCallback != null){
@@ -452,7 +455,7 @@ public abstract class NetworkModel implements Serializable{
 			if (currBestMetric != null)
 				print("Best metric on development set: " + currBestMetric.getMetricValue().toString());
 			this._decoders = null;
-			this._neuralDecoder = null;
+			this._decode_helper = null;
 		}
 	}
 	
@@ -475,14 +478,12 @@ public abstract class NetworkModel implements Serializable{
 				currBestMetric = metric;
 			}
 		}
-		this._fm._param_g.setNNParamG(_neuralLearner);
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
 			for(int threadId=0; threadId<this._numThreads; threadId++){
 				this._fm.setLocalNetworkParams(threadId, this._learners[threadId].getLocalNetworkParam());
 			}
-			this._fm._param_g.setNNParamG(_neuralLearner);
-			this._neuralLearner.setLearningState();
-			this._neuralLearner.setLocalNetworkParams(this._fm._params_l);
+			this._fm._param_g.getNN().setLearningState();
+			this._learn_helper.setLocalNetworkParams(this._fm._params_l); //FIXME might be useless? as it is always point to params_l
 		}
 	}
 
@@ -503,7 +504,7 @@ public abstract class NetworkModel implements Serializable{
 
 	private void preCompileNetworks(Instance[][] insts) throws InterruptedException{
 		for(int threadId = 0; threadId < this._numThreads; threadId++){
-			this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, -1);
+			this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, -1, this._learn_helper);
 			this._learners[threadId].setPrecompile();
 			this._learners[threadId].start();
 		}
@@ -519,7 +520,7 @@ public abstract class NetworkModel implements Serializable{
 		if(!NetworkConfig.PARALLEL_FEATURE_EXTRACTION || NetworkConfig.NUM_THREADS == 1){
 			for(int threadId = 0; threadId<this._numThreads; threadId++){
 				if(!keepExisting){
-					this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, 0);
+					this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, 0, this._learn_helper);
 				} else {
 					this._learners[threadId] = this._learners[threadId].copyThread();
 				}
@@ -529,7 +530,7 @@ public abstract class NetworkModel implements Serializable{
 		} else {
 			for(int threadId = 0; threadId < this._numThreads; threadId++){
 				if(!keepExisting){
-					this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, -1);
+					this._learners[threadId] = new LocalNetworkLearnerThread(threadId, this._fm, insts[threadId], this._compiler, -1, this._learn_helper);
 				} else {
 					this._learners[threadId] = this._learners[threadId].copyThread();
 				}
@@ -713,10 +714,10 @@ public abstract class NetworkModel implements Serializable{
 				if(this._decoders[threadId] != null){
 					this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, this._decoders[threadId].getParam(), true, numPredictionsGenerated);
 				} else {
-					this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, true, numPredictionsGenerated);
+					this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, true, numPredictionsGenerated, this._decode_helper); // could be null
 				}
 			} else {
-				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, false, numPredictionsGenerated);
+				this._decoders[threadId] = new LocalNetworkDecoderThread(threadId, this._fm, insts[threadId], this._compiler, false, numPredictionsGenerated,  this._decode_helper);
 			}
 		}
 
@@ -729,14 +730,13 @@ public abstract class NetworkModel implements Serializable{
 				//need to set it back if continue training.
 			}
 			//Important for batch training, since we don't use batch in decoding (check LocalNetworkParam, add hyperedge).
-			this._fm.getParam_G().getNNParamG().setDecodeState();
+			this._fm.getParam_G().getNN().setDecodeState();
 		}
 		
 		printUsedMemory("before decode");
 		this._compiler.reset();
-		if (NetworkConfig.FEATURE_TOUCH_TEST) {
+		if (NetworkConfig.FEATURE_TOUCH_TEST && (this._decode_helper == null || !cacheFeatures)) {
 			System.err.println("Touching test set.");
-			
 			for(int threadId = 0; threadId<this._numThreads; threadId++){
 				this._decoders[threadId].setTouch();
 				this._decoders[threadId].start();
@@ -750,21 +750,16 @@ public abstract class NetworkModel implements Serializable{
 		System.err.println("Okay. Decoding started.");
 		
 		long time = System.nanoTime();
-		
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			//initialize the neural decoder.
-			GlobalNeuralNetworkParam learner = this._fm.getParam_G().getNNParamG();
-			if (_neuralDecoder == null || !cacheFeatures) {
-				_neuralDecoder = learner.copyNNParamG();
-				_neuralDecoder.setLocalNetworkParams(this._fm._params_l);
-				_neuralDecoder.prepareInputId();
-				_neuralDecoder.setDecodeState();
-				_neuralDecoder.initializeNetwork();
-			} else {
-				_neuralDecoder.copyNNParam(learner);
-			}
-			this._fm.getParam_G().setNNParamG(_neuralDecoder);
-			this._fm.getParam_G().getNNParamG().forward(null);
+			if (this._decode_helper == null || !cacheFeatures) {
+				this._decode_helper = new NNDataHelper();
+				this._decode_helper.setLocalNetworkParams(this._fm._params_l);
+				for(int threadId = 0; threadId<this._numThreads; threadId++){
+					this._decoders[threadId].getParam()._helper = this._decode_helper;
+				}
+				this._decode_helper.prepareInputIdAndInput();
+			} 
+			this._fm.getParam_G().getNN().forward(null, this._decode_helper.getNNInputs());
 		}
 		
 		for(int threadId = 0; threadId<this._numThreads; threadId++){

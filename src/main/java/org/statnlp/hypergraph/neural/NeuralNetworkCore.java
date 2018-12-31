@@ -1,14 +1,14 @@
 package org.statnlp.hypergraph.neural;
 
-import static edu.cmu.dynet.internal.dynet_swig.*;
+import static edu.cmu.dynet.internal.dynet_swig.cmult;
+import static edu.cmu.dynet.internal.dynet_swig.input;
+import static edu.cmu.dynet.internal.dynet_swig.sum_batches;
+import static edu.cmu.dynet.internal.dynet_swig.sum_elems;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 import org.statnlp.hypergraph.Network;
@@ -27,14 +27,7 @@ import edu.cmu.dynet.internal.ParameterStorage;
 import edu.cmu.dynet.internal.ParameterStorageVector;
 import edu.cmu.dynet.internal.Tensor;
 import edu.cmu.dynet.internal.TensorTools;
-import gnu.trove.iterator.TIntIterator;
-import gnu.trove.list.TIntList;
-import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.set.TIntSet;
-import gnu.trove.set.hash.TIntHashSet;
 
 public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements Cloneable {
 	
@@ -46,28 +39,9 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	
 	protected transient int numParams;
 	
-	protected float[] params;
-	
 	protected transient Expression currExpr;
 	
-//	protected transient FloatVector outputVector;
-	/**
-	 * Neural network input to index (id)
-	 * If you are using batch training, do not directly use this to obtain input id.
-	 * Use the method # {@link #getNNInputID()}
-	 */
-	protected transient Map<Object, Integer> nnInput2Id;
-	
-	protected transient List<Object> nnInputs;
-	
-	/**
-	 * Save the mapping from instance id to neural network input id.
-	 */
-	protected transient TIntObjectMap<TIntList> instId2NNInputId;
-	
-	protected transient TIntIntMap dynamicNNInputId2BatchInputId;
-	
-	protected boolean continuousFeatureValue = false;
+	protected transient FloatVector gradVec;
 	
 	protected String nnModelFile = null;
 	
@@ -76,9 +50,9 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		
 	}
 	
-	public abstract ParameterCollection initalizeModelParams();
+	public abstract ParameterCollection initSpecificModelParam();
 	
-	public abstract Expression buildForwardGraph(List<Object> inputs);
+	public abstract Expression buildForwardGraph(Object[] inputs);
 	
 	private void getNumParameters() {
 		this.numParams = 0;
@@ -99,113 +73,69 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		return this.modelParams;
 	}
 	
-	public void initializeInput() {
-		System.out.println("initializing");
-		if (this.isTraining) {
-			this.modelParams = this.initalizeModelParams();
-			this.getNumParameters();
-			this.gradParams = new float[this.numParams];
-			this.params = new float[this.numParams];
-			Random rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
-			for (int i = 0; i < this.params.length; i++) {
-				this.params[i] = (float) (NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextFloat()-0.5)/10 : NetworkConfig.FEATURE_INIT_WEIGHT);
-			}
-			System.out.println("finish initialize the nn parameters in Java side");
-		} 
-		nnInputs = new ArrayList<>(nnInput2Id.size());
-		for (Object obj : nnInput2Id.keySet()) {
-			nnInputs.add(obj);
+	public void initModelParameters() {
+		System.out.println("initializing neural network [only called during training]");
+		this.modelParams = this.initSpecificModelParam();
+		this.getNumParameters();
+		this.gradParams = new double[this.numParams];
+		this.params = new double[this.numParams];
+		Random rng = new Random(NetworkConfig.RANDOM_INIT_FEATURE_SEED);
+		for (int i = 0; i < this.params.length; i++) {
+			this.params[i] = (float) (NetworkConfig.RANDOM_INIT_WEIGHT ? (rng.nextFloat()-0.5)/10 : NetworkConfig.FEATURE_INIT_WEIGHT);
 		}
-		System.out.println("finish the initialization");
+		System.out.println("finish initialize the nn parameters in Java side");
 	}
 	
 	/**
 	 * Calculate the input position in the output/countOuput matrix position
 	 * @return
 	 */
-	public abstract int hyperEdgeInput2OutputRowIndex(Object edgeInput);
-	
-	public int getNNInputID(Object nnInput) {
-		if (NetworkConfig.USE_BATCH_TRAINING && isTraining) {
-			return this.dynamicNNInputId2BatchInputId.get(this.nnInput2Id.get(nnInput));
-		} else {
-			return this.nnInput2Id.get(nnInput);
-		}
-	}
-	
-	public int getNNInputSize() {
-		if (NetworkConfig.USE_BATCH_TRAINING && isTraining) {
-			return this.dynamicNNInputId2BatchInputId.size();
-		} else {
-			return this.nnInput2Id.size();
-		}
-	}
+	public abstract int hyperEdgeInput2OutputRowIndex(Object edgeInput, NNDataHelper helper);
 	
 	/**
 	 * Neural network's forward
 	 */
 	@Override
-	public void forward(TIntSet batchInstIds) {
-		
+	public void forward(TIntSet batchInstIds, Object[] inputs) {
 		if ( isTraining || NetworkConfig.STATUS == ModelStatus.TESTING
 				|| NetworkConfig.STATUS == ModelStatus.DEV_IN_TRAINING) { // update with new params
 			//copy the parameters
+			/***
+			if (NetworkConfig.STATUS == ModelStatus.TESTING)
+				System.out.println("copying memory");
+			***/
 			this.copyParams();
-		}
-		
-		if (NetworkConfig.USE_BATCH_TRAINING && isTraining && batchInstIds != null
-				&& batchInstIds.size() > 0) {
-			//pass the batch input id.
-			TIntIterator iter = batchInstIds.iterator();
-			TIntHashSet set = new TIntHashSet();
-			while(iter.hasNext()) {
-				int positiveInstId = iter.next();
-				if (this.instId2NNInputId.containsKey(positiveInstId))
-					set.addAll(this.instId2NNInputId.get(positiveInstId));
-			}
-			TIntList batchInputIds = new TIntArrayList(set);
-			this.dynamicNNInputId2BatchInputId = new TIntIntHashMap(batchInputIds.size());
-			for (int i = 0; i < batchInputIds.size(); i++) {
-				this.dynamicNNInputId2BatchInputId.put(batchInputIds.get(i), i);
-			}
-			
-			
-			this.cg = ComputationGraph.getNew();
-			List<Object> batchInputs = new ArrayList<>(batchInputIds.size());
-			for (int i = 0; i < batchInputIds.size(); i++) {
-				batchInputs.add(nnInputs.get(batchInputIds.get(i)));
-			}
-//			System.out.println("batch size: " + batchInputs.size());
-//			this.currExpr = this.buildForwardGraph(nnInputs.get(batchInputIds.get(0)));
-			this.currExpr = this.buildForwardGraph(batchInputs);
-			Tensor outputTensor = this.cg.forward(this.currExpr);
-			FloatVector outputVector = as_vector(outputTensor);
-			this.output = this.getArray(outputVector, this.output);
-			if (isTraining && (this.gradOutput == null || this.gradOutput.length < this.output.length)) {
-				this.gradOutput = new float[this.output.length];
-			}
-		} else {
-			this.cg = ComputationGraph.getNew();
-			System.out.println("testing 2");
-//			System.out.println("nninput size: " + nnInputs.size());
-			this.currExpr = this.buildForwardGraph(nnInputs);
-			System.out.println("testing 3");
-			Tensor outputTensor = this.cg.forward(this.currExpr);
-			System.out.println("testing 4");
-			FloatVector outputVector = as_vector(outputTensor);
-			System.out.println("testing 5");
-			this.output = this.getArray(outputVector, this.output);
-			System.out.println("testing 6");
-			if (isTraining && (this.gradOutput == null || this.gradOutput.length < this.output.length)) {
-				this.gradOutput = new float[this.output.length];
+			if (NetworkConfig.STATUS == ModelStatus.DEV_IN_TRAINING) {
+				System.out.println("here");
 			}
 		}
+		this.cg = ComputationGraph.getNew();
+		this.currExpr = this.buildForwardGraph(inputs);
+		Tensor outputTensor = this.cg.forward(this.currExpr);
+//		FloatVector outputVector = as_vector(outputTensor); //try tensor tool access element because as_vector may cause memory increase
+//		this.output = this.getArray(outputVector, this.output);
+		this.output = this.copyOutput(outputTensor, this.output);
+		if (isTraining && (this.gradOutput == null || this.gradOutput.length < this.output.length)) {
+			this.gradOutput = new float[this.output.length];
+		}
+	}
+	
+	private float[] copyOutput(Tensor outputTensor, float[] buf) {
+		int size = (int) (outputTensor.getD().rows() * outputTensor.getD().cols());
+		if (buf == null || buf.length < size) {
+			buf = new float[size];
+        }
+		for (int i = 0; i < size; i++) {
+			buf[i] = TensorTools.access_element(outputTensor, i);
+		}
+		return buf;
 	}
 	
 	/**
 	 * Copy the parameters from our framework to dynet.
 	 */
 	private void copyParams() {
+//		System.out.println("nn param java side : " + Arrays.toString(this.params));
 		LookupParameterStorageVector lpsv =  modelParams.lookup_parameters_list();
 		ParameterStorageVector psv =  modelParams.parameters_list();
 		int k = 0;
@@ -213,14 +143,14 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 			LookupParameterStorage lps = lpsv.get(l);
 			Tensor vals = lps.get_all_values();
 			for(int i = 0; i < lps.size(); i++) {
-				TensorTools.set_element(vals, i, this.params[k++]);
+				TensorTools.set_element(vals, i, (float)this.params[k++]);
 			}
 		}
 		for (int l = 0; l < psv.size(); l++) {
 			ParameterStorage ps = psv.get(l);
 			Tensor vals = ps.getValues();
 			for(int i = 0; i < ps.size(); i++) {
-				TensorTools.set_element(vals, i, this.params[k++]);
+				TensorTools.set_element(vals, i, (float)this.params[k++]);
 			}
 		}
 	}
@@ -246,16 +176,20 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 				this.gradParams[k++] = TensorTools.access_element(vals, i);
 			}
 		}
+//		System.out.println("grad Param: " + Arrays.toString(this.gradParams));
 	}
 	
 	@Override
-	public double getScore(Network network, int parent_k, int children_k_index) {
+	public double getScore(Network network, int parent_k, int children_k_index, NNDataHelper helper) {
 		double val = 0.0;
-		NeuralIO io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
+//		if (!network.getInstance().isLabeled() && network.getInstance().getInstanceId() > 0) {
+//			System.out.println(helper==null);
+//		}
+		NeuralIO io = helper.getHyperEdgeInputOutput(network, parent_k, children_k_index);
 		if (io != null) {
 			Object edgeInput = io.getInput();
 			int outputLabel = io.getOutput();
-			int idx = this.hyperEdgeInput2OutputRowIndex(edgeInput) * this.numOutputs + outputLabel;
+			int idx = this.hyperEdgeInput2OutputRowIndex(edgeInput, helper) * this.numOutputs + outputLabel;
 			val = output[idx];
 		}
 		return val;
@@ -274,17 +208,8 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	 */
 	@Override
 	public void backward() {
-		
 		this.zeroGradCG();
-		FloatVector gradVec = this.getVector(this.gradOutput);
-//		Dim currExprDim = this.currExpr.dim();
-//		int[] dims = new int[1 + (int)currExprDim.ndims()];
-//		int x = this.gradOutput.length;
-//		for (int i = 0; i < currExprDim.ndims(); i++) {
-//			dims[i] = (int)currExprDim.get(i);
-//			x /= dims[i];
-//		}
-//		dims[dims.length - 1] = x;
+		this.getVector(this.gradOutput);
 		Expression myGrad = input(cg, this.currExpr.dim(), gradVec);
 		Expression finalLoss = sum_elems(sum_batches(cmult(this.currExpr, myGrad)));
 		this.cg.incremental_forward(finalLoss);
@@ -297,12 +222,12 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 	}
 	
 	@Override
-	public void update(double count, Network network, int parent_k, int children_k_index) {
-		NeuralIO io = getHyperEdgeInputOutput(network, parent_k, children_k_index);
+	public void update(double count, Network network, int parent_k, int children_k_index, NNDataHelper helper) {
+		NeuralIO io = helper.getHyperEdgeInputOutput(network, parent_k, children_k_index);
 		if (io != null) {
 			Object edgeInput = io.getInput();
 			int outputLabel = io.getOutput();
-			int idx = this.hyperEdgeInput2OutputRowIndex(edgeInput) * this.numOutputs + outputLabel;
+			int idx = this.hyperEdgeInput2OutputRowIndex(edgeInput, helper)* this.numOutputs + outputLabel;
 			synchronized (gradOutput) {
 				//TODO: alternatively, create #threads of countOutput array.
 				//Then aggregate them together.
@@ -322,6 +247,18 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 			ParameterStorage ps = psv.get(l);
 			TensorTools.zero(ps.gradients());
 		}
+	}
+	
+	public boolean isLearningState() {
+		return this.isTraining;
+	}
+	
+	public void setLearningState() {
+		this.isTraining = true;
+	}
+	
+	public void setDecodeState() {
+		this.isTraining = false;
 	}
 	
 	public void resetCountOutput() {
@@ -344,45 +281,27 @@ public abstract class NeuralNetworkCore extends AbstractNeuralNetwork implements
 		return buf;
 	}
 	
-	protected FloatVector getVector(float[] buf) {
-		FloatVector vec = new FloatVector(buf.length);
-		for (int i = 0; i < buf.length; i++) {
-			vec.add(buf[i]);
+	protected void getVector(float[] buf) {
+		if (this.gradVec == null) {
+			this.gradVec = new FloatVector(buf.length);
 		}
-		return vec;
+		for (int i = 0; i < buf.length; i++) {
+			this.gradVec.set(i, buf[i]);
+		}
 	}
 
-	@Override
-	protected NeuralNetworkCore clone(){
-		NeuralNetworkCore c = null;
-		try {
-			c = (NeuralNetworkCore) super.clone();
-			c.nnInput2Id = null;
-			c.nnInputs = null;
-			c.params = this.params;
-			c.modelParams = this.modelParams;
-		} catch (CloneNotSupportedException e) {
-			e.printStackTrace();
-		}
-		return c;
-	}
-	
 	public NeuralNetworkCore setModelFile(String nnModelFile) {
 		this.nnModelFile = nnModelFile;
 		return this;
 	}
 
 	private void writeObject(ObjectOutputStream out) throws IOException{
-		out.writeBoolean(this.continuousFeatureValue);
-		out.writeInt(this.netId);
 		out.writeInt(this.numOutputs);
 		out.writeDouble(this.scale);
 		out.writeObject(this.nnModelFile);
 	}
 	
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
-		this.continuousFeatureValue = in.readBoolean();
-		this.netId = in.readInt();
 		this.numOutputs = in.readInt();
 		this.scale = in.readDouble();
 		this.nnModelFile = (String) in.readObject();

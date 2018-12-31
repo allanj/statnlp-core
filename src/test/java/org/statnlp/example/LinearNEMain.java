@@ -28,7 +28,7 @@ import org.statnlp.hypergraph.NetworkConfig.ModelType;
 import org.statnlp.hypergraph.NetworkModel;
 import org.statnlp.hypergraph.decoding.Metric;
 import org.statnlp.hypergraph.neural.BidirectionalLSTM;
-import org.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
+import org.statnlp.hypergraph.neural.NNDataHelper;
 import org.statnlp.hypergraph.neural.NeuralNetworkCore;
 
 public class LinearNEMain {
@@ -127,7 +127,7 @@ public class LinearNEMain {
 					throw new RuntimeException("Unknown neural type: " + neuralType);
 				}
 			} 
-			GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, new GlobalNeuralNetworkParam(nets));
+			GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, new NNDataHelper(nets));
 			ECRFFeatureManager fa = new ECRFFeatureManager(gnp, labels, neuralType, false, lowercase);
 			ECRFNetworkCompiler compiler = new ECRFNetworkCompiler(iobes, labels);
 			model = DiscriminativeNetworkModel.create(fa, compiler);

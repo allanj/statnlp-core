@@ -7,7 +7,6 @@ import java.io.Serializable;
 import java.util.Arrays;
 
 import org.statnlp.commons.ml.opt.MathsVector;
-import org.statnlp.hypergraph.LocalNetworkParam;
 import org.statnlp.hypergraph.Network;
 import org.statnlp.hypergraph.NetworkConfig;
 
@@ -21,11 +20,6 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 	private static final long serialVersionUID = 1501009887917654699L;
 
 	/**
-	 * The id of this neural network
-	 */
-	protected int netId;
-	
-	/**
 	 * The total number of unique outputs
 	 */
 	protected int numOutputs;
@@ -33,7 +27,7 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 	/**
 	 * The neural net's internal weights and gradients
 	 */
-	protected transient float[] params, gradParams;
+	protected transient double[] params, gradParams;
 	
 	/**
 	 * A flattened matrix containing the continuous values
@@ -46,7 +40,7 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 	 */
 	protected double scale;
 	
-	protected transient LocalNetworkParam[] params_l;
+//	protected transient LocalNetworkParam[] params_l;
 	
 	protected transient DynetParams dp;
 	protected transient ComputationGraph cg;
@@ -72,16 +66,16 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 		this.cg = ComputationGraph.getNew();
 	}
 	
-	public void setLocalNetworkParams (LocalNetworkParam[] params_l) {
-		this.params_l = params_l;
-	}
+//	public void setLocalNetworkParams (LocalNetworkParam[] params_l) {
+//		this.params_l = params_l;
+//	}
 	
 	public abstract Object hyperEdgeInput2NNInput(Object edgeInput);
 	
 	/**
 	 * Initialize this provider (e.g., create a network and prepare its input)
 	 */
-	public abstract void initializeInput();
+	public abstract void initModelParameters();
 	
 	/**
 	 * Get the score associated with a specified hyper-edge
@@ -90,13 +84,13 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 	 * @param children_k_index
 	 * @return score
 	 */
-	public abstract double getScore(Network network, int parent_k, int children_k_index);
+	public abstract double getScore(Network network, int parent_k, int children_k_index, NNDataHelper helper);
 	
 	/**
 	 * Pre-compute all scores for each hyper-edge.
 	 * In neural network, this is equivalent to forward.
 	 */
-	public abstract void forward(TIntSet batchInstIds);
+	public abstract void forward(TIntSet batchInstIds, Object[] allInputs);
 	
 	/**
 	 * Accumulate count for a specified hyper-edge
@@ -105,7 +99,7 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 	 * @param parent_k
 	 * @param children_k_index
 	 */
-	public abstract void update(double count, Network network, int parent_k, int children_k_index);
+	public abstract void update(double count, Network network, int parent_k, int children_k_index, NNDataHelper helper);
 	
 	/**
 	 * Compute gradient based on the accumulated counts from all hyper-edges.
@@ -120,9 +114,7 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 	 * @param children_k_index
 	 * @return input
 	 */
-	public NeuralIO getHyperEdgeInputOutput(Network network, int parent_k, int children_k_index) {
-		return this.params_l[network.getThreadId()].getHyperEdgeIO(network, this.netId, parent_k, children_k_index);
-	}
+	
 	
 	/**
 	 * Reset gradient
@@ -154,23 +146,15 @@ public abstract class AbstractNeuralNetwork implements Serializable{
 		}
 	}
 	
-	public void setNeuralNetId(int netId){
-		this.netId = netId;
-	}
-	
-	public int getNeuralNetId() {
-		return this.netId;
-	}
-	
 	public int getParamSize() {
 		return params == null ? 0 : params.length;
 	}
 
-	public float[] getParams() {
+	public double[] getParams() {
 		return params;
 	}
 
-	public float[] getGradParams() {
+	public double[] getGradParams() {
 		return gradParams;
 	}
 	

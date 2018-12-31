@@ -24,6 +24,7 @@ import org.statnlp.hypergraph.NetworkConfig.InferenceType;
 import org.statnlp.hypergraph.decoding.EdgeHypothesis;
 import org.statnlp.hypergraph.decoding.NodeHypothesis;
 import org.statnlp.hypergraph.decoding.ScoredIndex;
+import org.statnlp.hypergraph.neural.NNDataHelper;
 
 public class LocalNetworkDecoderThread extends Thread{
 	
@@ -42,20 +43,20 @@ public class LocalNetworkDecoderThread extends Thread{
 	private boolean isTouching;
 	
 	//please make sure the threadId is 0-indexed.
-	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler){
-		this(threadId, fm, instances, compiler, false);
+	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, NNDataHelper helper){
+		this(threadId, fm, instances, compiler, false, helper);
 	}
 	
-	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, int numPredictionsGenerated){
-		this(threadId, fm, instances, compiler, false, numPredictionsGenerated);
+	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, int numPredictionsGenerated, NNDataHelper helper){
+		this(threadId, fm, instances, compiler, false, numPredictionsGenerated,helper);
 	}
 	
-	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, boolean cacheParam){
-		this(threadId, fm, instances, compiler, cacheParam, 1);
+	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, boolean cacheParam, NNDataHelper helper){
+		this(threadId, fm, instances, compiler, cacheParam, 1, helper);
 	}
 	
-	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, boolean cacheParam, int numPredictionsGenerated){
-		this(threadId, fm, instances, compiler, new LocalNetworkParam(threadId, fm, instances.length), cacheParam, numPredictionsGenerated);
+	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, boolean cacheParam, int numPredictionsGenerated, NNDataHelper helper){
+		this(threadId, fm, instances, compiler, new LocalNetworkParam(threadId, fm, instances.length, helper), cacheParam, numPredictionsGenerated);
 	}
 
 	public LocalNetworkDecoderThread(int threadId, FeatureManager fm, Instance[] instances, NetworkCompiler compiler, LocalNetworkParam param, boolean cacheParam){

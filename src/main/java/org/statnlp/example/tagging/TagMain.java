@@ -21,8 +21,6 @@ import org.statnlp.hypergraph.NetworkConfig.ModelType;
 import org.statnlp.hypergraph.NetworkModel;
 import org.statnlp.hypergraph.decoding.Metric;
 import org.statnlp.hypergraph.neural.BidirectionalLSTM;
-import org.statnlp.hypergraph.neural.GlobalNeuralNetworkParam;
-import org.statnlp.hypergraph.neural.NeuralNetworkCore;
 
 public class TagMain {
 
@@ -32,7 +30,7 @@ public class TagMain {
 	public static int testNum = 1;
 	public static int numThreads = 1;
 	public static double l2 = 0.01;
-	public static int numIterations = 1000;
+	public static int numIterations = 10;
 	public static List<String> labels;
 	public static boolean visualization = false;
 	public static int maxLen;
@@ -50,29 +48,27 @@ public class TagMain {
 		//NetworkConfig.OS = "linux";
 
 		labels = new ArrayList<>();
-		word2int.put("<pad>", 1);
+		word2int.put("<pad>", 0);
 		word2int.put("<unk>", 1);
 		TagInstance[] trainInstances = readData(trainFile, true, trainNum);
-		TagInstance[] devInstances = readData(trainFile, false, 2);
+		TagInstance[] devInstances = null; //readData(trainFile, false, 2);
+//		TagInstance[] devInstances = readData(trainFile, false, 2);
 		System.out.println("#labels: " + labels.size());
 		NetworkConfig.MODEL_TYPE = ModelType.CRF;
 		
-		List<NeuralNetworkCore> nets = new ArrayList<NeuralNetworkCore>();
 		OptimizerFactory optimizer = OptimizerFactory.getLBFGSFactory();
 		BidirectionalLSTM net = null;
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			NetworkConfig.USE_BATCH_TRAINING = true;
-			NetworkConfig.BATCH_SIZE = 10;
+			NetworkConfig.USE_BATCH_TRAINING = false;
+			NetworkConfig.BATCH_SIZE = 1;
 			NetworkConfig.FEATURE_TOUCH_TEST = true;
 			NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
-			net = new BidirectionalLSTM(50, labels.size(), word2int);
+			net = new BidirectionalLSTM(100, labels.size(), word2int);
 			net.setMaxLen(maxLen);
-			optimizer = OptimizerFactory.getGradientDescentFactory(BestParamCriteria.BEST_ON_DEV, 0.015);
-			nets.add(net);
+//			optimizer = OptimizerFactory.getGradientDescentFactory(BestParamCriteria.BEST_ON_DEV, 0.5);
+			optimizer = OptimizerFactory.getGradientDescentFactory(BestParamCriteria.LAST_UPDATE, 0.5);
 		}
-		GlobalNeuralNetworkParam gnnp = new GlobalNeuralNetworkParam(nets);
-		
-		GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, gnnp);
+		GlobalNetworkParam gnp = new GlobalNetworkParam(optimizer, net);
 		TagFeatureManager fa = new TagFeatureManager(gnp);
 		TagNetworkCompiler compiler = new TagNetworkCompiler(labels);
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);
@@ -99,9 +95,9 @@ public class TagMain {
 			
 		};
 		
-		model.train(trainInstances, numIterations, devInstances, evalFunc, 30);
-		if (visualization) model.visualize(TaggingViewer.class, trainInstances);
-		
+		model.train(trainInstances, numIterations, devInstances, evalFunc, 1);
+//		if (visualization) model.visualize(TaggingViewer.class, trainInstances);
+//		
 		TagInstance[] testInstances = readData(testFile, false, testNum);
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
 			net.setMaxLen(maxLen);

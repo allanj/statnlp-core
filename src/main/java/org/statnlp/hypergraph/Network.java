@@ -529,7 +529,7 @@ public abstract class Network implements Serializable, HyperGraph{
 					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
 			 	if (NetworkConfig.USE_NEURAL_FEATURES) {
-			 		score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+			 		score += this._param._fm.getParam_G().getNN().getScore(this, k, children_k_index, this._param._helper);
 			 	}
 			 	
 				for(int child_k : children_k){
@@ -568,7 +568,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 			}
  			if (NetworkConfig.USE_NEURAL_FEATURES) {
- 				score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+ 				score += this._param._fm.getParam_G().getNN().getScore(this, k, children_k_index, this._param._helper);
  			} 			
  			
 			for(int child_k : children_k){
@@ -629,7 +629,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 			}
 			if (NetworkConfig.USE_NEURAL_FEATURES) {
-				score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+				score += this._param._fm.getParam_G().getNN().getScore(this, k, children_k_index, this._param._helper);
 			}
 			score += this._outside[k];
 			for(int child_k : children_k){
@@ -709,7 +709,7 @@ public abstract class Network implements Serializable, HyperGraph{
 					score += this._param.cost(this, k, children_k, children_k_index, this._compiler);
 				}
 				if (NetworkConfig.USE_NEURAL_FEATURES) {
-					score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+					score += this._param._fm.getParam_G().getNN().getScore(this, k, children_k_index, this._param._helper);
 				}
 				score += this._outside[k];  // beta(s')
 				for(int child_k : children_k){
@@ -735,7 +735,7 @@ public abstract class Network implements Serializable, HyperGraph{
 				fa.update(this._param, count);
 			}
 			if (NetworkConfig.USE_NEURAL_FEATURES) {
-				this._param._fm.getParam_G().getNNParamG().setNNGradOutput(count, this, k, children_k_index); // todo
+				this._param._fm.getParam_G().getNN().update(count, this, k, children_k_index, this._param._helper); // todo
 			}
 			if(!NetworkConfig.MODEL_TYPE.USE_SOFTMAX){
 				for(int child_k: children_k){
@@ -812,7 +812,7 @@ public abstract class Network implements Serializable, HyperGraph{
 						}
 					}
 					if (NetworkConfig.USE_NEURAL_FEATURES) {
-						score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+						score += this._param._fm.getParam_G().getNN().getScore(this, k, children_k_index, this._param._helper);
 					}
 					for(int child_k : children_k){
 						if(child_k < 0){
@@ -858,7 +858,7 @@ public abstract class Network implements Serializable, HyperGraph{
 					}
 				}
 				if (NetworkConfig.USE_NEURAL_FEATURES) {
-					score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+					score += this._param._fm.getParam_G().getNN().getScore(this, k, children_k_index, this._param._helper);
 				}
 				for(int child_k : children_k){
 					if(child_k < 0){
@@ -908,7 +908,7 @@ public abstract class Network implements Serializable, HyperGraph{
 					}
 				}
 				if (NetworkConfig.USE_NEURAL_FEATURES) {
-					score += this._param._fm.getParam_G().getNNParamG().getNNScore(this, k, children_k, children_k_index);
+					score += this._param._fm.getParam_G().getNN().getScore(this, k, children_k_index, this._param._helper);
 				}
 				for(int child_k : children_k){
 					score += this._max[child_k];

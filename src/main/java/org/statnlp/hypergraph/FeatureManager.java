@@ -120,7 +120,7 @@ public abstract class FeatureManager implements Serializable{
 			return false;
 		}
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			this._param_g.getNNParamG().backward();
+			this._param_g.getNN().backward();
 		}
 		
 		boolean done = this._param_g.update();
