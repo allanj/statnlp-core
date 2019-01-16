@@ -19,7 +19,6 @@ package org.statnlp.commons.ml.opt;
 
 import java.util.Arrays;
 
-import org.statnlp.commons.ml.opt.GradientDescentOptimizer.BestParamCriteria;
 import org.statnlp.commons.ml.opt.LBFGS.ExceptionWithIflag;
 
 /**
@@ -340,7 +339,7 @@ public class GradientDescentOptimizer implements Optimizer{
 	 * @return
 	 */
 	private boolean checkAndSetAndIsBest(){
-		if (paramSelectCriteria == BestParamCriteria.LAST_UPDATE) {
+		if (paramSelectCriteria == BestParamCriteria.BEST_OBJ) {
 			if(this._obj < this.bestObj){
 				this.bestObj = this._obj;
 				for(int k=0; k<this._x.length; k++){
