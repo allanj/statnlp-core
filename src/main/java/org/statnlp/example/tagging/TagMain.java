@@ -21,20 +21,21 @@ import org.statnlp.hypergraph.neural.NeuralNetworkCore;
 public class TagMain {
 
 	public static String trainFile = "data/conll2000/sample_train.txt";
-	public static String testFile = "data/conll2000/sample_test.txt";
-	public static int trainNum = 30;
+	public static String testFile = "data/conll2000/sample_train.txt";
+	public static int trainNum = 20;
 	public static int testNum = 20;
-	public static int numThreads = 10;
+	public static int numThreads = 1;
 	public static double l2 = 0.01;
-	public static int numIterations = 30;
+	public static int numIterations = 100;
 	public static List<String> labels;
 	public static boolean visualization = false;
+	public static String embedding = "glove"; //or "random"
 	
 	public static void main(String[] args) throws IOException, InterruptedException{
 		
 		NetworkConfig.L2_REGULARIZATION_CONSTANT = l2;
 		NetworkConfig.NUM_THREADS = numThreads;
-		NetworkConfig.USE_NEURAL_FEATURES = false;
+		NetworkConfig.USE_NEURAL_FEATURES = true;
 		NetworkConfig.AVOID_DUPLICATE_FEATURES = true;
 		NetworkConfig.USE_FEATURE_VALUE = true; //Please set to false if you are not using feature value.
 
@@ -48,13 +49,19 @@ public class TagMain {
 		
 		List<NeuralNetworkCore> nets = new ArrayList<NeuralNetworkCore>();
 		if (NetworkConfig.USE_NEURAL_FEATURES) {
-			NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.01;
-			TagBiLSTM net = new TagBiLSTM(labels.size());
+			NetworkConfig.FEATURE_TOUCH_TEST = true;
+			NetworkConfig.USE_BATCH_TRAINING = false;
+			NetworkConfig.BATCH_SIZE = 5;
+			NetworkConfig.L2_REGULARIZATION_CONSTANT = 0.0;
+			NetworkConfig.PRINT_BATCH_OBJECTIVE = false;
+			TagBiLSTM net = new TagBiLSTM(labels.size(), embedding);
+			
 			nets.add(net);
 		}
 		GlobalNeuralNetworkParam gnnp = new GlobalNeuralNetworkParam(nets);
 		
-		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory(), gnnp);
+//		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getLBFGSFactory(), gnnp);
+		GlobalNetworkParam gnp = new GlobalNetworkParam(OptimizerFactory.getGradientDescentFactoryUsingAdaGrad(0.5), gnnp);
 		TagFeatureManager fa = new TagFeatureManager(gnp);
 		TagNetworkCompiler compiler = new TagNetworkCompiler(labels);
 		NetworkModel model = DiscriminativeNetworkModel.create(fa, compiler);

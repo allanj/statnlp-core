@@ -125,3 +125,23 @@ function loadPolyglot(wordList, lang)
     end
     return ltw
 end
+
+function loadGloveEmbObj(lang)
+    local embFile = 'nn-crf-interface/neural_server/glove_torch/glove.6B.100d.t7'
+    print("Reading Glove Embedidng...")
+    if not paths.filep(embFile) then
+        error('Please run bintot7.lua to preprocess Polyglot data!')
+    else
+        glove = torch.load(embFile)
+        print('Done reading Glove data.')
+    end
+    glove.unkToken = "unk"
+    glove.word2vec = function ( self, word )
+        local ind = self.w2vvocab[word] 
+        if ind == nil then
+            ind = self.w2vvocab[self.unkToken]
+        end
+        return self.M[ind]
+    end
+    return glove
+end

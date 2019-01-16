@@ -40,8 +40,8 @@ for line in io.lines(opt.binfilename) do
     table.remove(vecrep,1)
 	vecrep = torch.FloatTensor(vecrep)
 
-	local norm = torch.norm(vecrep,2)
-	if norm ~= 0 then vecrep:div(norm) end
+	-- local norm = torch.norm(vecrep,2)
+	-- if norm ~= 0 then vecrep:div(norm) end
 	w2vvocab[str] = i
 	v2wvocab[i] = str
 	M[{{i},{}}] = vecrep
